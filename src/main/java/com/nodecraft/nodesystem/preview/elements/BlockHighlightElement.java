@@ -1,0 +1,288 @@
+package com.nodecraft.nodesystem.preview.elements;
+
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.nodecraft.core.NodeCraft;
+import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
+import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.PreviewRenderer;
+import com.nodecraft.nodesystem.util.Coordinate; // 确保这是你的整数坐标类
+import net.minecraft.block.BlockState;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.render.*;
+import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.World;
+import org.joml.Matrix4f; // 确保使用 JOML 矩阵
+import org.joml.Vector3f; // 确保使用 JOML 向量
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 方块线框高亮预览元素
+ * 用于在世界中显示单个或多个方块的线框高亮效果。
+ */
+public class BlockHighlightElement extends AbstractPreviewElement {
+
+    private List<Coordinate> blockPositions = new ArrayList<>(); // 存储方块的整数坐标
+    private Vector3f color = new Vector3f(1.0f, 0.8f, 0.0f); // 默认橙黄色 (RGBA)
+    private float lineWidth = 4.0f; // 线宽 (增加线宽确保可见)
+    private float opacity = 1.0f; // 基础透明度
+    private float minOpacity = 0.0f; // 最小透明度值，默认为0允许完全按照设置的透明度显示
+    private boolean enablePulse = true; // 是否启用脉冲动画 (默认启用)
+    private float pulsePhase = 0.0f; // 脉冲动画的当前阶段 (0.0 - 1.0)
+
+    // 预计算的方块顶点偏移量，用于构建线框
+    private static final Vec3d[] CUBE_VERTICES = {
+            new Vec3d(0, 0, 0), new Vec3d(1, 0, 0), new Vec3d(1, 1, 0), new Vec3d(0, 1, 0),
+            new Vec3d(0, 0, 1), new Vec3d(1, 0, 1), new Vec3d(1, 1, 1), new Vec3d(0, 1, 1)
+    };
+    // 12 条边的索引对
+    private static final int[][] CUBE_EDGES = {
+            {0, 1}, {1, 2}, {2, 3}, {3, 0}, // Bottom face
+            {4, 5}, {5, 6}, {6, 7}, {7, 4}, // Top face
+            {0, 4}, {1, 5}, {2, 6}, {3, 7}  // Vertical edges
+    };
+
+    /**
+     * 构造一个新的方块高亮预览元素
+     * @param id 预览元素的唯一ID
+     * @param ownerNodeId 拥有此预览的节点ID
+     * @param data 要高亮的方块位置数据 (Coordinate 或 List<Coordinate>)
+     * @param options 预览选项
+     */
+    public BlockHighlightElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
+        super(id, ownerNodeId, data, options);
+        this.renderPriority = 10; // 中等优先级
+
+        // 从选项中读取设置
+        if (options.color != null) {
+            this.color = new Vector3f(options.color.x(), options.color.y(), options.color.z()); // 使用 JOML Vector3f 的访问器方法
+        }
+        if (options.lineWidth != null) {
+            this.lineWidth = options.lineWidth;
+        }
+        if (options.pulseAnimation != null) {
+            this.enablePulse = options.pulseAnimation;
+        }
+        if (options.opacity != null) {
+            this.opacity = options.opacity;
+        }
+        if (options.minOpacity != null) {
+            this.minOpacity = options.minOpacity;
+        }
+
+        // 处理输入数据
+        processData(data);
+    }
+
+    /**
+     * 处理输入数据，解析为 Coordinate 列表。
+     * @param data 要高亮的方块位置数据 (Coordinate 或 List<Coordinate>)
+     */
+    @Override
+    protected void processData(Object data) {
+        // 确保 blockPositions 已初始化，防止在父类构造函数中调用时出现 NPE
+        if (blockPositions == null) {
+            blockPositions = new ArrayList<>();
+        }
+        blockPositions.clear();
+
+        if (data instanceof Coordinate) {
+            blockPositions.add((Coordinate) data);
+        } else if (data instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Coordinate) {
+                    blockPositions.add((Coordinate) item);
+                }
+            }
+        }
+        // 不处理 Vec3d 或其他类型，此元素仅用于方块高亮
+    }
+
+    /**
+     * 渲染方块线框。
+     * @param matrices 矩阵栈
+     * @param camera 玩家相机
+     * @param partialTicks 渲染时间差
+     * @param globalOpacity 全局不透明度设置
+     */
+    @Override
+    public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
+        if (blockPositions.isEmpty()) {
+            NodeCraft.LOGGER.warn("BlockHighlightElement.render: blockPositions为空");
+            return;
+        }
+
+        // 移除频繁的调试信息以提高性能
+
+        // 更新脉冲动画阶段
+        if (enablePulse) {
+            pulsePhase = (pulsePhase + partialTicks * 0.1f) % (float)(Math.PI * 2); // 增加动画速度
+        }
+
+        // 计算最终透明度和亮度
+        float finalOpacity = opacity * globalOpacity;
+        float pulseFactor = 1.0f;
+
+        if (enablePulse) {
+            // 脉冲效果：从 0.6 到 1.0 的强度波动
+            pulseFactor = (float) (0.6 + 0.4 * Math.sin(pulsePhase));
+        }
+
+        // 应用最小透明度限制
+        finalOpacity = Math.max(finalOpacity, minOpacity);
+
+        Vec3d cameraPos = camera.getPos();
+
+        // 准备渲染系统状态
+        RenderSystem.disableCull(); // 禁用面剔除，确保所有线都可见
+        RenderSystem.enableBlend(); // 启用混合，处理透明度
+        RenderSystem.defaultBlendFunc(); // 默认混合函数 (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+        RenderSystem.enableDepthTest(); // 启用深度测试
+        RenderSystem.depthFunc(515); // GL_LEQUAL
+        RenderSystem.lineWidth(lineWidth); // 设置线宽
+
+        // 直接使用Minecraft原生的方块边框渲染方法
+        MinecraftClient client = MinecraftClient.getInstance();
+        WorldRenderer worldRenderer = client.worldRenderer;
+        World world = client.world;
+        
+        if (world == null || worldRenderer == null) {
+            NodeCraft.LOGGER.warn("world 或 worldRenderer 为 null");
+            return;
+        }
+
+        // 遍历所有要高亮的方块位置
+        for (Coordinate pos : blockPositions) {
+            // 检查是否在渲染距离内
+            double distance = getDistanceToCamera(camera, new Vec3d(pos.getX(), pos.getY(), pos.getZ()));
+            float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
+            if (distance > maxRenderDistance) {
+                continue;
+            }
+
+            BlockPos blockPos = new BlockPos(pos.getX(), pos.getY(), pos.getZ());
+            BlockState blockState = world.getBlockState(blockPos);
+            
+            // 如果方块是空气，跳过
+            if (blockState.isAir()) {
+                continue;
+            }
+
+            // 使用简化的方块边框渲染
+            renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor);
+        }
+
+        // 恢复渲染系统状态
+        RenderSystem.lineWidth(1.0f); // 恢复默认线宽
+        RenderSystem.enableDepthTest(); // 重新启用深度测试
+        RenderSystem.disableBlend(); // 禁用混合
+        RenderSystem.enableCull(); // 重新启用面剔除
+    }
+
+    /**
+     * 渲染方块轮廓 - 使用简化的渲染方法
+     */
+    private void renderSimpleBlockOutline(MatrixStack matrices, Vec3d cameraPos, BlockPos blockPos, float alpha, float pulseFactor) {
+        // 计算相对位置
+        double renderX = blockPos.getX() - cameraPos.x;
+        double renderY = blockPos.getY() - cameraPos.y;
+        double renderZ = blockPos.getZ() - cameraPos.z;
+        
+        matrices.push();
+        matrices.translate(renderX, renderY, renderZ);
+        
+        // 使用更简单、更可靠的渲染状态设置
+        RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
+        RenderSystem.enableDepthTest(); // 启用深度测试，但使用合适的深度函数
+        RenderSystem.depthFunc(515); // GL_LEQUAL
+        RenderSystem.lineWidth(lineWidth); // 直接使用用户设置的线宽
+        RenderSystem.disableCull();
+        
+        // 使用类的color属性设置颜色
+        float r = color.x();
+        float g = color.y();
+        float b = color.z();
+        float a = alpha * pulseFactor; // 直接使用计算的透明度，不再强制最小值
+        
+        // 使用简化的立方体边渲染
+        Tessellator tessellator = Tessellator.getInstance();
+        BufferBuilder buffer = tessellator.begin(VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR);
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        
+        // 绘制立方体的12条边
+        for (int[] edge : CUBE_EDGES) {
+            Vec3d v1 = CUBE_VERTICES[edge[0]];
+            Vec3d v2 = CUBE_VERTICES[edge[1]];
+            
+            buffer.vertex(matrix, (float)v1.x, (float)v1.y, (float)v1.z).color(r, g, b, a);
+            buffer.vertex(matrix, (float)v2.x, (float)v2.y, (float)v2.z).color(r, g, b, a);
+        }
+        
+        try {
+            BufferRenderer.drawWithGlobalProgram(buffer.end());
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("渲染方块轮廓失败: {}", e.getMessage());
+        }
+        
+        matrices.pop();
+        
+        // 恢复渲染状态
+        RenderSystem.enableCull();
+        RenderSystem.disableBlend();
+        RenderSystem.lineWidth(1.0f);
+        RenderSystem.depthFunc(515); // 恢复默认深度函数
+    }
+
+    /**
+     * 判断此预览元素是否应该被渲染。
+     * @param camera 玩家相机
+     * @return 如果至少有一个方块在渲染距离内且未过期，则返回 true。
+     */
+    @Override
+    public boolean shouldRender(Camera camera) {
+        if (blockPositions.isEmpty()) {
+            return false;
+        }
+        
+        if (isExpired()) {
+            return false;
+        }
+
+        float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
+        Vec3d cameraPos = camera.getPos();
+
+        // 检查是否有任何方块在渲染距离内
+        for (Coordinate pos : blockPositions) {
+            double distance = cameraPos.distanceTo(new Vec3d(pos.getX(), pos.getY(), pos.getZ()));
+            if (distance <= maxRenderDistance) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public void cleanup() {
+        // 清理资源，如方块位置列表
+        blockPositions.clear();
+        // 确保从PreviewRenderer中移除此元素
+        PreviewRenderer.getInstance().hidePreview(this.id);
+    }
+
+    public Vector3f getColor() {
+        return new Vector3f(color);
+    }
+
+    public void setColor(Vector3f color) {
+        // 确保颜色值在 0-1 范围内
+        this.color = new Vector3f(
+                Math.max(0.0f, Math.min(1.0f, color.x())),
+                Math.max(0.0f, Math.min(1.0f, color.y())),
+                Math.max(0.0f, Math.min(1.0f, color.z()))
+        );
+    }
+}

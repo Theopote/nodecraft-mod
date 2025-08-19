@@ -1,0 +1,158 @@
+plugins {
+	id 'fabric-loom' version '1.10-SNAPSHOT'
+	// Keep this plugin ONLY if you intend to publish your mod to a Maven repository using Gradle.
+	// If you only build the JAR and upload it manually (e.g., to CurseForge/Modrinth), you can remove this.
+	id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+	archivesName = project.archives_base_name
+}
+
+repositories {
+	// Define repositories for dependencies. Order matters for resolution speed and correctness.
+	// Start with the most common/official ones.
+
+	mavenCentral() // Standard Java repository, includes many libraries and some mods.
+
+	// Repositories for specific modding dependencies
+	maven { url 'https://maven.shedaniel.me/' } // For Cloth Config and other mods by shedaniel
+	maven { url 'https://api.modrinth.com/maven' } // For dependencies hosted on Modrinth
+	maven { url 'https://maven.terraformersmc.com/releases/' } // For TerraformersMC mods (e.g., Mod Menu alternative)
+	maven {
+		url = 'https://maven.isxander.dev/releases' // For Xander's mods/libs
+		name = 'Xander Maven'
+	}
+	maven {
+		url "https://oss.sonatype.org/content/repositories/snapshots/"
+	}
+	// Repository for ImGui snapshots (if needed). Releases are on Maven Central.
+	// Place it here if you might use snapshot versions of ImGui.
+	maven {
+		url 'https://oss.sonatype.org/content/repositories/snapshots'
+		content {
+			// Only check this repo for artifacts in the io.github.spair group
+			includeGroup "io.github.spair"
+		}
+	}
+
+	// JitPack - Used for libraries hosted directly on GitHub (like FastNoiseLite)
+	// Place it later as it builds on demand and can be slower.
+	maven { url 'https://jitpack.io' }
+}
+
+loom {
+
+	mods {
+		"nodecraft" {
+			sourceSet sourceSets.main
+		}
+	}
+}
+
+fabricApi {
+	// Configure Fabric API data generation if needed (usually for client-side features)
+	configureDataGeneration {
+		client = true
+	}
+}
+
+dependencies {
+	// Minecraft & Fabric
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+	include(modImplementation("net.fabricmc.fabric-api:fabric-item-api-v1:${project.fabric_version}"))
+
+	// GUI - ImGui，参考新方式配置
+	modImplementation 'com.github.SpaiR:imgui-java:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-binding:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-lwjgl3:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-gl3:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-natives-windows:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-natives-linux:v1.86.12'
+	include 'com.github.SpaiR:imgui-java-natives-macos:v1.86.12'
+
+	// Algorithms & Math Libraries
+	implementation "org.locationtech.jts:jts-core:${project.jts_version}" // JTS Topology Suite
+	implementation "org.joml:joml:${project.joml_version}" // JOML dependency - Ensure project.joml_version is defined (e.g., in gradle.properties)
+	include "org.joml:joml:${project.joml_version}" // 确保JOML库被打包进最终JAR
+
+	// 改用硬编码方式引用FastNoiseLite，尝试不同的引用方式
+	// implementation "com.github.Auburn:FastNoiseLite:7ccfbc1" // 使用提交哈希
+	// include "com.github.Auburn:FastNoiseLite:7ccfbc1" // 确保打包进mod
+
+	implementation "org.apache.commons:commons-math3:${project.commons_math_version}" // Apache Commons Math
+
+	// Configuration Library
+	// Using modImplementation as Cloth Config is a mod dependency.
+	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
+
+	// Gson for JSON serialization
+	implementation 'com.google.code.gson:gson:2.10.1'
+}
+
+processResources {
+	inputs.property "version", project.version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": inputs.properties.version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// Use the 'release' option - it sets source, target, and boot classpath consistently.
+	it.options.release = 21
+	// Add compiler arguments for detailed warnings
+	it.options.compilerArgs += ["-Xlint:deprecation", "-Xlint:unchecked"]
+}
+
+java {
+	// Automatically includes sources jar in builds. Good practice.
+	withSourcesJar()
+
+	// sourceCompatibility and targetCompatibility are set by the 'release' option above,
+	// so they are not strictly needed here. Removing them for clarity.
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+jar {
+	// Includes the LICENSE file in the root of the JAR.
+	from("LICENSE") {
+		// Renames the license file slightly to avoid potential name clashes if merging JARs (unlikely here, but safe practice).
+		rename { "${it}_${project.archives_base_name}"}
+		// Alternatively, keep the original name if preferred:
+		// rename { "LICENSE" } // or simply remove the rename closure
+	}
+}
+
+// Configure Maven Publishing (Only if 'maven-publish' plugin is active)
+publishing {
+	publications {
+		create("mavenJava", MavenPublication) {
+			artifactId = project.archives_base_name // Use the defined archivesName
+			from components.java // Publish the standard Java component (compiled classes, resources, etc.)
+		}
+	}
+
+	repositories {
+		// Define where to publish artifacts.
+		// This block needs to be configured with the URL and potentially credentials
+		// of your target Maven repository if you are using this feature.
+		// Example (replace with your actual repository):
+		/*
+        maven {
+            url = "https://your.maven.repo.url/repository/maven-releases/"
+            credentials {
+                username = project.properties['mavenUsername'] ?: System.getenv("MAVEN_USERNAME")
+                password = project.properties['mavenPassword'] ?: System.getenv("MAVEN_PASSWORD")
+            }
+        }
+        */
+	}
+}

@@ -1,0 +1,1105 @@
+package com.nodecraft.gui.editor.impl;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.List;
+import java.util.HashSet;
+
+import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.editor.NodeEditorFactory;
+import com.nodecraft.gui.editor.base.INodeEditor;
+import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
+import com.nodecraft.gui.components.CanvasComponent; // Needed for CanvasComponent.isNodeDragDropActive()
+
+import imgui.ImDrawList;
+import imgui.ImGui;
+import imgui.ImVec2;
+import imgui.flag.ImGuiMouseButton;
+import net.minecraft.client.gui.DrawContext;
+import org.jetbrains.annotations.Nullable;
+
+/**
+ * ImGui节点编辑器实现
+ */
+public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
+
+    private static ImGuiNodeEditor instance;
+
+    // 子组件
+    private final ImGuiNodeRenderer renderer;
+    private final ImGuiNodeInteraction interaction;
+    private final ImGuiNodeIO io;
+    private final ImGuiNodeMenus menus;
+    private final ImGuiNodeHistory history;
+    private final ImGuiNodeClipboard clipboard;
+
+    // 编辑器状态
+    private boolean isOpen = false;
+    private NodeGraph currentGraph;
+    private Map<UUID, NodePosition> nodePositions = new HashMap<>();
+    // portScreenPositions 存储的是端口的屏幕坐标 (已缩放)，每帧更新
+    private Map<UUID, Map<String, ImVec2>> portScreenPositions = new HashMap<>();
+
+    // 节点选中状态
+    private UUID selectedNodeId = null;
+    private final java.util.Set<UUID> selectedNodeIds = new HashSet<>();
+
+    // 画布视图状态变量
+    private float canvasZoom = 1.0f;
+    private float canvasOffsetX = 0;
+    private float canvasOffsetY = 0;
+    private boolean showGrid = true;
+
+    // 节点显示模式
+    private int nodeDisplayMode = 0; // 0=完整, 1=紧凑, 2=仅图标, 3=仅文本
+    private boolean showNodePreviews = true;
+
+    // 节点自定义颜色存储
+    private final Map<UUID, Integer> nodeCustomColors = new HashMap<>();
+
+    // 节点状态存储
+    private final java.util.Set<UUID> disabledNodes = new HashSet<>();
+    private final java.util.Set<UUID> hiddenNodes = new HashSet<>();
+
+    /**
+     * 获取单例实例
+     * @return 节点编辑器实例
+     */
+    public static ImGuiNodeEditor getInstance() {
+        if (instance == null) {
+            instance = new ImGuiNodeEditor();
+        }
+        return instance;
+    }
+
+    /**
+     * 私有构造函数，用于实现单例模式。
+     * 初始化所有编辑器子组件。
+     */
+    private ImGuiNodeEditor() {
+        this.renderer = new ImGuiNodeRenderer(this);
+        this.io = new ImGuiNodeIO(this);
+        this.interaction = new ImGuiNodeInteraction(this);
+        this.menus = new ImGuiNodeMenus(this, this.io);
+        this.history = new ImGuiNodeHistory(this);
+        this.clipboard = new ImGuiNodeClipboard(this);
+    }
+
+    /**
+     * 初始化节点编辑器，如果当前图为空，则创建一个默认图并添加一些示例节点。
+     */
+    @Override
+    public void init() {
+        if (currentGraph == null) {
+            currentGraph = new NodeGraph("默认节点图");
+
+            // 添加一些示例节点用于测试和演示
+            try {
+                NodeCraft.LOGGER.info("正在添加示例节点用于测试...");
+
+                String[] testNodeTypes = {
+                        // 基础输入节点（如果存在）
+                        "inputs.basic.integer_input", "inputs.basic.float_slider",
+                        "inputs.basic.boolean_toggle", "inputs.basic.text_input",
+                        // 数学运算节点
+                        "math.basic.addition", "math.basic.multiplication", "math.basic.division",
+                        "math.basic.subtraction", "math.basic.power", "math.basic.clamp",
+                        // 数学逻辑节点（如果存在）
+                        "math.logic.and", "math.logic.or", "math.logic.not"
+                };
+
+                int addedCount = 0;
+                float startX = 50f;
+                float startY = 50f;
+                float spacingX = 200f; // 节点水平间距
+                float spacingY = 150f; // 节点垂直间距
+
+                // 暂停历史记录，防止这些初始节点被记录
+                history.pauseRecording();
+                try {
+                    for (int i = 0; i < testNodeTypes.length && addedCount < 10; i++) { // 添加最多10个节点
+                        String nodeType = testNodeTypes[i];
+                        try {
+                            float x = startX + (addedCount % 4) * spacingX; // 每行4个节点
+                            float y = startY + (addedCount / 4) * spacingY;
+
+                            INode node = addNode(nodeType, x, y);
+                            if (node != null) {
+                                NodeCraft.LOGGER.info("成功添加示例节点: {} 在位置 ({}, {})", nodeType, x, y);
+                                addedCount++;
+                            }
+                        } catch (Exception e) {
+                            NodeCraft.LOGGER.debug("无法创建节点类型 {}: {}", nodeType, e.getMessage());
+                        }
+                    }
+                } finally {
+                    history.resumeRecording(); // 确保恢复记录
+                }
+
+                if (addedCount > 0) {
+                    NodeCraft.LOGGER.info("成功添加了 {} 个示例节点", addedCount);
+                } else {
+                    NodeCraft.LOGGER.warn("未能添加任何示例节点，请使用右键菜单手动添加节点");
+                }
+
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("添加示例节点时出错: {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    /**
+     * 打开编辑器界面。
+     */
+    @Override
+    public void open() {
+        NodeCraft.LOGGER.info("ImGuiNodeEditor打开");
+        isOpen = true;
+    }
+
+    /**
+     * 关闭编辑器界面。
+     */
+    @Override
+    public void close() {
+        NodeCraft.LOGGER.info("ImGuiNodeEditor关闭");
+        isOpen = false;
+    }
+
+    /**
+     * 检查编辑器是否处于打开状态。
+     * @return true 如果编辑器已打开，否则返回false。
+     */
+    @Override
+    public boolean isOpen() {
+        return isOpen;
+    }
+
+    /**
+     * Minecraft DrawContext 渲染方法（通常留空，实际ImGui渲染在 renderImGui 中）。
+     * @param context Minecraft 绘制上下文。
+     * @param mouseX 鼠标X坐标。
+     * @param mouseY 鼠标Y坐标。
+     * @param delta 帧时间差。
+     */
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        // 留空，渲染由 NodeCraftClient 中的 HudRenderCallback 处理
+    }
+
+    /**
+     * 主ImGui渲染方法。
+     * 此方法由外部调用（例如，CanvasComponent），负责整个节点编辑器的ImGui渲染循环。
+     */
+    public void renderImGui() {
+        if (!isOpen) {
+            return;
+        }
+
+        try {
+            // 获取当前画布子窗口的信息
+            ImVec2 canvasPos = ImGui.getWindowPos();
+            float canvasWidth = ImGui.getWindowWidth();
+            float canvasHeight = ImGui.getWindowHeight();
+
+            // 获取帧时间差，用于动画和动态效果
+            float deltaTime = ImGui.getIO().getDeltaTime();
+            interaction.updatePortHighlightAnimation(deltaTime);
+
+            ImDrawList drawList = ImGui.getWindowDrawList();
+
+            // 1. 绘制背景和网格
+            drawList.addRectFilled(canvasPos.x, canvasPos.y, canvasPos.x + canvasWidth, canvasPos.y + canvasHeight,
+                    ImGui.getColorU32(imgui.flag.ImGuiCol.FrameBg));
+
+            if (showGrid) {
+                renderer.drawGrid(drawList, canvasPos, canvasWidth, canvasHeight);
+            }
+
+            // 清除端口屏幕位置缓存，每帧重新计算
+            portScreenPositions.clear();
+
+            // 获取当前鼠标位置
+            ImVec2 mousePos = ImGui.getIO().getMousePos();
+
+            // 2. 先计算所有节点的尺寸和端口位置
+            // 这一步会更新 NodePosition 中的 width/height 字段，并填充 portScreenPositions
+            renderer.calculatePortPositions(canvasPos, currentGraph, nodePositions, portScreenPositions);
+
+            // 3. 渲染背景连接线（未选中节点之间的连接）
+            renderer.renderConnectionsDirect(drawList, currentGraph, portScreenPositions, selectedNodeIds);
+
+            // 4. 渲染节点（包含节点主体、标题和自定义UI）。
+            // 节点渲染会设置 ImGui.invisibleButton，并更新 ImGui.isItemActive() 状态。
+            // 【关键修改点】：节点选择和拖拽的启动和持续移动逻辑现在都移到 ImGuiNodeRenderer 内部处理。
+            renderer.renderNodesDirect(drawList, canvasPos, currentGraph, nodePositions, portScreenPositions, selectedNodeIds);
+
+            // 5. 渲染前景连接线（与选中节点相关的连接，显示在节点上方）
+            renderer.renderForegroundConnections(drawList, currentGraph, portScreenPositions, selectedNodeIds);
+
+            // 6. 更新端口和连接的悬停状态
+            // 这两个方法会更新 interaction.hoveredNodeId, hoveredPortId, isHoveredPortOutput, isHoveringConnection 等
+            interaction.updateHoveredPort(mousePos, portScreenPositions, currentGraph);
+            interaction.updateHoveredConnection(mousePos, portScreenPositions, currentGraph);
+
+            // 7. 处理进行中的连接创建（绘制预览线，鼠标释放时完成连接）
+            // 此方法内部会检查 interaction.isCreatingConnection()
+            interaction.handleActiveConnectionCreation(currentGraph, portScreenPositions);
+
+            // 8. 处理进行中的框选的更新和完成
+            // 此方法内部会检查 interaction.isBoxSelecting()，并在鼠标释放时处理框选结果
+            interaction.handleBoxSelection(mousePos, canvasPos, nodePositions, currentGraph);
+
+            // 9. 处理画布平移（如果正在平移）
+            interaction.handleCanvasPanning(canvasPos);
+
+            // 10. 处理鼠标左键点击：节点选择、选择清除、框选启动、画布平移
+            if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+                NodeCraft.LOGGER.debug("左键点击检测 - 鼠标位置: ({}, {})", mousePos.x, mousePos.y);
+
+                // 检查点击是否在画布区域内
+                if (mousePos.x >= canvasPos.x && mousePos.x <= canvasPos.x + canvasWidth &&
+                        mousePos.y >= canvasPos.y && mousePos.y <= canvasPos.y + canvasHeight) {
+                    NodeCraft.LOGGER.debug("鼠标点击在画布区域内");
+
+                    // 获取当前鼠标下方的节点信息
+                    UUID nodeUnderMouse = this.getNodeIdUnderMouse(mousePos.x, mousePos.y);
+                    // 重新检测鼠标是否在端口上，确保准确性
+                    boolean isMouseOnPort = interaction.updateHoveredPort(mousePos, portScreenPositions, currentGraph);
+                    NodeCraft.LOGGER.debug("节点检测 - nodeUnderMouse: {}, isMouseOnPort: {}", nodeUnderMouse, isMouseOnPort);
+
+                    // 只有当鼠标不在节点也不在端口上时，才启动画布级别的交互 (框选或平移)
+                    if (nodeUnderMouse == null && !isMouseOnPort) {
+                        NodeCraft.LOGGER.debug("鼠标点击在画布空白区域 (清除选择/框选/平移画布) - 鼠标位置: ({}, {})", mousePos.x, mousePos.y);
+                        // 如果鼠标在画布空白区域，并且当前没有按住Ctrl键，清除所有选择
+                        if (!ImGui.getIO().getKeyCtrl()) {
+                            NodeCraft.LOGGER.debug("清除选择 - 当前选中节点数: {}", selectedNodeIds.size());
+                            this.clearSelectedNodes();
+                            NodeCraft.LOGGER.debug("选择已清除 - 当前选中节点数: {}", selectedNodeIds.size());
+                        }
+                        // 启动框选 (使用新的专门的启动方法)
+                        NodeCraft.LOGGER.debug("尝试启动框选");
+                        interaction.startBoxSelection(mousePos, canvasPos);
+                        NodeCraft.LOGGER.debug("框选启动结果 - isBoxSelecting: {}", interaction.isBoxSelecting());
+
+                        // 启动画布平移 (仅当没有启动框选时)
+                        if (!interaction.isBoxSelecting()) {
+                            NodeCraft.LOGGER.debug("框选未启动，尝试启动画布平移");
+                            interaction.tryStartCanvasPanning(mousePos);
+                        } else {
+                            NodeCraft.LOGGER.debug("框选已启动，跳过画布平移");
+                        }
+                    } else {
+                        if (nodeUnderMouse != null) {
+                            NodeCraft.LOGGER.debug("鼠标点击在节点上，不清除选择 - 节点ID: {}", nodeUnderMouse);
+                        }
+                        if (isMouseOnPort) {
+                            NodeCraft.LOGGER.debug("鼠标点击在端口上，不清除选择");
+                        }
+                    }
+                } else {
+                    NodeCraft.LOGGER.debug("鼠标点击在画布区域外，不处理 - 鼠标位置: ({}, {}), 画布区域: ({}, {}) - ({}, {})", 
+                        mousePos.x, mousePos.y, canvasPos.x, canvasPos.y, canvasPos.x + canvasWidth, canvasPos.y + canvasHeight);
+                }
+            }
+
+            // 11. 渲染连接预览线 (如果正在创建连接)
+            if (interaction.isCreatingConnection()) {
+                renderer.drawConnectionPreview(drawList, interaction.getDragPreviewLineStartPos(), canvasZoom, interaction.isFromOutputPort());
+            }
+
+            // 12. 绘制框选框 (如果正在框选)
+            if (interaction.isBoxSelecting()) {
+                renderer.drawSelectionBox(drawList, canvasPos, interaction.getBoxSelectStart(), interaction.getBoxSelectEnd());
+            }
+
+            // 13. 处理连接线断开 (右键点击连接线)
+            // 此方法不依赖 ImGui.isAnyItemActive()，因为它处理的是右键事件，且鼠标已在连接线上。
+            interaction.handleConnectionDisconnection(currentGraph, portScreenPositions);
+
+            // 14. 处理节点右键菜单 (仅当 ImGui 没有被其他 Item 捕获时)
+            if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+                // 如果 ImGui 已经捕获了鼠标，则不显示右键菜单（防止与内部控件的右键事件冲突）
+                if (!ImGui.getIO().getWantCaptureMouse()) {
+                    handleNodeRightClick(mousePos.x, mousePos.y);
+                } else {
+                    NodeCraft.LOGGER.debug("ImGui已捕获右键，不显示节点右键菜单。");
+                }
+            }
+            menus.renderNodeContextMenu(); // 渲染菜单（如果菜单已打开）
+
+            // 15. 处理节点搜索弹窗
+            menus.renderNodeSearchPopup(); // 渲染搜索弹窗（如果弹窗已打开）
+
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("渲染ImGui编辑器时出错: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 处理鼠标右键点击节点或画布背景，打开上下文菜单。
+     * @param mouseX 鼠标X屏幕坐标。
+     * @param mouseY 鼠标Y屏幕坐标。
+     */
+    public void handleNodeRightClick(float mouseX, float mouseY) {
+        // ImGui.isAnyItemActive() 检查已在 renderImGui() 调用此方法之前进行，确保优先级。
+        menus.handleNodeRightClick(mouseX, mouseY);
+    }
+
+    /**
+     * 添加新节点到画布。
+     * 此方法现在是统一入口 `addNodeWithState` 的简化包装。
+     * @param nodeTypeId 节点的类型ID。
+     * @param x 节点的初始世界X坐标。
+     * @param y 节点的初始世界Y坐标。
+     * @return 新创建的节点实例，如果失败则返回null。
+     */
+    @Override
+    public INode addNode(String nodeTypeId, float x, float y) {
+        // 调用统一的添加方法，不指定UUID和状态，由其生成新UUID并记录历史
+        return addNodeWithState(nodeTypeId, null, x, y, null);
+    }
+
+    /**
+     * 根据节点类型ID、指定UUID和初始状态创建并添加一个节点到图中。
+     * 此方法主要用于历史记录的撤销/重做功能，以恢复特定ID和状态的节点。
+     *
+     * @param nodeTypeId 节点的类型ID。
+     * @param oldNodeId 节点的旧UUID（仅用于历史记录内部映射，新创建的节点会有新UUID），如果为null，将自动生成新的UUID。
+     * @param x 节点的初始世界X坐标。
+     * @param y 节点的初始世界Y坐标。
+     * @param nodeState 节点的初始状态数据，将通过 setNodeState 应用。如果为null，则使用节点默认状态。
+     * @return 新创建或恢复的节点实例，如果失败则返回null。
+     */
+    @Override
+    public INode addNodeWithState(String nodeTypeId, @Nullable UUID oldNodeId, float x, float y, @Nullable Object nodeState) {
+        if (currentGraph == null) {
+            NodeCraft.LOGGER.error("无法添加节点: 当前没有节点图");
+            return null;
+        }
+
+        try {
+            NodeRegistry registry = NodeRegistry.getInstance();
+            INode node = registry.createNodeInstance(nodeTypeId); // 创建节点实例，它会生成自己的 UUID
+
+            if (node == null) {
+                NodeCraft.LOGGER.error("无法创建节点: 未找到类型 {}", nodeTypeId);
+                return null;
+            }
+            
+            // 应用节点状态
+            if (nodeState != null) {
+                try {
+                    node.setNodeState(nodeState);
+                } catch (Exception e) {
+                    NodeCraft.LOGGER.warn("添加节点 {} 时恢复状态失败: {}", nodeTypeId, e.getMessage());
+                }
+            }
+
+            currentGraph.addNode(node); // 将新创建的节点添加到图中
+            nodePositions.put(node.getId(), new NodePosition(x, y));
+
+            if (io != null) {
+                io.markDirty();
+            }
+
+            // 只有在历史记录启用时才记录历史，避免在撤销/重做操作中重复记录
+            if (history != null && history.isRecording()) {
+                history.recordAddNode(node, x, y);
+            }
+
+            Map<String, Object> eventData = new HashMap<>();
+            eventData.put("nodeId", node.getId());
+            eventData.put("nodeType", nodeTypeId);
+            eventData.put("x", x);
+            eventData.put("y", y);
+            notifyEditorComponents("node_added", eventData);
+
+            return node;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("添加节点时出错: {}", e.getMessage(), e);
+            return null;
+        }
+    }
+
+    /**
+     * 连接两个节点的指定端口。
+     * @param sourceNodeId 源节点ID。
+     * @param sourcePortId 源端口ID。
+     * @param targetNodeId 目标节点ID。
+     * @param targetPortId 目标端口ID。
+     * @return true 如果连接成功，否则返回false。
+     */
+    @Override
+    public boolean connectPorts(UUID sourceNodeId, String sourcePortId, UUID targetNodeId, String targetPortId) {
+        if (currentGraph == null) {
+            NodeCraft.LOGGER.error("无法连接端口: 当前没有节点图");
+            return false;
+        }
+
+        try {
+            INode sourceNode = currentGraph.getNode(sourceNodeId);
+            INode targetNode = currentGraph.getNode(targetNodeId);
+
+            if (sourceNode == null || targetNode == null) {
+                NodeCraft.LOGGER.error("无法连接端口: 未找在节点");
+                return false;
+            }
+
+            boolean success = currentGraph.connect(sourceNodeId, sourcePortId, targetNodeId, targetPortId);
+
+            if (success) {
+                if (io != null) {
+                    io.markDirty();
+                }
+                // 只有在历史记录启用时才记录历史
+                if (history != null && history.isRecording()) {
+                    history.recordAddConnection(sourceNodeId, sourcePortId, targetNodeId, targetPortId);
+                }
+                Map<String, Object> eventData = new HashMap<>();
+                eventData.put("sourceNodeId", sourceNodeId);
+                eventData.put("sourcePortId", sourcePortId);
+                eventData.put("targetNodeId", targetNodeId);
+                eventData.put("targetPortId", targetPortId);
+                notifyEditorComponents("connection_added", eventData);
+            }
+
+            return success;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("连接端口时出错: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * 获取鼠标下方的节点ID。
+     * 此方法仅用于判断鼠标是否"在"节点上，不包含任何交互优先级逻辑。
+     * @param mouseX 鼠标屏幕X坐标。
+     * @param mouseY 鼠标屏幕Y坐标。
+     * @return 鼠标下方的节点ID，如果没有则返回null。
+     */
+    @Override
+    public UUID getNodeIdUnderMouse(float mouseX, float mouseY) {
+        if (currentGraph == null) {
+            // NodeCraft.LOGGER.debug("getNodeIdUnderMouse: currentGraph 为空"); // Too verbose
+            return null;
+        }
+
+        ImVec2 canvasWindowPos = ImGui.getWindowPos(); // Get ImGui window position
+        List<INode> nodes = currentGraph.getNodes();
+
+        // NodeCraft.LOGGER.debug("getNodeIdUnderMouse: Checking mouse ({}, {}) vs canvas ({}, {})", mouseX, mouseY, canvasWindowPos.x, canvasWindowPos.y);
+
+        for (int i = nodes.size() - 1; i >= 0; i--) { // Iterate backwards to pick top-most node
+            INode node = nodes.get(i);
+            UUID nodeId = node.getId();
+            NodePosition pos = nodePositions.get(nodeId);
+
+            if (pos != null) {
+                // Calculate node screen coordinates
+                float nodeScreenX = canvasWindowPos.x + pos.x * canvasZoom + canvasOffsetX;
+                float nodeScreenY = canvasWindowPos.y + pos.y * canvasZoom + canvasOffsetY;
+
+                // Use NodePosition's stored width/height (unscaled), then apply zoom
+                // Fallback to default if not yet calculated (width/height <= 0)
+                float nodeWidthScaled = pos.width > 0 ? pos.width * canvasZoom : 150 * canvasZoom;
+                float nodeHeightScaled = pos.height > 0 ? pos.height * canvasZoom : 80 * canvasZoom;
+
+                // Check if mouse is within node's bounding box
+                if (mouseX >= nodeScreenX && mouseX <= nodeScreenX + nodeWidthScaled &&
+                        mouseY >= nodeScreenY && mouseY <= nodeScreenY + nodeHeightScaled) {
+                    // NodeCraft.LOGGER.debug("Found node under mouse: {} at ({}, {}) size ({}, {})", nodeId, nodeScreenX, nodeScreenY, nodeWidthScaled, nodeHeightScaled);
+                    return nodeId;
+                }
+            }
+        }
+        // NodeCraft.LOGGER.debug("No node found under mouse."); // Too verbose
+        return null;
+    }
+
+    /**
+     * 检查鼠标是否悬停在画布的任何节点上。
+     * @param mouseX 鼠标X屏幕坐标。
+     * @param mouseY 鼠标Y屏幕坐标。
+     * @param canvasScreenPos 画布屏幕位置（此参数在此实现中可能冗余）。
+     * @return 如果鼠标在任何节点上则返回true。
+     */
+    public boolean isMouseOverAnyNode(float mouseX, float mouseY, ImVec2 canvasScreenPos) {
+        return getNodeIdUnderMouse(mouseX, mouseY) != null;
+    }
+
+    /**
+     * 在指定的世界坐标位置粘贴节点。
+     * @param x 粘贴的世界X坐标。
+     * @param y 粘贴的世界Y坐标。
+     */
+    @Override
+    public void pasteNodesAtPosition(float x, float y) {
+        NodeCraft.LOGGER.info("尝试在位置 ({}, {}) 粘贴节点", x, y);
+        if (clipboard != null) {
+            boolean result = clipboard.pasteNodes(x, y);
+            if (result) {
+                NodeCraft.LOGGER.info("粘贴节点成功");
+                if (io != null) {
+                    io.markDirty();
+                }
+            } else {
+                NodeCraft.LOGGER.error("粘贴节点失败");
+            }
+        } else {
+            NodeCraft.LOGGER.error("剪贴板组件为空，无法粘贴节点");
+        }
+    }
+
+    /**
+     * 在指定的世界坐标位置请求节点搜索。
+     * @param x 搜索弹窗的世界X坐标。
+     * @param y 搜索弹窗的世界Y坐标。
+     */
+    public void requestNodeSearch(float x, float y) {
+        menus.requestNodeSearch(x, y);
+    }
+
+    /**
+     * 获取编辑器的唯一标识符。
+     * @return 编辑器的字符串标识符。
+     */
+    @Override
+    public String getIdentifier() {
+        return "imgui";
+    }
+
+    /**
+     * 获取编辑器的优先级（如果存在多个编辑器）。
+     * @return 优先级数值。
+     */
+    @Override
+    public int getPriority() {
+        return 10; // 较高优先级
+    }
+
+    /**
+     * 检查当前平台是否支持此编辑器实现。
+     * @return 如果支持则返回true。
+     */
+    @Override
+    public boolean isPlatformSupported() {
+        return NodeEditorFactory.isImGuiSupported();
+    }
+
+    // --- Getter/Setter方法 (实现 ICanvasEditor 接口和内部访问) ---
+
+    @Override
+    public NodeGraph getCurrentGraph() {
+        return currentGraph;
+    }
+
+    public void setCurrentGraph(NodeGraph graph) {
+        this.currentGraph = graph;
+    }
+
+    @Override
+    public Map<UUID, NodePosition> getNodePositions() {
+        return nodePositions;
+    }
+
+    @Override
+    public NodePosition getNodePosition(UUID nodeId) {
+        return nodePositions.get(nodeId);
+    }
+
+    public void setNodePositions(Map<UUID, NodePosition> positions) {
+        this.nodePositions = positions;
+    }
+
+    @Override
+    public void clearNodePositions() {
+        this.nodePositions.clear();
+    }
+
+    @Override
+    public UUID getSelectedNodeId() {
+        return selectedNodeId;
+    }
+
+    @Override
+    public void setSelectedNodeId(UUID nodeId) {
+        this.selectedNodeId = nodeId;
+        if (nodeId != null) {
+            this.selectedNodeIds.add(nodeId);
+            NodeCraft.LOGGER.debug("设置选中节点ID: {}, 当前选中节点数: {}", nodeId, selectedNodeIds.size());
+        } else {
+            // 如果传入null，表示清空主选中节点，但不清空selectedNodeIds集合
+            // clearSelectedNodes() 方法负责清空整个集合
+        }
+        notifyEditorComponents("nodeSelected", nodeId); // 通知选择事件
+    }
+
+    /**
+     * 通知所有编辑器组件发生了事件。
+     * @param eventType 事件类型（字符串）。
+     * @param eventData 事件相关数据。
+     */
+    private void notifyEditorComponents(String eventType, Object eventData) {
+        NodeCraft.LOGGER.debug("发送编辑器事件: {}, 数据: {}", eventType, eventData);
+
+        try {
+            if (net.minecraft.client.MinecraftClient.getInstance().currentScreen instanceof com.nodecraft.gui.screens.NodecraftScreen) {
+                com.nodecraft.gui.screens.NodecraftScreen screen =
+                        (com.nodecraft.gui.screens.NodecraftScreen)net.minecraft.client.MinecraftClient.getInstance().currentScreen;
+
+                if (screen.getComponentManager() != null) {
+                    screen.getComponentManager().broadcastEvent(eventType, eventData);
+                    NodeCraft.LOGGER.debug("事件已通过ComponentManager广播: {} {}", eventType, eventData);
+                } else {
+                    NodeCraft.LOGGER.warn("ComponentManager为空，无法广播事件");
+                }
+            } else {
+                NodeCraft.LOGGER.debug("当前不在NodecraftScreen中，事件未广播");
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("广播事件时出错", e);
+        }
+    }
+
+    @Override
+    public java.util.Set<UUID> getSelectedNodeIds() {
+        return selectedNodeIds;
+    }
+
+    @Override
+    public void clearSelectedNodes() {
+        this.selectedNodeIds.clear();
+        this.selectedNodeId = null;
+        NodeCraft.LOGGER.debug("已清除所有选中节点");
+        notifyEditorComponents("nodeSelectionCleared", null); // 通知清除选择事件
+    }
+
+    @Override
+    public void removeSelectedNode(UUID nodeId) {
+        this.selectedNodeIds.remove(nodeId);
+        if (nodeId != null && nodeId.equals(selectedNodeId)) {
+            selectedNodeId = null;
+            // 如果移除了主选节点，尝试将集合中的第一个节点设置为主选
+            if (!selectedNodeIds.isEmpty()) {
+                setSelectedNodeId(selectedNodeIds.iterator().next());
+            } else {
+                notifyEditorComponents("nodeSelectionCleared", null);
+            }
+        }
+    }
+
+    @Override
+    public void removeNodePosition(UUID nodeId) {
+        this.nodePositions.remove(nodeId);
+    }
+
+    @Override
+    public float getCanvasZoom() {
+        return canvasZoom;
+    }
+
+    @Override
+    public void setCanvasZoom(float zoom) {
+        this.canvasZoom = zoom;
+    }
+
+    @Override
+    public float getCanvasOffsetX() {
+        return canvasOffsetX;
+    }
+
+    @Override
+    public float getCanvasOffsetY() {
+        return canvasOffsetY;
+    }
+
+    @Override
+    public void setCanvasOffset(float x, float y) {
+        this.canvasOffsetX = x;
+        this.canvasOffsetY = y;
+    }
+
+    @Override
+    public void setCanvasView(float zoom, float offsetX, float offsetY) {
+        this.canvasZoom = zoom;
+        this.canvasOffsetX = offsetX;
+        this.canvasOffsetY = offsetY;
+    }
+
+    public boolean isShowGrid() {
+        return showGrid;
+    }
+
+    public void setShowGrid(boolean showGrid) {
+        this.showGrid = showGrid;
+    }
+
+    @Override
+    public ImGuiNodeInteraction getInteraction() {
+        return interaction;
+    }
+
+    @Override
+    public ImGuiNodeIO getNodeIO() {
+        return io;
+    }
+
+    @Override
+    public Map<UUID, Map<String, ImVec2>> getPortScreenPositions() {
+        return portScreenPositions;
+    }
+
+    @Override
+    public ImGuiNodeHistory getHistory() {
+        return history;
+    }
+
+    @Override
+    public ImGuiNodeClipboard getClipboard() {
+        return clipboard;
+    }
+
+    @Override
+    public boolean undo() {
+        NodeCraft.LOGGER.info("编辑器撤销操作被调用 - 历史记录状态: {}", history.getHistoryStats());
+        boolean result = history.undo();
+        NodeCraft.LOGGER.info("编辑器撤销操作完成 - 结果: {}, 新状态: {}", result, history.getHistoryStats());
+        return result;
+    }
+
+    @Override
+    public boolean redo() {
+        NodeCraft.LOGGER.info("编辑器重做操作被调用 - 历史记录状态: {}", history.getHistoryStats());
+        boolean result = history.redo();
+        NodeCraft.LOGGER.info("编辑器重做操作完成 - 结果: {}, 新状态: {}", result, history.getHistoryStats());
+        return result;
+    }
+
+    @Override
+    public boolean copySelectedNodes() {
+        return clipboard.copySelectedNodes();
+    }
+
+    @Override
+    public boolean cutSelectedNodes() {
+        boolean result = clipboard.cutSelectedNodes();
+        if (result) {
+            if (io != null) {
+                io.markDirty();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean pasteNodesAt(float x, float y) {
+        boolean result = clipboard.pasteNodes(x, y);
+        if (result) {
+            if (io != null) {
+                io.markDirty();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean deleteSelectedNodes() {
+        boolean result = clipboard.deleteSelectedNodes();
+        if (result) {
+            if (io != null) {
+                io.markDirty();
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public boolean hasUnsavedChanges() {
+        if (io != null && io.isDirty()) {
+            return true;
+        }
+        if (currentGraph == null) {
+            return false;
+        }
+        return currentGraph.getNodes().size() > 0;
+    }
+
+    @Override
+    public boolean disconnectPorts(UUID sourceNodeId, String sourcePortId, UUID targetNodeId, String targetPortId) {
+        if (currentGraph == null) return false;
+        try {
+            INode sourceNode = currentGraph.getNode(sourceNodeId);
+            INode targetNode = currentGraph.getNode(targetNodeId);
+            if (sourceNode == null || targetNode == null) {
+                NodeCraft.LOGGER.warn("断开连接失败：未找到源节点或目标节点");
+                return false;
+            }
+            if (currentGraph.isConnected(sourceNodeId, sourcePortId, targetNodeId, targetPortId)) {
+                // 只有在历史记录启用时才记录历史
+                if (history != null && history.isRecording()) {
+                    history.recordRemoveConnection(sourceNodeId, sourcePortId, targetNodeId, targetPortId);
+                }
+                currentGraph.disconnectPorts(sourceNodeId, sourcePortId, targetNodeId, targetPortId);
+                if (io != null) {
+                    io.markDirty();
+                }
+                NodeCraft.LOGGER.info("成功断开连接: {}({}) -> {}({})",
+                        sourceNode.getDisplayName(), sourcePortId,
+                        targetNode.getDisplayName(), targetPortId);
+                return true;
+            } else {
+                NodeCraft.LOGGER.warn("断开连接失败：端口未连接");
+                return false;
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("断开端口连接时出错: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean duplicateSelectedNode() {
+        if (currentGraph == null) {
+            NodeCraft.LOGGER.warn("无法复制节点：当前没有节点图");
+            return false;
+        }
+        if (selectedNodeIds.isEmpty()) {
+            NodeCraft.LOGGER.warn("没有选中的节点可复制");
+            return false;
+        }
+        UUID nodeId = selectedNodeIds.iterator().next();
+        INode sourceNode = currentGraph.getNode(nodeId);
+        if (sourceNode == null) {
+            NodeCraft.LOGGER.error("复制失败：找不到选中的节点 {}", nodeId);
+            return false;
+        }
+        NodeCraft.LOGGER.info("开始复制节点: {} (ID: {}, 类型: {})",
+                sourceNode.getDisplayName(), nodeId, sourceNode.getTypeId());
+        NodePosition sourcePos = getNodePosition(nodeId);
+        if (sourcePos == null) {
+            NodeCraft.LOGGER.error("复制失败：节点 {} 没有位置信息", nodeId);
+            return false;
+        }
+        NodeCraft.LOGGER.info("源节点位置: ({}, {})", sourcePos.x, sourcePos.y);
+        float offsetX = 30;
+        float offsetY = 0;
+        INode newNode = null;
+        try {
+            // 使用新的 addNodeWithState 方法来创建副本，不指定 UUID，让它生成新的
+            // 复制节点时，将源节点的状态传递给新节点
+            newNode = addNodeWithState(sourceNode.getTypeId(), null, sourcePos.x + offsetX, sourcePos.y + offsetY, sourceNode.getNodeState());
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("复制节点失败: {}", e.getMessage());
+        }
+
+        if (newNode != null) {
+            clearSelectedNodes();
+            setSelectedNodeId(newNode.getId());
+            NodeCraft.LOGGER.info("节点复制成功: {} -> {} (新ID: {})",
+                    sourceNode.getDisplayName(), newNode.getDisplayName(), newNode.getId());
+            if (io != null) {
+                io.markDirty();
+            }
+            // 历史记录会在 addNodeWithState 内部统一记录，这里不再手动记录
+            return true;
+        } else {
+            NodeCraft.LOGGER.error("复制节点失败: 无法创建新节点");
+            return false;
+        }
+    }
+
+    public void setNodeDisplayMode(int mode) {
+        this.nodeDisplayMode = mode;
+        NodeCraft.LOGGER.debug("设置节点显示模式: {}", mode);
+    }
+
+    public int getNodeDisplayMode() {
+        return nodeDisplayMode;
+    }
+
+    public void setShowNodePreviews(boolean show) {
+        this.showNodePreviews = show;
+        NodeCraft.LOGGER.debug("设置节点预览显示: {}", show);
+    }
+
+    public boolean isShowNodePreviews() {
+        return showNodePreviews;
+    }
+
+    // === 节点颜色管理方法 ===
+
+    /**
+     * 设置节点的自定义颜色
+     * @param nodeId 节点ID
+     * @param color 颜色值（ImGui格式的整数颜色）
+     */
+    public void setNodeCustomColor(UUID nodeId, int color) {
+        if (nodeId != null) {
+            nodeCustomColors.put(nodeId, color);
+            NodeCraft.LOGGER.debug("设置节点 {} 的自定义颜色: {}", nodeId, String.format("0x%08X", color));
+        }
+    }
+
+    /**
+     * 获取节点的自定义颜色
+     * @param nodeId 节点ID
+     * @return 自定义颜色，如果没有设置则返回null
+     */
+    public Integer getNodeCustomColor(UUID nodeId) {
+        return nodeCustomColors.get(nodeId);
+    }
+
+    /**
+     * 移除节点的自定义颜色
+     * @param nodeId 节点ID
+     */
+    public void removeNodeCustomColor(UUID nodeId) {
+        if (nodeId != null) {
+            nodeCustomColors.remove(nodeId);
+            NodeCraft.LOGGER.debug("移除节点 {} 的自定义颜色", nodeId);
+        }
+    }
+
+    /**
+     * 检查节点是否有自定义颜色
+     * @param nodeId 节点ID
+     * @return 是否有自定义颜色
+     */
+    public boolean hasNodeCustomColor(UUID nodeId) {
+        return nodeCustomColors.containsKey(nodeId);
+    }
+
+    /**
+     * 清除所有节点的自定义颜色
+     */
+    public void clearAllNodeCustomColors() {
+        nodeCustomColors.clear();
+        NodeCraft.LOGGER.debug("清除所有节点的自定义颜色");
+    }
+
+    /**
+     * 获取所有节点自定义颜色的映射
+     * @return 节点颜色映射的副本
+     */
+    public Map<UUID, Integer> getNodeCustomColors() {
+        return new HashMap<>(nodeCustomColors);
+    }
+
+    // === 节点状态管理方法实现 ===
+
+    @Override
+    public boolean toggleNodeDisabled(UUID nodeId) {
+        if (nodeId == null) return false;
+        
+        boolean wasDisabled = disabledNodes.contains(nodeId);
+        if (wasDisabled) {
+            disabledNodes.remove(nodeId);
+            NodeCraft.LOGGER.info("启用节点: {}", nodeId);
+        } else {
+            disabledNodes.add(nodeId);
+            NodeCraft.LOGGER.info("禁用节点: {}", nodeId);
+        }
+        
+        // 标记编辑器为脏状态
+        if (io != null) {
+            io.markDirty();
+        }
+        
+        return !wasDisabled; // 返回新状态
+    }
+
+    @Override
+    public void setNodeDisabled(UUID nodeId, boolean disabled) {
+        if (nodeId == null) return;
+        
+        if (disabled) {
+            disabledNodes.add(nodeId);
+        } else {
+            disabledNodes.remove(nodeId);
+        }
+        
+        NodeCraft.LOGGER.debug("设置节点 {} 禁用状态: {}", nodeId, disabled);
+        
+        if (io != null) {
+            io.markDirty();
+        }
+    }
+
+    @Override
+    public boolean isNodeDisabled(UUID nodeId) {
+        return nodeId != null && disabledNodes.contains(nodeId);
+    }
+
+    @Override
+    public boolean toggleNodeVisible(UUID nodeId) {
+        if (nodeId == null) return true; // 默认可见
+        
+        boolean wasHidden = hiddenNodes.contains(nodeId);
+        if (wasHidden) {
+            hiddenNodes.remove(nodeId);
+            NodeCraft.LOGGER.info("显示节点: {}", nodeId);
+        } else {
+            hiddenNodes.add(nodeId);
+            NodeCraft.LOGGER.info("隐藏节点: {}", nodeId);
+        }
+        
+        // 标记编辑器为脏状态
+        if (io != null) {
+            io.markDirty();
+        }
+        
+        return !wasHidden; // 返回新状态（true=可见）
+    }
+
+    @Override
+    public void setNodeVisible(UUID nodeId, boolean visible) {
+        if (nodeId == null) return;
+        
+        if (visible) {
+            hiddenNodes.remove(nodeId);
+        } else {
+            hiddenNodes.add(nodeId);
+        }
+        
+        NodeCraft.LOGGER.debug("设置节点 {} 可见性: {}", nodeId, visible);
+        
+        if (io != null) {
+            io.markDirty();
+        }
+    }
+
+    @Override
+    public boolean isNodeVisible(UUID nodeId) {
+        return nodeId == null || !hiddenNodes.contains(nodeId); // 默认可见
+    }
+
+    /**
+     * 获取所有禁用节点的集合
+     * @return 禁用节点ID集合的副本
+     */
+    public java.util.Set<UUID> getDisabledNodes() {
+        return new HashSet<>(disabledNodes);
+    }
+
+    /**
+     * 获取所有隐藏节点的集合
+     * @return 隐藏节点ID集合的副本
+     */
+    public java.util.Set<UUID> getHiddenNodes() {
+        return new HashSet<>(hiddenNodes);
+    }
+
+    /**
+     * 清除所有节点状态（禁用和隐藏）
+     */
+    public void clearAllNodeStates() {
+        disabledNodes.clear();
+        hiddenNodes.clear();
+        NodeCraft.LOGGER.debug("清除所有节点状态");
+    }
+}

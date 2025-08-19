@@ -1,0 +1,333 @@
+package com.nodecraft.gui.editor.impl;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+
+import com.nodecraft.core.NodeCraft;
+import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.io.SavedConnection;
+import com.nodecraft.nodesystem.io.SavedGraph;
+import com.nodecraft.nodesystem.io.SavedNode;
+import com.nodecraft.nodesystem.io.SavedPosition;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+/**
+ * ImGui节点编辑器的IO组件，处理节点图的保存和加载
+ */
+public class ImGuiNodeIO {
+    private final ICanvasEditor editor;
+    private final Gson gson;
+    private final Path defaultSavePath;
+    private Path lastSavedPath = null;
+    private boolean dirty = false; // 跟踪是否有未保存的更改
+    
+    /**
+     * 构造函数
+     * @param editor 节点编辑器实例
+     */
+    public ImGuiNodeIO(ICanvasEditor editor) {
+        this.editor = editor;
+        this.gson = new GsonBuilder().setPrettyPrinting().create();
+        this.defaultSavePath = Paths.get("nodecraft_graph.json");
+    }
+    
+    /**
+     * 保存节点图到默认位置
+     */
+    public void saveGraph() {
+        saveGraph(defaultSavePath);
+    }
+    
+    /**
+     * 加载默认位置的节点图
+     */
+    public void loadGraph() {
+        loadGraph(defaultSavePath);
+    }
+    
+    /**
+     * 获取默认保存路径
+     */
+    public Path getDefaultSavePath() {
+        return defaultSavePath;
+    }
+    
+    /**
+     * 保存节点图到指定文件
+     * @param filePath 文件保存路径
+     */
+    public void saveGraph(Path filePath) {
+        NodeGraph currentGraph = editor.getCurrentGraph();
+        Map<UUID, NodePosition> nodePositions = editor.getNodePositions();
+        
+        if (currentGraph == null) {
+            NodeCraft.LOGGER.warn("无法保存：当前没有节点图。");
+            return;
+        }
+
+        NodeCraft.LOGGER.info("开始保存节点图到: {}", filePath);
+        SavedGraph savedGraph = new SavedGraph();
+        savedGraph.graphName = currentGraph.getName();
+        savedGraph.nodes = new ArrayList<>();
+        savedGraph.connections = new ArrayList<>();
+        savedGraph.nodePositions = new HashMap<>();
+
+        // Save nodes and their states
+        for (INode node : currentGraph.getNodes()) {
+            if (node instanceof BaseNode baseNode) {
+                SavedNode savedNode = new SavedNode();
+                savedNode.nodeId = baseNode.getId().toString();
+                savedNode.typeId = baseNode.getTypeId();
+                savedNode.state = baseNode.getNodeState();
+                savedGraph.nodes.add(savedNode);
+            } else {
+                NodeCraft.LOGGER.warn("跳过保存非 BaseNode 节点: {}", node.getId());
+            }
+        }
+
+        // Save connections
+        for (NodeGraph.Connection connection : currentGraph.getConnections()) {
+            SavedConnection savedConnection = new SavedConnection();
+            savedConnection.sourceNodeId = connection.sourceNode.getId().toString();
+            savedConnection.sourcePortId = connection.sourcePort.getId();
+            savedConnection.targetNodeId = connection.targetNode.getId().toString();
+            savedConnection.targetPortId = connection.targetPort.getId();
+            savedGraph.connections.add(savedConnection);
+        }
+
+        // Save positions
+        for (Map.Entry<UUID, NodePosition> entry : nodePositions.entrySet()) {
+            savedGraph.nodePositions.put(
+                entry.getKey().toString(), 
+                new SavedPosition(entry.getValue().x, entry.getValue().y)
+            );
+        }
+
+        // Serialize to JSON and write to file
+        try {
+            String json = gson.toJson(savedGraph);
+            Files.writeString(filePath, json, StandardCharsets.UTF_8);
+            NodeCraft.LOGGER.info("节点图成功保存到: {}", filePath);
+        } catch (IOException e) {
+            NodeCraft.LOGGER.error("保存节点图时发生 IO 错误: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("序列化节点图时发生错误: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 从指定文件加载节点图
+     * @param filePath 文件路径
+     */
+    public void loadGraph(Path filePath) {
+        if (!Files.exists(filePath)) {
+            NodeCraft.LOGGER.warn("无法加载：文件不存在: {}", filePath);
+            return;
+        }
+
+        NodeCraft.LOGGER.info("开始从文件加载节点图: {}", filePath);
+        try {
+            String json = Files.readString(filePath, StandardCharsets.UTF_8);
+            SavedGraph savedGraph = gson.fromJson(json, SavedGraph.class);
+
+            if (savedGraph == null) {
+                NodeCraft.LOGGER.error("加载失败：无法解析 JSON 文件。");
+                return;
+            }
+
+            // 创建新图
+            String graphName = savedGraph.graphName != null ? savedGraph.graphName : "Loaded Graph";
+            NodeGraph newGraph = new NodeGraph(graphName);
+            Map<UUID, NodePosition> newPositions = new HashMap<>();
+
+            // Map to track old node IDs to new node instances
+            Map<String, BaseNode> loadedNodesMap = new HashMap<>();
+
+            // 1. Recreate nodes
+            NodeRegistry registry = NodeRegistry.getInstance();
+            for (SavedNode savedNode : savedGraph.nodes) {
+                INode iNode = registry.createNodeInstance(savedNode.typeId); // Get INode instance
+                if (iNode instanceof BaseNode) { // Check if it's a BaseNode
+                    BaseNode newNode = (BaseNode) iNode; // Cast to BaseNode
+                    // newNode will not be null here if instanceof is true
+                    try {
+                         // Restore state BEFORE adding to map/graph
+                        newNode.setNodeState(savedNode.state); 
+                        // Store mapping using the OLD ID
+                        loadedNodesMap.put(savedNode.nodeId, newNode);
+                        newGraph.addNode(newNode); // Add to graph
+                    } catch (Exception e) {
+                         NodeCraft.LOGGER.error("恢复节点状态或添加到图时出错: Node Type={}, Saved ID={}, Error={}", 
+                             savedNode.typeId, savedNode.nodeId, e.getMessage(), e);
+                    }
+                } else if (iNode == null) {
+                    NodeCraft.LOGGER.warn("无法创建节点实例 (返回为null): Type ID={}, Saved ID={}", 
+                        savedNode.typeId, savedNode.nodeId);
+                } else {
+                    NodeCraft.LOGGER.warn("无法加载节点：实例不是 BaseNode 类型。Type ID={}, Saved ID={}, Actual Type={}", 
+                        savedNode.typeId, savedNode.nodeId, iNode.getClass().getName());
+                }
+            }
+
+            // 2. Recreate positions
+             if (savedGraph.nodePositions != null) {
+                for (Map.Entry<String, SavedPosition> entry : savedGraph.nodePositions.entrySet()) {
+                    String oldNodeId = entry.getKey();
+                    SavedPosition savedPos = entry.getValue();
+                    BaseNode nodeInstance = loadedNodesMap.get(oldNodeId); 
+                    if (nodeInstance != null && savedPos != null) {
+                        newPositions.put(nodeInstance.getId(), new NodePosition(savedPos.x, savedPos.y));
+                    } else {
+                         NodeCraft.LOGGER.warn("无法恢复节点位置：找不到节点实例或位置数据为空 for old ID {}", oldNodeId);
+                    }
+                }
+            }
+
+            // 3. Recreate connections
+            if (savedGraph.connections != null) {
+                for (SavedConnection savedConnection : savedGraph.connections) {
+                    BaseNode sourceNode = loadedNodesMap.get(savedConnection.sourceNodeId);
+                    BaseNode targetNode = loadedNodesMap.get(savedConnection.targetNodeId);
+                    
+                    if (sourceNode != null && targetNode != null) {
+                        boolean success = newGraph.connect(
+                            sourceNode.getId(), // Use NEW source ID
+                            savedConnection.sourcePortId, 
+                            targetNode.getId(), // Use NEW target ID
+                            savedConnection.targetPortId
+                        );
+                        if (!success) {
+                             NodeCraft.LOGGER.warn("无法重新连接端口: {} ({}) -> {} ({})", 
+                                savedConnection.sourceNodeId, savedConnection.sourcePortId, 
+                                savedConnection.targetNodeId, savedConnection.targetPortId);
+                        }
+                    } else {
+                        NodeCraft.LOGGER.warn("无法重新连接端口：找不到源节点或目标节点实例 for connection {} -> {}", 
+                                           savedConnection.sourceNodeId, savedConnection.targetNodeId);
+                    }
+                }
+            }
+
+            // 最后将加载的图和位置设置到编辑器
+            editor.setCurrentGraph(newGraph);
+            editor.setNodePositions(newPositions);
+            
+            NodeCraft.LOGGER.info("节点图成功从文件加载: {}", filePath);
+
+        } catch (IOException e) {
+            NodeCraft.LOGGER.error("加载节点图时发生 IO 错误: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("解析或重建节点图时发生错误: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 获取最后保存的路径
+     * @return 最后保存的路径
+     */
+    public Path getLastSavedPath() {
+        return lastSavedPath;
+    }
+    
+    /**
+     * 检查是否有未保存的更改
+     * @return 如果有未保存的更改返回true，否则返回false
+     */
+    public boolean isDirty() {
+        return dirty;
+    }
+    
+    /**
+     * 标记节点图已修改
+     */
+    public void markDirty() {
+        dirty = true;
+    }
+    
+    /**
+     * 从JSON中加载节点位置
+     * @param jsonContent JSON内容
+     * @return 节点位置映射
+     */
+    private Map<UUID, NodePosition> loadNodePositions(String jsonContent) {
+        try {
+            Map<UUID, NodePosition> positions = new HashMap<>();
+            
+            JsonElement element = JsonParser.parseString(jsonContent);
+            if (element.isJsonObject()) {
+                JsonObject json = element.getAsJsonObject();
+                if (json.has("nodePositions") && json.get("nodePositions").isJsonObject()) {
+                    JsonObject positionsJson = json.getAsJsonObject("nodePositions");
+                    
+                    for (Map.Entry<String, JsonElement> entry : positionsJson.entrySet()) {
+                        try {
+                            UUID nodeId = UUID.fromString(entry.getKey());
+                            JsonObject posObj = entry.getValue().getAsJsonObject();
+                            float x = posObj.has("x") ? posObj.get("x").getAsFloat() : 0;
+                            float y = posObj.has("y") ? posObj.get("y").getAsFloat() : 0;
+                            positions.put(nodeId, new NodePosition(x, y));
+                        } catch (Exception e) {
+                            NodeCraft.LOGGER.warn("解析节点位置时出错: {}", e.getMessage());
+                        }
+                    }
+                }
+            }
+            
+            return positions;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.warn("解析节点位置失败: {}", e.getMessage());
+            return new HashMap<>();
+        }
+    }
+    
+    /**
+     * 将节点位置添加到JSON中
+     * @param graphJson 节点图JSON
+     * @param positions 节点位置映射
+     * @return 更新后的JSON
+     */
+    private String addNodePositionsToJson(String graphJson, Map<UUID, NodePosition> positions) {
+        try {
+            JsonElement element = JsonParser.parseString(graphJson);
+            if (element.isJsonObject()) {
+                JsonObject json = element.getAsJsonObject();
+                
+                // 创建节点位置对象
+                JsonObject positionsJson = new JsonObject();
+                for (Map.Entry<UUID, NodePosition> entry : positions.entrySet()) {
+                    JsonObject posObj = new JsonObject();
+                    posObj.addProperty("x", entry.getValue().x);
+                    posObj.addProperty("y", entry.getValue().y);
+                    positionsJson.add(entry.getKey().toString(), posObj);
+                }
+                
+                // 添加到主JSON对象
+                json.add("nodePositions", positionsJson);
+                
+                // 使用美化输出
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                return gson.toJson(json);
+            }
+            
+            return graphJson;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.warn("添加节点位置信息时出错: {}", e.getMessage());
+            return graphJson;
+        }
+    }
+} 

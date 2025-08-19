@@ -1,0 +1,19 @@
+{
+  "required": true,
+  "package": "com.nodecraft.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ClientPlayerInteractionManagerMixin",
+    "GameStateMixin",
+    "InGameHudMixin",
+    "KeyboardInputMixin",
+    "MinecraftClientMixin",
+    "MouseCursorMixin",
+    "MouseHandlerMixin",
+    "NodecraftScreenMixin",
+    "ScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+	}
+}

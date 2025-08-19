@@ -1,0 +1,2564 @@
+package com.nodecraft.gui.components;
+
+import com.nodecraft.core.NodeCraft; // For logging
+import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.util.Vec3; // 确保 Vec3 可用
+import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.editor.impl.NodePosition; // 添加 NodePosition 导入
+import imgui.ImGui;
+import imgui.ImVec4;
+import imgui.flag.ImGuiInputTextFlags;
+import imgui.flag.ImGuiTableFlags;
+import imgui.flag.ImGuiTableColumnFlags; // 添加 ImGuiTableColumnFlags 导入
+import imgui.flag.ImGuiWindowFlags;
+import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiTreeNodeFlags;
+import imgui.type.ImBoolean;
+import imgui.type.ImFloat;
+import imgui.type.ImInt;
+import imgui.type.ImString;
+
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap; // 用于多线程安全的缓存
+import java.util.stream.Collectors;
+
+public class PropertyPanelComponent implements EditorComponent {
+
+    private static final String COMPONENT_ID = "property_panel";
+    private static final String GET_PREFIX = "get";
+    private static final String IS_PREFIX = "is";
+    private static final String SET_PREFIX = "set";
+
+    private boolean visible = true;
+    private INode selectedNode = null;
+
+    // 缓存: Class -> List<PropertyDescriptor>
+    private final Map<Class<?>, List<PropertyDescriptor>> propertyCache = new ConcurrentHashMap<>(); // 使用ConcurrentHashMap
+    // 临时值存储, Key: nodeId_propertyName
+    private final Map<String, Object> tempValues = new ConcurrentHashMap<>(); // 使用ConcurrentHashMap
+
+    // 正在编辑的属性集合：Key: nodeId_propertyName -> 最后活跃时间戳
+    // 用于防止节点计算覆盖用户正在输入的值，并支持精确的超时清理
+    private final Map<String, Long> propertiesBeingEdited = new ConcurrentHashMap<>(); // 使用ConcurrentHashMap
+    // 编辑锁定超时（毫秒），超过此时间没有新输入则自动释放锁
+    private static final long EDIT_LOCK_TIMEOUT = 2000; // 2秒
+
+    // 错误计数器：属性名 -> 错误次数 (针对当前 selectedNode 的属性)
+    private final Map<String, Integer> errorCounts = new HashMap<>(); // 每次 selectedNode 切换时重置
+
+    // 用于获取NodeGraph的接口，默认使用ImGuiNodeEditor
+    private NodeGraphProvider graphProvider = () -> {
+        try {
+            return ImGuiNodeEditor.getInstance().getCurrentGraph();
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("获取节点图失败", e);
+            return null;
+        }
+    };
+
+    // 可以提供一个接受NodeGraphProvider的构造函数，实现依赖注入
+    public PropertyPanelComponent() {
+        // 使用默认的graphProvider
+    }
+
+    public PropertyPanelComponent(NodeGraphProvider graphProvider) {
+        if (graphProvider != null) {
+            this.graphProvider = graphProvider;
+        }
+    }
+
+    // 内部类：属性描述符
+    private static class PropertyDescriptor {
+        final String name; // 属性的规范名称, e.g., "nodeName"
+        final String displayName; // UI显示的名称, e.g., "Node Name"
+        final Class<?> type;
+        final MethodAccessor getter;
+        final MethodAccessor setter; // Setter可以为null，表示只读属性
+        final PropertyRenderer renderer;
+        final String description; // 属性描述，用于工具提示
+        final String category; // 属性分类
+        final int order; // 排序顺序
+        // boolean disabled; // 禁用状态由 errorCounts 和当前节点选择决定，不存储在描述符中
+
+        PropertyDescriptor(String name, String displayName, Class<?> type, MethodAccessor getter, MethodAccessor setter,
+                           PropertyRenderer renderer) {
+            this(name, displayName, type, getter, setter, renderer, "", "", 100);
+        }
+
+        PropertyDescriptor(String name, String displayName, Class<?> type, MethodAccessor getter, MethodAccessor setter,
+                           PropertyRenderer renderer, String description) {
+            this(name, displayName, type, getter, setter, renderer, description, "", 100);
+        }
+
+        PropertyDescriptor(String name, String displayName, Class<?> type, MethodAccessor getter, MethodAccessor setter,
+                           PropertyRenderer renderer, String description, String category, int order) {
+            this.name = name;
+            this.displayName = displayName;
+            this.type = type;
+            this.getter = getter;
+            this.setter = setter;
+            this.renderer = renderer;
+            this.description = description;
+            this.category = category;
+            this.order = order;
+            // this.disabled = false; // 移除此字段
+        }
+    }
+
+    // 函数式接口：属性渲染器
+    @FunctionalInterface
+    private interface PropertyRenderer {
+        /**
+         * 渲染属性的UI控件.
+         * @param panel 当前属性面板实例 (用于访问 tempValues 等)
+         * @param node 当前选中的节点
+         * @param prop 当前属性的描述符
+         * @param isDisabled 当前属性是否因为错误而被禁用
+         */
+        void render(PropertyPanelComponent panel, INode node, PropertyDescriptor prop, boolean isDisabled);
+    }
+
+    // 接口：方法访问器
+    private interface MethodAccessor {
+        Object invoke(Object obj, Object... args) throws Throwable; // 统一为 Throwable，因为 MethodHandle.invoke 可以抛出任意 Throwable
+        Class<?> getReturnType();
+        Class<?>[] getParameterTypes();
+    }
+
+    // --- 各种类型的渲染器实现 ---
+    private static final PropertyRenderer BOOLEAN_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            boolean currentValue = (boolean) prop.getter.invoke(node);
+            ImBoolean imVal = new ImBoolean(currentValue);
+            boolean isReadOnly = prop.setter == null;
+
+            if (isReadOnly) ImGui.beginDisabled();
+            if (ImGui.checkbox("##" + prop.name, imVal)) {
+                if (!isReadOnly) {
+                    // 立即保存到节点
+                    prop.setter.invoke(node, imVal.get());
+                    NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), imVal.get());
+                }
+            }
+            if (isReadOnly) ImGui.endDisabled();
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer STRING_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            String currentValue = (String) prop.getter.invoke(node);
+            if (currentValue == null) currentValue = "";
+
+            String tempKey = panel.getTempValueKey(node, prop.name);
+            ImString imStr;
+
+            if (!panel.tempValues.containsKey(tempKey) || !(panel.tempValues.get(tempKey) instanceof ImString)) {
+                imStr = new ImString(currentValue, 256); // 增加缓冲区大小
+                panel.tempValues.put(tempKey, imStr);
+            } else {
+                imStr = (ImString) panel.tempValues.get(tempKey);
+
+                // 关键改进：检查属性是否正在被编辑，避免覆盖用户输入
+                // 仅当 ImGui 控件不活跃且属性未被锁定编辑时，才从节点同步值
+                if (!ImGui.isItemActive() && !panel.isPropertyBeingEdited(node, prop.name)) {
+                    if (!imStr.get().equals(currentValue)) {
+                        imStr.set(currentValue);
+                    }
+                }
+            }
+
+            int flags = ImGuiInputTextFlags.None;
+            boolean isReadOnly = prop.setter == null;
+            if (isReadOnly) flags |= ImGuiInputTextFlags.ReadOnly;
+
+            // 检测ImGui控件的交互状态
+            boolean changed = ImGui.inputText("##" + prop.name, imStr, flags | ImGuiInputTextFlags.EnterReturnsTrue);
+
+            // 如果控件刚变为活跃，标记属性为正在编辑状态
+            if (ImGui.isItemActive()) {
+                panel.markPropertyBeingEdited(node, prop.name);
+            }
+            // 如果控件刚变为不活跃，标记属性为编辑完成状态
+            if (ImGui.isItemDeactivated() && panel.isPropertyBeingEdited(node, prop.name)) {
+                panel.markPropertyEditingFinished(node, prop.name);
+            }
+
+            // 如果按下了回车键或失去焦点，且值已更改 - 立即保存
+            if (changed || (ImGui.isItemDeactivated() && panel.isPropertyBeingEdited(node, prop.name))) {
+                if (!isReadOnly) {
+                    if (!imStr.get().equals(currentValue)) { // 避免不必要的setter调用
+                        prop.setter.invoke(node, imStr.get());
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), imStr.get());
+                    }
+                }
+            }
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer INT_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            int currentValue = (int) prop.getter.invoke(node);
+            int[] valArr = {currentValue}; // ImGui dragInt 需要数组
+            boolean isReadOnly = prop.setter == null;
+
+            if (isReadOnly) ImGui.beginDisabled();
+            if (ImGui.dragInt("##" + prop.name, valArr, 1)) { // 默认速度为1
+                if (!isReadOnly) {
+                    if (valArr[0] != currentValue) { // 避免不必要的setter调用
+                        prop.setter.invoke(node, valArr[0]);
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), valArr[0]);
+                    }
+                }
+            }
+            // 标记编辑状态
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+            if (isReadOnly) ImGui.endDisabled();
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer FLOAT_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            float currentValue = (float) prop.getter.invoke(node);
+            float[] valArr = {currentValue};
+            boolean isReadOnly = prop.setter == null;
+
+            if (isReadOnly) ImGui.beginDisabled();
+            if (ImGui.dragFloat("##" + prop.name, valArr, 0.01f)) {
+                if (!isReadOnly) {
+                    if (valArr[0] != currentValue) { // 避免不必要的setter调用
+                        prop.setter.invoke(node, valArr[0]);
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), valArr[0]);
+                    }
+                }
+            }
+            // 标记编辑状态
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+            if (isReadOnly) ImGui.endDisabled();
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    // 改进的双精度渲染器，使用文本输入保持精度
+    private static final PropertyRenderer DOUBLE_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            double currentValue = (double) prop.getter.invoke(node);
+
+            String tempKey = panel.getTempValueKey(node, prop.name);
+            ImString textValue;
+
+            if (!panel.tempValues.containsKey(tempKey) || !(panel.tempValues.get(tempKey) instanceof ImString)) {
+                // 首次创建或不是ImString类型，初始化为当前值
+                textValue = new ImString(String.format("%.12f", currentValue), 64); // 增加缓冲区大小
+                panel.tempValues.put(tempKey, textValue);
+            } else {
+                textValue = (ImString)panel.tempValues.get(tempKey);
+
+                // 只有在用户未编辑且值变化时才从节点同步值
+                if (!ImGui.isItemActive() && !panel.isPropertyBeingEdited(node, prop.name)) {
+                    try {
+                        double currentTextValue = Double.parseDouble(textValue.get());
+                        if (Math.abs(currentTextValue - currentValue) > 1e-12) { // 使用epsilon比较浮点数
+                            textValue.set(String.format("%.12f", currentValue));
+                        }
+                    } catch (NumberFormatException e) {
+                        // 如果当前文本不是有效数字，重置为当前值
+                        textValue.set(String.format("%.12f", currentValue));
+                    }
+                }
+            }
+
+            // 文本输入框设置
+            int flags = ImGuiInputTextFlags.CharsDecimal;
+            boolean isReadOnly = prop.setter == null;
+            if (isReadOnly) flags |= ImGuiInputTextFlags.ReadOnly;
+
+            boolean valueChanged = ImGui.inputText("##" + prop.name, textValue, flags | ImGuiInputTextFlags.EnterReturnsTrue);
+
+            // 标记编辑状态
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+            // 如果按下了回车键或失去焦点，且正在编辑
+            if (!isReadOnly && (valueChanged || (ImGui.isItemDeactivated() && panel.isPropertyBeingEdited(node, prop.name)))) {
+                try {
+                    double newValue = Double.parseDouble(textValue.get());
+                    if (Math.abs(newValue - currentValue) > 1e-12) { // 避免不必要的setter调用
+                        prop.setter.invoke(node, newValue);
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), newValue);
+                    }
+                } catch (NumberFormatException e) {
+                    // 输入的不是有效数字，显示错误但不修改值
+                    ImGui.sameLine();
+                    ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无效数字");
+                }
+            }
+
+            // 在输入框后添加一个快速拖动控件
+            if (!isReadOnly) { // 只有可写属性才提供拖动
+                ImGui.sameLine();
+                ImGui.pushItemWidth(ImGui.getContentRegionAvailX() * 0.25f);
+
+                float[] dragValue = new float[]{0.0f}; // 拖动增量
+
+                // 拖动控件激活时，标记属性为正在编辑状态
+                if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+                if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+                if (ImGui.dragFloat("##drag_" + prop.name, dragValue, 0.01f, 0.0f, 0.0f, "%.3f")) {
+                    try {
+                        // 解析当前文本值
+                        double baseValue = Double.parseDouble(textValue.get());
+                        // 计算新值 (基值 + 拖动增量)
+                        double newValue = baseValue + dragValue[0];
+                        // 更新显示文本和节点值
+                        textValue.set(String.format("%.12f", newValue));
+                        prop.setter.invoke(node, newValue);
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), newValue);
+                        // 重置拖动增量
+                        dragValue[0] = 0.0f;
+                    } catch (NumberFormatException e) {
+                        // 无效数字时忽略拖动
+                    }
+                }
+                ImGui.popItemWidth();
+            }
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    // 添加枚举类型渲染器
+    private static final PropertyRenderer ENUM_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            Enum<?> currentValue = (Enum<?>) prop.getter.invoke(node);
+            if (currentValue == null) {
+                ImGui.textDisabled("(空)");
+                return;
+            }
+
+            // 获取枚举的所有值
+            Enum<?>[] values = currentValue.getDeclaringClass().getEnumConstants();
+            String[] names = Arrays.stream(values)
+                    .map(Enum::name) // ImGui.combo 使用的是字符串名称
+                    .toArray(String[]::new);
+
+            int currentIndex = currentValue.ordinal();
+            ImInt selectedIndex = new ImInt(currentIndex);
+            boolean isReadOnly = prop.setter == null;
+
+            if (isReadOnly) ImGui.beginDisabled();
+            if (ImGui.combo("##" + prop.name, selectedIndex, names)) {
+                if (!isReadOnly && selectedIndex.get() != currentIndex) { // 避免不必要的setter调用
+                    prop.setter.invoke(node, values[selectedIndex.get()]);
+                    NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), values[selectedIndex.get()]);
+                }
+            }
+            // 标记编辑状态
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+            if (isReadOnly) ImGui.endDisabled();
+
+            // 如果鼠标悬停，显示所有可用值
+            if (ImGui.isItemHovered()) {
+                StringBuilder tooltip = new StringBuilder("可用值:\n");
+                for (String name : names) {
+                    tooltip.append("- ").append(name).append("\n");
+                }
+                ImGui.setTooltip(tooltip.toString());
+            }
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    // 为Vec3添加渲染器
+    private static final PropertyRenderer VEC3_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(已禁用)");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
+            }
+            return;
+        }
+
+        try {
+            Vec3 vec = (Vec3) prop.getter.invoke(node);
+            if (vec == null) {
+                ImGui.textDisabled("(空)");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+
+            // 使用三个单独的浮点数组作为临时值，并与ImString同步
+            String tempXKey = panel.getTempValueKey(node, prop.name + "_x");
+            String tempYKey = panel.getTempValueKey(node, prop.name + "_y");
+            String tempZKey = panel.getTempValueKey(node, prop.name + "_z");
+
+            ImString xStr = (ImString) panel.tempValues.computeIfAbsent(tempXKey, k -> new ImString(String.format("%.3f", vec.getX()), 32));
+            ImString yStr = (ImString) panel.tempValues.computeIfAbsent(tempYKey, k -> new ImString(String.format("%.3f", vec.getY()), 32));
+            ImString zStr = (ImString) panel.tempValues.computeIfAbsent(tempZKey, k -> new ImString(String.format("%.3f", vec.getZ()), 32));
+
+            // 同步值，但仅当未被编辑时
+            if (!panel.isPropertyBeingEdited(node, prop.name + "_x")) xStr.set(String.format("%.3f", vec.getX()));
+            if (!panel.isPropertyBeingEdited(node, prop.name + "_y")) yStr.set(String.format("%.3f", vec.getY()));
+            if (!panel.isPropertyBeingEdited(node, prop.name + "_z")) zStr.set(String.format("%.3f", vec.getZ()));
+
+            boolean changed = false;
+            if (isReadOnly) ImGui.beginDisabled();
+
+            float width = ImGui.getContentRegionAvailX() / 3 - ImGui.getStyle().getItemSpacingX(); // 确保留有间距
+
+            ImGui.pushID("vec3_" + prop.name); // 为整个Vec3控件提供一个独立的ID空间
+
+            // X
+            ImGui.pushItemWidth(width);
+            if (ImGui.inputText("X", xStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
+                changed = true;
+            }
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_x");
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_x");
+            ImGui.popItemWidth();
+
+            ImGui.sameLine();
+            // Y
+            ImGui.pushItemWidth(width);
+            if (ImGui.inputText("Y", yStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
+                changed = true;
+            }
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_y");
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_y");
+            ImGui.popItemWidth();
+
+            ImGui.sameLine();
+            // Z
+            ImGui.pushItemWidth(width);
+            if (ImGui.inputText("Z", zStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
+                changed = true;
+            }
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_z");
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_z");
+            ImGui.popItemWidth();
+
+            ImGui.popID(); // 结束Vec3控件的ID空间
+
+            // 如果值改变且存在setter，应用更改
+            if (changed && !isReadOnly) {
+                try {
+                    Vec3 newVec = new Vec3(Double.parseDouble(xStr.get()),
+                            Double.parseDouble(yStr.get()),
+                            Double.parseDouble(zStr.get()));
+                    // 只有当实际值发生变化时才调用setter
+                    if (!newVec.equals(vec)) {
+                        prop.setter.invoke(node, newVec);
+                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), newVec);
+                    }
+                } catch (NumberFormatException e) {
+                    ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无效坐标");
+                }
+            }
+
+            if (isReadOnly) ImGui.endDisabled();
+
+            // 显示向量长度作为工具提示
+            if (ImGui.isItemHovered()) {
+                double length = vec.length();
+                ImGui.setTooltip(String.format("长度: %.2f", length));
+            }
+
+            // 重置该属性的错误计数
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) { // 统一捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    // 改进的异常处理方法
+    private void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
+        // 根据错误类型选择日志级别
+        boolean isSevere = false;
+        String errorType;
+        String errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+        Throwable cause = e instanceof InvocationTargetException ? e.getCause() : e; // 获取根原因
+
+        if (cause instanceof IllegalAccessException) {
+            errorType = "访问权限";
+            isSevere = true;
+        } else if (cause instanceof IllegalArgumentException || cause instanceof ClassCastException) {
+            errorType = "类型不匹配/参数";
+            isSevere = true;
+        } else if (cause instanceof NullPointerException) {
+            errorType = "空引用";
+            isSevere = true;
+        } else {
+            errorType = "未知内部";
+        }
+
+        // 累加错误次数
+        int errorCount = errorCounts.getOrDefault(prop.name, 0) + 1;
+        errorCounts.put(prop.name, errorCount);
+
+        // 如果错误次数超过阈值，标记为禁用
+        if (errorCount >= NodeConstants.ERROR_THRESHOLD) { // 使用常量
+            NodeCraft.LOGGER.error("属性 '{}' 因连续{}次{}错误已被禁用: {}", prop.name, errorCount, errorType, errorMessage);
+            // 标记为禁用后，不再增加错误计数，且不再尝试渲染（在 PropertyRenderer 处处理）
+        } else {
+            // 第一次错误记录为WARN，后续为DEBUG以避免日志溢出
+            if (errorCount == 1) {
+                NodeCraft.LOGGER.warn("属性 '{}' {}错误: {}", prop.name, errorType, errorMessage, e);
+            } else {
+                NodeCraft.LOGGER.debug("属性 '{}' 再次发生{}错误 (第{}次): {}",
+                        prop.name, errorType, errorCount, errorMessage);
+            }
+        }
+
+        // 显示友好的错误消息
+        ImGui.textColored(1.0f, 0.4f, 0.4f, 1.0f, "(错误)");
+
+        if (ImGui.isItemHovered()) {
+            StringBuilder tooltip = new StringBuilder();
+            tooltip.append("属性 '").append(prop.displayName).append("' 处理失败:\n");
+            tooltip.append(cause.getClass().getSimpleName()).append(": ").append(errorMessage).append("\n");
+
+            if (isSevere) {
+                tooltip.append("\n这是严重错误，请联系开发人员。");
+            } else {
+                tooltip.append("\n这是一个运行时错误，可能由节点逻辑问题引起。");
+            }
+            tooltip.append("\n\n继续操作可能不会影响其他属性。");
+            if (errorCount < NodeConstants.ERROR_THRESHOLD) { // 使用常量
+                tooltip.append("\n如果问题持续，此属性将在 ").append(NodeConstants.ERROR_THRESHOLD).append(" 次错误后被自动禁用。");
+            } else {
+                tooltip.append("\n此属性已被禁用，直到节点重新选择。");
+            }
+
+            ImGui.setTooltip(tooltip.toString());
+        }
+    }
+
+    @Override
+    public String getComponentId() {
+        return COMPONENT_ID;
+    }
+
+    @Override
+    public void init() {
+        NodeCraft.LOGGER.debug("PropertyPanelComponent initialized");
+    }
+
+    @Override
+    public void cleanup() {
+        NodeCraft.LOGGER.debug("PropertyPanelComponent cleaned up");
+        clearAllTempValues();
+        propertyCache.clear(); // 清空所有缓存
+        errorCounts.clear(); // 清空错误计数
+        propertiesBeingEdited.clear(); // 清空编辑锁
+        // 移除未保存更改相关的清理
+        selectedNode = null;
+    }
+
+    @Override
+    public void render(float x, float y, float width, float height, float windowPaddingX, float windowPaddingY) {
+        if (!visible) return;
+
+        try {
+            // 检查和清理过期的编辑锁
+            checkAndCleanExpiredEditLocks();
+
+            ImGui.text("属性面板");
+            ImGui.separator();
+
+            if (selectedNode != null) {
+                // 节点基本信息
+                if (ImGui.collapsingHeader("基本信息", ImGuiTreeNodeFlags.DefaultOpen)) {
+                    renderNodeInfo();
+                }
+
+                // 节点自定义属性 (由 @NodeProperty 标记的属性)
+                if (ImGui.collapsingHeader("节点属性", ImGuiTreeNodeFlags.DefaultOpen)) {
+                    renderNodeProperties();
+                }
+
+                // 输入端口信息
+                if (ImGui.collapsingHeader("输入端口", ImGuiTreeNodeFlags.DefaultOpen)) {
+                    renderInputPorts();
+                }
+
+                // 输出端口信息
+                if (ImGui.collapsingHeader("输出端口", ImGuiTreeNodeFlags.DefaultOpen)) {
+                    renderOutputPorts();
+                }
+
+                // 调试功能
+                if (ImGui.collapsingHeader("调试工具", ImGuiTreeNodeFlags.None)) {
+                    renderDebugTools();
+                }
+
+                // 节点操作
+                if (ImGui.collapsingHeader("操作", ImGuiTreeNodeFlags.DefaultOpen)) {
+                    renderActionButtons();
+                }
+
+                // 特殊处理：如果节点有自定义UI状态 (例如 BaseNode)
+                if (selectedNode instanceof BaseNode) {
+                    Object nodeState = selectedNode.getNodeState();
+                    if (nodeState != null) {
+                        if (ImGui.collapsingHeader("自定义状态")) {
+                            ImGui.textWrapped("对象类型: " + nodeState.getClass().getSimpleName());
+                            // 这里可以添加更多nodeState的渲染逻辑
+                            // 例如，如果 nodeState 是一个 Map，可以遍历并显示
+                            if (nodeState instanceof Map<?, ?> stateMap) {
+                                renderMap(stateMap, "状态数据");
+                            } else {
+                                ImGui.textWrapped("值: " + nodeState);
+                            }
+                        }
+                    }
+                }
+
+            } else {
+                ImGui.text("未选择节点");
+            }
+
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("渲染属性面板时出错", e);
+            ImGui.textColored(1.0f, 0.2f, 0.2f, 1.0f, "渲染错误: " + e.getMessage());
+        }
+    }
+
+    private void renderNodeInfo() {
+        String idStr = selectedNode.getId().toString();
+        ImGui.text("节点 ID: " + idStr.substring(0, Math.min(8, idStr.length())) + "...");
+
+        // 类型与名称
+        String typeId = selectedNode.getTypeId();
+        // 显示分类名称，而不是重复显示节点名称
+        String categoryName = getCategoryNameForNode(typeId);
+        ImGui.text("分类: " + categoryName); // 更改为分类
+        ImGui.text("类型: " + formatTypeId(typeId)); // 格式化类型ID
+        ImGui.text("名称: " + selectedNode.getDisplayName());
+
+        // 节点描述
+        String description = selectedNode.getDescription();
+        if (description != null && !description.isEmpty()) {
+            ImGui.separator();
+            ImGui.textWrapped("描述: " + description);
+        }
+
+        // 节点状态显示
+        ImGui.separator();
+        ImGui.text("状态: ");
+        ImGui.sameLine();
+
+        String nodeStatus = getNodeStatus();
+        ImVec4 statusColor = getStatusColor(nodeStatus);
+
+        ImGui.textColored(statusColor.x, statusColor.y, statusColor.z, statusColor.w, nodeStatus);
+
+        // 如果状态为错误或警告，显示详细信息
+        if (nodeStatus.equals("错误") || nodeStatus.equals("警告")) {
+            ImGui.sameLine();
+            ImGui.textDisabled("(?)");
+            if (ImGui.isItemHovered()) {
+                ImGui.beginTooltip();
+                ImGui.textWrapped(getNodeStatusMessage());
+                ImGui.endTooltip();
+            }
+        }
+    }
+
+    /**
+     * 获取节点所属的分类名称
+     * @param typeId 节点类型ID
+     * @return 分类显示名称
+     */
+    private String getCategoryNameForNode(String typeId) {
+        if (typeId == null || typeId.isEmpty()) {
+            return "未知";
+        }
+
+        // 从typeId中提取分类部分
+        String categoryId = "";
+        int firstDotIndex = typeId.indexOf('.');
+        if (firstDotIndex != -1) {
+            categoryId = typeId.substring(0, firstDotIndex);
+        }
+
+        try {
+            // 获取NodeRegistry实例
+            com.nodecraft.nodesystem.registry.NodeRegistry registry = com.nodecraft.nodesystem.registry.NodeRegistry.getInstance();
+            if (registry != null) {
+                // 尝试获取分类对象
+                com.nodecraft.nodesystem.registry.NodeRegistry.NodeCategory category = registry.getCategory(categoryId);
+                if (category != null) {
+                    // 返回分类的显示名称
+                    return category.getDisplayName();
+                }
+            }
+        } catch (Exception e) {
+            // 如果发生错误，记录日志并使用备用格式化
+            NodeCraft.LOGGER.error("获取节点分类时出错: {}", e.getMessage());
+        }
+
+        // 如果无法通过注册表获取分类，则进行简单格式化
+        if (!categoryId.isEmpty()) {
+            return formatSingleWord(categoryId); // 使用 formatSingleWord 来格式化一级分类
+        }
+
+        // 回退：尝试使用类型ID的第一部分作为分类
+        String[] parts = typeId.split("\\.");
+        return parts.length > 0 ? formatSingleWord(parts[0]) : "未分类";
+    }
+
+    /**
+     * 格式化单个单词（例如，将 "my_category" 格式化为 "My Category"）
+     */
+    private String formatSingleWord(String word) {
+        if (word == null || word.isEmpty()) {
+            return "";
+        }
+        // 将下划线替换为空格，然后转换为驼峰式（每个单词首字母大写）
+        String[] parts = word.split("_");
+        StringBuilder formatted = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                formatted.append(Character.toUpperCase(part.charAt(0)));
+                formatted.append(part.substring(1).toLowerCase());
+                formatted.append(" "); // 每个单词后添加空格
+            }
+        }
+        return formatted.toString().trim(); // 去掉尾部空格
+    }
+
+    /**
+     * 格式化类型ID，只显示最后一部分，并转为可读格式
+     * @param typeId 完整的类型ID
+     * @return 格式化后的类型显示名称
+     */
+    private String formatTypeId(String typeId) {
+        if (typeId != null && typeId.contains(".")) {
+            String lastPart = typeId.substring(typeId.lastIndexOf('.') + 1);
+            return formatSingleWord(lastPart);
+        }
+        return formatSingleWord(typeId); // 如果没有点，也进行格式化
+    }
+
+    // 获取节点状态 (示例实现，需要根据实际节点系统修改)
+    private String getNodeStatus() {
+        if (selectedNode == null) return "未选择";
+
+        // 1. 检查节点是否有错误状态 (例如通过节点自身的属性或日志)
+        // 假设 INode 实现了 getErrorState() 或类似方法
+        try {
+            Method getErrorMethod = selectedNode.getClass().getMethod("getErrorState");
+            Object errorState = getErrorMethod.invoke(selectedNode);
+            if (errorState instanceof String && !((String) errorState).isEmpty()) {
+                return "错误";
+            }
+            if (errorState instanceof Boolean && (Boolean) errorState) {
+                return "错误";
+            }
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            // 方法不存在或调用失败，忽略
+        }
+
+        // 2. 检查是否有未连接的输出端口
+        boolean hasOutputPorts = !selectedNode.getOutputPorts().isEmpty();
+        boolean allOutputsConnected = true;
+        if (hasOutputPorts) {
+            for (IPort port : selectedNode.getOutputPorts()) {
+                if (!port.isConnected()) {
+                    allOutputsConnected = false;
+                    break;
+                }
+            }
+            if (!allOutputsConnected) {
+                return "警告"; // 有输出端口但未连接
+            }
+        }
+
+        // 3. 检查是否有未连接的输入端口，且该输入端口没有默认值
+        boolean hasInputPorts = !selectedNode.getInputPorts().isEmpty();
+        boolean allInputsReady = true;
+        if (hasInputPorts) {
+            for (IPort port : selectedNode.getInputPorts()) {
+                if (!port.isConnected() && port.getValue() == null) { // 如果未连接且无默认值
+                    allInputsReady = false;
+                    break;
+                }
+            }
+            if (!allInputsReady) {
+                return "警告"; // 有未连接且无默认值的输入端口
+            }
+        }
+
+        // 4. 如果有自定义状态，例如 '计算中'
+        if (selectedNode instanceof BaseNode) {
+            Object nodeState = selectedNode.getNodeState();
+            if (nodeState instanceof Map<?, ?> stateMap && stateMap.containsKey("status")) {
+                Object status = stateMap.get("status");
+                if (status instanceof String) {
+                    if (status.equals("calculating")) return "计算中";
+                    if (status.equals("disabled")) return "禁用";
+                }
+            }
+        }
+
+        return "就绪"; // 默认状态
+    }
+
+    // 获取状态信息 (示例实现)
+    private String getNodeStatusMessage() {
+        String status = getNodeStatus();
+
+        return switch (status) {
+            case "错误" -> "节点执行过程中发生错误，无法生成有效输出。请检查输入参数和连接。";
+            case "警告" -> "节点有未连接的端口，或输入/输出存在潜在问题。";
+            case "计算中" -> "节点正在执行计算，请等待完成。";
+            case "禁用" -> "节点当前已被禁用，不会参与计算过程。";
+            case "就绪" -> "节点状态正常，准备就绪。";
+            default -> "未知节点状态。";
+        };
+    }
+
+    // 获取状态对应的颜色
+    private ImVec4 getStatusColor(String status) {
+        return switch (status) {
+            case "错误" -> new ImVec4(1.0f, 0.3f, 0.3f, 1.0f); // 红色
+            case "警告" -> new ImVec4(1.0f, 0.9f, 0.3f, 1.0f); // 黄色
+            case "计算中" -> new ImVec4(0.3f, 0.7f, 1.0f, 1.0f); // 蓝色
+            case "禁用" -> new ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 灰色
+            case "就绪" -> new ImVec4(0.3f, 0.9f, 0.3f, 1.0f); // 绿色
+            default -> new ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 白色
+        };
+    }
+
+    private void renderNodeProperties() {
+        if (selectedNode == null) return;
+
+        List<PropertyDescriptor> properties = getPropertiesForNode(selectedNode.getClass());
+        if (properties.isEmpty()) {
+            ImGui.textDisabled("无可用属性");
+            return;
+        }
+
+        // 将属性按类别分组
+        Map<String, List<PropertyDescriptor>> groupedProperties = properties.stream()
+                .collect(Collectors.groupingBy(prop -> prop.category));
+
+        // 处理无分类属性（空字符串分类）
+        if (groupedProperties.containsKey("")) {
+            List<PropertyDescriptor> uncategorizedProps = groupedProperties.remove("");
+            renderPropertyGroup(uncategorizedProps, "常规属性"); // 无分类属性命名为"常规属性"
+        }
+
+        // 按类别名称排序 (如果需要自定义排序，可以添加一个映射或在 NodeProperty 中添加 categoryOrder)
+        List<String> categories = new ArrayList<>(groupedProperties.keySet());
+        categories.sort(Comparator.naturalOrder()); // 字母排序
+
+        // 渲染每个分组
+        for (String category : categories) {
+            // 只有分类名非空时才使用折叠标题
+            // 使用 formatSingleWord 来格式化显示分类名
+            String formattedCategory = formatSingleWord(category);
+            if (!formattedCategory.isEmpty() && ImGui.collapsingHeader(formattedCategory, ImGuiTreeNodeFlags.DefaultOpen)) { // 默认打开
+                renderPropertyGroup(groupedProperties.get(category), category);
+            }
+        }
+    }
+
+    // 添加新方法渲染属性组
+    private void renderPropertyGroup(List<PropertyDescriptor> props, String categoryInternalName) {
+        if (ImGui.beginTable("propertiesTable_" + categoryInternalName, 2,
+                ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersOuter)) { // 修正标志名称
+            ImGui.tableSetupColumn("属性名", ImGuiTableColumnFlags.WidthFixed, ImGui.getContentRegionAvailX() * 0.4f); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableSetupColumn("值", ImGuiTableColumnFlags.WidthStretch); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableHeadersRow(); // 显示表头
+
+            // 按order和displayName排序
+            props.sort(Comparator.comparingInt((PropertyDescriptor p) -> p.order).thenComparing(p -> p.displayName));
+
+            for (PropertyDescriptor prop : props) {
+                // 检查属性是否因错误而禁用
+                boolean isDisabled = errorCounts.getOrDefault(prop.name, 0) >= NodeConstants.ERROR_THRESHOLD; // 使用常量
+
+                ImGui.tableNextRow();
+                ImGui.tableSetColumnIndex(0);
+                ImGui.text(prop.displayName);
+                // 增强工具提示 - 显示属性描述
+                if (ImGui.isItemHovered()) {
+                    StringBuilder tooltip = new StringBuilder();
+                    if (prop.description != null && !prop.description.isEmpty()) {
+                        tooltip.append(prop.description).append("\n");
+                    }
+                    tooltip.append("内部名: ").append(prop.name);
+                    if (prop.setter == null) {
+                        tooltip.append(" (只读)");
+                    }
+                    if (isDisabled) {
+                        tooltip.append("\n此属性因错误已被禁用，请重启或重新选择节点以重置。");
+                    }
+                    ImGui.setTooltip(tooltip.toString());
+                }
+
+                ImGui.tableSetColumnIndex(1);
+                // 为每个属性的控件提供基于节点ID和属性名的唯一ID
+                String uniqueId = selectedNode.getId().toString() + "_" + prop.name;
+                ImGui.pushID(uniqueId);
+                // 传入 isDisabled 状态
+                prop.renderer.render(this, selectedNode, prop, isDisabled);
+                ImGui.popID();
+            }
+            ImGui.endTable();
+        }
+    }
+
+    // 渲染操作按钮
+    private void renderActionButtons() {
+        ImGui.separator();
+
+        // 重置按钮
+        if (ImGui.button("重置属性")) {
+            // 清理临时值和编辑状态
+            clearCurrentNodeTempValues();
+            // 如果节点有重置功能，调用它
+            if (selectedNode instanceof BaseNode) {
+                try {
+                    Method resetMethod = selectedNode.getClass().getMethod("resetProperties");
+                    resetMethod.invoke(selectedNode);
+                    NodeCraft.LOGGER.info("已重置节点 {} 的属性。", selectedNode.getDisplayName());
+                } catch (NoSuchMethodException e) {
+                    NodeCraft.LOGGER.debug("节点 {} 没有 resetProperties 方法。", selectedNode.getDisplayName());
+                } catch (Exception e) {
+                    NodeCraft.LOGGER.error("重置节点 {} 属性时出错: {}", selectedNode.getDisplayName(), e.getMessage());
+                }
+            }
+        }
+
+        ImGui.sameLine();
+
+        // 删除节点按钮
+        ImGui.pushStyleColor(ImGuiCol.Button, 0.8f, 0.2f, 0.2f, 0.6f);
+        ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.9f, 0.3f, 0.3f, 0.8f);
+        ImGui.pushStyleColor(ImGuiCol.ButtonActive, 1.0f, 0.4f, 0.4f, 1.0f);
+        if (ImGui.button("删除节点")) {
+            NodeGraph graph = getNodeGraph();
+            if (graph != null) {
+                boolean success = graph.removeNode(selectedNode.getId());
+                if (success) {
+                    NodeCraft.LOGGER.info("已从图上删除节点: {}", selectedNode.getDisplayName());
+                    setSelectedNode(null); // 清除选择
+                } else {
+                    NodeCraft.LOGGER.warn("删除节点 {} 失败。", selectedNode.getDisplayName());
+                }
+            }
+        }
+        ImGui.popStyleColor(3);
+    }
+
+    /**
+     * 清理当前选中节点的临时值
+     */
+    private void clearCurrentNodeTempValues() {
+        if (selectedNode == null) return;
+
+        // 只清理当前选中节点的临时值
+        String nodeIdPrefix = selectedNode.getId().toString() + "_";
+        tempValues.entrySet().removeIf(entry -> entry.getKey().startsWith(nodeIdPrefix));
+
+        // 清理编辑状态
+        propertiesBeingEdited.entrySet().removeIf(entry -> entry.getKey().startsWith(nodeIdPrefix));
+
+        errorCounts.clear(); // 清理当前节点的错误计数
+    }
+
+    /**
+     * 清理所有临时值
+     */
+    private void clearAllTempValues() {
+        tempValues.clear();
+        propertiesBeingEdited.clear();
+        errorCounts.clear(); // 清空所有错误计数
+    }
+
+    /**
+     * 清理当前选中节点的所有数据
+     * 包括临时值、编辑锁等
+     */
+    private void clearSelectedNodeData() {
+        clearCurrentNodeTempValues();
+        // propertiesBeingEdited 在 clearCurrentNodeTempValues 内部已经处理了
+        // errorCounts 也在 clearCurrentNodeTempValues 内部处理了
+    }
+
+    public void setSelectedNode(INode node) {
+        // 简化选择逻辑，直接设置选中节点
+        if (this.selectedNode != node) { // 仅当选择的节点实际发生变化时才操作
+            // 清理旧节点的数据
+            clearSelectedNodeData();
+            this.selectedNode = node;
+            if (node != null) {
+                NodeCraft.LOGGER.debug("属性面板更新选中节点: {}", node.getId());
+            } else {
+                NodeCraft.LOGGER.debug("属性面板已清除选中节点");
+            }
+        }
+    }
+
+    private NodeGraph getNodeGraph() {
+        if (graphProvider != null) {
+            try {
+                return graphProvider.getCurrentGraph();
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("NodeGraphProvider 获取图时发生错误", e);
+                return null;
+            }
+        }
+        NodeCraft.LOGGER.warn("NodeGraphProvider 未设置, 无法获取节点图。PropertyPanelComponent 可能无法正常工作。");
+        return null;
+    }
+
+    // 函数式接口：用于从外部提供 NodeGraph 实例
+    @FunctionalInterface
+    public interface NodeGraphProvider {
+        NodeGraph getCurrentGraph();
+    }
+
+    // 创建getter访问器 - 使用MethodHandle改进性能
+    private static MethodAccessor createFieldGetter(Field field) {
+        try {
+            return new FieldHandleGetter(field);
+        } catch (Throwable e) { // 捕获 Throwable
+            NodeCraft.LOGGER.warn("创建MethodHandle getter for field {} 失败, 回退到传统反射: {}", field.getName(), e.getMessage());
+            return new FieldGetter(field);
+        }
+    }
+
+    // 创建setter访问器 - 使用MethodHandle改进性能
+    private static MethodAccessor createFieldSetter(Field field) {
+        if (false) return null;
+        try {
+            return new FieldHandleSetter(field);
+        } catch (Throwable e) { // 捕获 Throwable
+            NodeCraft.LOGGER.warn("创建MethodHandle setter for field {} 失败, 回退到传统反射: {}", field.getName(), e.getMessage());
+            return new FieldSetter(field);
+        }
+    }
+
+    // 使用MethodHandle实现的Method访问器
+    private static class MethodHandleAccessorImpl implements MethodAccessor { // 重命名为 Impl 以避免与 MethodWrapper 混淆
+        private final MethodHandle handle;
+        private final Class<?> returnType;
+        private final Class<?>[] parameterTypes;
+
+        public MethodHandleAccessorImpl(Method method) {
+            try {
+                // 获取方法的MethodHandle
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                // setAccessible(true) 是为了访问非公共方法，MethodHandle 默认不检查
+                method.setAccessible(true); // 确保 MethodHandle 也能访问私有/保护方法
+                handle = lookup.unreflect(method);
+
+                // 保存返回类型和参数类型
+                returnType = method.getReturnType();
+                parameterTypes = method.getParameterTypes();
+            } catch (IllegalAccessException e) {
+                // 如果 MethodHandle 无法创建 (例如安全管理器限制)，抛出 RuntimeException
+                throw new RuntimeException("Failed to create MethodHandle for " + method, e);
+            }
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws Throwable { // 统一为 Throwable
+            if (args == null || args.length == 0) {
+                return handle.invoke(obj);
+            } else if (args.length == 1) {
+                // 对于单个参数的情况，直接传递参数值，避免数组包装问题
+                return handle.invoke(obj, args[0]);
+            } else {
+                // 对于多个参数的情况，使用 invokeWithArguments
+                Object[] invokeArgs = new Object[args.length + 1];
+                invokeArgs[0] = obj;
+                System.arraycopy(args, 0, invokeArgs, 1, args.length);
+                return handle.invokeWithArguments(invokeArgs);
+            }
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return returnType;
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return parameterTypes;
+        }
+    }
+
+    // 使用MethodHandle实现的Field Getter访问器
+    private static class FieldHandleGetter implements MethodAccessor {
+        private final MethodHandle getter;
+        private final Class<?> fieldType;
+
+        public FieldHandleGetter(Field field) {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                field.setAccessible(true); // 确保 MethodHandle 也能访问私有字段
+                getter = lookup.unreflectGetter(field);
+                fieldType = field.getType();
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Failed to create MethodHandle getter for field " + field, e);
+            }
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws Throwable {
+            return getter.invoke(obj);
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return fieldType;
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return new Class<?>[0];
+        }
+    }
+
+    // 使用MethodHandle实现的Field Setter访问器
+    private static class FieldHandleSetter implements MethodAccessor {
+        private final MethodHandle setter;
+        private final Class<?> fieldType;
+
+        public FieldHandleSetter(Field field) {
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                field.setAccessible(true); // 确保 MethodHandle 也能访问私有字段
+                setter = lookup.unreflectSetter(field);
+                fieldType = field.getType();
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException("Failed to create MethodHandle setter for field " + field, e);
+            }
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws Throwable {
+            if (args == null || args.length == 0) {
+                throw new IllegalArgumentException("Setter requires a value argument");
+            }
+            setter.invoke(obj, args[0]);
+            return null; // Setter方法没有返回值
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return void.class;
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return new Class<?>[] { fieldType };
+        }
+    }
+
+    // 方法访问器包装器 (使用MethodHandle，作为首选)
+    private static class MethodWrapper implements MethodAccessor {
+        private final MethodHandleAccessorImpl methodHandleAccessor;
+
+        public MethodWrapper(Method method) {
+            methodHandleAccessor = new MethodHandleAccessorImpl(method);
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws Throwable {
+            return methodHandleAccessor.invoke(obj, args);
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return methodHandleAccessor.getReturnType();
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return methodHandleAccessor.getParameterTypes();
+        }
+    }
+
+    // 字段Getter访问器 (传统反射实现，作为后备)
+    private static class FieldGetter implements MethodAccessor {
+        private final Field field;
+
+        public FieldGetter(Field field) {
+            this.field = field;
+            field.setAccessible(true);
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws IllegalAccessException {
+            return field.get(obj);
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return field.getType();
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return new Class<?>[0];
+        }
+    }
+
+    // 字段Setter访问器 (传统反射实现，作为后备)
+    private static class FieldSetter implements MethodAccessor {
+        private final Field field;
+
+        public FieldSetter(Field field) {
+            this.field = field;
+            field.setAccessible(true);
+        }
+
+        @Override
+        public Object invoke(Object obj, Object... args) throws IllegalAccessException {
+            if (args != null && args.length > 0) {
+                field.set(obj, args[0]);
+            }
+            return null;
+        }
+
+        @Override
+        public Class<?> getReturnType() {
+            return void.class;
+        }
+
+        @Override
+        public Class<?>[] getParameterTypes() {
+            return new Class<?>[] { field.getType() };
+        }
+    }
+
+    // 新增：渲染输入端口信息
+    private void renderInputPorts() {
+        List<IPort> inputPorts = selectedNode.getInputPorts();
+        if (inputPorts.isEmpty()) {
+            ImGui.textDisabled("无输入端口");
+            return;
+        }
+
+        // 以表格形式显示端口信息
+        if (ImGui.beginTable("inputPortsTable", 2,
+                ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersOuter)) {
+            ImGui.tableSetupColumn("端口", ImGuiTableColumnFlags.WidthFixed, ImGui.getContentRegionAvailX() * 0.4f); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableSetupColumn("值/连接", ImGuiTableColumnFlags.WidthStretch); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableHeadersRow();
+
+            for (IPort port : inputPorts) {
+                ImGui.tableNextRow();
+                ImGui.tableSetColumnIndex(0);
+
+                // 端口名称与数据类型
+                ImGui.text(port.getDisplayName());
+                if (ImGui.isItemHovered()) {
+                    StringBuilder tooltip = new StringBuilder();
+                    tooltip.append("ID: ").append(port.getId()).append("\n");
+                    tooltip.append("类型: ").append(port.getDataType().name()).append("\n");
+                    if (port.getDescription() != null && !port.getDescription().isEmpty()) {
+                        tooltip.append(port.getDescription());
+                    }
+                    ImGui.setTooltip(tooltip.toString());
+                }
+
+                ImGui.tableSetColumnIndex(1);
+
+                // 检查端口连接状态
+                if (port.isConnected()) {
+                    // 端口已连接，显示连接信息
+                    NodeGraph graph = getNodeGraph();
+                    if (graph != null) {
+                        UUID sourceNodeId = graph.getConnectedOutputNodeId(selectedNode.getId(), port.getId());
+                        String sourcePortId = graph.getConnectedOutputPortId(selectedNode.getId(), port.getId());
+
+                        if (sourceNodeId != null) {
+                            INode sourceNode = graph.getNode(sourceNodeId);
+                            if (sourceNode != null) {
+                                ImGui.text("连接自: " + sourceNode.getDisplayName());
+
+                                // 查找源端口并显示其数据
+                                for (IPort sourcePort : sourceNode.getOutputPorts()) {
+                                    if (sourcePort.getId().equals(sourcePortId)) {
+                                        Object value = sourcePort.getValue();
+                                        renderPortData(value, "输入数据"); // 递归调用，传递标签
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // 端口未连接，显示当前值
+                    Object value = port.getValue();
+                    renderPortData(value, "默认值"); // 递归调用，传递标签
+                }
+            }
+            ImGui.endTable();
+        }
+    }
+
+    // 新增：渲染输出端口信息
+    private void renderOutputPorts() {
+        List<IPort> outputPorts = selectedNode.getOutputPorts();
+        if (outputPorts.isEmpty()) {
+            ImGui.textDisabled("无输出端口");
+            return;
+        }
+
+        // 以表格形式显示端口信息
+        if (ImGui.beginTable("outputPortsTable", 2,
+                ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersOuter)) {
+            ImGui.tableSetupColumn("端口", ImGuiTableColumnFlags.WidthFixed, ImGui.getContentRegionAvailX() * 0.4f); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableSetupColumn("值/连接", ImGuiTableColumnFlags.WidthStretch); // 修正为 ImGuiTableColumnFlags
+            ImGui.tableHeadersRow();
+
+            for (IPort port : outputPorts) {
+                ImGui.tableNextRow();
+                ImGui.tableSetColumnIndex(0);
+
+                // 端口名称与数据类型
+                ImGui.text(port.getDisplayName());
+                if (ImGui.isItemHovered()) {
+                    StringBuilder tooltip = new StringBuilder();
+                    tooltip.append("ID: ").append(port.getId()).append("\n");
+                    tooltip.append("类型: ").append(port.getDataType().name()).append("\n");
+                    if (port.getDescription() != null && !port.getDescription().isEmpty()) {
+                        tooltip.append(port.getDescription());
+                    }
+                    ImGui.setTooltip(tooltip.toString());
+                }
+
+                ImGui.tableSetColumnIndex(1);
+
+                // 获取当前值
+                Object value = selectedNode.getOutput(port.getId());
+                if (value != null) {
+                    renderPortData(value, "输出数据"); // 递归调用，传递标签
+                } else {
+                    value = port.getValue(); // 回退到端口的默认值
+                    renderPortData(value, "当前值"); // 递归调用，传递标签
+                }
+
+                // 如果连接到其他节点，显示连接信息
+                NodeGraph graph = getNodeGraph();
+                if (graph != null && port.isConnected()) {
+                    Map<UUID, String> connectedInputs = graph.getConnectedInputs(selectedNode.getId(), port.getId());
+                    if (!connectedInputs.isEmpty()) {
+                        ImGui.separator();
+                        ImGui.text("连接到:");
+                        for (Map.Entry<UUID, String> entry : connectedInputs.entrySet()) {
+                            INode targetNode = graph.getNode(entry.getKey());
+                            if (targetNode != null) {
+                                // 查找目标端口名称
+                                String targetPortName = entry.getValue();
+                                for (IPort targetPort : targetNode.getInputPorts()) {
+                                    if (targetPort.getId().equals(entry.getValue())) {
+                                        targetPortName = targetPort.getDisplayName();
+                                        break;
+                                    }
+                                }
+                                ImGui.text(" -> " + targetNode.getDisplayName() + "." + targetPortName);
+                            }
+                        }
+                    }
+                }
+            }
+            ImGui.endTable();
+        }
+    }
+
+    // 新增：根据数据类型渲染端口数据
+    private void renderPortData(Object value, String label) {
+        if (value == null) {
+            ImGui.textDisabled("(空)");
+            return;
+        }
+
+        // 使用一个通用的树节点来包裹，以便于折叠
+        // 确保每个树节点都有唯一ID，以防多处调用导致ID冲突
+        String treeNodeId = "portData_" + label + "_" + value.hashCode(); // 简单hash，可能冲突，但对于大多数情况够用
+
+        if (ImGui.treeNodeEx(treeNodeId, ImGuiTreeNodeFlags.SpanAvailWidth)) { // 展开时占满宽度
+            try {
+                // 根据值类型渲染不同的显示方式
+                String className = value.getClass().getSimpleName();
+
+                // 优先处理通用类型
+                if (value instanceof String || value instanceof Number || value instanceof Boolean) {
+                    ImGui.text(label + ": " + value);
+                } else if (value instanceof List<?> list) {
+                    renderList(list, label);
+                } else if (value instanceof Map<?, ?> map) {
+                    renderMap(map, label);
+                } else if (value instanceof Vec3 vec) {
+                    renderVec3(vec, label);
+                }
+                // 再处理特定领域对象，如果存在
+                else if (className.equals("BlockInfo")) { // 假设 BlockInfo 类存在
+                    renderBlockInfo(value, label);
+                } else if (className.equals("MinecraftBlock")) { // 假设 MinecraftBlock 类存在
+                    renderMinecraftBlock(value, label);
+                } else if (className.equals("ItemStack")) { // 假设 ItemStack 类存在
+                    renderItemStack(value, label);
+                } else if (className.equals("Region")) { // 假设 Region 类存在
+                    renderRegion(value, label);
+                } else if (className.equals("CompoundTag") || className.equals("CompoundNBT")) { // 假设 NBT 类存在
+                    renderNBT(value, label);
+                } else {
+                    // 其他类型直接显示 toString()
+                    ImGui.text(label + ": " + value);
+                }
+            } catch (Exception e) {
+                ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "渲染端口数据失败: " + e.getMessage());
+            } finally {
+                ImGui.treePop();
+            }
+        }
+    }
+
+    // 渲染BlockInfo数据
+    private void renderBlockInfo(Object blockInfo, String label) {
+        // 由于已经在 renderPortData 中创建了 treeNode，这里不再嵌套
+        try {
+            // 使用反射获取字段值
+            // 确保这些方法存在于 BlockInfo 类中
+            Method getIdMethod = blockInfo.getClass().getMethod("getId");
+            Method getNameMethod = blockInfo.getClass().getMethod("getName");
+            Method getPositionMethod = blockInfo.getClass().getMethod("getPosition");
+
+            Object id = getIdMethod.invoke(blockInfo);
+            Object name = getNameMethod.invoke(blockInfo);
+            Object position = getPositionMethod.invoke(blockInfo);
+
+            ImGui.text("方块ID: " + id);
+            ImGui.text("名称: " + name);
+            ImGui.text("位置: " + position);
+
+            // 提供预览按钮
+            if (ImGui.button("在世界中高亮此方块")) {
+                if (position instanceof Vec3 pos) {
+                    highlightPoint(pos);
+                }
+            }
+        } catch (NoSuchMethodException e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "BlockInfo 缺少必要方法 (getId/getName/getPosition)。");
+        } catch (Exception e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取方块信息: " + e.getMessage());
+        }
+    }
+
+    // 渲染MinecraftBlock数据
+    private void renderMinecraftBlock(Object block, String label) {
+        try {
+            // 使用反射获取字段值
+            // 确保这些方法存在于 MinecraftBlock 类中
+            Method getIdMethod = block.getClass().getMethod("getId");
+            Method getNameMethod = block.getClass().getMethod("getName");
+
+            Object id = getIdMethod.invoke(block);
+            Object name = getNameMethod.invoke(block);
+
+            ImGui.text("方块ID: " + id);
+            ImGui.text("名称: " + name);
+        } catch (NoSuchMethodException e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "MinecraftBlock 缺少必要方法 (getId/getName)。");
+        } catch (Exception e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取方块信息: " + e.getMessage());
+        }
+    }
+
+    // 渲染ItemStack数据
+    private void renderItemStack(Object itemStack, String label) {
+        try {
+            // 使用反射获取字段值
+            // 确保这些方法存在于 ItemStack 类中
+            Method getItemMethod = itemStack.getClass().getMethod("getItem");
+            Method getCountMethod = itemStack.getClass().getMethod("getCount");
+            Method getNameMethod = null;
+            try {
+                getNameMethod = itemStack.getClass().getMethod("getName"); // 尝试获取getName方法
+            } catch (NoSuchMethodException ignored) { 
+                // getName方法可能不存在，这是正常的
+            }
+
+            Object item = getItemMethod.invoke(itemStack);
+            Object count = getCountMethod.invoke(itemStack);
+            Object name = null;
+            if (getNameMethod != null) {
+                name = getNameMethod.invoke(itemStack);
+            }
+
+            ImGui.text("物品: " + (name != null ? name : item));
+            ImGui.text("数量: " + count);
+
+            // 提供复制功能
+            if (ImGui.button("复制物品命令")) {
+                String itemId = (item != null) ? item.toString() : "minecraft:air"; // 假设 item.toString() 提供物品ID
+                String command = "/give @p " + itemId + " " + count;
+                copyToClipboard(command);
+            }
+        } catch (NoSuchMethodException e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "ItemStack 缺少必要方法 (getItem/getCount)。");
+        } catch (Exception e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取物品信息: " + e.getMessage());
+        }
+    }
+
+    // 渲染Region数据
+    private void renderRegion(Object region, String label) {
+        try {
+            // 使用反射获取字段值
+            // 确保这些方法存在于 Region 类中
+            Method getMinMethod = region.getClass().getMethod("getMin");
+            Method getMaxMethod = region.getClass().getMethod("getMax");
+            Method getBlockCountMethod = region.getClass().getMethod("getBlockCount");
+
+            Object min = getMinMethod.invoke(region);
+            Object max = getMaxMethod.invoke(region);
+            Object blockCount = getBlockCountMethod.invoke(region);
+
+            if (min instanceof Vec3 minVec && max instanceof Vec3 maxVec) {
+                ImGui.text(String.format("最小角点: (%.1f, %.1f, %.1f)", minVec.getX(), minVec.getY(), minVec.getZ()));
+                ImGui.text(String.format("最大角点: (%.1f, %.1f, %.1f)", maxVec.getX(), maxVec.getY(), maxVec.getZ()));
+            } else {
+                ImGui.text("最小角点: " + min);
+                ImGui.text("最大角点: " + max);
+            }
+
+            ImGui.text("包含方块数: " + blockCount);
+
+            // 提供预览功能
+            if (ImGui.button("在世界中高亮此区域")) {
+                highlightRegion(region);
+            }
+        } catch (NoSuchMethodException e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Region 缺少必要方法 (getMin/getMax/getBlockCount)。");
+        } catch (Exception e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取区域信息: " + e.getMessage());
+        }
+    }
+
+    // 渲染NBT数据
+    private void renderNBT(Object nbt, String label) {
+        try {
+            // 使用简单toString来显示NBT
+            ImGui.textWrapped(nbt.toString());
+
+            // 提供复制功能
+            if (ImGui.button("复制NBT数据")) {
+                copyToClipboard(nbt.toString());
+            }
+        } catch (Exception e) {
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取NBT数据: " + e.getMessage());
+        }
+    }
+
+    // 增强List渲染，根据列表项类型使用专门的渲染逻辑
+    private void renderList(List<?> list, String label) {
+        int size = list.size();
+        if (ImGui.treeNode(label + ": List (" + size + " 项)")) {
+            // 只显示前10个元素，避免过多数据
+            int displayLimit = Math.min(size, 10);
+
+            if (!list.isEmpty()) {
+                for (int i = 0; i < displayLimit; i++) {
+                    Object item = list.get(i);
+                    ImGui.pushID(i); // 为每个列表项提供唯一ID
+                    if (item == null) {
+                        ImGui.text(String.format("[%d] null", i));
+                    } else {
+                        // 递归调用 renderPortData 来渲染列表项
+                        renderPortData(item, String.format("[%d]", i));
+                    }
+                    ImGui.popID();
+                }
+            }
+
+            // 如果列表很长，显示"查看更多"按钮
+            if (size > displayLimit) {
+                if (ImGui.button("查看所有 " + size + " 项...")) {
+                    // 创建一个弹窗显示完整列表
+                    ImGui.openPopup("完整列表: " + label); // 弹窗ID需要唯一
+                }
+            }
+
+            // 如果是坐标列表，提供预览按钮
+            if (!list.isEmpty() && list.getFirst() instanceof Vec3) {
+                if (ImGui.button("预览坐标点集合")) {
+                    highlightPoints(list);
+                }
+            }
+
+            // 处理完整列表的弹窗
+            if (ImGui.beginPopup("完整列表: " + label)) { // 匹配弹窗ID
+                ImGui.text("完整列表 (" + size + " 项)");
+                ImGui.separator();
+
+                // 在弹窗中实现带有滚动条的列表显示
+                float heightLimit = ImGui.getWindowHeight() * 0.6f; // 限制高度为窗口的60%
+                float childHeight = Math.min(heightLimit, size * (ImGui.getFontSize() + ImGui.getStyle().getItemSpacingY()) + ImGui.getStyle().getWindowPaddingY() * 2);
+
+                if (ImGui.beginChild("列表内容_" + label, ImGui.getContentRegionAvailX(), childHeight, false, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+                    for (int i = 0; i < size; i++) {
+                        Object item = list.get(i);
+                        ImGui.text(String.format("[%d] %s", i, item != null ? item.toString() : "null"));
+                    }
+                    ImGui.endChild();
+                }
+
+                ImGui.separator();
+                if (ImGui.button("关闭")) {
+                    ImGui.closeCurrentPopup();
+                }
+
+                ImGui.endPopup();
+            }
+        }
+    }
+
+    // 增强Map渲染
+    private void renderMap(Map<?, ?> map, String label) {
+        int size = map.size();
+        if (ImGui.treeNode(label + ": Map (" + size + " 项)")) {
+            if (ImGui.beginTable("mapTable_" + label, 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit)) {
+                ImGui.tableSetupColumn("键");
+                ImGui.tableSetupColumn("值");
+                ImGui.tableHeadersRow();
+
+                for (Map.Entry<?, ?> entry : map.entrySet()) {
+                    Object key = entry.getKey();
+                    Object value = entry.getValue();
+
+                    ImGui.tableNextRow();
+                    ImGui.tableSetColumnIndex(0);
+                    ImGui.text(key != null ? key.toString() : "null");
+
+                    ImGui.tableSetColumnIndex(1);
+                    if (value == null) {
+                        ImGui.textDisabled("null");
+                    } else {
+                        // 递归调用 renderPortData 来渲染 Map 的值
+                        renderPortData(value, ""); // 值不需要额外的标签
+                    }
+                }
+                ImGui.endTable();
+            }
+        }
+    }
+
+    // 渲染Vec3数据
+    private void renderVec3(Vec3 vec, String label) {
+        // 已经在 renderPortData 中创建了 treeNode，这里不再嵌套
+        ImGui.text(String.format("X: %.2f, Y: %.2f, Z: %.2f", vec.getX(), vec.getY(), vec.getZ()));
+
+        if (ImGui.button("复制到剪贴板")) {
+            String vecStr = String.format("%.2f %.2f %.2f", vec.getX(), vec.getY(), vec.getZ());
+            copyToClipboard(vecStr);
+        }
+
+        ImGui.sameLine();
+
+        if (ImGui.button("预览坐标点")) {
+            highlightPoint(vec);
+        }
+    }
+
+    // 复制文本到剪贴板
+    private void copyToClipboard(String text) {
+        try {
+            java.awt.Toolkit.getDefaultToolkit()
+                    .getSystemClipboard()
+                    .setContents(new java.awt.datatransfer.StringSelection(text), null);
+            NodeCraft.LOGGER.info("已复制到剪贴板: {}", text);
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("复制到剪贴板失败", e);
+        }
+    }
+
+    // 高亮单个坐标点 (占位符)
+    private void highlightPoint(Vec3 point) {
+        if (selectedNode == null) return;
+        NodeCraft.LOGGER.info("预览坐标点: {}", point);
+        // TODO: 调用实际的预览系统
+    }
+
+    // 高亮坐标点集合 (占位符)
+    private void highlightPoints(List<?> points) {
+        if (selectedNode == null || points.isEmpty() || !(points.getFirst() instanceof Vec3)) return;
+        NodeCraft.LOGGER.info("预览{}个坐标点", points.size());
+        // TODO: 调用实际的预览系统
+    }
+
+    // 高亮区域 (占位符)
+    private void highlightRegion(Object region) {
+        if (selectedNode == null) return;
+        NodeCraft.LOGGER.info("预览区域: {}", region);
+        // TODO: 调用实际的预览系统
+    }
+
+    // 新增：渲染调试工具
+    private void renderDebugTools() {
+        ImGui.text("节点调试工具");
+        ImGui.separator();
+
+        // 单独预览按钮
+        if (ImGui.button("单独预览此节点", -1, 0)) {
+            previewCurrentNode();
+            ImGui.openPopup("预览操作");
+        }
+
+        // 清除预览按钮
+        if (ImGui.button("清除此节点预览", -1, 0)) {
+            clearNodePreview();
+        }
+
+        // 执行计算按钮
+        if (ImGui.button("重新计算此节点", -1, 0)) {
+            recalculateNode();
+        }
+
+        // 记录到控制台按钮
+        if (ImGui.button("记录节点信息到控制台", -1, 0)) {
+            logNodeInfo();
+        }
+
+        // 性能统计
+        ImGui.separator();
+        ImGui.text("性能统计");
+        renderPerformanceStats();
+
+        // 弹出窗口：预览操作
+        // 使用 Flags.NoMove 防止被拖动
+        if (ImGui.beginPopup("预览操作", ImGuiWindowFlags.NoMove)) {
+            ImGui.text("预览选项");
+            ImGui.separator();
+
+            if (ImGui.menuItem("高亮显示")) {
+                previewNodeWithMode(PreviewMode.HIGHLIGHT);
+            }
+
+            if (ImGui.menuItem("线框模式")) {
+                previewNodeWithMode(PreviewMode.WIREFRAME);
+            }
+
+            if (ImGui.menuItem("实体模式")) {
+                previewNodeWithMode(PreviewMode.SOLID);
+            }
+
+            ImGui.endPopup();
+        }
+    }
+
+    // 实现单独预览当前节点功能
+    private void previewCurrentNode() {
+        if (selectedNode == null) return;
+
+        // 默认使用高亮模式预览
+        previewNodeWithMode(PreviewMode.HIGHLIGHT);
+    }
+
+    // 使用指定模式预览节点
+    private void previewNodeWithMode(PreviewMode mode) {
+        if (selectedNode == null) return;
+
+        NodeCraft.LOGGER.info("预览节点: {}，模式: {}", selectedNode.getId(), mode);
+        // TODO: 在预览系统实现后，替换为实际预览逻辑
+    }
+
+    // 清除节点预览
+    private void clearNodePreview() {
+        if (selectedNode == null) return;
+
+        NodeCraft.LOGGER.info("清除节点预览: {}", selectedNode.getId());
+        // TODO: 在预览系统实现后，替换为实际预览逻辑
+    }
+
+    // 重新计算节点
+    private void recalculateNode() {
+        if (selectedNode == null) return;
+
+        try {
+            NodeGraph graph = getNodeGraph();
+            if (graph != null) {
+                NodeCraft.LOGGER.info("开始重新计算节点: {}", selectedNode.getDisplayName());
+                long startTime = System.nanoTime();
+
+                // 执行计算
+                // 确保 selectedNode.compute 方法存在并能够处理输入
+                // compute 方法可能依赖于 ExecutionContext 或其他参数
+                // 这里假设 compute(Map<String, Object> inputs) 存在
+                Map<String, Object> inputs = new HashMap<>();
+                // 收集所有输入端口的当前值
+                for (IPort port : selectedNode.getInputPorts()) {
+                    inputs.put(port.getId(), port.getValue());
+                }
+
+                // 执行计算
+                // 如果节点没有实现 compute 方法，这里会抛出异常
+                Map<String, Object> outputs = selectedNode.compute(inputs); // 假设 compute 返回 Map<String, Object>
+
+                long endTime = System.nanoTime();
+                double executionTime = (endTime - startTime) / 1_000_000.0; // 转换为毫秒
+
+                updatePerformanceStats(executionTime);
+
+                NodeCraft.LOGGER.info("节点重新计算完成: {}, 用时: {}ms", selectedNode.getDisplayName(), String.format("%.2f", executionTime));
+
+                // 如果节点是BaseNode，将其标记为脏以便触发下游更新
+                if (selectedNode instanceof BaseNode) {
+                    ((BaseNode) selectedNode).markDirty();
+                }
+            }
+        } catch (NoSuchMethodError e) { // 捕获方法不存在的错误
+            NodeCraft.LOGGER.error("节点 {} 没有实现 compute(Map<String, Object>) 方法或其签名不匹配。", selectedNode.getDisplayName());
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("节点重新计算失败: {}", e.getMessage(), e);
+        }
+    }
+
+    // 记录节点详细信息到日志
+    private void logNodeInfo() {
+        if (selectedNode == null) return;
+
+        StringBuilder info = new StringBuilder();
+        info.append("节点详细信息:\n");
+        info.append("==============================================\n");
+        info.append("节点ID: ").append(selectedNode.getId()).append("\n");
+        info.append("类型: ").append(selectedNode.getTypeId()).append("\n");
+        info.append("显示名称: ").append(selectedNode.getDisplayName()).append("\n");
+        info.append("描述: ").append(selectedNode.getDescription()).append("\n");
+        // selectedNode 并没有 getPositionX/Y 方法，可能需要从 nodePositions 中获取
+        // if (selectedNode instanceof ImGuiNodeEditor.NodePosition) { // 错误，selectedNode 不是 NodePosition
+        //     info.append("位置: (").append(selectedNode.getPositionX()).append(", ")
+        //         .append(selectedNode.getPositionY()).append(")\n");
+        // } else {
+        // 从编辑器获取位置信息
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        NodePosition pos = editor.getNodePosition(selectedNode.getId());
+        if (pos != null) {
+            info.append("位置: (").append(String.format("%.1f", pos.x)).append(", ")
+                    .append(String.format("%.1f", pos.y)).append(")\n");
+        } else {
+            info.append("位置: 未知\n");
+        }
+        // }
+
+        info.append("\n输入端口:\n");
+        info.append("----------------------------------------------\n");
+        for (IPort port : selectedNode.getInputPorts()) {
+            info.append(" - ").append(port.getDisplayName())
+                    .append(" (").append(port.getDataType().name()).append("): ")
+                    .append(port.isConnected() ? "已连接" : "未连接").append("\n");
+
+            // 添加端口值信息
+            Object value = port.getValue();
+            if (value != null) {
+                info.append("   值: ").append(formatValueForLog(value)).append("\n");
+            }
+        }
+
+        info.append("\n输出端口:\n");
+        info.append("----------------------------------------------\n");
+        for (IPort port : selectedNode.getOutputPorts()) {
+            info.append(" - ").append(port.getDisplayName())
+                    .append(" (").append(port.getDataType().name()).append("): ")
+                    .append(port.isConnected() ? "已连接" : "未连接").append("\n");
+
+            // 添加端口值信息
+            Object value = selectedNode.getOutput(port.getId());
+            if (value != null) {
+                info.append("   值: ").append(formatValueForLog(value)).append("\n");
+            }
+        }
+
+        info.append("==============================================");
+
+        NodeCraft.LOGGER.info(info.toString());
+    }
+
+    // 格式化值用于日志输出
+    private String formatValueForLog(Object value) {
+        if (value == null) return "null";
+
+        if (value instanceof List<?> list) {
+            return "List (" + list.size() + " 项)";
+        } else if (value instanceof Map<?, ?> map) {
+            return "Map (" + map.size() + " 项)";
+        } else if (value.getClass().getSimpleName().contains("NBT") ||
+                value.getClass().getSimpleName().equals("CompoundTag")) {
+            return "NBT数据";
+        } else if (value.getClass().getSimpleName().equals("Region")) {
+            return "区域";
+        } else if (value instanceof Vec3 vec) {
+            return String.format("Vec3(%.1f, %.1f, %.1f)", vec.getX(), vec.getY(), vec.getZ());
+        } else {
+            return value.toString();
+        }
+    }
+
+    // 记录节点性能数据的字段
+    private double lastExecutionTime = 0;
+    private double averageExecutionTime = 0;
+    private int executionCount = 0;
+
+    // 更新性能统计
+    private void updatePerformanceStats(double executionTime) {
+        lastExecutionTime = executionTime;
+        executionCount++;
+
+        // 计算移动平均值
+        averageExecutionTime = ((averageExecutionTime * (executionCount - 1)) + executionTime) / executionCount;
+    }
+
+    // 渲染性能统计
+    private void renderPerformanceStats() {
+        ImGui.text("最近执行时间: " + (lastExecutionTime > 0 ? String.format("%.2f ms", lastExecutionTime) : "N/A"));
+        ImGui.text("平均执行时间: " + (executionCount > 0 ? String.format("%.2f ms", averageExecutionTime) : "N/A"));
+        ImGui.text("执行次数: " + (executionCount > 0 ? executionCount : "N/A"));
+    }
+
+    // 预览模式枚举
+    private enum PreviewMode {
+        HIGHLIGHT,  // 高亮显示
+        WIREFRAME,  // 线框模式
+        SOLID       // 实体模式
+    }
+
+    // 添加这些方法来管理属性编辑状态
+
+    /**
+     * 标记属性为正在编辑状态
+     * @param node 节点
+     * @param propName 属性名
+     */
+    private void markPropertyBeingEdited(INode node, String propName) {
+        String key = getTempValueKey(node, propName);
+        propertiesBeingEdited.put(key, System.currentTimeMillis());
+        NodeCraft.LOGGER.trace("属性 {} 标记为正在编辑。", key);
+    }
+
+    /**
+     * 标记属性为编辑完成状态
+     * @param node 节点
+     * @param propName 属性名
+     */
+    private void markPropertyEditingFinished(INode node, String propName) {
+        String key = getTempValueKey(node, propName);
+        propertiesBeingEdited.remove(key);
+        NodeCraft.LOGGER.trace("属性 {} 标记为编辑完成。", key);
+    }
+
+    /**
+     * 检查属性是否正在被编辑 (或编辑锁未过期)
+     * @param node 节点
+     * @param propName 属性名
+     * @return 是否正在被编辑
+     */
+    private boolean isPropertyBeingEdited(INode node, String propName) {
+        String key = getTempValueKey(node, propName);
+        Long timestamp = propertiesBeingEdited.get(key);
+        if (timestamp == null) {
+            return false;
+        }
+        // 检查是否过期
+        if (System.currentTimeMillis() - timestamp > EDIT_LOCK_TIMEOUT) {
+            propertiesBeingEdited.remove(key); // 移除过期锁
+            NodeCraft.LOGGER.debug("属性 {} 的编辑锁已过期并移除。", key);
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 检查和清理过期的编辑锁
+     * 定期调用，移除所有超时的编辑锁
+     */
+    private void checkAndCleanExpiredEditLocks() {
+        long currentTime = System.currentTimeMillis();
+        // 使用迭代器安全地移除 Map 中的元素
+        propertiesBeingEdited.entrySet().removeIf(entry -> {
+            boolean expired = (currentTime - entry.getValue()) > EDIT_LOCK_TIMEOUT;
+            if (expired) {
+                NodeCraft.LOGGER.debug("清理过期编辑锁: {}", entry.getKey());
+            }
+            return expired;
+        });
+    }
+
+    // 修改为使用节点ID和属性名作为键
+    private String getTempValueKey(INode node, String propName) {
+        return node.getId().toString() + "_" + propName;
+    }
+
+    private List<PropertyDescriptor> getPropertiesForNode(Class<?> nodeClass) {
+        // 从缓存获取，如果不存在则计算并存入
+        return propertyCache.computeIfAbsent(nodeClass, clazz -> {
+            List<PropertyDescriptor> descriptors = new ArrayList<>();
+            Map<String, Method> getters = new HashMap<>();
+            Map<String, Method> setters = new HashMap<>();
+
+            // 1. 处理标记有@NodeProperty注解的字段
+            processAnnotatedFields(clazz, descriptors);
+
+            // 2. 处理标记有@NodeProperty注解的方法
+            processAnnotatedMethods(clazz, descriptors);
+
+            // 3. 回退到JavaBean命名约定的方法查找
+            // 遍历当前类和所有父类的公共方法
+            Class<?> currentClass = clazz;
+            while (currentClass != null && !currentClass.equals(Object.class)) {
+                for (Method method : currentClass.getMethods()) {
+                    // 过滤掉 Object 类的方法
+                    if (method.getDeclaringClass().equals(Object.class)) {
+                        continue;
+                    }
+
+                    String methodName = method.getName();
+                    if (method.getParameterCount() == 0) { // Potential getter
+                        if (methodName.startsWith(GET_PREFIX) && methodName.length() > GET_PREFIX.length()) {
+                            getters.put(extractPropertyName(methodName, GET_PREFIX), method);
+                        } else if (methodName.startsWith(IS_PREFIX) && methodName.length() > IS_PREFIX.length() &&
+                                (method.getReturnType().equals(boolean.class) || method.getReturnType().equals(Boolean.class))) {
+                            getters.put(extractPropertyName(methodName, IS_PREFIX), method);
+                        }
+                    } else if (method.getParameterCount() == 1 && methodName.startsWith(SET_PREFIX) &&
+                            method.getReturnType().equals(void.class)) { // Potential setter
+                        setters.put(extractPropertyName(methodName, SET_PREFIX), method);
+                    }
+                }
+                currentClass = currentClass.getSuperclass();
+            }
+
+            // 3.2 匹配 getter 和 setter，创建 PropertyDescriptor
+            for (Map.Entry<String, Method> getterEntry : getters.entrySet()) {
+                String propertyName = getterEntry.getKey();
+                Method getterMethod = getterEntry.getValue();
+
+                // 跳过已经由注解处理的属性，避免重复
+                if (descriptors.stream().anyMatch(d -> d.name.equals(propertyName))) {
+                    continue;
+                }
+
+                Method setterMethod = setters.get(propertyName); // 尝试找到对应的setter
+
+                // 验证setter参数类型是否与getter返回类型匹配 (setter可以为null，表示只读)
+                // 且 setter 必须是公共的且非静态
+                if (setterMethod != null &&
+                        (Modifier.isStatic(setterMethod.getModifiers()) ||
+                                !Modifier.isPublic(setterMethod.getModifiers()) ||
+                                !setterMethod.getParameterTypes()[0].isAssignableFrom(getterMethod.getReturnType()))) {
+                    NodeCraft.LOGGER.trace("属性 {} 的setter方法类型或修饰符不匹配，或不是公共非静态方法，将视为只读。", propertyName);
+                    setterMethod = null; // 将其视为只读
+                }
+
+                Class<?> type = getterMethod.getReturnType();
+                PropertyRenderer renderer = getRendererForType(type);
+
+                // 创建Method包装器
+                MethodAccessor getter = new MethodWrapper(getterMethod);
+                MethodAccessor setter = setterMethod != null ? new MethodWrapper(setterMethod) : null;
+
+                descriptors.add(new PropertyDescriptor(
+                        propertyName,
+                        formatPropertyName(propertyName), // 格式化属性名
+                        type,
+                        getter,
+                        setter,
+                        renderer,
+                        null, // 没有来自注解的描述
+                        "", // 默认分类为空字符串
+                        100 // 默认排序
+                ));
+            }
+
+            // 替换按照分类和order排序的代码段
+            descriptors.sort((p1, p2) -> {
+                // 先按分类排序 (空字符串分类排在最前面)
+                int catComp = p1.category.compareTo(p2.category);
+                if (catComp != 0) return catComp;
+
+                // 再按order排序
+                int orderComp = Integer.compare(p1.order, p2.order);
+                if (orderComp != 0) return orderComp;
+
+                // 最后按显示名称排序
+                return p1.displayName.compareTo(p2.displayName);
+            });
+
+            return descriptors;
+        });
+    }
+
+    // 处理带有@NodeProperty注解的字段
+    private void processAnnotatedFields(Class<?> clazz, List<PropertyDescriptor> descriptors) {
+        // 遍历当前类和所有父类的字段
+        Class<?> currentClass = clazz;
+        while (currentClass != null && !currentClass.equals(Object.class)) {
+            for (Field field : currentClass.getDeclaredFields()) { // 只获取声明的字段
+                NodeProperty annotation = field.getAnnotation(NodeProperty.class);
+                if (annotation != null) {
+                    String propertyName = field.getName();
+
+                    // 严格验证字段修饰符
+                    int modifiers = field.getModifiers();
+                    if (Modifier.isStatic(modifiers)) {
+                        NodeCraft.LOGGER.error("无效的@NodeProperty注解用法: 静态字段 '{}' 在类 '{}' 中。注解将被忽略。",
+                                propertyName, currentClass.getName());
+                        continue;
+                    }
+
+                    // final 字段必须标记为 readOnly
+                    if (Modifier.isFinal(modifiers) && !annotation.readOnly()) {
+                        NodeCraft.LOGGER.warn("@NodeProperty注解在final字段 '{}' 上未标记为readOnly，将强制视为只读。",
+                                propertyName);
+                    }
+
+                    String displayName = annotation.displayName().isEmpty()
+                            ? formatPropertyName(propertyName)
+                            : annotation.displayName();
+
+                    PropertyRenderer renderer = getRendererForType(field.getType());
+
+                    // 创建field getter和setter的Method包装
+                    MethodAccessor getter = createFieldGetter(field);
+                    MethodAccessor setter = (annotation.readOnly() || Modifier.isFinal(modifiers))
+                            ? null
+                            : createFieldSetter(field); // false 表示不是 readOnly
+
+                    descriptors.add(new PropertyDescriptor(
+                            propertyName,
+                            displayName,
+                            field.getType(),
+                            getter,
+                            setter,
+                            renderer,
+                            annotation.description(),
+                            annotation.category(),
+                            annotation.order()
+                    ));
+                }
+            }
+            currentClass = currentClass.getSuperclass(); // 继续检查父类
+        }
+    }
+
+    // 处理带有@NodeProperty注解的方法
+    private void processAnnotatedMethods(Class<?> clazz, List<PropertyDescriptor> descriptors) {
+        // 遍历当前类和所有父类的公共方法
+        Class<?> currentClass = clazz;
+        while (currentClass != null && !currentClass.equals(Object.class)) {
+            for (Method method : currentClass.getDeclaredMethods()) { // 只获取声明的方法
+                NodeProperty annotation = method.getAnnotation(NodeProperty.class);
+                if (annotation != null) {
+                    String methodName = method.getName();
+
+                    // 严格验证方法类型和修饰符
+                    int modifiers = method.getModifiers();
+                    if (Modifier.isStatic(modifiers)) {
+                        NodeCraft.LOGGER.error("无效的@NodeProperty注解用法: 静态方法 '{}' 在类 '{}' 中。注解将被忽略。",
+                                methodName, currentClass.getName());
+                        continue;
+                    }
+
+                    // 方法必须是getter（无参数且有返回值）
+                    if (method.getParameterCount() != 0) {
+                        NodeCraft.LOGGER.error("无效的@NodeProperty注解用法: 方法 '{}' 有参数。只有无参数的getter方法才能使用此注解。",
+                                methodName);
+                        continue;
+                    }
+
+                    if (method.getReturnType().equals(void.class)) {
+                        NodeCraft.LOGGER.error("无效的@NodeProperty注解用法: 方法 '{}' 返回void。只有有返回值的getter方法才能使用此注解。",
+                                methodName);
+                        continue;
+                    }
+
+                    String propertyName;
+                    // 如果方法名不是标准的getter命名，发出警告并使用方法名作为属性名
+                    if (methodName.startsWith(GET_PREFIX) && methodName.length() > GET_PREFIX.length()) {
+                        propertyName = extractPropertyName(methodName, GET_PREFIX);
+                    } else if (methodName.startsWith(IS_PREFIX) && methodName.length() > IS_PREFIX.length() &&
+                            (method.getReturnType().equals(boolean.class) || method.getReturnType().equals(Boolean.class))) {
+                        propertyName = extractPropertyName(methodName, IS_PREFIX);
+                    } else {
+                        propertyName = methodName; // 非标准getter命名
+                        NodeCraft.LOGGER.warn("方法 '{}' 使用了@NodeProperty注解但不遵循标准的getter命名规范。使用方法名作为属性名。", methodName);
+                    }
+
+                    String displayName = annotation.displayName().isEmpty()
+                            ? formatPropertyName(propertyName)
+                            : annotation.displayName();
+
+                    Class<?> type = method.getReturnType();
+                    PropertyRenderer renderer = getRendererForType(type);
+
+                    // 查找对应的setter
+                    Method setterMethod = null;
+                    if (!annotation.readOnly()) {
+                        String setterName = SET_PREFIX + propertyName.substring(0, 1).toUpperCase() + propertyName.substring(1);
+                        try {
+                            setterMethod = currentClass.getMethod(setterName, type); // 尝试在当前类中找
+
+                            // 验证setter的修饰符和参数类型
+                            if (Modifier.isStatic(setterMethod.getModifiers()) ||
+                                    !Modifier.isPublic(setterMethod.getModifiers()) ||
+                                    setterMethod.getParameterTypes().length != 1 ||
+                                    !setterMethod.getParameterTypes()[0].equals(type)) { // 严格匹配参数类型
+                                NodeCraft.LOGGER.warn("属性 '{}' 的setter方法 '{}' 类型或修饰符不匹配，将视为只读。",
+                                        propertyName, setterName);
+                                setterMethod = null;
+                            }
+                        } catch (NoSuchMethodException e) {
+                            // 没有找到匹配的setter，记录一个debug日志但继续（属性将是只读的）
+                            NodeCraft.LOGGER.debug("属性 '{}' 未找到对应的setter方法 '{}'，将作为只读属性处理。",
+                                    propertyName, setterName);
+                        }
+                    }
+
+                    MethodAccessor getter = new MethodWrapper(method);
+                    MethodAccessor setter = setterMethod != null ? new MethodWrapper(setterMethod) : null;
+
+                    descriptors.add(new PropertyDescriptor(
+                            propertyName,
+                            displayName,
+                            type,
+                            getter,
+                            setter,
+                            renderer,
+                            annotation.description(),
+                            annotation.category(),
+                            annotation.order()
+                    ));
+                }
+            }
+            currentClass = currentClass.getSuperclass(); // 继续检查父类
+        }
+    }
+
+    // 渲染器注册表：类型 -> 渲染器
+    private static final Map<Class<?>, PropertyRenderer> RENDERER_REGISTRY = new HashMap<>();
+
+    // 回退渲染器，用于处理没有专门渲染器的类型
+    private static final PropertyRenderer FALLBACK_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            Object value = prop.getter.invoke(node);
+            if (value == null) {
+                ImGui.textDisabled("(空)");
+                return;
+            }
+
+            // 对只读属性进行禁用处理
+            boolean isReadOnly = prop.setter == null || isDisabled;
+            if (isReadOnly) ImGui.beginDisabled();
+
+            ImGui.text(value.toString());
+
+            // 对于集合类型，显示大小信息
+            if (value instanceof Collection<?> collection) {
+                ImGui.sameLine();
+                ImGui.textDisabled("(" + collection.size() + " 项)");
+            } else if (value instanceof Map<?,?> map) {
+                ImGui.sameLine();
+                ImGui.textDisabled("(" + map.size() + " 键值对)");
+            }
+
+            if (isReadOnly) ImGui.endDisabled();
+
+        } catch (Throwable e) { // 捕获 Throwable
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    // 静态初始化代码块，注册默认渲染器
+    static {
+        // 注册基本类型渲染器
+        registerRenderer(boolean.class, BOOLEAN_RENDERER);
+        registerRenderer(Boolean.class, BOOLEAN_RENDERER);
+        registerRenderer(String.class, STRING_RENDERER);
+        registerRenderer(int.class, INT_RENDERER);
+        registerRenderer(Integer.class, INT_RENDERER);
+        registerRenderer(float.class, FLOAT_RENDERER);
+        registerRenderer(Float.class, FLOAT_RENDERER);
+        registerRenderer(double.class, DOUBLE_RENDERER);
+        registerRenderer(Double.class, DOUBLE_RENDERER);
+        registerRenderer(Vec3.class, VEC3_RENDERER);
+    }
+
+    /**
+     * 注册一个类型的属性渲染器
+     * @param type 要注册渲染器的类型
+     * @param renderer 对应的渲染器实现
+     */
+    public static void registerRenderer(Class<?> type, PropertyRenderer renderer) {
+        if (type == null || renderer == null) {
+            throw new IllegalArgumentException("类型和渲染器都不能为null");
+        }
+
+        RENDERER_REGISTRY.put(type, renderer);
+        NodeCraft.LOGGER.debug("已注册属性渲染器: " + type.getName());
+    }
+
+    /**
+     * 为类型获取合适的渲染器
+     * @param type 需要获取渲染器的类型
+     * @return 对应的渲染器，如果没有注册则返回null
+     */
+    private PropertyRenderer getRendererForType(Class<?> type) {
+        // 1. 直接检查是否有精确匹配的渲染器
+        PropertyRenderer renderer = RENDERER_REGISTRY.get(type);
+        if (renderer != null) {
+            return renderer;
+        }
+
+        // 2. 如果是枚举类型，返回枚举渲染器
+        if (type.isEnum()) {
+            return ENUM_RENDERER;
+        }
+
+        // 3. 尝试为子类找到合适的渲染器（处理继承关系）
+        // 遍历所有已注册的渲染器，看是否有其 Key 是给定 Type 的父类或接口
+        for (Map.Entry<Class<?>, PropertyRenderer> entry : RENDERER_REGISTRY.entrySet()) {
+            if (entry.getKey().isAssignableFrom(type)) {
+                // 找到了匹配的父类渲染器
+                return entry.getValue();
+            }
+        }
+
+        // 4. 对于没有注册渲染器的类型，返回回退渲染器
+        return FALLBACK_RENDERER;
+    }
+
+    private String extractPropertyName(String methodName, String prefix) {
+        String name = methodName.substring(prefix.length());
+        if (name.isEmpty()) return "";
+
+        // JavaBean规范:
+        // 1. 如果第一个和第二个字符都是大写，保持第一个字符大写 (getURL -> URL)
+        // 2. 如果第一个字符是大写，第二个字符是小写，将第一个字符转为小写 (getName -> name)
+        // 3. 如果第一个字符是小写，保持原样 (getaValue -> aValue)
+
+        if (name.length() == 1) {
+            // 单个字符的情况
+            return name.toLowerCase();
+        }
+
+        char firstChar = name.charAt(0);
+        char secondChar = name.charAt(1);
+
+        // 情况1: 连续大写 (getURL -> URL)
+        if (Character.isUpperCase(firstChar) && Character.isUpperCase(secondChar)) {
+            return name;
+        }
+        // 情况2: 首字母大写，第二个字母小写 (getName -> name)
+        else if (Character.isUpperCase(firstChar) && Character.isLowerCase(secondChar)) {
+            return Character.toLowerCase(firstChar) + name.substring(1);
+        }
+        // 情况3: 首字母小写 (getaValue -> aValue)
+        else {
+            return name;
+        }
+    }
+
+    private String formatPropertyName(String propertyName) {
+        if (propertyName == null || propertyName.isEmpty()) return "";
+
+        StringBuilder result = new StringBuilder();
+
+        // 特殊处理：如果前两个字母都是大写，保持整个词大写
+        // 例如：URL -> URL，而不是 "U R L"
+        if (propertyName.length() >= 2 &&
+                Character.isUpperCase(propertyName.charAt(0)) &&
+                Character.isUpperCase(propertyName.charAt(1))) {
+
+            // 查找连续大写字母的结束位置
+            int upperCaseEnd = 2;
+            while (upperCaseEnd < propertyName.length() &&
+                    Character.isUpperCase(propertyName.charAt(upperCaseEnd))) {
+                upperCaseEnd++;
+            }
+
+            // 第一个单词是全大写缩写
+            if (upperCaseEnd == propertyName.length()) {
+                // 全部是大写，直接返回
+                return propertyName;
+            } else {
+                // 添加缩写部分
+                result.append(propertyName, 0, upperCaseEnd);
+
+                // 添加空格，除非下一个字符是特殊字符
+                char nextChar = propertyName.charAt(upperCaseEnd);
+                if (Character.isLetterOrDigit(nextChar)) {
+                    result.append(' ');
+                }
+
+                // 处理剩余部分
+                propertyName = propertyName.substring(upperCaseEnd);
+                // 如果剩余部分以小写开头，将其首字母大写
+                if (Character.isLowerCase(propertyName.charAt(0))) {
+                    propertyName = Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+                }
+            }
+        } else {
+            // 普通处理：首字母大写
+            result.append(Character.toUpperCase(propertyName.charAt(0)));
+            propertyName = propertyName.substring(1);
+        }
+
+        // 处理剩余部分
+        for (int i = 0; i < propertyName.length(); i++) {
+            char c = propertyName.charAt(i);
+
+            // 在大写字母前且前一个字符不是大写字母时添加空格
+            // (处理驼峰如 myValue -> My Value, TCPValue -> TCP Value)
+            if (Character.isUpperCase(c) &&
+                    (i > 0 && !Character.isUpperCase(propertyName.charAt(i - 1))) &&
+                    (i + 1 < propertyName.length() && Character.isLowerCase(propertyName.charAt(i + 1)))) {
+                result.append(' ');
+            }
+
+            result.append(c);
+        }
+
+        return result.toString();
+    }
+
+    @Override
+    public boolean isVisible() {
+        return visible;
+    }
+
+    @Override
+    public void setVisible(boolean visible) {
+        this.visible = visible;
+    }
+
+    @Override
+    public boolean handleEvent(String eventType, Object eventData) {
+        switch (eventType) {
+            case "nodeSelected":
+                if (eventData instanceof UUID nodeId) {
+                    NodeGraph currentGraph = getNodeGraph(); // 安全地获取图
+                    if (currentGraph != null) {
+                        INode newlySelectedNode = currentGraph.getNode(nodeId);
+                        setSelectedNode(newlySelectedNode); // 调用 setter
+                    } else {
+                        setSelectedNode(null); // 清除选择或图无效
+                    }
+                    return true;
+                } else if (eventData == null) { // 明确处理 eventData 为 null 的情况
+                    setSelectedNode(null); // 调用 setter
+                    return true;
+                }
+                break;
+            case "nodeSelectionCleared":
+            case "graphChanged": // 图改变或清除选择时都清除当前选中
+                setSelectedNode(null); // 调用 setter
+                return true;
+        }
+        return false;
+    }
+
+    // 定义 NodeConstants 类
+    private static class NodeConstants {
+        // 错误阈值，超过此值则禁用属性渲染
+        private static final int ERROR_THRESHOLD = 3;
+    }
+}
