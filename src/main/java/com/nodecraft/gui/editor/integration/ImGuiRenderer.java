@@ -17,6 +17,7 @@ import imgui.ImFontConfig;
 import imgui.ImFontGlyphRangesBuilder;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.Window;
+import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 
 /**
@@ -191,13 +192,7 @@ public class ImGuiRenderer {
 
             // 添加16pt字体，并设置为默认字体
             // 克隆 fontConfig 以便为不同大小的字体进行调整
-            ImFontConfig fontConfig16 = new ImFontConfig();
-            fontConfig16.setFontDataOwnedByAtlas(false); // 字体数据不被atlas拥有，因为它是一个共享的byte[]
-            fontConfig16.setMergeMode(baseFontConfig.getMergeMode());
-            fontConfig16.setPixelSnapH(baseFontConfig.getPixelSnapH());
-            fontConfig16.setOversampleH(baseFontConfig.getOversampleH());
-            fontConfig16.setOversampleV(baseFontConfig.getOversampleV());
-            fontConfig16.setRasterizerMultiply(baseFontConfig.getRasterizerMultiply());
+            ImFontConfig fontConfig16 = getImFontConfig();
 
             io.getFonts().addFontFromMemoryTTF(fontDataBytes, 16.0f, fontConfig16, chineseGlyphRanges);
             NodeCraft.LOGGER.info("已加载16pt中文字体。");
@@ -226,7 +221,18 @@ public class ImGuiRenderer {
             fallbackToDefaultFont(io);
         }
     }
-    
+
+    private @NotNull ImFontConfig getImFontConfig() {
+        ImFontConfig fontConfig16 = new ImFontConfig();
+        fontConfig16.setFontDataOwnedByAtlas(false); // 字体数据不被atlas拥有，因为它是一个共享的byte[]
+        fontConfig16.setMergeMode(baseFontConfig.getMergeMode());
+        fontConfig16.setPixelSnapH(baseFontConfig.getPixelSnapH());
+        fontConfig16.setOversampleH(baseFontConfig.getOversampleH());
+        fontConfig16.setOversampleV(baseFontConfig.getOversampleV());
+        fontConfig16.setRasterizerMultiply(baseFontConfig.getRasterizerMultiply());
+        return fontConfig16;
+    }
+
     /**
      * 回退到默认字体。
      * @param io ImGuiIO 实例。

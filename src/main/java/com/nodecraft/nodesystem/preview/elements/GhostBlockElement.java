@@ -27,22 +27,22 @@ import java.util.Map;
 /**
  * 幽灵方块预览元素 (完善版)
  * 用于显示半透明的方块预览，支持原始纹理渲染
- * 
+ * <p>
  * 性能优化：
  * - 避免在渲染循环中重复获取设置，将 maxRenderDistance 在循环外获取一次
  * - 使用方块颜色信息而非完整纹理渲染，提高渲染效率
  * - 优化了内存分配和方法调用开销
- * 
+ * <p>
  * 代码简化：
  * - 使用 Java 16+ 的模式匹配（Pattern Matching for instanceof）简化类型检查
  * - 将复杂的 Map 数据处理逻辑提取到单独的方法中
  * - 改进了代码的可读性和维护性
- * 
+ * <p>
  * 健壮性优化：
  * - 无效方块ID返回空气而不是石头，避免错误的视觉效果
  * - 空气方块会被渲染逻辑自动跳过，不会显示任何内容
  * - 提供更好的调试体验，错误不会产生意外的视觉干扰
- * 
+ * <p>
  * 渲染状态管理优化：
  * - 假设通用渲染状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
  * - 每个渲染方法只管理自己特有的状态，并在 finally 块中恢复
@@ -169,13 +169,13 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     /**
      * 渲染原始纹理的幽灵方块
-     * 
+     * <p>
      * 优化说明：
      * - 使用方块的原始颜色信息而不是完整的纹理渲染
      * - 通过 BlockColors.getColor() 获取方块的基础颜色
      * - 应用着色和透明度效果
      * - 相比完整的 BlockRenderManager.renderBlock()，这种方法更高效且稳定
-     * 
+     * <p>
      * 渲染状态管理：
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法不需要设置任何特有状态，直接使用通用状态即可
@@ -252,7 +252,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     /**
      * 渲染纯色幽灵方块
-     * 
+     * <p>
      * 渲染状态管理：
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法特有状态：disableCull（禁用面剔除以确保所有面都可见）
@@ -301,7 +301,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     /**
      * 渲染线框幽灵方块
-     * 
+     * <p>
      * 渲染状态管理：
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法特有状态：lineWidth（线宽）和 disableCull（禁用面剔除）
@@ -418,7 +418,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     /**
      * 根据方块ID获取方块状态
-     * 
+     * <p>
      * 健壮性优化：
      * - 当方块ID无效或解析失败时，返回空气而不是石头
      * - 避免因无效ID而在预览中产生错误的视觉效果

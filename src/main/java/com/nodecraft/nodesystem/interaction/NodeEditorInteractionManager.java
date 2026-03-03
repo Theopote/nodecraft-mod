@@ -23,14 +23,14 @@ import java.util.HashMap;
 
 /**
  * 节点编辑器交互管理器
- * 
+ * <p>
  * 核心功能：
  * 1. 编辑模式管理 (enterEditorMode/exitEditorMode)
  * 2. 鼠标射线投射 (Mouse Raycasting)
  * 3. 世界拾取 (World Picking)
  * 4. 实时高亮反馈
  * 5. 状态管理
- * 
+ * <p>
  * 单例模式，确保全局只有一个交互状态
  */
 public class NodeEditorInteractionManager {
@@ -403,7 +403,6 @@ public class NodeEditorInteractionManager {
      * 实体拾取处理器
      */
     private class EntityPickingHandler implements InteractionModeHandler {
-        private String currentNodeId;
         private IEntityPickerCallback currentCallback;
         
         @Override
@@ -411,8 +410,7 @@ public class NodeEditorInteractionManager {
             if (!(callback instanceof IEntityPickerCallback)) {
                 throw new IllegalArgumentException("实体拾取模式需要IEntityPickerCallback");
             }
-            
-            this.currentNodeId = nodeId;
+
             this.currentCallback = (IEntityPickerCallback) callback;
             
             MinecraftClientController.getInstance().showHudMessage(getHintMessage());
@@ -771,7 +769,7 @@ public class NodeEditorInteractionManager {
     /**
      * 根据归一化设备坐标计算射线方向（精确版本）
      * 使用Minecraft原生的投影矩阵和视图矩阵进行精确的射线计算
-     * 
+     * <p>
      * 这个实现使用矩阵逆变换来精确计算射线方向，适应不同FOV和宽高比，
      * 比之前的近似方法更加准确和鲁棒。
      * 
@@ -1118,7 +1116,7 @@ public class NodeEditorInteractionManager {
         // 调试信息：只在实际点击或状态变化时记录
         if (isLeftMouseClicked) {
             NodeCraft.LOGGER.debug("NodeEditorInteractionManager.update() - 鼠标点击({}, {}) 左键:{} 中键:{} ImGui:{} 交互模式:{}", 
-                mouseX, mouseY, isLeftMouseClicked, isMiddleMouseDown, isMouseOverImGui, interactionState.getMode());
+                mouseX, mouseY, true, isMiddleMouseDown, isMouseOverImGui, interactionState.getMode());
         }
         
         try {
@@ -1141,7 +1139,7 @@ public class NodeEditorInteractionManager {
                 updateHoveredBlockHighlight(newHoveredBlock);
                 
                 // 处理鼠标点击事件
-                handleMouseClickEvents(newHoveredBlock, hitResult, isLeftMouseClicked, false, isMouseOverImGui);
+                handleMouseClickEvents(newHoveredBlock, hitResult, isLeftMouseClicked);
             } else {
                 // 鼠标在ImGui界面上时，停止中键视角控制
                 if (middleMousePressed) {
@@ -1227,7 +1225,7 @@ public class NodeEditorInteractionManager {
                 // 中键释放
                 middleMousePressed = false;
                 NodeCraft.LOGGER.debug("结束视角控制");
-            } else if (isMiddleMouseDown && middleMousePressed) {
+            } else if (isMiddleMouseDown) {
                 // 中键持续按下，计算鼠标移动并更新视角
                 float deltaX = mouseX - lastMouseX;
                 float deltaY = mouseY - lastMouseY;
@@ -1284,7 +1282,7 @@ public class NodeEditorInteractionManager {
     /**
      * 处理鼠标点击事件
      */
-    private void handleMouseClickEvents(Coordinate hoveredBlock, BlockHitResult hitResult, boolean isLeftMouseClicked, boolean isRightMouseClicked, boolean isMouseOverImGui) {
+    private void handleMouseClickEvents(Coordinate hoveredBlock, BlockHitResult hitResult, boolean isLeftMouseClicked) {
         try {
             // 如果中键正在被按下（用于视角控制），跳过其他鼠标事件处理
             if (middleMousePressed) {
@@ -1292,20 +1290,17 @@ public class NodeEditorInteractionManager {
             }
             
             // 检查是否点击在ImGui窗口上
-            if (isMouseOverImGui) {
-                return; // 点击在UI上，不处理世界交互
-            }
-            
+
             // 使用处理器系统处理交互
-            if ((isLeftMouseClicked || isRightMouseClicked) && interactionState.isInInteractionMode()) {
+            if ((isLeftMouseClicked) && interactionState.isInInteractionMode()) {
                 EditorInteractionMode currentMode = interactionState.getMode();
                 InteractionModeHandler handler = modeHandlers.get(currentMode);
                 
                 if (handler != null) {
-                    handler.onUpdate(hoveredBlock, hitResult, isLeftMouseClicked, isRightMouseClicked);
+                    handler.onUpdate(hoveredBlock, hitResult, true, false);
                 } else {
                     // 备用处理：如果没有找到处理器，使用旧的方块拾取逻辑
-                    if (isLeftMouseClicked && interactionState.isPendingBlockPick() && hoveredBlock != null && hitResult != null) {
+                    if (interactionState.isPendingBlockPick() && hoveredBlock != null && hitResult != null) {
                         handleBlockPicking(hoveredBlock, hitResult);
                     }
                 }

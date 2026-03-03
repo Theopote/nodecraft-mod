@@ -125,7 +125,7 @@ public class NodecraftWindowRenderer {
         String windowTitle = viewportsEnabled ?
                 "NodeCraft 编辑器 - 独立窗口模式" : "NodeCraft 编辑器";
         
-        boolean windowOpened = false;
+        boolean windowOpened;
         try {
             if (viewportsEnabled) {
                 windowOpened = ImGui.begin(windowTitle, closeDetector.getWindowOpenFlag(), windowFlags);
