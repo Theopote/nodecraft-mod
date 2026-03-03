@@ -66,7 +66,6 @@ dependencies {
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-	include(modImplementation("net.fabricmc.fabric-api:fabric-item-api-v1:${project.fabric_api_version}"))
 
 	// GUI - ImGui，参考新方式配置
 	modImplementation 'com.github.SpaiR:imgui-java:v1.86.12'
