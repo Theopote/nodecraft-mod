@@ -190,7 +190,8 @@ public class GhostBlockElement extends AbstractPreviewElement {
         
         // 使用简化的渲染方法，直接使用 Tessellator
         // 注意：不需要设置渲染状态，因为通用状态已由 PreviewRenderer 设置
-        Tessellator tessellator = Tessellator.getInstance();
+        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.debugFilledBox());
         
         for (BlockData blockData : blocks) {
             // 检查渲染距离
@@ -232,14 +233,10 @@ public class GhostBlockElement extends AbstractPreviewElement {
                 g = Math.min(1.0f, g * tintColor.y());
                 b = Math.min(1.0f, b * tintColor.z());
 
-                // 使用 Tessellator 渲染带颜色的立方体
-                BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.vertex.VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
                 Matrix4f matrix = matrices.peek().getPositionMatrix();
                 
                 // 渲染立方体的6个面，使用方块的原始颜色
-                renderCubeFaces(buffer, matrix, 0, 0, 0, r, g, b, opacity);
-                
-                buffer.end();
+                renderCubeFaces(vertexConsumer, matrix, 0, 0, 0, r, g, b, opacity);
                 
             } catch (Exception e) {
                 NodeCraft.LOGGER.warn("渲染幽灵方块失败: {}, 位置: {}", blockData.blockId, blockPos, e);
@@ -247,6 +244,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             
             matrices.pop();
         }
+        vertexConsumers.draw();
         
         // 渲染完成，无需额外的绘制命令
         // 注意：不需要恢复渲染状态，因为没有修改任何特有状态
@@ -267,8 +265,9 @@ public class GhostBlockElement extends AbstractPreviewElement {
         
         // 设置此方法特有的渲染状态
         
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.vertex.VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        MinecraftClient client = MinecraftClient.getInstance();
+        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.debugFilledBox());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
         float r = tintColor.x();
@@ -294,14 +293,10 @@ public class GhostBlockElement extends AbstractPreviewElement {
             float renderZ = (float) (blockData.position.z - cameraPos.z);
             
             // 渲染立方体的6个面
-            renderCubeFaces(buffer, matrix, renderX, renderY, renderZ, r, g, b, opacity);
+            renderCubeFaces(vertexConsumer, matrix, renderX, renderY, renderZ, r, g, b, opacity);
         }
         
-        try {
-            buffer.end();
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("渲染纯色幽灵方块失败", e);
-        }
+        vertexConsumers.draw();
     }
     
     /**
@@ -319,8 +314,9 @@ public class GhostBlockElement extends AbstractPreviewElement {
         
         // 设置此方法特有的渲染状态
         
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.vertex.VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR);
+        MinecraftClient client = MinecraftClient.getInstance();
+        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.lines());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
         float r = tintColor.x();
@@ -363,16 +359,18 @@ public class GhostBlockElement extends AbstractPreviewElement {
                 Vec3d v1 = vertices[edge[0]];
                 Vec3d v2 = vertices[edge[1]];
                 
-                buffer.vertex(matrix, renderX + (float)v1.x, renderY + (float)v1.y, renderZ + (float)v1.z).color(r, g, b, opacity);
-                buffer.vertex(matrix, renderX + (float)v2.x, renderY + (float)v2.y, renderZ + (float)v2.z).color(r, g, b, opacity);
+                vertexConsumer.vertex(matrix, renderX + (float)v1.x, renderY + (float)v1.y, renderZ + (float)v1.z)
+                    .color(r, g, b, opacity)
+                    .normal(0.0f, 1.0f, 0.0f)
+                    .lineWidth(1.5f);
+                vertexConsumer.vertex(matrix, renderX + (float)v2.x, renderY + (float)v2.y, renderZ + (float)v2.z)
+                    .color(r, g, b, opacity)
+                    .normal(0.0f, 1.0f, 0.0f)
+                    .lineWidth(1.5f);
             }
         }
         
-        try {
-            buffer.end();
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("渲染线框幽灵方块失败", e);
-        }
+        vertexConsumers.draw();
     }
     
 
@@ -380,42 +378,42 @@ public class GhostBlockElement extends AbstractPreviewElement {
     /**
      * 渲染立方体的6个面
      */
-    private void renderCubeFaces(BufferBuilder buffer, Matrix4f matrix, float x, float y, float z, float r, float g, float b, float a) {
+    private void renderCubeFaces(VertexConsumer vertexConsumer, Matrix4f matrix, float x, float y, float z, float r, float g, float b, float a) {
         // 底面 (Y = 0)
-        buffer.vertex(matrix, x, y, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
         
         // 顶面 (Y = 1)
-        buffer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
-        buffer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
         
         // 北面 (Z = 0)
-        buffer.vertex(matrix, x, y, z).color(r, g, b, a);
-        buffer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
         
         // 南面 (Z = 1)
-        buffer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
         
         // 西面 (X = 0)
-        buffer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
-        buffer.vertex(matrix, x, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
         
         // 东面 (X = 1)
-        buffer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
-        buffer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
     }
     
     /**

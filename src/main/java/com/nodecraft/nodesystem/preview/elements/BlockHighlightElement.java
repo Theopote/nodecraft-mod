@@ -148,6 +148,9 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             return;
         }
 
+        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.lines());
+
         // 遍历所有要高亮的方块位置
         for (Coordinate pos : blockPositions) {
             // 检查是否在渲染距离内
@@ -166,8 +169,10 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             }
 
             // 使用简化的方块边框渲染
-            renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor);
+            renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, vertexConsumer);
         }
+
+        vertexConsumers.draw();
 
         // 恢复渲染系统状态
     }
@@ -175,7 +180,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
     /**
      * 渲染方块轮廓 - 使用简化的渲染方法
      */
-    private void renderSimpleBlockOutline(MatrixStack matrices, Vec3d cameraPos, BlockPos blockPos, float alpha, float pulseFactor) {
+    private void renderSimpleBlockOutline(MatrixStack matrices, Vec3d cameraPos, BlockPos blockPos, float alpha, float pulseFactor, VertexConsumer vertexConsumer) {
         // 计算相对位置
         double renderX = blockPos.getX() - cameraPos.x;
         double renderY = blockPos.getY() - cameraPos.y;
@@ -193,9 +198,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         float b = color.z();
         float a = alpha * pulseFactor; // 直接使用计算的透明度，不再强制最小值
         
-        // 使用简化的立方体边渲染
-        Tessellator tessellator = Tessellator.getInstance();
-        BufferBuilder buffer = tessellator.begin(com.mojang.blaze3d.vertex.VertexFormat.DrawMode.LINES, VertexFormats.POSITION_COLOR);
+        // 使用统一的线框缓冲提交
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
         // 绘制立方体的12条边
@@ -203,14 +206,14 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             Vec3d v1 = CUBE_VERTICES[edge[0]];
             Vec3d v2 = CUBE_VERTICES[edge[1]];
             
-            buffer.vertex(matrix, (float)v1.x, (float)v1.y, (float)v1.z).color(r, g, b, a);
-            buffer.vertex(matrix, (float)v2.x, (float)v2.y, (float)v2.z).color(r, g, b, a);
-        }
-        
-        try {
-            buffer.end();
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("渲染方块轮廓失败: {}", e.getMessage());
+            vertexConsumer.vertex(matrix, (float)v1.x, (float)v1.y, (float)v1.z)
+                .color(r, g, b, a)
+                .normal(0.0f, 1.0f, 0.0f)
+                .lineWidth(lineWidth);
+            vertexConsumer.vertex(matrix, (float)v2.x, (float)v2.y, (float)v2.z)
+                .color(r, g, b, a)
+                .normal(0.0f, 1.0f, 0.0f)
+                .lineWidth(lineWidth);
         }
         
         matrices.pop();
