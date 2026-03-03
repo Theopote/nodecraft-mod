@@ -30,9 +30,9 @@ public class PreviewRenderHandler {
                     return;
                 }
                 
-                Camera camera = context.camera();
-                MatrixStack matrices = context.matrixStack();
-                float tickDelta = context.tickCounter().getTickDelta(true);
+                Camera camera = client.gameRenderer.getCamera();
+                MatrixStack matrices = context.matrices();
+                float tickDelta = client.getRenderTickCounter().getTickProgress(true);
                 
                 // 调用预览渲染器
                 PreviewRenderer.getInstance().renderAll(matrices, camera, tickDelta);

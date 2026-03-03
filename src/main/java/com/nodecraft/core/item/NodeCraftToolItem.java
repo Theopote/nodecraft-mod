@@ -28,7 +28,7 @@ public class NodeCraftToolItem extends Item {
         ItemStack itemStack = user.getStackInHand(hand);
         
         // 只在客户端打开界面
-        if (world.isClient) {
+        if (world.isClient()) {
             NodeCraft.LOGGER.info("NodeCraft工具右键点击 - 准备打开编辑器界面");
             
             // 播放音效

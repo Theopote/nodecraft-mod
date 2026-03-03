@@ -191,7 +191,7 @@ public class NodeIconManager {
                     NativeImage image = NativeImage.read(stream);
                     
                     // 创建纹理
-                    NativeImageBackedTexture texture = new NativeImageBackedTexture(image);
+                    NativeImageBackedTexture texture = new NativeImageBackedTexture(() -> "nodecraft:" + resourcePath, image);
                     int textureId = texture.getGlId();
                     
                     NodeCraft.LOGGER.debug("加载图标纹理: {} (纹理ID: {})", resourcePath, textureId);

@@ -86,8 +86,8 @@ public class GameStateMixin {
      * 监听断开连接事件
      * 这是处理退出存档的主要方法，包括单人游戏和多人游戏
      */
-    @Inject(method = "disconnect()V", at = @At("HEAD"))
-    private void onDisconnect(CallbackInfo ci) {
+    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screen/Screen;ZZ)V", at = @At("HEAD"))
+    private void onDisconnect(Screen disconnectionScreen, boolean transferring, boolean joining, CallbackInfo ci) {
         try {
             NodeCraft.LOGGER.info("检测到断开连接事件，强制清理NodeCraft状态");
             
