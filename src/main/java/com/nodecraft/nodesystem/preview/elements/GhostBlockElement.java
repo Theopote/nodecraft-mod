@@ -156,15 +156,13 @@ public class GhostBlockElement extends AbstractPreviewElement {
         
         // 根据纹理模式选择渲染方法
         switch (textureMode) {
-            case "original":
-                renderOriginalTexture(matrices, camera, world, finalOpacity);
-                break;
             case "solid_color":
                 renderSolidColor(matrices, camera, finalOpacity);
                 break;
             case "wireframe":
                 renderWireframe(matrices, camera, finalOpacity);
                 break;
+            case "original":
             default:
                 renderOriginalTexture(matrices, camera, world, finalOpacity);
                 break;
@@ -187,7 +185,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
     private void renderOriginalTexture(MatrixStack matrices, Camera camera, World world, float opacity) {
         MinecraftClient client = MinecraftClient.getInstance();
         BlockRenderManager blockRenderManager = client.getBlockRenderManager();
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
         
         // 在循环外获取一次最大渲染距离，避免重复调用
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
@@ -264,7 +262,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
      * - 此方法特有状态：disableCull（禁用面剔除以确保所有面都可见）
      */
     private void renderSolidColor(MatrixStack matrices, Camera camera, float opacity) {
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
         
         // 在循环外获取一次最大渲染距离，避免重复调用
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
@@ -320,7 +318,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
      * - 此方法特有状态：lineWidth（线宽）和 disableCull（禁用面剔除）
      */
     private void renderWireframe(MatrixStack matrices, Camera camera, float opacity) {
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
         
         // 在循环外获取一次最大渲染距离，避免重复调用
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
@@ -467,7 +465,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         }
         
         // 检查距离 - 在循环外获取一次最大渲染距离
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
         
         for (BlockData block : blocks) {

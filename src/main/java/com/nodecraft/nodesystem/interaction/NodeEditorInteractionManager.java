@@ -697,7 +697,7 @@ public class NodeEditorInteractionManager {
             }
             
             Camera camera = client.gameRenderer.getCamera();
-            Vec3d cameraPos = camera.getPos();
+            Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
             
             // 获取窗口尺寸
             int windowWidth = client.getWindow().getWidth();
@@ -753,7 +753,7 @@ public class NodeEditorInteractionManager {
             }
             
             Camera camera = client.gameRenderer.getCamera();
-            Vec3d cameraPos = camera.getPos();
+            Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
             
             // 使用屏幕中心的方向作为备用
             Vec3d direction = Vec3d.fromPolar(camera.getPitch(), camera.getYaw()).normalize();
@@ -879,7 +879,7 @@ public class NodeEditorInteractionManager {
      */
     private Matrix4f createViewMatrix(Camera camera) {
         try {
-            Vec3d cameraPos = camera.getPos();
+            Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
             float pitch = camera.getPitch();
             float yaw = camera.getYaw();
             

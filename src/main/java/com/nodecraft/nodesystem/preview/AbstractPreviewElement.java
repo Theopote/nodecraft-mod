@@ -143,7 +143,7 @@ public abstract class AbstractPreviewElement {
      * 计算到相机的距离
      */
     protected double getDistanceToCamera(Camera camera, Vec3d position) {
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
         return cameraPos.distanceTo(position);
     }
     

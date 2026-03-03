@@ -134,14 +134,10 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         // 应用最小透明度限制
         finalOpacity = Math.max(finalOpacity, minOpacity);
 
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
 
         // 准备渲染系统状态
         RenderSystem.disableCull(); // 禁用面剔除，确保所有线都可见
-        RenderSystem.enableBlend(); // 启用混合，处理透明度
-        RenderSystem.defaultBlendFunc(); // 默认混合函数 (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
-        RenderSystem.enableDepthTest(); // 启用深度测试
-        RenderSystem.depthFunc(515); // GL_LEQUAL
         RenderSystem.lineWidth(lineWidth); // 设置线宽
 
         // 直接使用Minecraft原生的方块边框渲染方法
@@ -177,8 +173,6 @@ public class BlockHighlightElement extends AbstractPreviewElement {
 
         // 恢复渲染系统状态
         RenderSystem.lineWidth(1.0f); // 恢复默认线宽
-        RenderSystem.enableDepthTest(); // 重新启用深度测试
-        RenderSystem.disableBlend(); // 禁用混合
         RenderSystem.enableCull(); // 重新启用面剔除
     }
 
@@ -195,10 +189,6 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         matrices.translate(renderX, renderY, renderZ);
         
         // 使用更简单、更可靠的渲染状态设置
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest(); // 启用深度测试，但使用合适的深度函数
-        RenderSystem.depthFunc(515); // GL_LEQUAL
         RenderSystem.lineWidth(lineWidth); // 直接使用用户设置的线宽
         RenderSystem.disableCull();
         
@@ -232,9 +222,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         
         // 恢复渲染状态
         RenderSystem.enableCull();
-        RenderSystem.disableBlend();
         RenderSystem.lineWidth(1.0f);
-        RenderSystem.depthFunc(515); // 恢复默认深度函数
     }
 
     /**
@@ -253,7 +241,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         }
 
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
-        Vec3d cameraPos = camera.getPos();
+        Vec3d cameraPos = camera.getFocusedEntity() != null ? camera.getFocusedEntity().getPos() : camera.getBlockPos().toCenterPos();
 
         // 检查是否有任何方块在渲染距离内
         for (Coordinate pos : blockPositions) {

@@ -18,6 +18,7 @@ import com.nodecraft.minecraft.client.GhostCameraManager;
 import imgui.ImGui;
 import org.lwjgl.glfw.GLFW;
 
+import net.minecraft.client.gui.Click;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.text.Text;
@@ -362,15 +363,15 @@ public boolean isImGuiWantCaptureMouse() {
 
     // 输入事件委托给输入处理器
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (!initialized) return super.mouseClicked(mouseX, mouseY, button);
-        return inputHandler.handleMouseClicked(mouseX, mouseY, button);
+    public boolean mouseClicked(Click click, boolean doubleClick) {
+        if (!initialized) return super.mouseClicked(click, doubleClick);
+        return inputHandler.handleMouseClicked(click.x(), click.y(), click.button());
     }
     
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
-        if (!initialized) return super.mouseReleased(mouseX, mouseY, button);
-        return inputHandler.handleMouseReleased(mouseX, mouseY, button);
+    public boolean mouseReleased(Click click) {
+        if (!initialized) return super.mouseReleased(click);
+        return inputHandler.handleMouseReleased(click.x(), click.y(), click.button());
     }
     
     @Override
@@ -380,9 +381,9 @@ public boolean isImGuiWantCaptureMouse() {
     }
     
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
-        if (!initialized) return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
-        return inputHandler.handleMouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+    public boolean mouseDragged(Click click, double mouseX, double mouseY) {
+        if (!initialized) return super.mouseDragged(click, mouseX, mouseY);
+        return inputHandler.handleMouseDragged(mouseX, mouseY, click.button(), mouseX - click.x(), mouseY - click.y());
     }
     
     @Override

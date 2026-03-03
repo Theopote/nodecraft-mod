@@ -304,17 +304,11 @@ public class PreviewRenderer {
     // ================= 渲染管理 =================
     
     private void setupRenderState() {
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.enableDepthTest();
-        RenderSystem.depthFunc(515); // GL_LEQUAL
-        RenderSystem.depthMask(false); // 禁用深度写入以支持透明度
+        // 1.21.11 渲染状态由管线管理，避免调用已移除的全局状态方法
     }
     
     private void restoreRenderState() {
-        RenderSystem.depthMask(true);
-        RenderSystem.disableBlend();
-        RenderSystem.defaultBlendFunc();
+        // 1.21.11 渲染状态由管线管理，避免调用已移除的全局状态方法
     }
     
     private void renderElementsByType(MatrixStack matrices, Camera camera, float partialTicks) {
