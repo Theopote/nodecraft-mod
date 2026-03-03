@@ -19,6 +19,9 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.Window;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
+import org.lwjgl.BufferUtils;
+
+import java.nio.DoubleBuffer;
 
 /**
  * ImGui渲染器类。
@@ -276,6 +279,17 @@ public class ImGuiRenderer {
         }
         
         try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            Window window = client.getWindow();
+
+            ImGuiIO io = ImGui.getIO();
+            io.setDisplaySize(window.getWidth(), window.getHeight());
+
+            DoubleBuffer xBuffer = BufferUtils.createDoubleBuffer(1);
+            DoubleBuffer yBuffer = BufferUtils.createDoubleBuffer(1);
+            GLFW.glfwGetCursorPos(window.getHandle(), xBuffer, yBuffer);
+            io.setMousePos((float) xBuffer.get(0), (float) yBuffer.get(0));
+
             imGuiGlfw.newFrame();
             ImGui.newFrame();
             
@@ -400,7 +414,7 @@ public class ImGuiRenderer {
         style.setWindowTitleAlign(0.5f, 0.5f); // 居中对齐
         
         // 颜色主题
-        style.setColor(ImGuiCol.WindowBg, 0.16f, 0.16f, 0.20f, 0.94f);
+        style.setColor(ImGuiCol.WindowBg, 0.16f, 0.16f, 0.20f, 0.72f);
         style.setColor(ImGuiCol.Border, 0.40f, 0.40f, 0.50f, 0.7f);
         style.setColor(ImGuiCol.Header, 0.30f, 0.50f, 0.80f, 0.45f);
         style.setColor(ImGuiCol.HeaderHovered, 0.35f, 0.60f, 0.90f, 0.55f);

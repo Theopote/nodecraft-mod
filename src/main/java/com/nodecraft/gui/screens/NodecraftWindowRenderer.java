@@ -89,8 +89,8 @@ public class NodecraftWindowRenderer {
 
         // 防止窗口被历史配置移动到屏幕外
         MinecraftClient client = MinecraftClient.getInstance();
-        float screenWidth = client.getWindow().getScaledWidth();
-        float screenHeight = client.getWindow().getScaledHeight();
+        float screenWidth = client.getWindow().getWidth();
+        float screenHeight = client.getWindow().getHeight();
 
         float minVisibleWidth = 320.0f;
         float minVisibleHeight = 180.0f;
@@ -156,40 +156,6 @@ public class NodecraftWindowRenderer {
             windowFlags |= ImGuiWindowFlags.NoDocking;
         } else {
             windowFlags |= ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoResize;
-        }
-        
-        // 根据交互状态调整窗口标志
-        LayoutRenderer layoutRenderer = parentScreen.getLayoutRenderer();
-        if (layoutRenderer != null) {
-            boolean isDraggingSplitter = layoutRenderer.isDraggingSplitter();
-            boolean isHoveringSplitter = layoutRenderer.isHoveringSplitter();
-            
-            // 检查是否有自定义UI处于激活状态
-            boolean hasCustomUIActive = false;
-            if (parentScreen.getCurrentEditor() != null && parentScreen.getCurrentEditor() instanceof com.nodecraft.gui.editor.impl.ICanvasEditor canvasEditor) {
-                hasCustomUIActive = canvasEditor.getInteraction().isNodeCustomUIActive();
-            }
-            
-            if (isDraggingSplitter || isHoveringSplitter || hasCustomUIActive) {
-                // 添加NoMove标志，完全禁止窗口移动
-                windowFlags |= ImGuiWindowFlags.NoMove;
-
-                if (isDraggingSplitter) {
-                    // 拖拽分隔线时还要禁用标题栏，防止通过标题栏拖动
-                    windowFlags |= ImGuiWindowFlags.NoTitleBar;
-                    if (NodeCraft.LOGGER.isDebugEnabled()) {
-                        NodeCraft.LOGGER.debug("正在拖拽分隔线，已禁用窗口移动和标题栏");
-                    }
-                } else if (hasCustomUIActive) {
-                    if (NodeCraft.LOGGER.isDebugEnabled()) {
-                        NodeCraft.LOGGER.debug("自定义UI激活，已禁用窗口移动");
-                    }
-                } else {
-                    if (NodeCraft.LOGGER.isDebugEnabled()) {
-                        NodeCraft.LOGGER.debug("悬停在分隔线上，已禁用窗口移动");
-                    }
-                }
-            }
         }
         
         return windowFlags;
