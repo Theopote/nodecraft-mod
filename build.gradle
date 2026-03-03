@@ -1,5 +1,5 @@
 plugins {
-	id 'fabric-loom' version '1.10-SNAPSHOT'
+	id 'fabric-loom' version '1.15-SNAPSHOT'
 	// Keep this plugin ONLY if you intend to publish your mod to a Maven repository using Gradle.
 	// If you only build the JAR and upload it manually (e.g., to CurseForge/Modrinth), you can remove this.
 	id 'maven-publish'
@@ -65,8 +65,8 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-	include(modImplementation("net.fabricmc.fabric-api:fabric-item-api-v1:${project.fabric_version}"))
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	include(modImplementation("net.fabricmc.fabric-api:fabric-item-api-v1:${project.fabric_api_version}"))
 
 	// GUI - ImGui，参考新方式配置
 	modImplementation 'com.github.SpaiR:imgui-java:v1.86.12'
