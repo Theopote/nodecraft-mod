@@ -16,7 +16,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.stream.Collectors;
 
 /**
  * 自动节点扫描器
@@ -77,15 +76,13 @@ public class AutoNodeScanner {
             List<Path> paths = Files.walk(basePath)
                     .filter(Files::isRegularFile)
                     .filter(p -> p.toString().endsWith(".class"))
-                    .collect(Collectors.toList());
+                    .toList();
             
             for (Path path : paths) {
                 String className = getClassNameFromPath(basePath, path);
-                if (className != null) {
-                    boolean registered = processClass(registry, className);
-                    if (registered) {
-                        count++;
-                    }
+                boolean registered = processClass(registry, className);
+                if (registered) {
+                    count++;
                 }
             }
         } catch (Exception e) {
@@ -256,11 +253,10 @@ public class AutoNodeScanner {
             @SuppressWarnings("unchecked")
             Class<? extends INode> castedClass = (Class<? extends INode>) nodeClass;
             com.nodecraft.gui.node.NodeInfo nodeInfo = new com.nodecraft.gui.node.NodeInfo(id, displayName, "", category, castedClass);
-            boolean success = registry.registerNode(nodeInfo);
-            
+
             // 成功注册的节点不再记录日志，减少输出
             
-            return success;
+            return registry.registerNode(nodeInfo);
         } catch (Exception e) {
             NodeCraft.LOGGER.error("按约定注册节点 {} 时出错: {}", nodeClass.getName(), e.getMessage());
             return false;

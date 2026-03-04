@@ -150,11 +150,8 @@ public class FillRegionNode extends BaseNode {
                 BlockPos maxCorner = region.getMaxCorner();
                 
                 // 计算区域体积
-                int width = maxCorner.getX() - minCorner.getX() + 1;
-                int height = maxCorner.getY() - minCorner.getY() + 1;
-                int depth = maxCorner.getZ() - minCorner.getZ() + 1;
-                int volume = width * height * depth;
-                
+                int volume = getVolume(maxCorner, minCorner);
+
                 // 检查体积是否超过最大方块数
                 if (volume > maxBlocksValue) {
                     System.err.println("Region volume (" + volume + ") exceeds max blocks limit (" + maxBlocksValue + ").");
@@ -175,55 +172,59 @@ public class FillRegionNode extends BaseNode {
                 
                 try {
                     // 遍历区域内的所有方块
-                    for (BlockPos pos : BlockPos.iterate(minCorner, maxCorner)) {
-                        totalCount++;
-                        affectedBlocks++;
-                        
-                        // 检查是否为中空结构
-                        boolean isShell = false;
-                        if (hollowValue) {
-                            isShell = pos.getX() == minCorner.getX() || pos.getX() == maxCorner.getX() ||
-                                    pos.getY() == minCorner.getY() || pos.getY() == maxCorner.getY() ||
-                                    pos.getZ() == minCorner.getZ() || pos.getZ() == maxCorner.getZ();
-                            
-                            // 如果是中空结构的内部，跳过
-                            if (!isShell) {
-                                continue;
-                            }
-                        }
-                        
-                        try {
-                            BlockPos immutablePos = pos.toImmutable();
-                            
-                            // 检查是否排除空气方块
-                            if (excludeAirValue) {
-                                boolean isAir = context.getWorld().isAir(immutablePos);
-                                if (isAir) {
-                                    continue; // 跳过空气方块
+                    if (minCorner != null) {
+                        if (maxCorner != null) {
+                            for (BlockPos pos : BlockPos.iterate(minCorner, maxCorner)) {
+                                totalCount++;
+                                affectedBlocks++;
+
+                                // 检查是否为中空结构
+                                boolean isShell;
+                                if (hollowValue) {
+                                    isShell = pos.getX() == minCorner.getX() || pos.getX() == maxCorner.getX() ||
+                                            pos.getY() == minCorner.getY() || pos.getY() == maxCorner.getY() ||
+                                            pos.getZ() == minCorner.getZ() || pos.getZ() == maxCorner.getZ();
+
+                                    // 如果是中空结构的内部，跳过
+                                    if (!isShell) {
+                                        continue;
+                                    }
+                                }
+
+                                try {
+                                    BlockPos immutablePos = pos.toImmutable();
+
+                                    // 检查是否排除空气方块
+                                    if (excludeAirValue) {
+                                        boolean isAir = context.getWorld().isAir(immutablePos);
+                                        if (isAir) {
+                                            continue; // 跳过空气方块
+                                        }
+                                    }
+
+                                    // 解析目标方块状态并放置
+                                    BlockState targetState = resolveBlockState(blockInfoObj);
+                                    if (targetState == null) {
+                                        System.err.println("FillRegionNode: Cannot resolve block state from input");
+                                        continue;
+                                    }
+
+                                    int flags = Block.NOTIFY_ALL;
+                                    if (spawnDropsValue) {
+                                        context.getWorld().breakBlock(immutablePos, true);
+                                    }
+                                    boolean success = context.getWorld().setBlockState(immutablePos, targetState, flags);
+
+                                    if (success) {
+                                        successCount++;
+                                        filledBlocks++;
+                                        coordinates.add(immutablePos);
+                                    }
+                                } catch (Exception e) {
+                                    // 记录单个方块放置错误但继续执行
+                                    System.err.println("Error filling block at " + pos + ": " + e.getMessage());
                                 }
                             }
-                            
-                            // 解析目标方块状态并放置
-                            BlockState targetState = resolveBlockState(blockInfoObj);
-                            if (targetState == null) {
-                                System.err.println("FillRegionNode: Cannot resolve block state from input");
-                                continue;
-                            }
-                            
-                            int flags = Block.NOTIFY_ALL;
-                            if (spawnDropsValue) {
-                                context.getWorld().breakBlock(immutablePos, true);
-                            }
-                            boolean success = context.getWorld().setBlockState(immutablePos, targetState, flags);
-                            
-                            if (success) {
-                                successCount++;
-                                filledBlocks++;
-                                coordinates.add(immutablePos);
-                            }
-                        } catch (Exception e) {
-                            // 记录单个方块放置错误但继续执行
-                            System.err.println("Error filling block at " + pos + ": " + e.getMessage());
                         }
                     }
                 } finally {
@@ -242,7 +243,30 @@ public class FillRegionNode extends BaseNode {
         outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
         outputValues.put(OUTPUT_COORDINATES_ID, coordinates);
     }
-    
+
+    private static int getVolume(BlockPos maxCorner, BlockPos minCorner) {
+        int width = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                width = maxCorner.getX() - minCorner.getX() + 1;
+            }
+        }
+        int height = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                height = maxCorner.getY() - minCorner.getY() + 1;
+            }
+        }
+        int depth = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                depth = maxCorner.getZ() - minCorner.getZ() + 1;
+            }
+        }
+        int volume = width * height * depth;
+        return volume;
+    }
+
     // --- Getters/Setters for Properties ---
     
     public boolean isNotifyUpdate() {
@@ -313,9 +337,7 @@ public class FillRegionNode extends BaseNode {
             try {
                 Identifier id = Identifier.of(blockId);
                 Block block = Registries.BLOCK.get(id);
-                if (block != null) {
-                    return block.getDefaultState();
-                }
+                return block.getDefaultState();
             } catch (Exception e) {
                 System.err.println("Invalid block ID: " + blockId);
             }

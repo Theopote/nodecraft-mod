@@ -145,20 +145,16 @@ public class ReplaceBlocksNode extends BaseNode {
             BlockPosList positionsToProcess = new BlockPosList();
             
             // 从区域获取坐标
-            if (regionObj instanceof RegionData) {
-                RegionData region = (RegionData) regionObj;
-                
+            if (regionObj instanceof RegionData region) {
+
                 // 确保区域完整且有效
                 if (region.isComplete()) {
                     BlockPos minCorner = region.getMinCorner();
                     BlockPos maxCorner = region.getMaxCorner();
                     
                     // 计算区域体积
-                    int width = maxCorner.getX() - minCorner.getX() + 1;
-                    int height = maxCorner.getY() - minCorner.getY() + 1;
-                    int depth = maxCorner.getZ() - minCorner.getZ() + 1;
-                    int volume = width * height * depth;
-                    
+                    int volume = getVolume(maxCorner, minCorner);
+
                     // 检查体积是否超过最大方块数
                     if (volume > maxBlocksValue) {
                         System.err.println("Region volume (" + volume + ") exceeds max blocks limit (" + maxBlocksValue + ").");
@@ -173,16 +169,19 @@ public class ReplaceBlocksNode extends BaseNode {
                     }
                     
                     // 遍历区域内的所有方块
-                    for (BlockPos pos : BlockPos.iterate(minCorner, maxCorner)) {
-                        positionsToProcess.add(pos.toImmutable());
+                    if (minCorner != null) {
+                        if (maxCorner != null) {
+                            for (BlockPos pos : BlockPos.iterate(minCorner, maxCorner)) {
+                                positionsToProcess.add(pos.toImmutable());
+                            }
+                        }
                     }
                 }
             }
             
             // 从坐标列表获取坐标
-            if (coordinatesObj instanceof BlockPosList) {
-                BlockPosList coordinates = (BlockPosList) coordinatesObj;
-                
+            if (coordinatesObj instanceof BlockPosList coordinates) {
+
                 // 检查坐标数量是否超过最大方块数
                 if (coordinates.size() > maxBlocksValue) {
                     System.err.println("Coordinate list size (" + coordinates.size() + ") exceeds max blocks limit (" + maxBlocksValue + ").");
@@ -197,7 +196,7 @@ public class ReplaceBlocksNode extends BaseNode {
                 }
                 
                 // 如果之前没有从区域添加坐标，使用输入的坐标列表
-                if (positionsToProcess.size() == 0) {
+                if (positionsToProcess.isEmpty()) {
                     positionsToProcess = coordinates;
                 }
                 // 否则添加额外的坐标（可能会有重复，但不影响功能）
@@ -209,7 +208,7 @@ public class ReplaceBlocksNode extends BaseNode {
             }
             
             // 如果有坐标需要处理
-            if (positionsToProcess.size() > 0) {
+            if (!positionsToProcess.isEmpty()) {
                 // 在实际实现中，开始批量更新（如果启用）
                 if (batchUpdates) {
                     // 开始批量更新，例如 context.getWorld().beginBatchBlockUpdate();
@@ -234,7 +233,7 @@ public class ReplaceBlocksNode extends BaseNode {
                             }
                             
                             // 判断当前方块是否符合目标方块（需要替换的方块）
-                            boolean shouldReplace = false;
+                            boolean shouldReplace;
                             
                             if (exactMatchValue) {
                                 // 精确匹配（方块类型和状态都必须匹配）
@@ -279,7 +278,29 @@ public class ReplaceBlocksNode extends BaseNode {
         outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
         outputValues.put(OUTPUT_AFFECTED_COORDINATES_ID, affectedCoordinates);
     }
-    
+
+    private static int getVolume(BlockPos maxCorner, BlockPos minCorner) {
+        int width = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                width = maxCorner.getX() - minCorner.getX() + 1;
+            }
+        }
+        int height = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                height = maxCorner.getY() - minCorner.getY() + 1;
+            }
+        }
+        int depth = 0;
+        if (maxCorner != null) {
+            if (minCorner != null) {
+                depth = maxCorner.getZ() - minCorner.getZ() + 1;
+            }
+        }
+        return width * height * depth;
+    }
+
     // --- Getters/Setters for Properties ---
     
     public boolean isNotifyUpdate() {
@@ -340,9 +361,7 @@ public class ReplaceBlocksNode extends BaseNode {
             try {
                 Identifier id = Identifier.of(blockId);
                 Block block = Registries.BLOCK.get(id);
-                if (block != null) {
-                    return block.getDefaultState();
-                }
+                return block.getDefaultState();
             } catch (Exception e) {
                 System.err.println("Invalid block ID: " + blockId);
             }

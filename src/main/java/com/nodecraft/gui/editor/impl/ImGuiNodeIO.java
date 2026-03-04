@@ -25,6 +25,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * ImGui节点编辑器的IO组件，处理节点图的保存和加载
@@ -164,8 +165,8 @@ public class ImGuiNodeIO {
             NodeRegistry registry = NodeRegistry.getInstance();
             for (SavedNode savedNode : savedGraph.nodes) {
                 INode iNode = registry.createNodeInstance(savedNode.typeId); // Get INode instance
-                if (iNode instanceof BaseNode) { // Check if it's a BaseNode
-                    BaseNode newNode = (BaseNode) iNode; // Cast to BaseNode
+                if (iNode instanceof BaseNode newNode) { // Check if it's a BaseNode
+                    // Cast to BaseNode
                     // newNode will not be null here if instanceof is true
                     try {
                          // Restore state BEFORE adding to map/graph
@@ -309,20 +310,8 @@ public class ImGuiNodeIO {
         try {
             JsonElement element = JsonParser.parseString(graphJson);
             if (element.isJsonObject()) {
-                JsonObject json = element.getAsJsonObject();
-                
-                // 创建节点位置对象
-                JsonObject positionsJson = new JsonObject();
-                for (Map.Entry<UUID, NodePosition> entry : positions.entrySet()) {
-                    JsonObject posObj = new JsonObject();
-                    posObj.addProperty("x", entry.getValue().x);
-                    posObj.addProperty("y", entry.getValue().y);
-                    positionsJson.add(entry.getKey().toString(), posObj);
-                }
-                
-                // 添加到主JSON对象
-                json.add("nodePositions", positionsJson);
-                
+                JsonObject json = getJsonObject(positions, element);
+
                 // 使用美化输出
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
                 return gson.toJson(json);
@@ -333,5 +322,22 @@ public class ImGuiNodeIO {
             NodeCraft.LOGGER.warn("添加节点位置信息时出错: {}", e.getMessage());
             return graphJson;
         }
+    }
+
+    private static @NotNull JsonObject getJsonObject(Map<UUID, NodePosition> positions, JsonElement element) {
+        JsonObject json = element.getAsJsonObject();
+
+        // 创建节点位置对象
+        JsonObject positionsJson = new JsonObject();
+        for (Map.Entry<UUID, NodePosition> entry : positions.entrySet()) {
+            JsonObject posObj = new JsonObject();
+            posObj.addProperty("x", entry.getValue().x);
+            posObj.addProperty("y", entry.getValue().y);
+            positionsJson.add(entry.getKey().toString(), posObj);
+        }
+
+        // 添加到主JSON对象
+        json.add("nodePositions", positionsJson);
+        return json;
     }
 } 

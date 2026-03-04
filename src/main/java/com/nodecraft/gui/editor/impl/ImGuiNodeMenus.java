@@ -369,8 +369,7 @@ public class ImGuiNodeMenus {
         
         try {
             // 先将要复制的节点设置为选中状态
-            if (editor instanceof ImGuiNodeEditor) {
-                ImGuiNodeEditor imguiEditor = (ImGuiNodeEditor) editor;
+            if (editor instanceof ImGuiNodeEditor imguiEditor) {
                 // 清除当前选择，然后选中要复制的节点
                 imguiEditor.clearSelectedNodes();
                 imguiEditor.setSelectedNodeId(nodeId);

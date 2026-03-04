@@ -257,7 +257,7 @@ public class MenuBarRenderer {
             if (ImGui.beginMenu("执行")) {
                 // 获取编辑器和图
                 CanvasComponent execCanvas = componentManager != null ? componentManager.getCanvasComponent() : null;
-                ImGuiNodeEditor execEditor = null;
+                ImGuiNodeEditor execEditor;
                 NodeGraph execGraph = null;
                 if (execCanvas != null && execCanvas.getNodeEditor() instanceof ImGuiNodeEditor) {
                     execEditor = (ImGuiNodeEditor) execCanvas.getNodeEditor();

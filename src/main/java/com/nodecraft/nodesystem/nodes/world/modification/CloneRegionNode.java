@@ -6,7 +6,6 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import com.nodecraft.nodesystem.util.BlockPosList;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
@@ -157,20 +156,33 @@ public class CloneRegionNode extends BaseNode {
         }
         
         // 检查执行上下文和必要输入是否有效
-        if (context != null && context.getWorld() != null && 
-                sourceRegionObj instanceof RegionData && destinationPosObj instanceof BlockPos) {
-            RegionData sourceRegion = (RegionData) sourceRegionObj;
-            BlockPos destinationPos = (BlockPos) destinationPosObj;
-            
+        if (context != null && context.getWorld() != null &&
+                sourceRegionObj instanceof RegionData sourceRegion && destinationPosObj instanceof BlockPos destinationPos) {
+
             // 确保源区域完整且有效
             if (sourceRegion.isComplete()) {
                 BlockPos sourceMinCorner = sourceRegion.getMinCorner();
                 BlockPos sourceMaxCorner = sourceRegion.getMaxCorner();
                 
                 // 计算区域尺寸
-                int width = sourceMaxCorner.getX() - sourceMinCorner.getX() + 1;
-                int height = sourceMaxCorner.getY() - sourceMinCorner.getY() + 1;
-                int depth = sourceMaxCorner.getZ() - sourceMinCorner.getZ() + 1;
+                int width = 0;
+                if (sourceMaxCorner != null) {
+                    if (sourceMinCorner != null) {
+                        width = sourceMaxCorner.getX() - sourceMinCorner.getX() + 1;
+                    }
+                }
+                int height = 0;
+                if (sourceMaxCorner != null) {
+                    if (sourceMinCorner != null) {
+                        height = sourceMaxCorner.getY() - sourceMinCorner.getY() + 1;
+                    }
+                }
+                int depth = 0;
+                if (sourceMaxCorner != null) {
+                    if (sourceMinCorner != null) {
+                        depth = sourceMaxCorner.getZ() - sourceMinCorner.getZ() + 1;
+                    }
+                }
                 int volume = width * height * depth;
                 
                 // 检查体积是否超过最大方块数
@@ -187,7 +199,6 @@ public class CloneRegionNode extends BaseNode {
                 }
                 
                 // 计算目标区域的角落坐标
-                BlockPos destMinCorner = destinationPos;
                 BlockPos destMaxCorner = new BlockPos(
                     destinationPos.getX() + width - 1,
                     destinationPos.getY() + height - 1,
@@ -195,7 +206,7 @@ public class CloneRegionNode extends BaseNode {
                 );
                 
                 // 创建目标区域
-                destinationRegion = new RegionData(destMinCorner, destMaxCorner);
+                destinationRegion = new RegionData(destinationPos, destMaxCorner);
                 
                 // 检查两个区域是否重叠（防止破坏源区域）
                 boolean regionsOverlap = checkRegionsOverlap(sourceRegion, destinationRegion);
@@ -222,45 +233,49 @@ public class CloneRegionNode extends BaseNode {
                     Map<BlockPos, BlockState> blocksToCopy = new HashMap<>();
                     
                     // 遍历源区域内的所有方块
-                    for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
-                        totalCount++;
-                        BlockPos immutablePos = pos.toImmutable();
-                        
-                        try {
-                            // 获取方块状态
-                            BlockState blockState = context.getWorld().getBlockState(immutablePos);
-                            
-                            // 检查是否为空气（如果不包括空气则跳过）
-                            boolean isAir = context.getWorld().isAir(immutablePos);
-                            if (isAir && !includeAirValue) {
-                                continue;
+                    if (sourceMinCorner != null) {
+                        if (sourceMaxCorner != null) {
+                            for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
+                                totalCount++;
+                                BlockPos immutablePos = pos.toImmutable();
+
+                                try {
+                                    // 获取方块状态
+                                    BlockState blockState = context.getWorld().getBlockState(immutablePos);
+
+                                    // 检查是否为空气（如果不包括空气则跳过）
+                                    boolean isAir = context.getWorld().isAir(immutablePos);
+                                    if (isAir && !includeAirValue) {
+                                        continue;
+                                    }
+
+                                    // 处理蒙版模式 - 如果是蒙版模式且为空气，跳过
+                                    if (cloneModeValue == CloneMode.MASKED && isAir) {
+                                        continue;
+                                    }
+
+                                    // 计算源与目标坐标的偏移
+                                    int offsetX = immutablePos.getX() - sourceMinCorner.getX();
+                                    int offsetY = immutablePos.getY() - sourceMinCorner.getY();
+                                    int offsetZ = immutablePos.getZ() - sourceMinCorner.getZ();
+
+                                    // 计算目标坐标
+                                    BlockPos destPos = new BlockPos(
+                                        destinationPos.getX() + offsetX,
+                                        destinationPos.getY() + offsetY,
+                                        destinationPos.getZ() + offsetZ
+                                    );
+
+                                    // 记录要复制的方块
+                                    blocksToCopy.put(destPos, blockState);
+                                } catch (Exception e) {
+                                    // 记录单个方块读取错误但继续执行
+                                    System.err.println("Error reading block at " + immutablePos + ": " + e.getMessage());
+                                }
                             }
-                            
-                            // 处理蒙版模式 - 如果是蒙版模式且为空气，跳过
-                            if (cloneModeValue == CloneMode.MASKED && isAir) {
-                                continue;
-                            }
-                            
-                            // 计算源与目标坐标的偏移
-                            int offsetX = immutablePos.getX() - sourceMinCorner.getX();
-                            int offsetY = immutablePos.getY() - sourceMinCorner.getY();
-                            int offsetZ = immutablePos.getZ() - sourceMinCorner.getZ();
-                            
-                            // 计算目标坐标
-                            BlockPos destPos = new BlockPos(
-                                destinationPos.getX() + offsetX,
-                                destinationPos.getY() + offsetY,
-                                destinationPos.getZ() + offsetZ
-                            );
-                            
-                            // 记录要复制的方块
-                            blocksToCopy.put(destPos, blockState);
-                        } catch (Exception e) {
-                            // 记录单个方块读取错误但继续执行
-                            System.err.println("Error reading block at " + immutablePos + ": " + e.getMessage());
                         }
                     }
-                    
+
                     // 应用克隆（按照顺序处理，以确保像重力方块等能正确放置）
                     for (Map.Entry<BlockPos, BlockState> entry : blocksToCopy.entrySet()) {
                         BlockPos pos = entry.getKey();
@@ -285,11 +300,15 @@ public class CloneRegionNode extends BaseNode {
                         BlockState airState = Blocks.AIR.getDefaultState();
                         
                         // 清除源区域
-                        for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
-                            try {
-                                context.getWorld().setBlockState(pos.toImmutable(), airState, Block.NOTIFY_ALL);
-                            } catch (Exception e) {
-                                System.err.println("Error clearing block at " + pos + ": " + e.getMessage());
+                        if (sourceMinCorner != null) {
+                            if (sourceMaxCorner != null) {
+                                for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
+                                    try {
+                                        context.getWorld().setBlockState(pos.toImmutable(), airState, Block.NOTIFY_ALL);
+                                    } catch (Exception e) {
+                                        System.err.println("Error clearing block at " + pos + ": " + e.getMessage());
+                                    }
+                                }
                             }
                         }
                     }
@@ -320,7 +339,7 @@ public class CloneRegionNode extends BaseNode {
         outputValues.put(OUTPUT_DESTINATION_REGION_ID, destinationRegion);
         outputValues.put(OUTPUT_SUCCESS_ID, success);
     }
-    
+
     /**
      * 检查两个区域是否重叠
      * @param region1 第一个区域

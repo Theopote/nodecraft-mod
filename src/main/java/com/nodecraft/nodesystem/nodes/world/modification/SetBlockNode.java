@@ -90,10 +90,9 @@ public class SetBlockNode extends BaseNode {
         }
         
         // 检查执行上下文和输入是否有效
-        if (context != null && context.getWorld() != null && 
-                coordinateObj instanceof BlockPos && blockInfoObj != null) {
-            BlockPos pos = (BlockPos) coordinateObj;
-            
+        if (context != null && context.getWorld() != null &&
+                coordinateObj instanceof BlockPos pos && blockInfoObj != null) {
+
             try {
                 // 获取当前方块信息（用于返回被替换的方块）
                 previousBlock = context.getWorld().getBlockState(pos);
@@ -157,9 +156,7 @@ public class SetBlockNode extends BaseNode {
             try {
                 Identifier id = Identifier.of(blockId);
                 Block block = Registries.BLOCK.get(id);
-                if (block != null) {
-                    return block.getDefaultState();
-                }
+                return block.getDefaultState();
             } catch (Exception e) {
                 System.err.println("Invalid block ID: " + blockId);
             }
