@@ -1,15 +1,21 @@
 package com.nodecraft.nodesystem.nodes.visualization.debugging;
 
+import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.gui.editor.impl.ZoomHelper;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import imgui.ImGui;
+import imgui.type.ImBoolean;
+import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Execution Timer 节点: 测量连接到此节点的计算分支所花费的时间
+ * Execution Timer 节点: 测量连接到此节点的计算分支所花费的时间。
+ * 显示时间统计、精度控制、自动重置选项。
  */
 @NodeInfo(
     id = "visualization.debugging.execution_timer",
@@ -17,138 +23,176 @@ import java.util.UUID;
     description = "测量连接到此节点的计算分支所花费的时间",
     category = "visualization.debugging"
 )
-public class ExecutionTimerNode extends BaseNode {
+public class ExecutionTimerNode extends BaseCustomUINode {
 
-    // --- 节点属性 ---
-    private boolean autoReset = true; // 每次执行后是否自动重置
-    private boolean showMilliseconds = true; // 是否显示毫秒
-    private boolean printToConsole = false; // 是否打印到控制台
-    private int precision = 2; // 浮点数精度
-    
-    // --- 内部状态 ---
+    @NodeProperty(displayName = "自动重置", category = "计时", order = 1)
+    private boolean autoReset = true;
+
+    @NodeProperty(displayName = "显示毫秒", category = "计时", order = 2)
+    private boolean showMilliseconds = true;
+
+    @NodeProperty(displayName = "打印到控制台", category = "计时", order = 3)
+    private boolean printToConsole = false;
+
+    @NodeProperty(displayName = "精度", category = "计时", order = 4)
+    private int precision = 2;
+
     private long startTime = 0;
     private long endTime = 0;
     private long lastExecutionTime = 0;
     private long totalExecutionTime = 0;
     private int executionCount = 0;
-    
-    // --- 输入端口 IDs ---
+
     private static final String INPUT_START_ID = "input_start";
     private static final String INPUT_STOP_ID = "input_stop";
     private static final String INPUT_RESET_ID = "input_reset";
     private static final String INPUT_AUTO_RESET_ID = "input_auto_reset";
-    
-    // --- 输出端口 IDs ---
     private static final String OUTPUT_EXECUTION_TIME_ID = "output_execution_time";
     private static final String OUTPUT_TOTAL_TIME_ID = "output_total_time";
     private static final String OUTPUT_AVERAGE_TIME_ID = "output_average_time";
     private static final String OUTPUT_COUNT_ID = "output_count";
     private static final String OUTPUT_FORMATTED_TIME_ID = "output_formatted_time";
 
-    // --- 构造函数 ---
     public ExecutionTimerNode() {
         super(UUID.randomUUID(), "visualization.debugging.execution_timer");
-        
-        // 创建并添加输入端口
-        addInputPort(new BasePort(INPUT_START_ID, "Start", 
-                "开始计时", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_STOP_ID, "Stop", 
-                "停止计时", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_RESET_ID, "Reset", 
-                "重置计时器", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_AUTO_RESET_ID, "Auto Reset", 
-                "是否在每次开始时自动重置", NodeDataType.BOOLEAN, this));
-        
-        // 创建并添加输出端口
-        addOutputPort(new BasePort(OUTPUT_EXECUTION_TIME_ID, "Execution Time", 
-                "最近一次执行时间（毫秒）", NodeDataType.FLOAT, this));
-        addOutputPort(new BasePort(OUTPUT_TOTAL_TIME_ID, "Total Time", 
-                "累计执行时间（毫秒）", NodeDataType.FLOAT, this));
-        addOutputPort(new BasePort(OUTPUT_AVERAGE_TIME_ID, "Average Time", 
-                "平均执行时间（毫秒）", NodeDataType.FLOAT, this));
-        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", 
-                "执行次数", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_FORMATTED_TIME_ID, "Formatted Time", 
-                "格式化的时间字符串", NodeDataType.STRING, this));
-        
-        // 初始化输出值
+        addInputPort(new BasePort(INPUT_START_ID, "Start", "开始计时", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_STOP_ID, "Stop", "停止计时", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_RESET_ID, "Reset", "重置计时器", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_AUTO_RESET_ID, "Auto Reset", "是否在每次开始时自动重置", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_EXECUTION_TIME_ID, "Execution Time", "最近一次执行时间（毫秒）", NodeDataType.FLOAT, this));
+        addOutputPort(new BasePort(OUTPUT_TOTAL_TIME_ID, "Total Time", "累计执行时间（毫秒）", NodeDataType.FLOAT, this));
+        addOutputPort(new BasePort(OUTPUT_AVERAGE_TIME_ID, "Average Time", "平均执行时间（毫秒）", NodeDataType.FLOAT, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "执行次数", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_FORMATTED_TIME_ID, "Formatted Time", "格式化的时间字符串", NodeDataType.STRING, this));
         resetOutputs();
     }
 
-    // --- 核心逻辑 ---
+    @Override
+    public String getDescription() { return "测量连接到此节点的计算分支所花费的时间"; }
+
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 获取输入值
         Object startObj = inputValues.get(INPUT_START_ID);
         Object stopObj = inputValues.get(INPUT_STOP_ID);
         Object resetObj = inputValues.get(INPUT_RESET_ID);
         Object autoResetObj = inputValues.get(INPUT_AUTO_RESET_ID);
-        
-        // 确定是否自动重置
-        boolean autoReset = this.autoReset;
-        if (autoResetObj instanceof Boolean) {
-            autoReset = (Boolean) autoResetObj;
-        }
-        
-        // 处理重置信号
-        if (resetObj != null) {
-            resetTimer();
-        }
-        
-        // 处理开始信号
+
+        boolean ar = this.autoReset;
+        if (autoResetObj instanceof Boolean) ar = (Boolean) autoResetObj;
+
+        if (resetObj != null) resetTimer();
         if (startObj != null) {
-            // 如果设置了自动重置，则在开始时重置
-            if (autoReset) {
-                startTime = System.currentTimeMillis();
-                endTime = 0;
-            } 
-            // 如果未设置自动重置且未开始计时，则开始计时
-            else if (startTime == 0) {
-                startTime = System.currentTimeMillis();
-            }
+            if (ar) { startTime = System.currentTimeMillis(); endTime = 0; }
+            else if (startTime == 0) startTime = System.currentTimeMillis();
         }
-        
-        // 处理停止信号
         if (stopObj != null && startTime > 0) {
             endTime = System.currentTimeMillis();
-            
-            // 计算执行时间
             lastExecutionTime = endTime - startTime;
             totalExecutionTime += lastExecutionTime;
             executionCount++;
-            
-            // 如果启用了控制台打印
             if (printToConsole) {
-                System.out.println(
-                    "执行时间 [" + getDisplayName() + "]: " +
-                    formatDuration(lastExecutionTime) + " (" +
-                    formatDuration(totalExecutionTime / executionCount) + " avg)"
-                );
+                System.out.println("执行时间: " + formatDuration(lastExecutionTime) +
+                    " (" + formatDuration(executionCount > 0 ? totalExecutionTime / executionCount : 0) + " avg)");
             }
-            
-            // 重置开始时间，准备下一次测量
             startTime = 0;
         }
-        
-        // 更新输出值
         updateOutputs();
     }
-    
-    /**
-     * 重置计时器
-     */
-    private void resetTimer() {
-        startTime = 0;
-        endTime = 0;
-        lastExecutionTime = 0;
-        totalExecutionTime = 0;
-        executionCount = 0;
-        resetOutputs();
+
+    @Override
+    protected float calculateUIHeight() {
+        float h = getMediumPadding();
+        h += ImGui.getTextLineHeight();    // 最后执行时间
+        h += getSmallPadding();
+        h += ImGui.getTextLineHeight();    // 平均/总计
+        h += getSmallPadding();
+        h += ImGui.getTextLineHeight();    // 执行次数
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();       // autoReset
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();       // showMilliseconds
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();       // printToConsole
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();       // precision slider
+        h += getMediumPadding();
+        return h;
     }
-    
-    /**
-     * 重置输出值
-     */
+
+    @Override
+    protected float calculateMinUIWidth() {
+        return 190f + getContentMargin();
+    }
+
+    @Override
+    protected boolean renderCustomUIScaled(float width, float height, float zoom) {
+        return layout(zoom, l -> {
+            boolean changed = false;
+            try {
+                float aw = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                l.addVerticalSpacing(getMediumPadding());
+
+                // === 时间统计显示 ===
+                ImGui.pushStyleColor(ImGuiCol.Text, 0xFF44DDAA);
+                ImGui.text("⏱ " + formatDuration(lastExecutionTime));
+                ImGui.popStyleColor();
+                l.addVerticalSpacing(getSmallPadding());
+
+                float avgTime = executionCount > 0 ? (float) totalExecutionTime / executionCount : 0;
+                ImGui.pushStyleColor(ImGuiCol.Text, 0xFF888888);
+                ImGui.text(String.format("平均: %s | 总计: %s", formatDuration((long) avgTime), formatDuration(totalExecutionTime)));
+                ImGui.popStyleColor();
+                l.addVerticalSpacing(getSmallPadding());
+
+                ImGui.pushStyleColor(ImGuiCol.Text, 0xFFAAAACC);
+                ImGui.text("执行次数: " + executionCount);
+                ImGui.popStyleColor();
+                l.addVerticalSpacing(getSmallPadding());
+
+                // === 复选框 ===
+                ImBoolean arBool = new ImBoolean(autoReset);
+                if (ImGui.checkbox("自动重置##ar", arBool)) { setAutoReset(arBool.get()); changed = true; }
+                l.addVerticalSpacing(getSmallPadding());
+
+                ImBoolean smBool = new ImBoolean(showMilliseconds);
+                if (ImGui.checkbox("显示毫秒##sm", smBool)) { setShowMilliseconds(smBool.get()); changed = true; }
+                l.addVerticalSpacing(getSmallPadding());
+
+                ImBoolean pcBool = new ImBoolean(printToConsole);
+                if (ImGui.checkbox("打印到控制台##pc", pcBool)) { setPrintToConsole(pcBool.get()); changed = true; }
+                l.addVerticalSpacing(getSmallPadding());
+
+                // === 精度滑条 ===
+                int[] prec = {precision};
+                l.pushFramePadding(4.0f, 3.0f);
+                l.setItemWidth(aw / zoom);
+                if (ImGui.sliderInt("##prec", prec, 0, 6, "精度: %d")) {
+                    setPrecision(prec[0]); changed = true;
+                }
+                l.popItemWidth();
+                l.popStyleVar();
+
+                l.addVerticalSpacing(getMediumPadding());
+            } catch (Exception e) {
+                System.err.println("ExecutionTimerNode UI渲染失败: " + e.getMessage());
+            }
+            return changed;
+        });
+    }
+
+    private String formatDuration(long duration) {
+        if (duration < 1000 || showMilliseconds) {
+            return String.format("%." + precision + "f ms", (float) duration);
+        } else {
+            return String.format("%." + precision + "f s", duration / 1000.0f);
+        }
+    }
+
+    private void resetTimer() {
+        startTime = 0; endTime = 0; lastExecutionTime = 0;
+        totalExecutionTime = 0; executionCount = 0; resetOutputs();
+    }
+
     private void resetOutputs() {
         outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0.0f);
         outputValues.put(OUTPUT_TOTAL_TIME_ID, 0.0f);
@@ -156,165 +200,52 @@ public class ExecutionTimerNode extends BaseNode {
         outputValues.put(OUTPUT_COUNT_ID, 0);
         outputValues.put(OUTPUT_FORMATTED_TIME_ID, "0 ms");
     }
-    
-    /**
-     * 更新输出值
-     */
+
     private void updateOutputs() {
-        float executionTime = (float) lastExecutionTime;
-        float totalTime = (float) totalExecutionTime;
-        float avgTime = executionCount > 0 ? totalTime / executionCount : 0;
-        
-        outputValues.put(OUTPUT_EXECUTION_TIME_ID, executionTime);
-        outputValues.put(OUTPUT_TOTAL_TIME_ID, totalTime);
-        outputValues.put(OUTPUT_AVERAGE_TIME_ID, avgTime);
+        float et = (float) lastExecutionTime;
+        float tt = (float) totalExecutionTime;
+        float avg = executionCount > 0 ? tt / executionCount : 0;
+        outputValues.put(OUTPUT_EXECUTION_TIME_ID, et);
+        outputValues.put(OUTPUT_TOTAL_TIME_ID, tt);
+        outputValues.put(OUTPUT_AVERAGE_TIME_ID, avg);
         outputValues.put(OUTPUT_COUNT_ID, executionCount);
         outputValues.put(OUTPUT_FORMATTED_TIME_ID, formatDuration(lastExecutionTime));
     }
-    
-    /**
-     * 格式化持续时间为易读的字符串
-     */
-    private String formatDuration(long duration) {
-        if (duration < 1000 || showMilliseconds) {
-            return String.format("%." + precision + "f ms", (float) duration);
-        } else {
-            float seconds = duration / 1000.0f;
-            return String.format("%." + precision + "f s", seconds);
-        }
-    }
-    
-    // --- Getters/Setters for Properties ---
-    
-    public boolean isAutoReset() {
-        return autoReset;
-    }
-    
-    public void setAutoReset(boolean autoReset) {
-        this.autoReset = autoReset;
-        markDirty();
-    }
-    
-    public boolean isShowMilliseconds() {
-        return showMilliseconds;
-    }
-    
-    public void setShowMilliseconds(boolean showMilliseconds) {
-        this.showMilliseconds = showMilliseconds;
-        markDirty();
-    }
-    
-    public boolean isPrintToConsole() {
-        return printToConsole;
-    }
-    
-    public void setPrintToConsole(boolean printToConsole) {
-        this.printToConsole = printToConsole;
-        markDirty();
-    }
-    
-    public int getPrecision() {
-        return precision;
-    }
-    
-    public void setPrecision(int precision) {
-        this.precision = Math.max(0, Math.min(6, precision));
-        markDirty();
-    }
-    
-    /**
-     * 获取最近一次执行时间
-     */
-    public long getLastExecutionTime() {
-        return lastExecutionTime;
-    }
-    
-    /**
-     * 获取平均执行时间
-     */
-    public float getAverageExecutionTime() {
-        return executionCount > 0 ? (float) totalExecutionTime / executionCount : 0;
-    }
-    
-    /**
-     * 获取累计执行时间
-     */
-    public long getTotalExecutionTime() {
-        return totalExecutionTime;
-    }
-    
-    /**
-     * 获取执行次数
-     */
-    public int getExecutionCount() {
-        return executionCount;
-    }
-    
-    /**
-     * 保存节点状态
-     */
+
+    public boolean isAutoReset() { return autoReset; }
+    public void setAutoReset(boolean v) { if (this.autoReset != v) { this.autoReset = v; markDirty(); } }
+    public boolean isShowMilliseconds() { return showMilliseconds; }
+    public void setShowMilliseconds(boolean v) { if (this.showMilliseconds != v) { this.showMilliseconds = v; markDirty(); } }
+    public boolean isPrintToConsole() { return printToConsole; }
+    public void setPrintToConsole(boolean v) { if (this.printToConsole != v) { this.printToConsole = v; markDirty(); } }
+    public int getPrecision() { return precision; }
+    public void setPrecision(int v) { v = Math.max(0, Math.min(6, v)); if (this.precision != v) { this.precision = v; markDirty(); } }
+    public long getLastExecutionTime() { return lastExecutionTime; }
+    public float getAverageExecutionTime() { return executionCount > 0 ? (float) totalExecutionTime / executionCount : 0; }
+
     @Override
     public @Nullable Object getNodeState() {
-        Object[] state = new Object[8];
-        state[0] = autoReset;
-        state[1] = showMilliseconds;
-        state[2] = printToConsole;
-        state[3] = precision;
-        state[4] = startTime;
-        state[5] = lastExecutionTime;
-        state[6] = totalExecutionTime;
-        state[7] = executionCount;
-        return state;
+        java.util.Map<String, Object> s = new java.util.HashMap<>();
+        s.put("autoReset", autoReset); s.put("showMilliseconds", showMilliseconds);
+        s.put("printToConsole", printToConsole); s.put("precision", precision);
+        s.put("startTime", startTime); s.put("lastExecutionTime", lastExecutionTime);
+        s.put("totalExecutionTime", totalExecutionTime); s.put("executionCount", executionCount);
+        return s;
     }
-    
-    /**
-     * 恢复节点状态
-     */
+
     @Override
     public void setNodeState(@Nullable Object state) {
-        if (state instanceof Object[]) {
-            Object[] objState = (Object[]) state;
-            if (objState.length >= 8) {
-                if (objState[0] instanceof Boolean) {
-                    setAutoReset((Boolean) objState[0]);
-                }
-                if (objState[1] instanceof Boolean) {
-                    setShowMilliseconds((Boolean) objState[1]);
-                }
-                if (objState[2] instanceof Boolean) {
-                    setPrintToConsole((Boolean) objState[2]);
-                }
-                if (objState[3] instanceof Number) {
-                    setPrecision(((Number) objState[3]).intValue());
-                }
-                if (objState[4] instanceof Number) {
-                    startTime = ((Number) objState[4]).longValue();
-                }
-                if (objState[5] instanceof Number) {
-                    lastExecutionTime = ((Number) objState[5]).longValue();
-                }
-                if (objState[6] instanceof Number) {
-                    totalExecutionTime = ((Number) objState[6]).longValue();
-                }
-                if (objState[7] instanceof Number) {
-                    executionCount = ((Number) objState[7]).intValue();
-                }
-                
-                // 更新输出值
-                updateOutputs();
-            }
+        if (state instanceof java.util.Map) {
+            java.util.Map<?, ?> m = (java.util.Map<?, ?>) state;
+            if (m.get("autoReset") instanceof Boolean) setAutoReset((Boolean) m.get("autoReset"));
+            if (m.get("showMilliseconds") instanceof Boolean) setShowMilliseconds((Boolean) m.get("showMilliseconds"));
+            if (m.get("printToConsole") instanceof Boolean) setPrintToConsole((Boolean) m.get("printToConsole"));
+            if (m.get("precision") instanceof Number) setPrecision(((Number) m.get("precision")).intValue());
+            if (m.get("startTime") instanceof Number) startTime = ((Number) m.get("startTime")).longValue();
+            if (m.get("lastExecutionTime") instanceof Number) lastExecutionTime = ((Number) m.get("lastExecutionTime")).longValue();
+            if (m.get("totalExecutionTime") instanceof Number) totalExecutionTime = ((Number) m.get("totalExecutionTime")).longValue();
+            if (m.get("executionCount") instanceof Number) executionCount = ((Number) m.get("executionCount")).intValue();
+            updateOutputs();
         }
     }
-
-    // 添加 getDescription 方法
-    @Override
-    public String getDescription() {
-        return "测量连接到此节点的计算分支所花费的时间";
-    }
-
-    // 添加 getDisplayName 方法
-    @Override
-    public String getDisplayName() {
-        return "Execution Timer";
-    }
-} 
+}

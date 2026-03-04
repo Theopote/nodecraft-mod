@@ -823,18 +823,7 @@ public class NodeLibraryComponent implements EditorComponent {
         }
 
         // 获取合适的显示标题
-        String displayTitle;
-        
-        if (level > 0 && categoryId.contains(".")) {
-            // 对于子分类，我们在UI层动态构建"父分类 / 子分类"格式的显示名称
-            String subCategoryPart = categoryId.substring(categoryId.lastIndexOf('.') + 1);
-            // 首字母大写
-            subCategoryPart = subCategoryPart.substring(0, 1).toUpperCase() + subCategoryPart.substring(1);
-            displayTitle = subCategoryPart;
-        } else {
-            // 对于顶级分类，直接使用原始显示名称
-            displayTitle = displayCategory.getDisplayName();
-        }
+        String displayTitle = getString(displayCategory, level, categoryId);
 
         // 定义折叠头部标志
         int headerFlags = ImGuiSelectableFlags.None;
@@ -910,11 +899,11 @@ public class NodeLibraryComponent implements EditorComponent {
                     
                     // 计算图标位置和大小
                     float lineHeight = ImGui.getTextLineHeight();
-                    float iconSize = lineHeight; // 确保图标大小与行高一致
+                    // 确保图标大小与行高一致
                     float iconPadding = 4.0f; // 图标与文本间距
                     
                     ImVec2 cursorPos = ImGui.getCursorScreenPos();
-                    float textStartX = cursorPos.x + iconSize + iconPadding;
+                    float textStartX = cursorPos.x + lineHeight + iconPadding;
                     
                     // 计算可用宽度
                     float availableWidth = ImGui.getContentRegionAvailX();
@@ -931,7 +920,7 @@ public class NodeLibraryComponent implements EditorComponent {
                     ImDrawList drawList = ImGui.getWindowDrawList();
                     
                     // 绘制图标纹理
-                    renderNode(drawList, rectMin, new ImVec2(iconSize, iconSize), node, nodeCategory, iconSize, iconPadding);
+                    renderNode(drawList, rectMin, new ImVec2(lineHeight, lineHeight), node, nodeCategory, lineHeight, iconPadding);
                     
                     // 处理选择事件
                     if (selected) {
@@ -1003,6 +992,22 @@ public class NodeLibraryComponent implements EditorComponent {
              // Optional: Add very small spacing below collapsed header for visual separation
              ImGui.dummy(0, NodeLibraryConstants.CATEGORY_SPACING_COLLAPSED);
         }
+    }
+
+    private static String getString(DisplayCategory displayCategory, int level, String categoryId) {
+        String displayTitle;
+
+        if (level > 0 && categoryId.contains(".")) {
+            // 对于子分类，我们在UI层动态构建"父分类 / 子分类"格式的显示名称
+            String subCategoryPart = categoryId.substring(categoryId.lastIndexOf('.') + 1);
+            // 首字母大写
+            subCategoryPart = subCategoryPart.substring(0, 1).toUpperCase() + subCategoryPart.substring(1);
+            displayTitle = subCategoryPart;
+        } else {
+            // 对于顶级分类，直接使用原始显示名称
+            displayTitle = displayCategory.getDisplayName();
+        }
+        return displayTitle;
     }
 
     /**

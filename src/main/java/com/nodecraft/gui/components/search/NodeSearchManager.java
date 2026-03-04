@@ -1,7 +1,5 @@
 package com.nodecraft.gui.components.search;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.Consumer;
 
 import com.nodecraft.core.NodeCraft;
@@ -156,9 +154,8 @@ public class NodeSearchManager {
             String categoryId = category.getId().toLowerCase();
             
             // 简单的字符串包含检查
-            boolean matches = displayName.contains(processedTerm) || categoryId.contains(processedTerm);
-            
-            return matches;
+
+            return displayName.contains(processedTerm) || categoryId.contains(processedTerm);
         } catch (Exception e) {
             // 捕获任何异常
             NodeCraft.LOGGER.error("搜索分类时出错: {}", e.getMessage(), e);

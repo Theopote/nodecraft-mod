@@ -375,9 +375,8 @@ public class FileDialogManager {
                         !name.toLowerCase().endsWith(defaultExtension.toLowerCase())) {
                         name += defaultExtension;
                     }
-                    
-                    Path selected = currentDirectory.resolve(name);
-                    selectedPath = selected;
+
+                    selectedPath = currentDirectory.resolve(name);
                     showSaveDialog = false;
                     
                     // 调用回调函数

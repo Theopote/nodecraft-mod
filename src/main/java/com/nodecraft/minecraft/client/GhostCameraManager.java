@@ -192,7 +192,7 @@ public class GhostCameraManager {
         // 只有当高亮方块变化时才更新，减少日志输出
         if (newHighlightedBlock != null) {
             NodeCraft.LOGGER.info("方块高亮变化: {} -> {}", currentHighlightedBlock, newHighlightedBlock);
-        } else if (currentHighlightedBlock != null) {
+        } else {
             NodeCraft.LOGGER.info("清除方块高亮: {}", currentHighlightedBlock);
         }
         
