@@ -491,6 +491,9 @@ public boolean isImGuiWantCaptureMouse() {
             // 确保幽灵相机模式被禁用
             ghostCameraManager.forceCleanup();
             
+            // 清除射线检测缓存
+            com.nodecraft.client.input.NodecraftInputSystem.clearCache();
+            
             // 清除所有预览渲染元素
             com.nodecraft.nodesystem.preview.PreviewRenderer.getInstance().clearAllPreviews();
             NodeCraft.LOGGER.info("所有预览元素已清除");

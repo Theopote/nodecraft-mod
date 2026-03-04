@@ -11,9 +11,12 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallba
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.hit.BlockHitResult;
 import org.lwjgl.glfw.GLFW;
 
 public class NodeCraftClient implements ClientModInitializer {
@@ -135,6 +138,34 @@ public class NodeCraftClient implements ClientModInitializer {
         
         // 初始化预览渲染处理器
         com.nodecraft.nodesystem.preview.PreviewRenderHandler.initialize();
+        
+        // 注册方块高亮边框渲染事件
+        // 当 NodecraftScreen 打开且鼠标在 UI 外时，渲染鼠标指向方块的高亮边框
+        WorldRenderEvents.END_MAIN.register(context -> {
+            try {
+                MinecraftClient client = MinecraftClient.getInstance();
+                if (client == null || client.world == null || client.player == null) {
+                    return;
+                }
+                if (client.gameRenderer == null || client.gameRenderer.getCamera() == null) {
+                    return;
+                }
+                
+                // 仅在 NodecraftScreen 打开时渲染自定义方块高亮
+                if (client.currentScreen instanceof NodecraftScreen screen) {
+                    // 仅在鼠标不在 UI 上时显示高亮
+                    if (!screen.isMouseOverNodecraftGui(client.mouse.getX(), client.mouse.getY())) {
+                        BlockHitResult hitResult = com.nodecraft.client.input.NodecraftInputSystem.raycastFromMouse();
+                        if (hitResult != null && hitResult.getType() == net.minecraft.util.hit.HitResult.Type.BLOCK) {
+                            com.nodecraft.client.renderer.BlockHighlightRenderer.renderBlockOutline(
+                                    context.matrices(), context.consumers(), hitResult);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("渲染方块高亮时出错: {}", e.getMessage());
+            }
+        });
     }
     
     private void registerKeyBindings() {

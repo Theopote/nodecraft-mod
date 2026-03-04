@@ -13,7 +13,9 @@
     "MouseHandlerMixin",
     "NodecraftScreenMixin",
     "RenderSystemMixin",
-    "ScreenMixin"
+    "ScreenMixin",
+    "WorldRendererMixin",
+    "accessor.GameRendererAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
