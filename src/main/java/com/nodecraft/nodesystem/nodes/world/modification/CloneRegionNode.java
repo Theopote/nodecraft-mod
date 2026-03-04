@@ -8,6 +8,9 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -216,7 +219,7 @@ public class CloneRegionNode extends BaseNode {
                 
                 try {
                     // 记录源区域中的所有方块和实体
-                    Map<BlockPos, Object> blocksToCopy = new HashMap<>();
+                    Map<BlockPos, BlockState> blocksToCopy = new HashMap<>();
                     
                     // 遍历源区域内的所有方块
                     for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
@@ -225,7 +228,7 @@ public class CloneRegionNode extends BaseNode {
                         
                         try {
                             // 获取方块状态
-                            Object blockState = context.getWorld().getBlockState(immutablePos);
+                            BlockState blockState = context.getWorld().getBlockState(immutablePos);
                             
                             // 检查是否为空气（如果不包括空气则跳过）
                             boolean isAir = context.getWorld().isAir(immutablePos);
@@ -259,16 +262,13 @@ public class CloneRegionNode extends BaseNode {
                     }
                     
                     // 应用克隆（按照顺序处理，以确保像重力方块等能正确放置）
-                    for (Map.Entry<BlockPos, Object> entry : blocksToCopy.entrySet()) {
+                    for (Map.Entry<BlockPos, BlockState> entry : blocksToCopy.entrySet()) {
                         BlockPos pos = entry.getKey();
-                        Object blockState = entry.getValue();
+                        BlockState blockState = entry.getValue();
                         
                         try {
-                            // 在实际实现中放置方块
-                            // 例如：boolean blockSuccess = context.getWorld().setBlockState(pos, blockState, notifyUpdateValue, false);
-                            
-                            // 模拟放置成功
-                            boolean blockSuccess = true;
+                            int flags = Block.NOTIFY_ALL;
+                            boolean blockSuccess = context.getWorld().setBlockState(pos, blockState, flags);
                             
                             if (blockSuccess) {
                                 successCount++;
@@ -282,18 +282,13 @@ public class CloneRegionNode extends BaseNode {
                     
                     // 如果是移动模式，清除源区域
                     if (cloneModeValue == CloneMode.MOVE) {
-                        // 获取空气方块状态
-                        // 在实际实现中，应该使用Minecraft API获取空气方块
-                        // 例如：BlockState airState = Blocks.AIR.getDefaultState();
-                        Object airState = null; // 模拟空气方块状态
+                        BlockState airState = Blocks.AIR.getDefaultState();
                         
                         // 清除源区域
                         for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
                             try {
-                                // 在实际实现中设置为空气方块
-                                // 例如：context.getWorld().setBlockState(pos, airState, notifyUpdateValue, false);
+                                context.getWorld().setBlockState(pos.toImmutable(), airState, Block.NOTIFY_ALL);
                             } catch (Exception e) {
-                                // 记录单个方块清除错误但继续执行
                                 System.err.println("Error clearing block at " + pos + ": " + e.getMessage());
                             }
                         }

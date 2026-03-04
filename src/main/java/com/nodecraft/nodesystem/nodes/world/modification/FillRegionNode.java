@@ -8,6 +8,10 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
@@ -199,11 +203,18 @@ public class FillRegionNode extends BaseNode {
                                 }
                             }
                             
-                            // 在实际实现中放置方块
-                            // 例如：boolean success = context.getWorld().setBlockState(immutablePos, blockInfoObj, notifyUpdateValue, spawnDropsValue);
+                            // 解析目标方块状态并放置
+                            BlockState targetState = resolveBlockState(blockInfoObj);
+                            if (targetState == null) {
+                                System.err.println("FillRegionNode: Cannot resolve block state from input");
+                                continue;
+                            }
                             
-                            // 模拟放置成功
-                            boolean success = true;
+                            int flags = Block.NOTIFY_ALL;
+                            if (spawnDropsValue) {
+                                context.getWorld().breakBlock(immutablePos, true);
+                            }
+                            boolean success = context.getWorld().setBlockState(immutablePos, targetState, flags);
                             
                             if (success) {
                                 successCount++;
@@ -288,5 +299,27 @@ public class FillRegionNode extends BaseNode {
             this.maxBlocks = maxBlocks;
             markDirty();
         }
+    }
+    
+    /**
+     * 将输入的方块信息对象解析为 BlockState。
+     * 支持：BlockState 直接传入、String 方块ID（如 "minecraft:stone"）
+     */
+    private BlockState resolveBlockState(Object blockInfoObj) {
+        if (blockInfoObj instanceof BlockState) {
+            return (BlockState) blockInfoObj;
+        }
+        if (blockInfoObj instanceof String blockId) {
+            try {
+                Identifier id = Identifier.of(blockId);
+                Block block = Registries.BLOCK.get(id);
+                if (block != null) {
+                    return block.getDefaultState();
+                }
+            } catch (Exception e) {
+                System.err.println("Invalid block ID: " + blockId);
+            }
+        }
+        return null;
     }
 } 

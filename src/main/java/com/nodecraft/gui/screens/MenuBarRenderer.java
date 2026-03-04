@@ -13,7 +13,14 @@ import com.nodecraft.gui.dialogs.MessageDialog;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
 import com.nodecraft.gui.editor.impl.ImGuiNodeIO;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.world.World;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -33,6 +40,11 @@ public class MenuBarRenderer {
     
     // 最近文件路径
     private Path lastSavedPath = null;
+    
+    // 执行器引用
+    private NodeExecutor currentExecutor = null;
+    private String executionStatus = null;
+    private long executionStatusTime = 0;
 
     public MenuBarRenderer(
             ComponentManager componentManager,
@@ -237,6 +249,54 @@ public class MenuBarRenderer {
                     } else {
                         NodeCraft.LOGGER.warn("CanvasComponent is null, cannot toggle node previews");
                     }
+                }
+                
+                ImGui.endMenu();
+            }
+            // === 执行菜单 ===
+            if (ImGui.beginMenu("执行")) {
+                // 获取编辑器和图
+                CanvasComponent execCanvas = componentManager != null ? componentManager.getCanvasComponent() : null;
+                ImGuiNodeEditor execEditor = null;
+                NodeGraph execGraph = null;
+                if (execCanvas != null && execCanvas.getNodeEditor() instanceof ImGuiNodeEditor) {
+                    execEditor = (ImGuiNodeEditor) execCanvas.getNodeEditor();
+                    execGraph = execEditor.getCurrentGraph();
+                }
+                
+                boolean isExecuting = currentExecutor != null && currentExecutor.isExecuting();
+                boolean hasGraph = execGraph != null && !execGraph.getNodes().isEmpty();
+                
+                // 执行节点图
+                if (ImGui.menuItem("\u25b6 执行节点图", "F5", false, hasGraph && !isExecuting)) {
+                    if (execGraph != null) {
+                        executeNodeGraph(execGraph);
+                    }
+                }
+                
+                // 停止执行
+                if (ImGui.menuItem("\u25a0 停止执行", "Shift+F5", false, isExecuting)) {
+                    stopExecution();
+                }
+                
+                ImGui.separator();
+                
+                // 显示执行状态
+                if (isExecuting) {
+                    ImGui.textColored(0.2f, 1.0f, 0.2f, 1.0f, "状态: 正在执行...");
+                } else if (executionStatus != null) {
+                    // 状态信息显示5秒后自动清除
+                    if (System.currentTimeMillis() - executionStatusTime < 5000) {
+                        if (executionStatus.startsWith("成功")) {
+                            ImGui.textColored(0.2f, 1.0f, 0.2f, 1.0f, "状态: " + executionStatus);
+                        } else {
+                            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "状态: " + executionStatus);
+                        }
+                    } else {
+                        executionStatus = null;
+                    }
+                } else {
+                    ImGui.textDisabled("状态: 就绪");
                 }
                 
                 ImGui.endMenu();
@@ -569,4 +629,82 @@ public class MenuBarRenderer {
             NodeCraft.LOGGER.error("调试历史记录功能时出错: {}", e.getMessage(), e);
         }
     }
-} 
+    
+    // === 节点图执行相关方法 ===
+    
+    /**
+     * 执行节点图
+     * @param graph 要执行的节点图
+     */
+    private void executeNodeGraph(NodeGraph graph) {
+        try {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client == null || client.world == null) {
+                executionStatus = "失败: 未进入世界";
+                executionStatusTime = System.currentTimeMillis();
+                NodeCraft.LOGGER.error("无法执行节点图: 客户端未进入世界");
+                return;
+            }
+            
+            // 尝试获取服务端世界和玩家（单人模式下）
+            World world = client.world;
+            ServerPlayerEntity serverPlayer = null;
+            
+            IntegratedServer integratedServer = client.getServer();
+            if (integratedServer != null && client.player != null) {
+                serverPlayer = integratedServer.getPlayerManager()
+                    .getPlayer(client.player.getUuid());
+                if (serverPlayer != null) {
+                    // 使用服务端的主世界维度
+                    world = integratedServer.getOverworld();
+                }
+            }
+            
+            // 创建执行上下文
+            ExecutionContext context = new ExecutionContext(world, serverPlayer);
+            
+            // 创建执行器并异步执行
+            currentExecutor = new NodeExecutor(graph, context);
+            
+            NodeCraft.LOGGER.info("开始执行节点图: {} 个节点", graph.getNodes().size());
+            executionStatus = null;
+            
+            currentExecutor.executeAsync().thenAccept(result -> {
+                if (result) {
+                    executionStatus = "成功完成";
+                    NodeCraft.LOGGER.info("节点图执行成功");
+                } else {
+                    executionStatus = "执行失败";
+                    NodeCraft.LOGGER.warn("节点图执行失败");
+                }
+                executionStatusTime = System.currentTimeMillis();
+                currentExecutor = null;
+            }).exceptionally(throwable -> {
+                executionStatus = "错误: " + throwable.getMessage();
+                executionStatusTime = System.currentTimeMillis();
+                NodeCraft.LOGGER.error("节点图执行时发生异常", throwable);
+                currentExecutor = null;
+                return null;
+            });
+            
+        } catch (Exception e) {
+            executionStatus = "错误: " + e.getMessage();
+            executionStatusTime = System.currentTimeMillis();
+            NodeCraft.LOGGER.error("启动节点图执行失败", e);
+            currentExecutor = null;
+        }
+    }
+    
+    /**
+     * 停止当前执行
+     */
+    private void stopExecution() {
+        if (currentExecutor != null) {
+            currentExecutor.stop();
+            executionStatus = "已取消";
+            executionStatusTime = System.currentTimeMillis();
+            NodeCraft.LOGGER.info("节点图执行已取消");
+            currentExecutor = null;
+        }
+    }
+}

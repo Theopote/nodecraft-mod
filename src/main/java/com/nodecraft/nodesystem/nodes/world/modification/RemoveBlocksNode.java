@@ -7,6 +7,9 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.block.Blocks;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -134,9 +137,7 @@ public class RemoveBlocksNode extends BaseNode {
             
             try {
                 // 获取空气方块状态
-                // 在实际实现中，应该使用Minecraft API获取空气方块
-                // 例如：BlockState airState = Blocks.AIR.getDefaultState();
-                Object airState = null; // 模拟空气方块状态
+                BlockState airState = Blocks.AIR.getDefaultState();
                 
                 // 遍历所有坐标
                 for (BlockPos pos : coordinates) {
@@ -144,23 +145,26 @@ public class RemoveBlocksNode extends BaseNode {
                     
                     try {
                         // 获取当前方块状态（用于返回被替换的方块）
-                        Object currentBlockState = context.getWorld().getBlockState(pos);
+                        BlockState currentBlockState = context.getWorld().getBlockState(pos);
                         previousBlocksList.add(currentBlockState);
                         
                         // 检查当前位置是否已经是空气
-                        boolean isAir = context.getWorld().isAir(pos);
+                        boolean isAir = currentBlockState.isAir();
                         
-                        // 如果不是空气，进行替换
+                        // 如果不是空气，进行移除
                         if (!isAir) {
-                            // 在实际实现中设置为空气方块
-                            // 例如：boolean success = context.getWorld().setBlockState(pos, airState, notifyUpdateValue, spawnDropsValue);
-                            
-                            // 模拟替换成功
-                            boolean success = true;
-                            
-                            if (success) {
+                            if (spawnDropsValue) {
+                                // 先破坏方块产生掉落物，再设置为空气
+                                context.getWorld().breakBlock(pos, true);
                                 successCount++;
                                 removedBlocks++;
+                            } else {
+                                int flags = Block.NOTIFY_ALL;
+                                boolean result = context.getWorld().setBlockState(pos, airState, flags);
+                                if (result) {
+                                    successCount++;
+                                    removedBlocks++;
+                                }
                             }
                         } else {
                             // 已经是空气，考虑为操作成功

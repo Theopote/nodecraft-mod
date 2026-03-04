@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.execution;
 
 import com.nodecraft.nodesystem.minecraft.PlayerAccessor;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -8,9 +9,10 @@ import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * Holds context information for a node graph execution.
+ * 节点图执行上下文，持有执行期间所需的世界、玩家和变量信息。
+ * 实现 api.ExecutionContext 接口以统一上下文访问方式。
  */
-public class ExecutionContext {
+public class ExecutionContext implements com.nodecraft.nodesystem.api.ExecutionContext {
     
     private final World world;
     @Nullable
@@ -22,7 +24,10 @@ public class ExecutionContext {
     // 玩家数据访问器
     private PlayerAccessor playerAccessor;
     
-    // 可以添加更多上下文信息，例如当前迭代索引 (用于循环)
+    // 执行状态
+    private boolean success = true;
+    private String errorMessage = null;
+    private Object result = null;
     
     public ExecutionContext(World world, @Nullable ServerPlayerEntity player) {
         this.world = world;
@@ -59,23 +64,54 @@ public class ExecutionContext {
         this.playerAccessor = playerAccessor;
     }
     
-    /**
-     * 设置变量值
-     * @param key 变量名
-     * @param value 变量值
-     */
+    // === api.ExecutionContext 接口实现 ===
+    
+    @Override
     public void setVariable(String key, Object value) {
         variables.put(key, value);
     }
     
-    /**
-     * 获取变量值
-     * @param key 变量名
-     * @return 变量值，如果不存在则返回null
-     */
+    @Override
     public Object getVariable(String key) {
         return variables.get(key);
     }
+    
+    @Override
+    public Map<String, Object> getAllVariables() {
+        return Collections.unmodifiableMap(variables);
+    }
+    
+    @Override
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+    
+    @Override
+    public boolean isSuccess() {
+        return success;
+    }
+    
+    @Override
+    public void setErrorMessage(String message) {
+        this.errorMessage = message;
+    }
+    
+    @Override
+    public String getErrorMessage() {
+        return errorMessage;
+    }
+    
+    @Override
+    public void setResult(Object result) {
+        this.result = result;
+    }
+    
+    @Override
+    public Object getResult() {
+        return result;
+    }
+    
+    // === 额外便捷方法 ===
     
     /**
      * 检查变量是否存在
@@ -107,6 +143,6 @@ public class ExecutionContext {
      * @return 变量映射的不可修改视图
      */
     public Map<String, Object> getVariables() {
-        return java.util.Collections.unmodifiableMap(variables);
+        return Collections.unmodifiableMap(variables);
     }
 }

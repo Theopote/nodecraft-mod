@@ -7,12 +7,15 @@ import com.nodecraft.nodesystem.registry.NodeRegistry;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.JarURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 import java.util.stream.Collectors;
 
 /**
@@ -47,8 +50,8 @@ public class AutoNodeScanner {
                     // 处理文件系统中的资源
                     count += scanFileSystem(registry, resource);
                 } else if ("jar".equals(protocol)) {
-                    // 处理JAR包中的资源（未实现）
-                    NodeCraft.LOGGER.warn("暂不支持从JAR包扫描节点: {}", resource.getPath());
+                    // 处理JAR包中的资源
+                    count += scanJar(registry, resource);
                 } else {
                     NodeCraft.LOGGER.warn("不支持的资源协议: {}", protocol);
                 }
@@ -87,6 +90,40 @@ public class AutoNodeScanner {
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("扫描文件系统时出错: {}", e.getMessage(), e);
+        }
+        return count;
+    }
+    
+    /**
+     * 扫描 JAR 包中的类
+     */
+    private static int scanJar(NodeRegistry registry, URL resource) {
+        int count = 0;
+        try {
+            JarURLConnection jarConnection = (JarURLConnection) resource.openConnection();
+            JarFile jarFile = jarConnection.getJarFile();
+            
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+                String entryName = entry.getName();
+                
+                // 只处理指定包路径下的 .class 文件
+                if (entryName.startsWith(BASE_PACKAGE_PATH) && entryName.endsWith(".class")) {
+                    // 将路径转换为类名: com/nodecraft/nodesystem/nodes/Foo.class → com.nodecraft.nodesystem.nodes.Foo
+                    String className = entryName.replace('/', '.')
+                            .substring(0, entryName.length() - 6); // 移除 .class
+                    
+                    boolean registered = processClass(registry, className);
+                    if (registered) {
+                        count++;
+                    }
+                }
+            }
+        } catch (IOException e) {
+            NodeCraft.LOGGER.error("扫描JAR包时出错: {}", e.getMessage(), e);
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("扫描JAR包时发生未知错误: {}", e.getMessage(), e);
         }
         return count;
     }

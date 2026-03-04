@@ -5,6 +5,8 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
@@ -77,26 +79,22 @@ public class GetBlockNode extends BaseNode {
             BlockPos pos = (BlockPos) coordinateObj;
             
             try {
-                // 在实际实现中，从世界获取方块信息
-                // 这里只是示例代码，需要根据Minecraft实际API调整
-                blockObj = context.getWorld().getBlockState(pos);
+                // 从世界获取方块状态
+                BlockState blockState = context.getWorld().getBlockState(pos);
+                blockObj = blockState;
                 
-                // 获取方块类型
-                if (blockObj != null) {
-                    // 假设blockObj是BlockState，获取方块ID
-                    blockType = blockObj.toString(); // 在实际实现中应该获取正确的ID
-                    
-                    // 检查是否为空气
-                    isAir = context.getWorld().isAir(pos);
-                    
-                    // 检查是否为实心方块
-                    isSolid = !isAir; // 简化实现，实际应检查碰撞箱
-                    
-                    // 获取光照等级
-                    lightLevel = context.getWorld().getLightLevel(pos);
-                }
+                // 获取方块类型ID（如 "minecraft:stone"）
+                blockType = Registries.BLOCK.getId(blockState.getBlock()).toString();
+                
+                // 检查是否为空气
+                isAir = blockState.isAir();
+                
+                // 检查是否为实心方块（有完整碰撞箱）
+                isSolid = blockState.isSolidBlock(context.getWorld(), pos);
+                
+                // 获取光照等级
+                lightLevel = context.getWorld().getLightLevel(pos);
             } catch (Exception e) {
-                // 记录错误但继续执行，使用默认值
                 System.err.println("Error getting block at " + pos + ": " + e.getMessage());
             }
         }

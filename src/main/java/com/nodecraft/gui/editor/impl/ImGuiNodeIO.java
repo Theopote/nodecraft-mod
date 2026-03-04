@@ -122,6 +122,8 @@ public class ImGuiNodeIO {
         try {
             String json = gson.toJson(savedGraph);
             Files.writeString(filePath, json, StandardCharsets.UTF_8);
+            lastSavedPath = filePath;
+            dirty = false;
             NodeCraft.LOGGER.info("节点图成功保存到: {}", filePath);
         } catch (IOException e) {
             NodeCraft.LOGGER.error("保存节点图时发生 IO 错误: {}", e.getMessage(), e);
@@ -226,6 +228,8 @@ public class ImGuiNodeIO {
             // 最后将加载的图和位置设置到编辑器
             editor.setCurrentGraph(newGraph);
             editor.setNodePositions(newPositions);
+            lastSavedPath = filePath;
+            dirty = false;
             
             NodeCraft.LOGGER.info("节点图成功从文件加载: {}", filePath);
 

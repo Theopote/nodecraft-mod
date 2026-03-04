@@ -1,14 +1,19 @@
 package com.nodecraft.gui.editor.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.node.NodeInfo;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
 
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiWindowFlags;
+import imgui.type.ImString;
 
 /**
  * ImGui节点编辑器的菜单和弹窗UI组件
@@ -24,6 +29,8 @@ public class ImGuiNodeMenus {
     private float nodeSearchPosX = 0;
     private float nodeSearchPosY = 0;
     private boolean showNodeSearchPopup = false;
+    private final ImString searchBuffer = new ImString(256);
+    private boolean searchFocusRequested = false;
     
     /**
      * 构造函数
@@ -136,7 +143,7 @@ public class ImGuiNodeMenus {
     }
     
     /**
-     * 渲染节点搜索弹窗
+     * 渲染节点搜索弹窗 — 从 NodeRegistry 动态获取节点列表，支持模糊搜索
      */
     public void renderNodeSearchPopup() {
         if (showNodeSearchPopup) {
@@ -146,32 +153,96 @@ public class ImGuiNodeMenus {
             float popupY = canvasPos.y + nodeSearchPosY * editor.getCanvasZoom() + editor.getCanvasOffsetY();
             
             ImGui.setNextWindowPos(popupX, popupY);
-            ImGui.setNextWindowSize(300, 400);
+            ImGui.setNextWindowSize(320, 450);
             
             // 打开模态弹窗
             ImGui.openPopup("Node Search");
             
             if (ImGui.beginPopupModal("Node Search", ImGuiWindowFlags.AlwaysAutoResize)) {
                 try {
-                    ImGui.text("Add node at this position:");
+                    ImGui.text("搜索并添加节点:");
                     ImGui.separator();
                     
-                    // 节点搜索实现...
-                    String[] nodeTypes = {"Number Parameter", "Text Parameter", "Boolean", "Addition", "Multiplication"};
-                    String[] nodeIds = {"params.number", "params.text", "params.boolean", "maths.add", "maths.multiply"};
+                    // 搜索输入框
+                    if (searchFocusRequested) {
+                        ImGui.setKeyboardFocusHere();
+                        searchFocusRequested = false;
+                    }
+                    ImGui.inputText("##search", searchBuffer);
+                    String filter = searchBuffer.get().toLowerCase().trim();
                     
-                    for (int i = 0; i < nodeTypes.length; i++) {
-                        if (ImGui.button(nodeTypes[i], 280, 30)) {
-                            editor.addNode(nodeIds[i], nodeSearchPosX, nodeSearchPosY);
+                    ImGui.separator();
+                    
+                    // 从 NodeRegistry 获取所有节点
+                    NodeRegistry registry = NodeRegistry.getInstance();
+                    List<String> allNodeIds = registry.getAllNodeIds();
+                    
+                    // 按分类分组，筛选匹配的节点
+                    String lastCategory = null;
+                    int displayedCount = 0;
+                    
+                    // 排序后遍历
+                    List<String> sortedIds = new ArrayList<>(allNodeIds);
+                    sortedIds.sort(String::compareTo);
+                    
+                    ImGui.beginChild("NodeList", 300, 340, true);
+                    for (String nodeId : sortedIds) {
+                        NodeInfo info = registry.getNodeInfo(nodeId);
+                        if (info == null) continue;
+                        
+                        String displayName = info.getDisplayName();
+                        String categoryId = info.getCategoryId();
+                        
+                        // 模糊搜索：匹配节点ID、显示名、分类
+                        if (!filter.isEmpty()) {
+                            boolean matches = nodeId.toLowerCase().contains(filter)
+                                || (displayName != null && displayName.toLowerCase().contains(filter))
+                                || (categoryId != null && categoryId.toLowerCase().contains(filter));
+                            if (!matches) continue;
+                        }
+                        
+                        // 分类标题
+                        if (categoryId != null && !categoryId.equals(lastCategory)) {
+                            if (lastCategory != null) {
+                                ImGui.spacing();
+                            }
+                            ImGui.textColored(0.6f, 0.8f, 1.0f, 1.0f, "\u25b6 " + categoryId);
+                            ImGui.separator();
+                            lastCategory = categoryId;
+                        }
+                        
+                        // 节点按钮
+                        String label = (displayName != null ? displayName : nodeId);
+                        if (ImGui.selectable("  " + label + "##" + nodeId)) {
+                            editor.addNode(nodeId, nodeSearchPosX, nodeSearchPosY);
                             showNodeSearchPopup = false;
+                            searchBuffer.set("");
                             ImGui.closeCurrentPopup();
                         }
+                        
+                        // 悬停提示显示节点ID
+                        if (ImGui.isItemHovered()) {
+                            ImGui.beginTooltip();
+                            ImGui.text("ID: " + nodeId);
+                            if (info.getDescription() != null) {
+                                ImGui.text(info.getDescription());
+                            }
+                            ImGui.endTooltip();
+                        }
+                        
+                        displayedCount++;
                     }
+                    
+                    if (displayedCount == 0) {
+                        ImGui.textDisabled("没有找到匹配的节点");
+                    }
+                    ImGui.endChild();
                     
                     ImGui.separator();
                     
-                    if (ImGui.button("Cancel", 280, 30)) {
+                    if (ImGui.button("取消", 300, 28)) {
                         showNodeSearchPopup = false;
+                        searchBuffer.set("");
                         ImGui.closeCurrentPopup();
                     }
                 } finally {
@@ -212,6 +283,8 @@ public class ImGuiNodeMenus {
         nodeSearchPosX = x;
         nodeSearchPosY = y;
         showNodeSearchPopup = true;
+        searchBuffer.set("");
+        searchFocusRequested = true;
         NodeCraft.LOGGER.debug("节点搜索请求，位置: ({}, {})", x, y);
     }
     

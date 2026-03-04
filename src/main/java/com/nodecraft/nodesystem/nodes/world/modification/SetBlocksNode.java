@@ -7,6 +7,10 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -75,164 +79,103 @@ public class SetBlocksNode extends BaseNode {
         return this.description;
     }
 
-    // --- 核心逻辑 ---
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 默认输出值
         int successCount = 0;
         int totalCount = 0;
         boolean allSuccess = true;
         
-        // 获取输入值
         Object coordinatesObj = inputValues.get(INPUT_COORDINATES_ID);
         Object blockInfoObj = inputValues.get(INPUT_BLOCK_INFO_ID);
         Object blockInfoListObj = inputValues.get(INPUT_BLOCK_INFO_LIST_ID);
         
-        // 获取布尔值参数
         boolean notifyUpdateValue = this.notifyUpdate;
         Object notifyUpdateObj = inputValues.get(INPUT_NOTIFY_ID);
-        if (notifyUpdateObj instanceof Boolean) {
-            notifyUpdateValue = (Boolean) notifyUpdateObj;
-        }
+        if (notifyUpdateObj instanceof Boolean) { notifyUpdateValue = (Boolean) notifyUpdateObj; }
         
         boolean spawnDropsValue = this.spawnDrops;
         Object spawnDropsObj = inputValues.get(INPUT_SPAWN_DROPS_ID);
-        if (spawnDropsObj instanceof Boolean) {
-            spawnDropsValue = (Boolean) spawnDropsObj;
-        }
+        if (spawnDropsObj instanceof Boolean) { spawnDropsValue = (Boolean) spawnDropsObj; }
         
-        boolean batchUpdatesValue = this.batchUpdates;
-        Object batchUpdatesObj = inputValues.get(INPUT_BATCH_UPDATES_ID);
-        if (batchUpdatesObj instanceof Boolean) {
-            batchUpdatesValue = (Boolean) batchUpdatesObj;
-        }
-        
-        // 检查执行上下文和坐标列表输入是否有效
         if (context != null && context.getWorld() != null && 
                 coordinatesObj instanceof BlockPosList) {
             BlockPosList coordinates = (BlockPosList) coordinatesObj;
             
-            // 获取方块信息列表（如果有）
             List<?> blockInfoList = null;
-            if (blockInfoListObj instanceof List) {
-                blockInfoList = (List<?>) blockInfoListObj;
-            }
+            if (blockInfoListObj instanceof List) { blockInfoList = (List<?>) blockInfoListObj; }
             
-            // 如果方块信息列表为空但提供了单个方块信息，创建单元素列表
+            int flags = notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE;
+            
+            // 单一方块信息模式
             if ((blockInfoList == null || blockInfoList.isEmpty()) && blockInfoObj != null) {
-                // 使用单个方块信息应用于所有坐标
-                
-                // 在实际实现中，开始批量更新（如果启用）
-                if (batchUpdatesValue) {
-                    // 开始批量更新，例如 context.getWorld().beginBatchBlockUpdate();
-                }
-                
-                try {
-                    // 为所有坐标放置相同的方块
+                BlockState targetState = resolveBlockState(blockInfoObj);
+                if (targetState != null) {
                     for (BlockPos pos : coordinates) {
                         totalCount++;
                         try {
-                            // 在实际实现中放置方块
-                            // 例如：boolean success = context.getWorld().setBlockState(pos, blockInfoObj, notifyUpdateValue, spawnDropsValue);
-                            
-                            // 模拟放置成功
-                            boolean success = true;
-                            
-                            if (success) {
-                                successCount++;
-                            } else {
-                                allSuccess = false;
+                            if (spawnDropsValue && !context.getWorld().isAir(pos)) {
+                                context.getWorld().breakBlock(pos, true);
                             }
+                            boolean success = context.getWorld().setBlockState(pos, targetState, flags);
+                            if (success) { successCount++; } else { allSuccess = false; }
                         } catch (Exception e) {
-                            // 记录单个方块放置错误但继续执行
                             System.err.println("Error setting block at " + pos + ": " + e.getMessage());
                             allSuccess = false;
                         }
                     }
-                } finally {
-                    // 完成批量更新（如果启用）
-                    if (batchUpdatesValue) {
-                        // 例如: context.getWorld().endBatchBlockUpdate();
-                    }
                 }
             } 
-            // 使用方块信息列表
+            // 方块信息列表模式
             else if (blockInfoList != null && !blockInfoList.isEmpty()) {
-                
-                // 在实际实现中，开始批量更新（如果启用）
-                if (batchUpdatesValue) {
-                    // 开始批量更新，例如 context.getWorld().beginBatchBlockUpdate();
-                }
-                
-                try {
-                    // 根据两个列表的长度确定处理模式
-                    if (blockInfoList.size() == coordinates.size()) {
-                        // 一对一模式：每个坐标对应一个方块信息
-                        int i = 0;
-                        for (BlockPos pos : coordinates) {
-                            totalCount++;
-                            try {
-                                Object currentBlockInfo = blockInfoList.get(i++);
-                                
-                                // 在实际实现中放置方块
-                                // 例如：boolean success = context.getWorld().setBlockState(pos, currentBlockInfo, notifyUpdateValue, spawnDropsValue);
-                                
-                                // 模拟放置成功
-                                boolean success = true;
-                                
-                                if (success) {
-                                    successCount++;
-                                } else {
-                                    allSuccess = false;
-                                }
-                            } catch (Exception e) {
-                                // 记录单个方块放置错误但继续执行
-                                System.err.println("Error setting block at " + pos + ": " + e.getMessage());
-                                allSuccess = false;
+                int infoListSize = blockInfoList.size();
+                boolean oneToOne = (infoListSize == coordinates.size());
+                int i = 0;
+                for (BlockPos pos : coordinates) {
+                    totalCount++;
+                    try {
+                        Object currentBlockInfo = oneToOne ? blockInfoList.get(i) : blockInfoList.get(i % infoListSize);
+                        i++;
+                        BlockState targetState = resolveBlockState(currentBlockInfo);
+                        if (targetState != null) {
+                            if (spawnDropsValue && !context.getWorld().isAir(pos)) {
+                                context.getWorld().breakBlock(pos, true);
                             }
-                        }
-                    } else {
-                        // 循环模式：循环使用方块信息列表
-                        int infoListSize = blockInfoList.size();
-                        int i = 0;
-                        for (BlockPos pos : coordinates) {
-                            totalCount++;
-                            try {
-                                // 循环使用方块信息列表中的元素
-                                Object currentBlockInfo = blockInfoList.get(i % infoListSize);
-                                i++;
-                                
-                                // 在实际实现中放置方块
-                                // 例如：boolean success = context.getWorld().setBlockState(pos, currentBlockInfo, notifyUpdateValue, spawnDropsValue);
-                                
-                                // 模拟放置成功
-                                boolean success = true;
-                                
-                                if (success) {
-                                    successCount++;
-                                } else {
-                                    allSuccess = false;
-                                }
-                            } catch (Exception e) {
-                                // 记录单个方块放置错误但继续执行
-                                System.err.println("Error setting block at " + pos + ": " + e.getMessage());
-                                allSuccess = false;
-                            }
-                        }
-                    }
-                } finally {
-                    // 完成批量更新（如果启用）
-                    if (batchUpdatesValue) {
-                        // 例如: context.getWorld().endBatchBlockUpdate();
+                            boolean success = context.getWorld().setBlockState(pos, targetState, flags);
+                            if (success) { successCount++; } else { allSuccess = false; }
+                        } else { allSuccess = false; }
+                    } catch (Exception e) {
+                        System.err.println("Error setting block at " + pos + ": " + e.getMessage());
+                        allSuccess = false;
                     }
                 }
             }
         }
         
-        // 设置输出值
         outputValues.put(OUTPUT_SUCCESS_COUNT_ID, successCount);
         outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
         outputValues.put(OUTPUT_ALL_SUCCESS_ID, allSuccess);
+    }
+    
+    /**
+     * 将输入的方块信息对象解析为 BlockState。
+     * 支持：BlockState 直接传入、String 方块ID（如 "minecraft:stone"）
+     */
+    private BlockState resolveBlockState(Object blockInfoObj) {
+        if (blockInfoObj instanceof BlockState) {
+            return (BlockState) blockInfoObj;
+        }
+        if (blockInfoObj instanceof String blockId) {
+            try {
+                Identifier id = Identifier.of(blockId);
+                Block block = Registries.BLOCK.get(id);
+                if (block != null) {
+                    return block.getDefaultState();
+                }
+            } catch (Exception e) {
+                System.err.println("Invalid block ID: " + blockId);
+            }
+        }
+        return null;
     }
     
     // --- Getters/Setters for Properties ---

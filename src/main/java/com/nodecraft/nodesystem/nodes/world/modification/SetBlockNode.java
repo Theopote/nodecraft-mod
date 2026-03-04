@@ -5,6 +5,10 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
@@ -94,18 +98,23 @@ public class SetBlockNode extends BaseNode {
                 // 获取当前方块信息（用于返回被替换的方块）
                 previousBlock = context.getWorld().getBlockState(pos);
                 
-                // 在实际实现中，放置方块
-                // 这里是示例代码，需要根据Minecraft API进行调整
+                // 解析目标方块状态
+                BlockState targetState = resolveBlockState(blockInfoObj);
                 
-                // 设置方块
-                // 根据是否生成掉落物和是否通知更新，选择对应的方法
-                // 例如：context.getWorld().setBlockState(pos, blockState, notifyUpdateValue, spawnDropsValue);
-
-                // 模拟放置成功
-                success = true;
-                
+                if (targetState != null) {
+                    // 构建 setBlockState 的 flags
+                    // Block.NOTIFY_ALL = 3 (NOTIFY_NEIGHBORS | NOTIFY_LISTENERS)
+                    int flags = notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE;
+                    
+                    // 如果需要生成掉落物，先破坏原方块
+                    if (spawnDropsValue && !context.getWorld().isAir(pos)) {
+                        context.getWorld().breakBlock(pos, true);
+                    }
+                    
+                    // 设置方块
+                    success = context.getWorld().setBlockState(pos, targetState, flags);
+                }
             } catch (Exception e) {
-                // 记录错误
                 System.err.println("Error setting block at " + pos + ": " + e.getMessage());
                 success = false;
             }
@@ -134,5 +143,27 @@ public class SetBlockNode extends BaseNode {
     public void setSpawnDrops(boolean spawnDrops) {
         this.spawnDrops = spawnDrops;
         markDirty();
+    }
+    
+    /**
+     * 将输入的方块信息对象解析为 BlockState。
+     * 支持：BlockState 直接传入、String 方块ID（如 "minecraft:stone"）
+     */
+    private BlockState resolveBlockState(Object blockInfoObj) {
+        if (blockInfoObj instanceof BlockState) {
+            return (BlockState) blockInfoObj;
+        }
+        if (blockInfoObj instanceof String blockId) {
+            try {
+                Identifier id = Identifier.of(blockId);
+                Block block = Registries.BLOCK.get(id);
+                if (block != null) {
+                    return block.getDefaultState();
+                }
+            } catch (Exception e) {
+                System.err.println("Invalid block ID: " + blockId);
+            }
+        }
+        return null;
     }
 } 

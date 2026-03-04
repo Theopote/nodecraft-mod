@@ -8,6 +8,10 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
@@ -219,29 +223,34 @@ public class ReplaceBlocksNode extends BaseNode {
                         
                         try {
                             // 获取当前方块状态
-                            Object currentBlockState = context.getWorld().getBlockState(pos);
+                            BlockState currentState = context.getWorld().getBlockState(pos);
+                            
+                            // 解析目标方块状态
+                            BlockState targetState = resolveBlockState(targetBlockObj);
+                            BlockState replacementState = resolveBlockState(replacementBlockObj);
+                            
+                            if (targetState == null || replacementState == null) {
+                                continue;
+                            }
                             
                             // 判断当前方块是否符合目标方块（需要替换的方块）
                             boolean shouldReplace = false;
                             
                             if (exactMatchValue) {
                                 // 精确匹配（方块类型和状态都必须匹配）
-                                shouldReplace = targetBlockObj.equals(currentBlockState);
+                                shouldReplace = currentState.equals(targetState);
                             } else {
                                 // 只匹配方块类型，不考虑状态
-                                // 这里需要根据Minecraft API调整实现
-                                String currentType = currentBlockState.toString().split("\\[")[0];
-                                String targetType = targetBlockObj.toString().split("\\[")[0];
-                                shouldReplace = currentType.equals(targetType);
+                                shouldReplace = currentState.getBlock() == targetState.getBlock();
                             }
                             
                             // 如果符合替换条件
                             if (shouldReplace) {
-                                // 在实际实现中替换方块
-                                // 例如：boolean success = context.getWorld().setBlockState(pos, replacementBlockObj, notifyUpdateValue, spawnDropsValue);
-                                
-                                // 模拟替换成功
-                                boolean success = true;
+                                int flags = Block.NOTIFY_ALL;
+                                if (spawnDropsValue) {
+                                    context.getWorld().breakBlock(pos, true);
+                                }
+                                boolean success = context.getWorld().setBlockState(pos, replacementState, flags);
                                 
                                 if (success) {
                                     successCount++;
@@ -319,4 +328,25 @@ public class ReplaceBlocksNode extends BaseNode {
             markDirty();
         }
     }
-} 
+    
+    /**
+     * 将输入的方块信息对象解析为 BlockState。
+     */
+    private BlockState resolveBlockState(Object blockInfoObj) {
+        if (blockInfoObj instanceof BlockState) {
+            return (BlockState) blockInfoObj;
+        }
+        if (blockInfoObj instanceof String blockId) {
+            try {
+                Identifier id = Identifier.of(blockId);
+                Block block = Registries.BLOCK.get(id);
+                if (block != null) {
+                    return block.getDefaultState();
+                }
+            } catch (Exception e) {
+                System.err.println("Invalid block ID: " + blockId);
+            }
+        }
+        return null;
+    }
+}
