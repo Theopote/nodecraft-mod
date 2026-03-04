@@ -20,6 +20,8 @@ import net.minecraft.client.util.Window;
 import org.jetbrains.annotations.NotNull;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
+import org.lwjgl.opengl.GL30;
 
 import java.nio.DoubleBuffer;
 
@@ -350,7 +352,23 @@ public class ImGuiRenderer {
         }
 
         try {
-            imGuiGl3.renderDrawData(ImGui.getDrawData());
+            com.mojang.blaze3d.systems.RenderSystem.assertOnRenderThread();
+
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client != null && client.getWindow() != null) {
+                Window window = client.getWindow();
+                GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
+                GL11.glViewport(0, 0,
+                        Math.max(1, window.getFramebufferWidth()),
+                        Math.max(1, window.getFramebufferHeight()));
+            }
+
+            imgui.ImDrawData drawData = ImGui.getDrawData();
+            if (drawData != null && drawData.getCmdListsCount() > 0) {
+                try (ImGuiGLStateGuard ignored = ImGuiGLStateGuard.enter()) {
+                    imGuiGl3.renderDrawData(drawData);
+                }
+            }
 
             if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
                 final long backupCurrentContext = GLFW.glfwGetCurrentContext();
