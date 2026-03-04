@@ -9,6 +9,7 @@ import com.nodecraft.gui.layout.StandardLayoutManager;
 import com.nodecraft.gui.window.ViewportCloseDetector;
 import com.nodecraft.minecraft.client.GhostCameraManager;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
+import net.minecraft.client.MinecraftClient;
 
 /**
  * NodeCraft编辑器生命周期管理器
@@ -85,8 +86,17 @@ public class NodecraftLifecycleManager {
     }
     
     private void calculateInitialWindowSize() {
-        float screenWidth = Math.max(parentScreen.width, EditorConstants.MIN_WINDOW_WIDTH + EditorConstants.WINDOW_EDGE_MARGIN * 2);
-        float screenHeight = Math.max(parentScreen.height, EditorConstants.MIN_WINDOW_HEIGHT + EditorConstants.WINDOW_EDGE_MARGIN * 2);
+        MinecraftClient client = MinecraftClient.getInstance();
+        float baseWidth = parentScreen.width;
+        float baseHeight = parentScreen.height;
+
+        if (client != null && client.getWindow() != null) {
+            baseWidth = client.getWindow().getWidth();
+            baseHeight = client.getWindow().getHeight();
+        }
+
+        float screenWidth = Math.max(baseWidth, EditorConstants.MIN_WINDOW_WIDTH + EditorConstants.WINDOW_EDGE_MARGIN * 2);
+        float screenHeight = Math.max(baseHeight, EditorConstants.MIN_WINDOW_HEIGHT + EditorConstants.WINDOW_EDGE_MARGIN * 2);
         
         float desiredWidth = screenWidth * EditorConstants.SCREEN_WIDTH_RATIO;
         float desiredHeight = screenHeight * EditorConstants.SCREEN_HEIGHT_RATIO;
