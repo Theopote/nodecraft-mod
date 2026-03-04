@@ -190,16 +190,14 @@ public class ImGuiRenderer {
         try {
             io.getFonts().clear();
 
-            float dpiScale = 1.0f;
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client != null && client.getWindow() != null) {
-                dpiScale = (float) Math.max(1.0, client.getWindow().getScaleFactor());
+            boolean loadedFromSystem = tryLoadSystemChineseFont(io);
+            if (!loadedFromSystem) {
+                ImFontConfig fontConfig = getImFontConfig();
+                io.getFonts().addFontFromMemoryTTF(fontDataBytes, 18.0f, fontConfig, chineseGlyphRanges);
+                NodeCraft.LOGGER.info("已加载内置中文字体。");
             }
 
-            ImFontConfig fontConfig = getImFontConfig();
-            io.getFonts().addFontFromMemoryTTF(fontDataBytes, 16.0f * dpiScale, fontConfig, chineseGlyphRanges);
-            io.setFontGlobalScale(1.0f / dpiScale);
-            NodeCraft.LOGGER.info("已加载中文字体，DPI缩放: {}", dpiScale);
+            io.setFontGlobalScale(1.0f);
 
             // 构建字体图集
             if (!io.getFonts().build()) {
@@ -212,6 +210,33 @@ public class ImGuiRenderer {
             NodeCraft.LOGGER.error("加载自定义字体时出错", e);
             fallbackToDefaultFont(io);
         }
+    }
+
+    private boolean tryLoadSystemChineseFont(ImGuiIO io) {
+        String[] fontPaths = {
+                "C:/Windows/Fonts/msyh.ttc",
+                "C:/Windows/Fonts/msyhbd.ttc",
+                "C:/Windows/Fonts/simhei.ttf"
+        };
+
+        for (String fontPath : fontPaths) {
+            try {
+                java.io.File file = new java.io.File(fontPath);
+                if (!file.exists()) {
+                    continue;
+                }
+
+                ImFontConfig config = getImFontConfig();
+                config.setGlyphRanges(io.getFonts().getGlyphRangesChineseFull());
+                io.getFonts().addFontFromFileTTF(fontPath, 18.0f, config);
+                NodeCraft.LOGGER.info("已加载系统字体: {}", fontPath);
+                return true;
+            } catch (Exception e) {
+                NodeCraft.LOGGER.warn("加载系统字体失败: {}", fontPath, e);
+            }
+        }
+
+        return false;
     }
 
     private @NotNull ImFontConfig getImFontConfig() {

@@ -106,10 +106,10 @@ public class NodecraftWindowRenderer {
         parentScreen.windowWidth = Math.max(minWidth, Math.min(parentScreen.windowWidth, screenWidth));
         parentScreen.windowHeight = Math.max(minHeight, Math.min(parentScreen.windowHeight, screenHeight));
         
-        // 设置窗口位置和大小
-        ImGui.setNextWindowPos(parentScreen.windowX, parentScreen.windowY, ImGuiCond.Always);
-        ImGui.setNextWindowSize(parentScreen.windowWidth, parentScreen.windowHeight, ImGuiCond.Always);
-        ImGui.setNextWindowCollapsed(false, ImGuiCond.Always);
+        // 仅在窗口出现时设置初始位置和大小，避免每帧强制覆盖导致无法自由拖动
+        ImGui.setNextWindowPos(parentScreen.windowX, parentScreen.windowY, ImGuiCond.Appearing);
+        ImGui.setNextWindowSize(parentScreen.windowWidth, parentScreen.windowHeight, ImGuiCond.Appearing);
+        ImGui.setNextWindowCollapsed(false, ImGuiCond.Appearing);
         
         // 创建窗口标志
         int windowFlags = createWindowFlags(viewportsEnabled);
