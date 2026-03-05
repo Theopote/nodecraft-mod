@@ -285,6 +285,10 @@ public class SelectionVisualFeedback {
             .setOpacity(state.opacity)
             .setLineWidth(3.0f)
             .wireframeMode();
+
+        if (state == SelectionState.SELECTED || state == SelectionState.CONFIRMED) {
+            options.setShowFill(true);
+        }
         
         if (state.pulse) {
             options.enablePulse();

@@ -113,6 +113,14 @@ public class PreviewOptions {
         this.lineWidth = Math.max(0.1f, width);
         return this;
     }
+
+    /**
+     * 设置是否显示填充
+     */
+    public PreviewOptions setShowFill(boolean showFill) {
+        this.showFill = showFill;
+        return this;
+    }
     
     /**
      * 设置持续时间

@@ -30,6 +30,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
     private float opacity = 1.0f; // 基础透明度
     private float minOpacity = 0.0f; // 最小透明度值，默认为0允许完全按照设置的透明度显示
     private boolean enablePulse = true; // 是否启用脉冲动画 (默认启用)
+    private boolean showFill = false; // 是否显示方块表面填充
     private float pulsePhase = 0.0f; // 脉冲动画的当前阶段 (0.0 - 1.0)
 
     // 预计算的方块顶点偏移量，用于构建线框
@@ -70,6 +71,9 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         }
         if (options.minOpacity != null) {
             this.minOpacity = options.minOpacity;
+        }
+        if (options.showFill != null) {
+            this.showFill = options.showFill;
         }
 
         // 处理输入数据
@@ -148,7 +152,8 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         }
 
         VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.lines());
+        VertexConsumer lineVertexConsumer = vertexConsumers.getBuffer(RenderLayers.lines());
+        VertexConsumer fillVertexConsumer = showFill ? vertexConsumers.getBuffer(RenderLayers.debugFilledBox()) : null;
 
         // 遍历所有要高亮的方块位置
         for (Coordinate pos : blockPositions) {
@@ -168,7 +173,10 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             }
 
             // 使用简化的方块边框渲染
-            renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, vertexConsumer);
+            if (showFill && fillVertexConsumer != null) {
+                renderSimpleBlockFill(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, fillVertexConsumer);
+            }
+            renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, lineVertexConsumer);
         }
 
         vertexConsumers.draw();
@@ -219,6 +227,63 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         
         // 恢复渲染状态
         // 1.21.11 下线宽/剔除状态由渲染管线管理
+    }
+
+    /**
+     * 渲染方块半透明填充面
+     */
+    private void renderSimpleBlockFill(MatrixStack matrices, Vec3d cameraPos, BlockPos blockPos, float alpha, float pulseFactor, VertexConsumer vertexConsumer) {
+        double renderX = blockPos.getX() - cameraPos.x;
+        double renderY = blockPos.getY() - cameraPos.y;
+        double renderZ = blockPos.getZ() - cameraPos.z;
+
+        matrices.push();
+        matrices.translate(renderX, renderY, renderZ);
+
+        float r = color.x();
+        float g = color.y();
+        float b = color.z();
+        float a = Math.max(0.08f, alpha * 0.28f * pulseFactor);
+
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        renderCubeFaces(vertexConsumer, matrix, 0.0f, 0.0f, 0.0f, r, g, b, a);
+
+        matrices.pop();
+    }
+
+    /**
+     * 渲染立方体的6个面
+     */
+    private void renderCubeFaces(VertexConsumer vertexConsumer, Matrix4f matrix, float x, float y, float z, float r, float g, float b, float a) {
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+
+        vertexConsumer.vertex(matrix, x, y, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x, y, z).color(r, g, b, a);
+
+        vertexConsumer.vertex(matrix, x + 1, y, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y + 1, z + 1).color(r, g, b, a);
+        vertexConsumer.vertex(matrix, x + 1, y, z + 1).color(r, g, b, a);
     }
 
     /**
