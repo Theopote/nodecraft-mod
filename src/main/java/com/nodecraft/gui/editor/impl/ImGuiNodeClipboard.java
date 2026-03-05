@@ -9,7 +9,6 @@ import java.util.UUID;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -209,7 +208,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                 return false;
             }
             
-            String clipboardContent = null;
+            String clipboardContent;
             
             // 首先尝试从内部剪贴板获取数据
             if (internalClipboardContent != null) {
@@ -239,7 +238,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                 }
             }
             
-            if (clipboardContent == null || clipboardContent.isEmpty()) {
+            if (clipboardContent.isEmpty()) {
                 NodeCraft.LOGGER.error("粘贴失败：剪贴板内容为空");
                 return false;
             }
@@ -358,19 +357,17 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                                         try {
                                             Class<?> nodeClass = existingNode.getClass();
                                             INode clonedNode = (INode) nodeClass.getDeclaredConstructor().newInstance();
-                                            
-                                            if (clonedNode != null) {
-                                                currentGraph.addNode(clonedNode);
-                                                editor.getNodePositions().put(clonedNode.getId(), 
-                                                    new NodePosition(newX, newY));
-                                                
-                                                // 添加到结果列表
-                                                newNodes.add(clonedNode);
-                                                indexToNodeIdMap.put(i, clonedNode.getId());
-                                                
-                                                NodeCraft.LOGGER.info("通过克隆成功创建节点: {}", clonedNode.getDisplayName());
-                                                break;
-                                            }
+
+                                            currentGraph.addNode(clonedNode);
+                                            editor.getNodePositions().put(clonedNode.getId(),
+                                                new NodePosition(newX, newY));
+
+                                            // 添加到结果列表
+                                            newNodes.add(clonedNode);
+                                            indexToNodeIdMap.put(i, clonedNode.getId());
+
+                                            NodeCraft.LOGGER.info("通过克隆成功创建节点: {}", clonedNode.getDisplayName());
+                                            break;
                                         } catch (Exception ex) {
                                             // 继续尝试下一个节点
                                         }
@@ -392,23 +389,21 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                         NodeGraph editorGraph = editor.getCurrentGraph();
                         if (editorGraph != null && !editorGraph.getNodes().isEmpty()) {
                             // 获取第一个可用节点尝试克隆
-                            INode existingNode = editorGraph.getNodes().iterator().next();
+                            INode existingNode = editorGraph.getNodes().getFirst();
                             if (existingNode != null) {
                                 try {
                                     Class<?> nodeClass = existingNode.getClass();
                                     INode clonedNode = (INode) nodeClass.getDeclaredConstructor().newInstance();
-                                    
-                                    if (clonedNode != null) {
-                                        editorGraph.addNode(clonedNode);
-                                        editor.getNodePositions().put(clonedNode.getId(), 
-                                            new NodePosition(newX, newY));
-                                        
-                                        // 添加到结果列表
-                                        newNodes.add(clonedNode);
-                                        indexToNodeIdMap.put(i, clonedNode.getId());
-                                        
-                                        NodeCraft.LOGGER.info("通过克隆成功创建节点: {}", clonedNode.getDisplayName());
-                                    }
+
+                                    editorGraph.addNode(clonedNode);
+                                    editor.getNodePositions().put(clonedNode.getId(),
+                                        new NodePosition(newX, newY));
+
+                                    // 添加到结果列表
+                                    newNodes.add(clonedNode);
+                                    indexToNodeIdMap.put(i, clonedNode.getId());
+
+                                    NodeCraft.LOGGER.info("通过克隆成功创建节点: {}", clonedNode.getDisplayName());
                                 } catch (Exception ex) {
                                     NodeCraft.LOGGER.error("节点克隆失败: {}", ex.getMessage());
                                 }
@@ -496,7 +491,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
             // 获取历史记录组件
             ImGuiNodeHistory history = null;
             if (editor instanceof ImGuiNodeEditor) {
-                history = ((ImGuiNodeEditor) editor).getHistory();
+                history = editor.getHistory();
             }
 
             List<ImGuiNodeHistory.RemovedNodeSnapshot> snapshots = new ArrayList<>();

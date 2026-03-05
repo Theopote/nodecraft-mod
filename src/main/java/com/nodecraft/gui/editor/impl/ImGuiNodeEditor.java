@@ -2,7 +2,6 @@ package com.nodecraft.gui.editor.impl;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.List;
 import java.util.HashSet;
@@ -709,9 +708,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         NodeCraft.LOGGER.debug("发送编辑器事件: {}, 数据: {}", eventType, eventData);
 
         try {
-            if (net.minecraft.client.MinecraftClient.getInstance().currentScreen instanceof com.nodecraft.gui.screens.NodecraftScreen) {
-                com.nodecraft.gui.screens.NodecraftScreen screen =
-                        (com.nodecraft.gui.screens.NodecraftScreen)net.minecraft.client.MinecraftClient.getInstance().currentScreen;
+            if (net.minecraft.client.MinecraftClient.getInstance().currentScreen instanceof com.nodecraft.gui.screens.NodecraftScreen screen) {
 
                 if (screen.getComponentManager() != null) {
                     screen.getComponentManager().broadcastEvent(eventType, eventData);
@@ -887,7 +884,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         if (currentGraph == null) {
             return false;
         }
-        return currentGraph.getNodes().size() > 0;
+        return !currentGraph.getNodes().isEmpty();
     }
 
     @Override

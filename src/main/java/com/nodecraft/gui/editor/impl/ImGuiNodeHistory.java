@@ -334,7 +334,7 @@ public class ImGuiNodeHistory {
         
         // 如果历史记录超过最大值，移除最旧的
         if (undoStack.size() > maxHistorySize) {
-            undoStack.remove(0); // 移除栈底元素
+            undoStack.removeFirst(); // 移除栈底元素
             NodeCraft.LOGGER.debug("历史记录超出最大容量，移除最旧记录");
         }
         
@@ -347,7 +347,7 @@ public class ImGuiNodeHistory {
      */
     private void markEditorDirty() {
         if (editor instanceof ImGuiNodeEditor) {
-            ImGuiNodeIO io = ((ImGuiNodeEditor) editor).getNodeIO();
+            ImGuiNodeIO io = editor.getNodeIO();
             if (io != null) {
                 io.markDirty();
             }
