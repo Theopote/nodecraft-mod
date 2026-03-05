@@ -121,7 +121,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float availableWidth = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                float availableWidth = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
                 
                 // === 自动更新复选框 ===
@@ -179,7 +179,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
                     ImGui.pushStyleColor(ImGuiCol.Button, 0xFF4444AA);
                     ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF5555CC);
                     ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF3333AA);
-                    if (ImGui.button("清除选区##clear", availableWidth / zoom, 0)) {
+                    if (ImGui.button("清除选区##clear", availableWidth, 0)) {
                         clearSelection();
                         changed = true;
                     }
@@ -194,7 +194,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
                     ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF333333);
                     ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF333333);
                     ImGui.pushStyleColor(ImGuiCol.Text, 0xFF666666);
-                    ImGui.button("清除选区##clear_d", availableWidth / zoom, 0);
+                    ImGui.button("清除选区##clear_d", availableWidth, 0);
                     ImGui.popStyleColor(4);
                     l.popItemWidth();
                     l.popStyleVar();

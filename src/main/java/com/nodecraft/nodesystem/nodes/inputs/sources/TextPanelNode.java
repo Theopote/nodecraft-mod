@@ -115,7 +115,7 @@ public class TextPanelNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float availableWidth = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                float availableWidth = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
                 
                 ensureBuffer();
@@ -127,7 +127,7 @@ public class TextPanelNode extends BaseCustomUINode {
                     // === 多行文本区 ===
                     float textAreaHeight = ImGui.getTextLineHeightWithSpacing() * 6;
                     if (ImGui.inputTextMultiline("##text_panel", textBuffer, 
-                            availableWidth / zoom, textAreaHeight / zoom, flags)) {
+                            availableWidth, textAreaHeight, flags)) {
                         String newText = textBuffer.get();
                         if (!newText.equals(text)) {
                             text = newText;

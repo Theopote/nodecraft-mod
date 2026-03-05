@@ -127,11 +127,11 @@ public class FloatInputNode extends BaseCustomUINode {
                 l.addVerticalSpacing(getSmallPadding());
                 
                 // === 拖拽输入框 ===
-                float inputWidth = Math.min(160.0f, availableWidth - l.toPixels(10.0f));
-                setCenterX(availableWidth, l.toPixels(inputWidth));
+                float inputWidthPx = Math.min(l.toPixels(160.0f), availableWidth - l.toPixels(10.0f));
+                setCenterX(availableWidth, inputWidthPx);
                 
                 l.pushFramePadding(4.0f, 3.0f);
-                l.setItemWidth(inputWidth);
+                l.setItemWidth(inputWidthPx / zoom);
                 
                 float[] dragValue = {value};
                 // 根据是否有范围限制选择不同的拖拽模式
@@ -295,6 +295,6 @@ public class FloatInputNode extends BaseCustomUINode {
     }
 
     protected final float getAvailableWidth(float totalWidth, float zoom) {
-        return totalWidth - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+        return getAvailableContentWidth(totalWidth, zoom);
     }
 }

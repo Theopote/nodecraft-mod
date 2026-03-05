@@ -974,8 +974,8 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         // === 使用 Minecraft UI 主题系统 ===
         // 注意：缩放变换现在由 CustomUIRenderer 统一处理，这里只需要应用主题颜色
         try (MinecraftUITheme.MinecraftStyleScope themeScope = MinecraftUITheme.apply(1.0f)) {
-            // 现在 width 已经是缩放后的像素值，直接使用
-            float availableWidth = width - ZoomHelper.applyZoom(getMediumPadding() * 2, zoom);
+            // 将逻辑宽度和边距统一转换为像素后再做减法，确保缩放一致
+            float availableWidth = ZoomHelper.toScaledPixels(width - getMediumPadding() * 2, zoom);
             
             // 添加顶部间距（较小）
             addVerticalSpacing(getSmallPadding(), zoom);
@@ -1150,7 +1150,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
                 addVerticalSpacing(2, zoom);
                 
                 float[] distanceArray = {maxDistance};
-                setItemWidth(availableWidth, zoom);
+                ImGui.pushItemWidth(availableWidth);
                 if (ImGui.sliderFloat("##maxDistance", distanceArray, 1.0f, 300.0f)) {
                     setMaxDistance(distanceArray[0]);
                     changed = true;
@@ -1228,18 +1228,13 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
      * @return 扣除padding后的可用宽度
      */
     protected final float getAvailableWidth(float width, float zoom) {
-        // 使用与通用节点元素一致的padding计算方式
-        // 通用节点使用：NodeRenderConstants.NODE_HORIZONTAL_PADDING * canvasZoom
-        // 我们也使用相同的策略来确保一致性
-        
-        // 使用固定的逻辑padding值，然后直接用zoom缩放
-        float logicalPadding = 8.0f; // 与 NodeRenderConstants.NODE_HORIZONTAL_PADDING 相似的值
-        float scaledPadding = logicalPadding * zoom;
-        float availableWidth = Math.max(0, width - (scaledPadding * 2)); // 左右两侧padding
+        // 将逻辑宽度和边距统一转换为像素后再做减法，确保缩放一致
+        float logicalPadding = 8.0f;
+        float availableWidth = Math.max(0, ZoomHelper.toScaledPixels(width - logicalPadding * 2, zoom));
         
         if (isLayoutDebugEnabled()) {
-            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: getAvailableWidth (direct scaling) - inputWidth={}, zoom={}, logicalPadding={}, scaledPadding={}, availableWidth={}", 
-                                 getId(), width, zoom, logicalPadding, scaledPadding, availableWidth);
+            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: getAvailableWidth (direct scaling) - inputWidth={}, zoom={}, logicalPadding={}, availableWidth={}", 
+                                 getId(), width, zoom, logicalPadding, availableWidth);
         }
         
         return availableWidth;

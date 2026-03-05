@@ -661,8 +661,8 @@ public class AngleSliderNode extends BaseCustomUINode {
      * @return 可用宽度
      */
     protected final float getAvailableWidth(float totalWidth, float zoom) {
-        // 假设 getContentMargin() 返回的是逻辑单位的边距
-        return totalWidth - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+        // 使用父类方法确保逻辑/像素单位一致
+        return getAvailableContentWidth(totalWidth, zoom);
     }
 
     /**

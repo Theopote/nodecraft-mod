@@ -137,7 +137,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float aw = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                float aw = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
 
                 // 状态行
@@ -148,7 +148,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
                 l.addVerticalSpacing(getSmallPadding());
 
                 // 进度条
-                ImGui.progressBar(progressPercentage, aw / zoom, ImGui.getFrameHeight() / zoom,
+                ImGui.progressBar(progressPercentage, aw, ImGui.getFrameHeight(),
                     String.format("%.0f%%", progressPercentage * 100));
                 l.addVerticalSpacing(getSmallPadding());
 

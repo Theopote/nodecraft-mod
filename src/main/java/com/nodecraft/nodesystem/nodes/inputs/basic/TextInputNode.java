@@ -125,7 +125,7 @@ public class TextInputNode extends BaseCustomUINode {
                     
                     l.pushFramePadding(4.0f, 3.0f);
                     
-                    if (ImGui.inputTextMultiline("##text_input", inputBuffer, inputWidth / zoom, inputHeight / zoom, 
+                    if (ImGui.inputTextMultiline("##text_input", inputBuffer, inputWidth, inputHeight, 
                             ImGuiInputTextFlags.AllowTabInput)) {
                         String newText = inputBuffer.get();
                         if (newText.length() > maxLength) {
@@ -297,6 +297,6 @@ public class TextInputNode extends BaseCustomUINode {
     }
 
     protected final float getAvailableWidth(float totalWidth, float zoom) {
-        return totalWidth - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+        return getAvailableContentWidth(totalWidth, zoom);
     }
 }

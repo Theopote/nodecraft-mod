@@ -319,8 +319,11 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
     }
     
     protected final float getAvailableWidth(float unscaledNodeWidth, float zoom) {
-        float padding = getMediumPadding() * zoom;
-        return Math.max(0, unscaledNodeWidth - padding * 2);
+        // 使用父类方法统一将逻辑宽度转为像素后再减去像素边距，确保缩放一致
+        // 注意：这里用 getMediumPadding 而非 getContentMargin，通过手动计算像素差
+        float totalPx = toPixelsExact(unscaledNodeWidth, zoom);
+        float marginPx = toPixels(getMediumPadding() * 2, zoom);
+        return Math.max(0, totalPx - marginPx);
     }
     
     // === Getters/Setters ===

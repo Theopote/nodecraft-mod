@@ -119,7 +119,7 @@ public class PrintToChatNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float aw = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                float aw = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
 
                 // 前缀输入

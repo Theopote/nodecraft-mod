@@ -246,7 +246,7 @@ public class IntegerSliderNode extends BaseCustomUINode {
         // Assume getContentMargin() is a per-side margin.
         // For total available content width, subtract margin from both sides.
         // This is a common pattern for ImGui layouts.
-        return totalWidth - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+        return getAvailableContentWidth(totalWidth, zoom);
     }
 
     /**

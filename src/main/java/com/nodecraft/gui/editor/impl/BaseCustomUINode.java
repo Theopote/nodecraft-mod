@@ -113,11 +113,11 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
     /** 默认节点内容边距（未缩放逻辑单位） */
     protected static final float DEFAULT_CONTENT_MARGIN = 16.0f;
     /** 默认小间距（未缩放逻辑单位） */
-    protected static final float DEFAULT_PADDING_SMALL = 4.0f;
+    protected static final float DEFAULT_PADDING_SMALL = 2.0f;
     /** 默认中等间距（未缩放逻辑单位） */
-    protected static final float DEFAULT_PADDING_MEDIUM = 6.0f;
+    protected static final float DEFAULT_PADDING_MEDIUM = 3.0f;
     /** 默认大间距（未缩放逻辑单位） */
-    protected static final float DEFAULT_PADDING_LARGE = 8.0f;
+    protected static final float DEFAULT_PADDING_LARGE = 5.0f;
     
     // ### 缓存一致性检查阈值
     
@@ -294,28 +294,29 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
         // 使用更可靠的ID生成策略，避免hashCode()的碰撞风险
         pushUniqueImGuiId();
         
-        // 检查是否已经被 CustomUIRenderer 设置了字体缩放
-        // 如果当前字体缩放已经接近目标缩放，说明 CustomUIRenderer 已经处理了
+        // 检查字体缩放是否已经被 CustomUIRenderer 设置为 zoom
+        // CustomUIRenderer 会将所有样式属性统一按 zoom 线性缩放（包括字体），
+        // 所以这里必须比较 currentFontScale 和 zoom（而非非线性的 calculateImGuiFontScale），
+        // 否则字体缩放与其他样式属性不匹配，导致UI元素比例失调。
         float currentFontScale = ImGui.getIO().getFontGlobalScale();
-        float targetFontScale = calculateImGuiFontScaleWithCache(zoom);
-        boolean alreadyScaledByRenderer = Math.abs(currentFontScale - targetFontScale) < 0.05f;
+        boolean alreadyScaledByRenderer = Math.abs(currentFontScale - zoom) < 0.05f;
         
         boolean fontScaleChanged = false;
         
         try {
-            // 只有在 CustomUIRenderer 没有设置字体缩放时才自己设置
-            if (!alreadyScaledByRenderer && shouldUpdateFontScale(currentFontScale, targetFontScale, zoom)) {
-                ImGui.getIO().setFontGlobalScale(targetFontScale);
+            if (!alreadyScaledByRenderer) {
+                // 独立渲染模式（非通过 CustomUIRenderer）
+                // 使用线性 zoom 作为字体缩放，保持与 toPixels() 等布局方法的一致性
+                ImGui.getIO().setFontGlobalScale(zoom);
                 fontScaleChanged = true;
                 
                 if (isLayoutDebugEnabled()) {
-                    NodeCraft.LOGGER.debug("[Font Scale Debug] Node {}: ImGui font scale changed from {:.3f} to {:.3f} (zoom={:.3f}, threshold={:.3f})", 
-                                         getId(), currentFontScale, targetFontScale, zoom, getFontScaleChangeThreshold());
+                    NodeCraft.LOGGER.debug("[Font Scale Debug] Node {}: Font scale set to zoom={:.3f} (was {:.3f})", 
+                                         getId(), zoom, currentFontScale);
                 }
             } else if (isLayoutDebugEnabled()) {
-                String reason = alreadyScaledByRenderer ? "already scaled by renderer" : "difference below threshold";
-                NodeCraft.LOGGER.debug("[Font Scale Debug] Node {}: Font scale change skipped - {} (current={:.3f}, target={:.3f})", 
-                                     getId(), reason, currentFontScale, targetFontScale);
+                NodeCraft.LOGGER.debug("[Font Scale Debug] Node {}: Font scale already at zoom={:.3f}, skipping", 
+                                     getId(), zoom);
             }
             
             // 调用子类实现的缩放感知渲染方法
@@ -1157,55 +1158,29 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
     }
 
     protected final float toPixels(float logicalSize, float zoom) {
-        // 应用基础缩放
-        float scaled = ZoomHelper.toScaledPixels(logicalSize, zoom);
-        
-        // 内建响应式逻辑：确保最小可见尺寸
-        float minSize = getMinResponsiveSize();
-        float result = Math.max(scaled, minSize);
+        // 直接使用精确的线性缩放，不再应用响应式最小值。
+        // 响应式最小值（如 4.0f 固定像素）在小 zoom 时会使元素比例失调，
+        // 导致内容总高度超出 calculateUIHeight() 的预期值，引起裁剪。
+        // CustomUIRenderer 已经统一缩放了所有样式属性，各元素应严格按 zoom 等比缩放。
+        float result = ZoomHelper.toScaledPixels(logicalSize, zoom);
         
         if (isLayoutDebugEnabled()) {
-            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: toPixels (responsive) - logicalSize={}, zoom={}, scaled={}, minSize={}, result={}", 
-                                 getId(), logicalSize, zoom, scaled, minSize, result);
+            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: toPixels - logicalSize={}, zoom={}, result={}", 
+                                 getId(), logicalSize, zoom, result);
         }
         
         return result;
     }
 
     protected final float toPixels(float logicalSize, float zoom, ResponsiveElementType elementType) {
-        // 应用基础缩放
-        float scaled = ZoomHelper.toScaledPixels(logicalSize, zoom);
-        
-        // 根据元素类型选择不同的最小尺寸策略
-        float minSize;
-        switch (elementType) {
-            case BUTTON:
-                // 按钮需要足够大以便点击
-                minSize = Math.max(getMinResponsiveSize(), 20.0f);
-                break;
-            case TEXT:
-                // 文本需要可读性
-                minSize = getMinResponsiveFontSize();
-                break;
-            case ICON:
-                // 图标需要可识别性
-                minSize = Math.max(getMinResponsiveSize(), 12.0f);
-                break;
-            case SPACING:
-                // 间距需要视觉分离
-                minSize = getMinResponsiveSpacing();
-                break;
-            case GENERIC:
-            default:
-                minSize = getMinResponsiveSize();
-                break;
-        }
-        
-        float result = Math.max(scaled, minSize);
+        // 直接使用精确的线性缩放，与 toPixelsExact 行为一致。
+        // 之前的响应式最小值在 zoom < 1.0 时会使 padding/spacing 膨胀，
+        // 破坏与 calculateUIHeight()（线性预期）的一致性，导致UI元素被裁剪或位移。
+        float result = ZoomHelper.toScaledPixels(logicalSize, zoom);
         
         if (isLayoutDebugEnabled()) {
-            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: toPixels (typed responsive) - logicalSize={}, zoom={}, type={}, scaled={}, minSize={}, result={}", 
-                                 getId(), logicalSize, zoom, elementType, scaled, minSize, result);
+            NodeCraft.LOGGER.debug("[Layout Debug] Node {}: toPixels (typed) - logicalSize={}, zoom={}, type={}, result={}", 
+                                 getId(), logicalSize, zoom, elementType, result);
         }
         
         return result;

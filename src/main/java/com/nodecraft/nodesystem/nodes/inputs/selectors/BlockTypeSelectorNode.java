@@ -271,6 +271,6 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     }
 
     protected final float getAvailableWidth(float totalWidth, float zoom) {
-        return totalWidth - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+        return getAvailableContentWidth(totalWidth, zoom);
     }
 }

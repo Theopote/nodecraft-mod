@@ -467,7 +467,7 @@ public class CircularAngleNode extends BaseCustomUINode {
      * @return 可用宽度
      */
     protected final float getAvailableWidth(float totalWidth, float zoom) {
-        return ZoomHelper.getAvailableWidth(totalWidth, getContentMargin(), zoom);
+        return getAvailableContentWidth(totalWidth, zoom);
     }
     
     /**

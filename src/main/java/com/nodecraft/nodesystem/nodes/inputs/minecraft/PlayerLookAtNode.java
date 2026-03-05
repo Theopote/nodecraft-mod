@@ -98,7 +98,7 @@ public class PlayerLookAtNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float availableWidth = width - ZoomHelper.applyZoom(getContentMargin() * 2, zoom);
+                float availableWidth = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
                 
                 // === 最大距离滑条 ===
