@@ -29,10 +29,11 @@ public class BlockHighlightElement extends AbstractPreviewElement {
     private float lineWidth = 4.0f; // 线宽 (增加线宽确保可见)
     private float opacity = 1.0f; // 基础透明度
     private float minOpacity = 0.0f; // 最小透明度值，默认为0允许完全按照设置的透明度显示
-    private boolean enablePulse = true; // 是否启用脉冲动画 (默认启用)
+    private boolean enablePulse = false; // 是否启用脉冲动画（仅在选项明确开启时启用）
     private boolean showOutline = true; // 是否显示方块边框
     private boolean showFill = false; // 是否显示方块表面填充
     private float pulsePhase = 0.0f; // 脉冲动画的当前阶段 (0.0 - 1.0)
+    private static final float OUTLINE_EXPAND = 0.0025f; // 轻微外扩，避免与填充面共面导致边框不可见
 
     // 预计算的方块顶点偏移量，用于构建线框
     private static final Vec3d[] CUBE_VERTICES = {
@@ -214,10 +215,10 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         // 使用统一的线框缓冲提交
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
-        // 绘制立方体的12条边
+        // 绘制立方体的12条边（轻微外扩，增强可见性）
         for (int[] edge : CUBE_EDGES) {
-            Vec3d v1 = CUBE_VERTICES[edge[0]];
-            Vec3d v2 = CUBE_VERTICES[edge[1]];
+            Vec3d v1 = expandOutlineVertex(CUBE_VERTICES[edge[0]]);
+            Vec3d v2 = expandOutlineVertex(CUBE_VERTICES[edge[1]]);
             
             vertexConsumer.vertex(matrix, (float)v1.x, (float)v1.y, (float)v1.z)
                 .color(r, g, b, a)
@@ -233,6 +234,13 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         
         // 恢复渲染状态
         // 1.21.11 下线宽/剔除状态由渲染管线管理
+    }
+
+    private Vec3d expandOutlineVertex(Vec3d vertex) {
+        double ex = vertex.x == 0.0 ? -OUTLINE_EXPAND : OUTLINE_EXPAND;
+        double ey = vertex.y == 0.0 ? -OUTLINE_EXPAND : OUTLINE_EXPAND;
+        double ez = vertex.z == 0.0 ? -OUTLINE_EXPAND : OUTLINE_EXPAND;
+        return new Vec3d(vertex.x + ex, vertex.y + ey, vertex.z + ez);
     }
 
     /**
