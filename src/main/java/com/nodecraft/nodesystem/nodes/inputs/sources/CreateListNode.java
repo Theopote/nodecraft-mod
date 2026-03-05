@@ -10,7 +10,6 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiMouseButton;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -178,8 +177,7 @@ public class CreateListNode extends BaseCustomUINode {
     
     @Override
     public void setNodeState(Object state) {
-        if (state instanceof java.util.Map) {
-            java.util.Map<?, ?> m = (java.util.Map<?, ?>) state;
+        if (state instanceof java.util.Map<?, ?> m) {
             if (m.containsKey("allowDifferentTypes")) {
                 Object v = m.get("allowDifferentTypes");
                 if (v instanceof Boolean) setAllowDifferentTypes((Boolean) v);

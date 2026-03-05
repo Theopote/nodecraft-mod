@@ -3,7 +3,6 @@ package com.nodecraft.gui.editor.impl;
 import java.util.UUID;
 import com.nodecraft.nodesystem.api.INode;
 import imgui.ImGui;
-import imgui.ImVec2;
 import imgui.flag.ImGuiWindowFlags;
 import com.nodecraft.core.NodeCraft;
 
@@ -322,8 +321,6 @@ public class CustomUIRenderer {
             try {
                 java.lang.reflect.Method getCustomUIHeightMethod = node.getClass().getMethod("getCustomUIHeight");
                 return (Float) getCustomUIHeightMethod.invoke(node);
-            } catch (NoSuchMethodException e) {
-                return 0;
             } catch (Exception e) {
                 return 0;
             }
@@ -345,8 +342,6 @@ public class CustomUIRenderer {
             try {
                 java.lang.reflect.Method getMinRequiredUIWidthMethod = node.getClass().getMethod("getMinRequiredUIWidth");
                 return (Float) getMinRequiredUIWidthMethod.invoke(node);
-            } catch (NoSuchMethodException e) {
-                return 0;
             } catch (Exception e) {
                 return 0;
             }

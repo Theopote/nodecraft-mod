@@ -492,19 +492,13 @@ public class ImGuiNodeRenderer {
         if (customUIUnscaledHeight > 0) {
             float customUIStartY = nodeScreenY + (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
             if (hasAnyPorts) {
-                float unscaledPortsRegionHeight;
-                int numInputPorts = node.getInputPorts().size();
-                int numOutputPorts = node.getOutputPorts().size();
-                float inputPortsVisualHeight = (numInputPorts > 0) ? (numInputPorts * baseTextLineHeight + Math.max(0, numInputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
-                float outputPortsVisualHeight = (numOutputPorts > 0) ? (numOutputPorts * baseTextLineHeight + Math.max(0, numOutputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
-                unscaledPortsRegionHeight = Math.max(inputPortsVisualHeight, outputPortsVisualHeight);
+                float unscaledPortsRegionHeight = getUnscaledPortsRegionHeight(node, baseTextLineHeight, baseItemSpacingY);
                 customUIStartY += (unscaledPortsRegionHeight + NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
             }
 
             // 注意：在新的统一缩放架构中，我们传递逻辑尺寸但保持屏幕坐标
             // CustomUIRenderer 会在内部应用缩放变换
             float customUILogicalWidth = finalNodeWidthScaled / canvasZoom - 2 * NodeRenderConstants.NODE_HORIZONTAL_PADDING;
-            float customUILogicalHeight = customUIUnscaledHeight;
             float customUIScreenX = nodeScreenX + NodeRenderConstants.NODE_HORIZONTAL_PADDING * canvasZoom;
 
             ICustomUINode customUINode = null;
@@ -523,7 +517,7 @@ public class ImGuiNodeRenderer {
                             customUIScreenX,
                             customUIStartY,
                             customUILogicalWidth * canvasZoom, // 直接绘制需要已缩放的尺寸
-                            customUILogicalHeight * canvasZoom,
+                            customUIUnscaledHeight * canvasZoom,
                             canvasZoom
                     );
                 } catch (Exception e) {
@@ -534,12 +528,22 @@ public class ImGuiNodeRenderer {
                         node, customUINode, nodeId,
                         customUIScreenX, customUIStartY, // 使用屏幕坐标
                         customUILogicalWidth,            // 使用逻辑尺寸
-                        customUILogicalHeight,
+                        customUIUnscaledHeight,
                         canvasZoom, supportsDirectDrawing
                 );
                 customUIRenderer.renderSingleCustomUIWithChildWindow(info);
             }
         }
+    }
+
+    private static float getUnscaledPortsRegionHeight(INode node, float baseTextLineHeight, float baseItemSpacingY) {
+        float unscaledPortsRegionHeight;
+        int numInputPorts = node.getInputPorts().size();
+        int numOutputPorts = node.getOutputPorts().size();
+        float inputPortsVisualHeight = (numInputPorts > 0) ? (numInputPorts * baseTextLineHeight + Math.max(0, numInputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
+        float outputPortsVisualHeight = (numOutputPorts > 0) ? (numOutputPorts * baseTextLineHeight + Math.max(0, numOutputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
+        unscaledPortsRegionHeight = Math.max(inputPortsVisualHeight, outputPortsVisualHeight);
+        return unscaledPortsRegionHeight;
     }
 
     private void handleNodeInteraction(UUID nodeId, java.util.Set<UUID> selectedNodeIds,
@@ -586,7 +590,7 @@ public class ImGuiNodeRenderer {
 
                 if (currentHoveredNodeId != null && currentHoveredPortId != null) {
                     interaction.tryStartConnectionCreation(currentHoveredNodeId, currentHoveredPortId, currentIsHoveredPortOutput, editor.getPortScreenPositions());
-                    NodeCraft.LOGGER.debug("从节点内部端口区域启动连接创建: NodeId=" + currentHoveredNodeId + ", PortId=" + currentHoveredPortId);
+                    NodeCraft.LOGGER.debug("从节点内部端口区域启动连接创建: NodeId={}, PortId={}", currentHoveredNodeId, currentHoveredPortId);
                 }
             } else if (canDragNode && !isCustomUIWidgetActive) {
                 // 鼠标点击在节点主体上（包括自定义UI空白区域）
