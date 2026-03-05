@@ -6,6 +6,7 @@ import com.nodecraft.nodesystem.util.BlockStateData;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.minecraft.client.MinecraftClientController;
+import com.nodecraft.client.input.NodecraftInputSystem;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
@@ -1150,9 +1151,8 @@ public class NodeEditorInteractionManager {
                     middleMousePressed = false;
                 }
                 
-                // 使用缓存的射线进行拾取（性能优化）
-                Ray cachedRay = getCachedOrComputeRay(mouseX, mouseY);
-                BlockHitResult hitResult = cachedRay != null ? pickBlockWithRay(cachedRay) : null;
+                // 使用输入系统中已验证的射线换算，避免屏幕边缘拾取偏移
+                BlockHitResult hitResult = NodecraftInputSystem.raycastFromMouse();
                 Coordinate newHoveredBlock = null;
                 
                 if (hitResult != null && hitResult.getType() != HitResult.Type.MISS) {
