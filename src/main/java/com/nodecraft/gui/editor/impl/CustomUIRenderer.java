@@ -133,7 +133,8 @@ public class CustomUIRenderer {
             float zoom = info.zoom;
             ImGui.getIO().setFontGlobalScale(zoom);
             ImGui.getStyle().setFramePadding(originalFramePaddingX * zoom, originalFramePaddingY * zoom);
-            ImGui.getStyle().setItemSpacing(originalItemSpacingX * zoom, originalItemSpacingY * zoom);
+            // 节点面板内部使用更紧凑的垂直间距，X方向保持不变
+            ImGui.getStyle().setItemSpacing(originalItemSpacingX * zoom, 2.0f * zoom);
             ImGui.getStyle().setIndentSpacing(originalIndentSpacing * zoom);
             ImGui.getStyle().setFrameBorderSize(originalFrameBorderSize * zoom);
             ImGui.getStyle().setFrameRounding(originalFrameRounding * zoom);
