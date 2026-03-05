@@ -16,6 +16,7 @@ import com.nodecraft.gui.layout.LayoutConfig;
 import com.nodecraft.minecraft.client.GhostCameraManager;
 
 import imgui.ImGui;
+import imgui.flag.ImGuiPopupFlags;
 import org.lwjgl.glfw.GLFW;
 
 import net.minecraft.client.gui.Click;
@@ -264,16 +265,9 @@ private boolean isMouseOverImGuiForInteraction(com.nodecraft.nodesystem.interact
                 return false;
             }
             
-            // 如果 WantCaptureMouse 为 true，进行更保守的判断
-            // 检查鼠标是否在窗口的边缘区域（可能是在拖拽或调整大小）
-            float edgeThreshold = 10.0f; // 边缘阈值
-
-            // 如果在边缘区域，可能是窗口操作，保持UI捕获
-            // 如果不在边缘，在交互模式下倾向于世界交互
-            return (mouseX <= windowX + edgeThreshold ||
-                               mouseX >= windowX + windowWidth - edgeThreshold ||
-                               mouseY <= windowY + edgeThreshold ||
-                               mouseY >= windowY + windowHeight - edgeThreshold);
+            // 只要 ImGui 明确要求捕获鼠标（例如菜单、弹窗、控件交互），
+            // 就应稳定地视为在 UI 上，避免菜单在移动鼠标时被误关闭。
+            return true;
             
         } else {
             // 非交互模式下，使用标准的检测逻辑
@@ -351,6 +345,12 @@ public void setShowMenuBar(boolean show) { this.showMenuBar = show; }
 // 缺失的方法实现
 public boolean isMouseOverNodecraftGui(double mouseX, double mouseY) {
     if (initialized && ImGui.getIO() != null) {
+        // 菜单/子菜单/弹窗打开期间，始终视为鼠标在UI上，
+        // 避免从一级菜单移动到二级菜单时被误判并导致菜单收起。
+        if (ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopupId)) {
+            return true;
+        }
+
         boolean imguiWantsMouse = ImGui.getIO().getWantCaptureMouse();
         boolean inWindowBounds = (mouseX >= windowX && mouseX <= windowX + windowWidth &&
                                 mouseY >= windowY && mouseY <= windowY + windowHeight);
