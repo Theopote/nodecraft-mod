@@ -14,9 +14,40 @@ import com.nodecraft.core.NodeCraft;
 public class CustomUIRenderer {
     
     private final ICanvasEditor editor;
+
+    // === 自定义UI交互状态追踪 ===
+    // 追踪最近一次渲染的自定义UI子窗口的鼠标状态，
+    // 用于在 handleNodeInteraction 中支持通过自定义UI区域拖动节点
+    private java.util.UUID lastCustomUIHoveredNodeId = null;
+    private boolean lastCustomUIWasHoveredEmpty = false;
+    private boolean lastCustomUIHasActiveWidget = false;
     
     public CustomUIRenderer(ICanvasEditor editor) {
         this.editor = editor;
+    }
+
+    /**
+     * 获取最近一次渲染中，鼠标悬停在自定义UI空白区域的节点ID。
+     * 如果鼠标不在任何自定义UI空白区域，返回 null。
+     */
+    public java.util.UUID getCustomUIHoveredEmptyNodeId() {
+        return lastCustomUIWasHoveredEmpty ? lastCustomUIHoveredNodeId : null;
+    }
+
+    /**
+     * 检查最近渲染的自定义UI是否有活跃的控件（滑块、输入框等正在被交互）。
+     */
+    public boolean isCustomUIWidgetActive() {
+        return lastCustomUIHasActiveWidget;
+    }
+
+    /**
+     * 重置自定义UI交互状态（在每帧开始前调用）。
+     */
+    public void resetCustomUIInteractionState() {
+        lastCustomUIHoveredNodeId = null;
+        lastCustomUIWasHoveredEmpty = false;
+        lastCustomUIHasActiveWidget = false;
     }
 
     /**
@@ -63,8 +94,11 @@ public class CustomUIRenderer {
             float scaledWidth = info.width * info.zoom;
             float scaledHeight = info.height * info.zoom;
             
-            float safeWidth = scaledWidth;
-            float safeHeight = scaledHeight;
+            // 增加安全边距以防止内容被裁剪
+            // ImGui 控件的实际渲染尺寸可能因样式属性缩放而略大于计算值
+            float safetyMarginPixels = 4.0f * info.zoom;
+            float safeWidth = scaledWidth + safetyMarginPixels;
+            float safeHeight = scaledHeight + safetyMarginPixels;
 
             if (bounds != null) {
                 safeWidth = Math.max(scaledWidth, bounds.minWidth);
@@ -90,6 +124,10 @@ public class CustomUIRenderer {
             float originalScrollbarSize = ImGui.getStyle().getScrollbarSize();
             float originalScrollbarRounding = ImGui.getStyle().getScrollbarRounding();
             float originalGrabMinSize = ImGui.getStyle().getGrabMinSize();
+            float originalWindowPaddingX = ImGui.getStyle().getWindowPaddingX();
+            float originalWindowPaddingY = ImGui.getStyle().getWindowPaddingY();
+            float originalItemInnerSpacingX = ImGui.getStyle().getItemInnerSpacingX();
+            float originalItemInnerSpacingY = ImGui.getStyle().getItemInnerSpacingY();
             
             // 应用统一的缩放变换
             // 这样 ImGui 控件的所有部分（边框、内边距、交互区域等）都会正确缩放
@@ -104,6 +142,9 @@ public class CustomUIRenderer {
             ImGui.getStyle().setScrollbarSize(originalScrollbarSize * zoom);
             ImGui.getStyle().setScrollbarRounding(originalScrollbarRounding * zoom);
             ImGui.getStyle().setGrabMinSize(originalGrabMinSize * zoom);
+            // WindowPadding 设为 0，确保子窗口的整个区域都可用于内容渲染，避免裁剪
+            ImGui.getStyle().setWindowPadding(0, 0);
+            ImGui.getStyle().setItemInnerSpacing(originalItemInnerSpacingX * zoom, originalItemInnerSpacingY * zoom);
 
             try {
                 ImGui.setCursorScreenPos(info.screenX, info.screenY);
@@ -113,7 +154,8 @@ public class CustomUIRenderer {
                 int windowFlags = ImGuiWindowFlags.NoScrollbar |
                         ImGuiWindowFlags.NoScrollWithMouse |
                         ImGuiWindowFlags.NoBackground |
-                        ImGuiWindowFlags.NoDecoration;
+                        ImGuiWindowFlags.NoDecoration |
+                        ImGuiWindowFlags.NoMove; // 防止子窗口本身被拖动
 
                 boolean childVisible = ImGui.beginChild(customUIChildId, safeWidth, safeHeight, false, windowFlags);
                 childStarted = true;
@@ -127,6 +169,31 @@ public class CustomUIRenderer {
                         NodeCraft.LOGGER.error("自定义UI渲染失败 (节点: {}): {}", info.nodeId, e.getMessage(), e);
                     }
                 }
+
+                // === 自定义UI区域的鼠标事件处理 ===
+                // 检测鼠标是否在此子窗口区域内，以及是否有控件正在被交互
+                boolean isChildWindowHovered = ImGui.isWindowHovered();
+                boolean isAnyItemActiveInWindow = ImGui.isAnyItemActive();
+                boolean isAnyItemHoveredInWindow = ImGui.isAnyItemHovered();
+
+                if (isChildWindowHovered) {
+                    // 鼠标在自定义UI子窗口区域内
+                    // 无论是否有控件交互，都要捕获鼠标以防止父窗口被拖动
+                    ImGui.getIO().setWantCaptureMouse(true);
+
+                    if (isAnyItemActiveInWindow) {
+                        // 有控件正在被交互（如拖拽滑块），记录活跃状态
+                        lastCustomUIHasActiveWidget = true;
+                        lastCustomUIHoveredNodeId = info.nodeId;
+                        lastCustomUIWasHoveredEmpty = false;
+                    } else if (!isAnyItemHoveredInWindow) {
+                        // 鼠标在子窗口空白区域 → 允许通过此区域拖动节点
+                        lastCustomUIHoveredNodeId = info.nodeId;
+                        lastCustomUIWasHoveredEmpty = true;
+                        lastCustomUIHasActiveWidget = false;
+                    }
+                }
+
             } finally {
                 // 恢复原始样式状态
                 ImGui.getIO().setFontGlobalScale(originalFontScale);
@@ -139,6 +206,8 @@ public class CustomUIRenderer {
                 ImGui.getStyle().setScrollbarSize(originalScrollbarSize);
                 ImGui.getStyle().setScrollbarRounding(originalScrollbarRounding);
                 ImGui.getStyle().setGrabMinSize(originalGrabMinSize);
+                ImGui.getStyle().setWindowPadding(originalWindowPaddingX, originalWindowPaddingY);
+                ImGui.getStyle().setItemInnerSpacing(originalItemInnerSpacingX, originalItemInnerSpacingY);
             }
 
         } catch (Exception e) {

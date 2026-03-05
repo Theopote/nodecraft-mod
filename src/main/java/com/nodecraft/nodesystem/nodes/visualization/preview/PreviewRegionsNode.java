@@ -189,9 +189,10 @@ public class PreviewRegionsNode extends BaseCustomUINode {
                 l.addVerticalSpacing(getSmallPadding());
 
                 // 显示模式按钮行
-                float btnW = (aw / zoom - 8) / 3.0f;
+                float btnSpacing = ZoomHelper.applyZoom(4.0f, zoom);
+                float btnW = (aw / zoom - btnSpacing * 2 / zoom) / 3.0f;
                 for (int i = 0; i < DISPLAY_MODES.length; i++) {
-                    if (i > 0) ImGui.sameLine(0, 4);
+                    if (i > 0) ImGui.sameLine(0, btnSpacing);
                     boolean selected = DISPLAY_MODES[i].equals(displayMode);
                     if (selected) {
                         ImGui.pushStyleColor(ImGuiCol.Button, 0xFF4488CC);

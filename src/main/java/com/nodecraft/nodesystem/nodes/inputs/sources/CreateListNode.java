@@ -93,7 +93,7 @@ public class CreateListNode extends BaseCustomUINode {
                 l.addVerticalSpacing(getSmallPadding());
                 
                 // === +/- 按钮 ===
-                float buttonWidth = 40f;
+                float buttonWidth = ZoomHelper.applyZoom(40f, zoom);
                 
                 // 减号按钮
                 boolean canRemove = inputCount > 1;

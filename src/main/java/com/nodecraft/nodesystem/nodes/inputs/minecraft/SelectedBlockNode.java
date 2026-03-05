@@ -3,6 +3,7 @@ package com.nodecraft.nodesystem.nodes.inputs.minecraft;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.style.MinecraftUITheme;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.gui.editor.impl.ZoomHelper;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.IPort;
@@ -974,7 +975,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         // 注意：缩放变换现在由 CustomUIRenderer 统一处理，这里只需要应用主题颜色
         try (MinecraftUITheme.MinecraftStyleScope themeScope = MinecraftUITheme.apply(1.0f)) {
             // 现在 width 已经是缩放后的像素值，直接使用
-            float availableWidth = width - (2 * getMediumPadding());
+            float availableWidth = width - ZoomHelper.applyZoom(getMediumPadding() * 2, zoom);
             
             // 添加顶部间距（较小）
             addVerticalSpacing(getSmallPadding(), zoom);

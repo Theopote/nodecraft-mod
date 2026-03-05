@@ -174,7 +174,11 @@ public class ImGuiNodeRenderer {
             finalUnscaledNodeHeight += unscaledPortsRegionHeight + NodeRenderConstants.NODE_VERTICAL_PADDING;
         }
         if (hasCustomUI && customUIUnscaledHeight > 0) {
-            finalUnscaledNodeHeight += customUIUnscaledHeight + NodeRenderConstants.NODE_VERTICAL_PADDING;
+            // 添加安全边距以防止自定义UI元素在缩放时被裁剪。
+            // 由于 ImGui 控件的实际高度可能因样式参数（FramePadding、ItemSpacing 等）
+            // 的缩放而略微超出计算的逻辑高度，这里增加一个小的安全边距。
+            float customUISafetyMargin = 4.0f; // 逻辑单位的安全边距
+            finalUnscaledNodeHeight += customUIUnscaledHeight + customUISafetyMargin + NodeRenderConstants.NODE_VERTICAL_PADDING;
         }
 
         pos.setSize(finalUnscaledNodeWidth, finalUnscaledNodeHeight);
@@ -294,7 +298,10 @@ public class ImGuiNodeRenderer {
         }
 
         // 处理自定义UI
-        if (customUIRenderer.hasCustomUI(node)) {
+        boolean nodeHasCustomUI = customUIRenderer.hasCustomUI(node);
+        if (nodeHasCustomUI) {
+            // 在渲染自定义UI前重置交互状态
+            customUIRenderer.resetCustomUIInteractionState();
             renderCustomUI(node, nodeId, nodeScreenX, nodeScreenY, finalNodeWidthScaled, 
                     baseTextLineHeight, canvasZoom, hasAnyPorts, baseItemSpacingY);
         }
@@ -303,7 +310,8 @@ public class ImGuiNodeRenderer {
         ImGui.setCursorScreenPos(nodeScreenX, nodeScreenY);
         ImGui.invisibleButton("node_interaction_area_" + nodeId, finalNodeWidthScaled, finalNodeHeightScaled);
 
-        handleNodeInteraction(nodeId, selectedNodeIds);
+        handleNodeInteraction(nodeId, selectedNodeIds, nodeHasCustomUI,
+                nodeScreenX, nodeScreenY, finalNodeWidthScaled, finalNodeHeightScaled);
 
         if (selectedNodeIds.contains(nodeId)) {
             float selectionBorderThickness = 3.0f * canvasZoom;
@@ -534,12 +542,37 @@ public class ImGuiNodeRenderer {
         }
     }
 
-    private void handleNodeInteraction(UUID nodeId, java.util.Set<UUID> selectedNodeIds) {
+    private void handleNodeInteraction(UUID nodeId, java.util.Set<UUID> selectedNodeIds,
+                                         boolean nodeHasCustomUI,
+                                         float nodeScreenX, float nodeScreenY,
+                                         float nodeWidthScaled, float nodeHeightScaled) {
+        ImGuiNodeInteraction interaction = editor.getInteraction();
+        ImVec2 mousePos = ImGui.getIO().getMousePos();
+
+        // 检查鼠标是否在节点矩形区域内（基于位置，不依赖 ImGui 的 isItemActive）
+        boolean isMouseInNodeBounds = mousePos.x >= nodeScreenX && mousePos.x <= nodeScreenX + nodeWidthScaled &&
+                                     mousePos.y >= nodeScreenY && mousePos.y <= nodeScreenY + nodeHeightScaled;
+
+        // 检查自定义UI区域的交互状态
+        boolean isCustomUIHoveredEmpty = false;
+        boolean isCustomUIWidgetActive = false;
+        if (nodeHasCustomUI) {
+            java.util.UUID hoveredCustomUINodeId = customUIRenderer.getCustomUIHoveredEmptyNodeId();
+            isCustomUIHoveredEmpty = hoveredCustomUINodeId != null && hoveredCustomUINodeId.equals(nodeId);
+            isCustomUIWidgetActive = customUIRenderer.isCustomUIWidgetActive();
+        }
+
+        // invisibleButton 是否活跃（标准方式）
+        boolean isInvisibleButtonActive = ImGui.isItemActive();
+
+        // 综合判断：节点可拖动条件
+        // 1. 标准方式：invisible button 活跃
+        // 2. 增强方式：鼠标在节点区域内 + 自定义UI空白区域被悬停（无控件活跃）
+        boolean canDragNode = isInvisibleButtonActive || (isMouseInNodeBounds && isCustomUIHoveredEmpty && !isCustomUIWidgetActive);
+
         // 检查是否是首次点击 (鼠标刚按下左键)
         if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
             // 首先检查鼠标是否在端口区域 - 如果是，优先处理端口连接
-            ImVec2 mousePos = ImGui.getIO().getMousePos();
-            ImGuiNodeInteraction interaction = editor.getInteraction();
             boolean isMouseOnPort = interaction.isMouseOverAnyPortOfNode(nodeId, mousePos, editor.getPortScreenPositions());
 
             if (isMouseOnPort) { // 鼠标点击在端口上：尝试启动连接
@@ -555,21 +588,24 @@ public class ImGuiNodeRenderer {
                     interaction.tryStartConnectionCreation(currentHoveredNodeId, currentHoveredPortId, currentIsHoveredPortOutput, editor.getPortScreenPositions());
                     NodeCraft.LOGGER.debug("从节点内部端口区域启动连接创建: NodeId=" + currentHoveredNodeId + ", PortId=" + currentHoveredPortId);
                 }
-            } else if (ImGui.isItemActive()) { // 鼠标点击在节点主体上 (非端口区域) 且 invisibleButton 活跃
+            } else if (canDragNode && !isCustomUIWidgetActive) {
+                // 鼠标点击在节点主体上（包括自定义UI空白区域）
                 // 处理正常的节点选择和拖拽
                 interaction.handleClickOnNodeBody(nodeId, ImGui.getIO().getKeyCtrl());
 
-                // 立即尝试启动拖拽 (如果满足拖拽条件)
-                // 此处确保 DRAGGING_NODE 状态被设置
+                // 立即尝试启动拖拽
                 interaction.tryStartNodeDraggingFromNodeBody(nodeId);
+                
+                // 确保鼠标被捕获，防止窗口拖动
+                ImGui.getIO().setWantCaptureMouse(true);
             }
         }
 
-        // 如果节点主体的 invisible button 处于激活状态 (意味着鼠标左键保持按下并在其上拖动)
-        // 并且交互状态为 DRAGGING_NODE，则持续移动节点
-        if (ImGui.isItemActive() && editor.getInteraction().isDraggingNode() && ImGui.isMouseDown(ImGuiMouseButton.Left)) { // 确保鼠标左键依然按下
+        // 如果节点处于可拖动状态并且交互状态为 DRAGGING_NODE，则持续移动节点
+        if ((isInvisibleButtonActive || (isMouseInNodeBounds && !isCustomUIWidgetActive)) 
+                && interaction.isDraggingNode() && ImGui.isMouseDown(ImGuiMouseButton.Left)) {
             // 确保当前活跃的节点是正在拖动的节点，或者拖动的节点是选中集的一部分
-            if (Objects.equals(editor.getInteraction().getDraggingNodeId(), nodeId) || selectedNodeIds.contains(nodeId)) {
+            if (Objects.equals(interaction.getDraggingNodeId(), nodeId) || selectedNodeIds.contains(nodeId)) {
                 float deltaX = ImGui.getIO().getMouseDelta().x / editor.getCanvasZoom();
                 float deltaY = ImGui.getIO().getMouseDelta().y / editor.getCanvasZoom();
 
@@ -587,9 +623,14 @@ public class ImGuiNodeRenderer {
             }
         } else if (ImGui.isItemDeactivated()) {
             // 如果这个 invisible button 刚刚失去激活状态 (鼠标抬起)
-            editor.getInteraction().clearNodeBodyActive(nodeId);
+            interaction.clearNodeBodyActive(nodeId);
             // 此时拖拽状态应该由 ImGuiNodeInteraction 内部在鼠标释放时统一处理
-            editor.getInteraction().tryStopNodeDragging(); // 尝试停止拖拽
+            interaction.tryStopNodeDragging(); // 尝试停止拖拽
+        }
+
+        // 额外检查：如果正在拖动节点且鼠标释放，确保停止拖动
+        if (interaction.isDraggingNode() && ImGui.isMouseReleased(ImGuiMouseButton.Left)) {
+            interaction.tryStopNodeDragging();
         }
     }
 
