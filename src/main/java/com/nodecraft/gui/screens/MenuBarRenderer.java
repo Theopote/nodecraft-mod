@@ -2,8 +2,6 @@ package com.nodecraft.gui.screens;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.components.CanvasComponent;
@@ -33,7 +31,6 @@ public class MenuBarRenderer {
 
     private final ComponentManager componentManager;
     private final Runnable closeAction;
-    private final BooleanSupplier showMenuBarSupplier;
 
     // 文件过滤器
     private static final String NODE_GRAPH_FILTER = "节点图文件 (*.nodecraft;*.json)";
@@ -49,12 +46,9 @@ public class MenuBarRenderer {
 
     public MenuBarRenderer(
             ComponentManager componentManager,
-            Runnable closeAction,
-            BooleanSupplier showMenuBarSupplier,
-            Consumer<Boolean> showMenuBarConsumer) {
+            Runnable closeAction) {
         this.componentManager = componentManager;
         this.closeAction = closeAction;
-        this.showMenuBarSupplier = showMenuBarSupplier;
     }
 
     /**
@@ -161,28 +155,25 @@ public class MenuBarRenderer {
             }
             if (ImGui.beginMenu("视图")) {
                 // 缩放选项
+                CanvasComponent viewCanvas = componentManager != null ? componentManager.getCanvasComponent() : null;
                 if (ImGui.menuItem("放大", "Ctrl++")) {
-                    CanvasComponent canvas = componentManager != null ? componentManager.getCanvasComponent() : null;
-                    if (canvas != null) {
-                        canvas.zoomIn();
+                    if (viewCanvas != null) {
+                        viewCanvas.zoomIn();
                     }
                 }
                 if (ImGui.menuItem("缩小", "Ctrl+-")) {
-                    CanvasComponent canvas = componentManager != null ? componentManager.getCanvasComponent() : null;
-                    if (canvas != null) {
-                        canvas.zoomOut();
+                    if (viewCanvas != null) {
+                        viewCanvas.zoomOut();
                     }
                 }
                 if (ImGui.menuItem("重置视图", "Ctrl+0")) {
-                    CanvasComponent canvas = componentManager != null ? componentManager.getCanvasComponent() : null;
-                    if (canvas != null) {
-                        canvas.resetCanvasView();
+                    if (viewCanvas != null) {
+                        viewCanvas.resetCanvasView();
                     }
                 }
                 if (ImGui.menuItem("适应视图", "Ctrl+Home")) {
-                    CanvasComponent canvas = componentManager != null ? componentManager.getCanvasComponent() : null;
-                    if (canvas != null) {
-                        canvas.fitToContent();
+                    if (viewCanvas != null) {
+                        viewCanvas.fitToContent();
                     }
                 }
                 
@@ -209,7 +200,7 @@ public class MenuBarRenderer {
                 }
                 
                 // 网格显示选项
-                CanvasComponent canvas = componentManager != null ? componentManager.getCanvasComponent() : null;
+                CanvasComponent canvas = viewCanvas;
                 boolean showGrid = canvas != null && canvas.isShowGrid();
                 if (ImGui.menuItem("显示网格", null, showGrid)) {
                     if (canvas != null) {
@@ -431,9 +422,9 @@ public class MenuBarRenderer {
     }
     
     /**
-     * 创建新的节点图
+     * 创建新的节点图（包级可见，供快捷键调用）
      */
-    private void createNewNodeGraph() {
+    void createNewNodeGraph() {
         try {
             CanvasComponent canvas = componentManager.getCanvasComponent();
             if (canvas != null && canvas.getNodeEditor() instanceof ImGuiNodeEditor editor) {
@@ -492,9 +483,9 @@ public class MenuBarRenderer {
     }
     
     /**
-     * 打开节点图文件
+     * 打开节点图文件（包级可见，供快捷键调用）
      */
-    private void openNodeGraph() {
+    void openNodeGraph() {
         try {
             CanvasComponent canvas = componentManager.getCanvasComponent();
             if (canvas != null && canvas.getNodeEditor() instanceof ImGuiNodeEditor editor) {
@@ -543,10 +534,10 @@ public class MenuBarRenderer {
     }
     
     /**
-     * 保存节点图
+     * 保存节点图（包级可见，供快捷键调用）
      * @param saveAs 是否另存为
      */
-    private void saveNodeGraph(boolean saveAs) {
+    void saveNodeGraph(boolean saveAs) {
         saveNodeGraph(saveAs, null);
     }
     
@@ -674,6 +665,33 @@ public class MenuBarRenderer {
     // === 节点图执行相关方法 ===
     
     /**
+     * 从快捷键触发执行当前节点图
+     */
+    void executeCurrentGraph() {
+        try {
+            CanvasComponent execCanvas = componentManager != null ? componentManager.getCanvasComponent() : null;
+            NodeGraph execGraph = null;
+            if (execCanvas != null && execCanvas.getNodeEditor() instanceof ImGuiNodeEditor) {
+                ImGuiNodeEditor execEditor = (ImGuiNodeEditor) execCanvas.getNodeEditor();
+                execGraph = execEditor.getCurrentGraph();
+            }
+            boolean isExecuting = currentExecutor != null && currentExecutor.isExecuting();
+            if (execGraph != null && !execGraph.getNodes().isEmpty() && !isExecuting) {
+                executeNodeGraph(execGraph);
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("快捷键执行节点图失败: {}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 检查当前是否正在执行
+     */
+    boolean isExecuting() {
+        return currentExecutor != null && currentExecutor.isExecuting();
+    }
+
+    /**
      * 执行节点图
      * @param graph 要执行的节点图
      */
@@ -737,9 +755,9 @@ public class MenuBarRenderer {
     }
     
     /**
-     * 停止当前执行
+     * 停止当前执行（包级可见，供快捷键调用）
      */
-    private void stopExecution() {
+    void stopExecution() {
         if (currentExecutor != null) {
             currentExecutor.stop();
             executionStatus = "已取消";

@@ -189,9 +189,7 @@ public class NodecraftLifecycleManager {
         // 创建菜单栏渲染器
         MenuBarRenderer menuBarRenderer = new MenuBarRenderer(
             componentManager,
-            () -> parentScreen.closeRequested = true,
-                parentScreen::isShowMenuBar,
-                parentScreen::setShowMenuBar
+            () -> parentScreen.closeRequested = true
         );
         parentScreen.setMenuBarRenderer(menuBarRenderer);
         

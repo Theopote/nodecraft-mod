@@ -134,12 +134,10 @@ public class ImGuiNodeMenus {
                 }
             } finally {
                 ImGui.endPopup();
-                
-                // 关闭菜单后清除引用
-                if (!ImGui.isPopupOpen("NodeContextMenu")) {
-                    rightClickedNodeId = null;
-                }
             }
+        } else {
+            // 弹窗已关闭，安全清除引用
+            rightClickedNodeId = null;
         }
     }
     

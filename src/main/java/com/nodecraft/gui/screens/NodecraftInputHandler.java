@@ -5,12 +5,11 @@ import com.nodecraft.gui.components.CanvasComponent;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.minecraft.client.GhostCameraManager;
 import imgui.ImGui;
+import imgui.ImVec2;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import org.lwjgl.glfw.GLFW;
-
-import java.util.UUID;
 
 /**
  * NodeCraft编辑器的输入事件处理器
@@ -123,8 +122,9 @@ public class NodecraftInputHandler {
             return handleEditorShortcuts(keyCode, modifiers);
         }
 
-        // 鼠标在 UI 外：移动键传递给 Minecraft
-        if (isMovementKey(keyCode)) {
+        // 鼠标在 UI 外：移动键传递给 Minecraft（但带 Ctrl 修饰符时不视为移动键，以免阻断 Ctrl+S 等快捷键）
+        boolean hasCtrlModifier = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        if (isMovementKey(keyCode) && !hasCtrlModifier) {
             return false; // 不拦截，让 Minecraft 处理
         }
 
@@ -205,7 +205,7 @@ public class NodecraftInputHandler {
         }
         
         // 处理其他快捷键（只有在ImGui不捕获键盘时才处理）
-        return handleOtherShortcuts(editor, canvas, keyCode, isCtrlPressed);
+        return handleOtherShortcuts(editor, canvas, keyCode, modifiers);
     }
     
     /**
@@ -261,9 +261,11 @@ public class NodecraftInputHandler {
     }
     
     /**
-     * 处理其他快捷键（剪切、复制、粘贴等）
+     * 处理其他快捷键（剪切、复制、粘贴、文件操作、视图、执行等）
      */
-    private boolean handleOtherShortcuts(ImGuiNodeEditor editor, CanvasComponent canvas, int keyCode, boolean isCtrlPressed) {
+    private boolean handleOtherShortcuts(ImGuiNodeEditor editor, CanvasComponent canvas, int keyCode, int modifiers) {
+        boolean isCtrlPressed = (modifiers & GLFW.GLFW_MOD_CONTROL) != 0;
+        boolean isShiftPressed = (modifiers & GLFW.GLFW_MOD_SHIFT) != 0;
         // 判断是否有选中的节点
         boolean hasSelection = !editor.getSelectedNodeIds().isEmpty();
 
@@ -285,12 +287,7 @@ public class NodecraftInputHandler {
             // 复制节点：Ctrl+D
             if (isCtrlPressed && keyCode == GLFW.GLFW_KEY_D) {
                 NodeCraft.LOGGER.info("触发复制节点快捷键: Ctrl+D");
-                // 只复制第一个选中的节点
-                UUID nodeId = editor.getSelectedNodeIds().iterator().next();
-                if (editor instanceof ImGuiNodeEditor) {
-                    // 调用菜单系统的复制节点方法
-                    editor.duplicateSelectedNode();
-                }
+                editor.duplicateSelectedNode();
                 return true;
             }
         }
@@ -298,19 +295,9 @@ public class NodecraftInputHandler {
         // 粘贴：Ctrl+V
         if (isCtrlPressed && keyCode == GLFW.GLFW_KEY_V) {
             NodeCraft.LOGGER.info("触发粘贴快捷键: Ctrl+V");
-
-            // 如果有画布组件，获取更精确的粘贴位置
-            {
-                // 获取鼠标在画布中的位置，或者使用画布中心
-                double mouseX = MinecraftClient.getInstance().mouse.getX();
-                double mouseY = MinecraftClient.getInstance().mouse.getY();
-
-                // 将画布坐标转换为世界坐标
-                float canvasX = (float)(mouseX - ImGui.getWindowPosX() - canvas.getCanvasOffsetX()) / canvas.getCanvasZoom();
-                float canvasY = (float)(mouseY - ImGui.getWindowPosY() - canvas.getCanvasOffsetY()) / canvas.getCanvasZoom();
-
-                editor.pasteNodesAt(canvasX, canvasY);
-            }
+            // 使用画布中心世界坐标粘贴，与菜单栏行为一致
+            ImVec2 centerWorldPos = canvas.getCanvasCenterWorldPosition();
+            editor.pasteNodesAtPosition(centerWorldPos.x, centerWorldPos.y);
             return true;
         }
 
@@ -319,6 +306,76 @@ public class NodecraftInputHandler {
             ghostCameraManager.toggle();
             NodeCraft.LOGGER.info("幽灵相机模式已切换: {}", ghostCameraManager.isEnabled() ? "开启" : "关闭");
             return true;
+        }
+        
+        // === 文件操作快捷键 ===
+        MenuBarRenderer menuBar = parentScreen.getMenuBarRenderer();
+        if (menuBar != null) {
+            // 新建节点图：Ctrl+N
+            if (isCtrlPressed && keyCode == GLFW.GLFW_KEY_N) {
+                NodeCraft.LOGGER.info("触发新建快捷键: Ctrl+N");
+                menuBar.createNewNodeGraph();
+                return true;
+            }
+            
+            // 打开节点图：Ctrl+O
+            if (isCtrlPressed && keyCode == GLFW.GLFW_KEY_O) {
+                NodeCraft.LOGGER.info("触发打开快捷键: Ctrl+O");
+                menuBar.openNodeGraph();
+                return true;
+            }
+            
+            // 保存节点图：Ctrl+S
+            if (isCtrlPressed && keyCode == GLFW.GLFW_KEY_S) {
+                NodeCraft.LOGGER.info("触发保存快捷键: Ctrl+S");
+                menuBar.saveNodeGraph(false);
+                return true;
+            }
+            
+            // 执行节点图：F5
+            if (keyCode == GLFW.GLFW_KEY_F5 && !isShiftPressed) {
+                NodeCraft.LOGGER.info("触发执行快捷键: F5");
+                menuBar.executeCurrentGraph();
+                return true;
+            }
+            
+            // 停止执行：Shift+F5
+            if (keyCode == GLFW.GLFW_KEY_F5 && isShiftPressed) {
+                NodeCraft.LOGGER.info("触发停止执行快捷键: Shift+F5");
+                menuBar.stopExecution();
+                return true;
+            }
+        }
+        
+        // === 视图快捷键 ===
+        if (isCtrlPressed) {
+            // 放大：Ctrl++ 或 Ctrl+= 或 Ctrl+小键盘+
+            if (keyCode == GLFW.GLFW_KEY_EQUAL || keyCode == GLFW.GLFW_KEY_KP_ADD) {
+                NodeCraft.LOGGER.info("触发放大快捷键: Ctrl++");
+                canvas.zoomIn();
+                return true;
+            }
+            
+            // 缩小：Ctrl+- 或 Ctrl+小键盘-
+            if (keyCode == GLFW.GLFW_KEY_MINUS || keyCode == GLFW.GLFW_KEY_KP_SUBTRACT) {
+                NodeCraft.LOGGER.info("触发缩小快捷键: Ctrl+-");
+                canvas.zoomOut();
+                return true;
+            }
+            
+            // 重置视图：Ctrl+0
+            if (keyCode == GLFW.GLFW_KEY_0 || keyCode == GLFW.GLFW_KEY_KP_0) {
+                NodeCraft.LOGGER.info("触发重置视图快捷键: Ctrl+0");
+                canvas.resetCanvasView();
+                return true;
+            }
+            
+            // 适应视图：Ctrl+Home
+            if (keyCode == GLFW.GLFW_KEY_HOME) {
+                NodeCraft.LOGGER.info("触发适应视图快捷键: Ctrl+Home");
+                canvas.fitToContent();
+                return true;
+            }
         }
         
         return false;

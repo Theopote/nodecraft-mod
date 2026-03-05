@@ -170,10 +170,8 @@ public class NodecraftWindowRenderer {
         MenuBarRenderer menuBarRenderer = parentScreen.getMenuBarRenderer();
         LayoutRenderer layoutRenderer = parentScreen.getLayoutRenderer();
         
-        boolean isDraggingSplitter = layoutRenderer != null && layoutRenderer.isDraggingSplitter();
-        boolean isHoveringSplitter = layoutRenderer != null && layoutRenderer.isHoveringSplitter();
-        
-        if (parentScreen.showMenuBar && !(isDraggingSplitter || isHoveringSplitter)) {
+        // 始终渲染菜单栏，避免空白菜单栏闪烁（窗口标志包含 MenuBar，必须调用 beginMenuBar/endMenuBar）
+        if (parentScreen.showMenuBar) {
             if (menuBarRenderer != null) {
                 try {
                     menuBarRenderer.render();
