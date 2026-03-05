@@ -355,8 +355,9 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
      * 使用边沿检测确保每次按键只触发一次。
      */
     private void handleKeyboardShortcutsInRenderLoop() {
-        // 如果 ImGui 正在捕获键盘输入（如文本输入框激活），跳过快捷键处理
-        if (ImGui.getIO().getWantCaptureKeyboard()) {
+        // 仅在 ImGui 内部控件处于活跃编辑状态时跳过快捷键处理
+        // 允许在画布聚焦时仍可触发 Delete / Ctrl+Z / Ctrl+Y
+        if (ImGui.getIO().getWantCaptureKeyboard() && ImGui.isAnyItemActive()) {
             wasDeleteKeyDown = false;
             wasCtrlZDown = false;
             wasCtrlYDown = false;

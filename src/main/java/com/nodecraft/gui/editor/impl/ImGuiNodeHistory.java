@@ -1,7 +1,11 @@
 package com.nodecraft.gui.editor.impl;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -240,6 +244,43 @@ public class ImGuiNodeHistory {
         RemoveNodeAction action = new RemoveNodeAction(
             node.getId(), node.getTypeId(), x, y, connectionInfos, nodeState
         );
+        addAction(action);
+    }
+
+    public RemovedNodeSnapshot captureRemovedNodeSnapshot(INode node, float x, float y) {
+        if (node == null) {
+            return null;
+        }
+
+        NodeGraph graph = editor.getCurrentGraph();
+        List<ConnectionInfo> connectionInfos = new ArrayList<>();
+        if (graph != null) {
+            connectionInfos = graph.getConnections().stream()
+                .filter(conn -> conn.sourceNode.getId().equals(node.getId()) ||
+                               conn.targetNode.getId().equals(node.getId()))
+                .map(conn -> new ConnectionInfo(
+                    conn.sourceNode.getId(), conn.sourcePort.getId(),
+                    conn.targetNode.getId(), conn.targetPort.getId()
+                ))
+                .collect(Collectors.toList());
+        }
+
+        Object nodeState = null;
+        try {
+            nodeState = node.getNodeState();
+        } catch (Exception e) {
+            NodeCraft.LOGGER.debug("获取节点状态失败：{}", e.getMessage());
+        }
+
+        return new RemovedNodeSnapshot(node.getId(), node.getTypeId(), x, y, connectionInfos, nodeState);
+    }
+
+    public void recordRemoveNodes(List<RemovedNodeSnapshot> snapshots) {
+        if (!isRecording || snapshots == null || snapshots.isEmpty()) {
+            return;
+        }
+
+        RemoveNodesAction action = new RemoveNodesAction(snapshots);
         addAction(action);
     }
     
@@ -579,11 +620,108 @@ public class ImGuiNodeHistory {
             return success;
         }
     }
+
+    public static class RemovedNodeSnapshot {
+        public final UUID nodeId;
+        public final String nodeTypeId;
+        public final float x;
+        public final float y;
+        public final List<ConnectionInfo> connections;
+        public final Object nodeState;
+
+        public RemovedNodeSnapshot(UUID nodeId, String nodeTypeId, float x, float y,
+                                  List<ConnectionInfo> connections, Object nodeState) {
+            this.nodeId = nodeId;
+            this.nodeTypeId = nodeTypeId;
+            this.x = x;
+            this.y = y;
+            this.connections = connections;
+            this.nodeState = nodeState;
+        }
+    }
+
+    private static class RemoveNodesAction extends HistoryAction {
+        private final List<RemovedNodeSnapshot> snapshots;
+        private final Map<UUID, UUID> currentNodeIdMap = new HashMap<>();
+
+        public RemoveNodesAction(List<RemovedNodeSnapshot> snapshots) {
+            this.snapshots = new ArrayList<>(snapshots);
+            for (RemovedNodeSnapshot snapshot : this.snapshots) {
+                currentNodeIdMap.put(snapshot.nodeId, snapshot.nodeId);
+            }
+        }
+
+        @Override
+        public ActionType getType() {
+            return ActionType.REMOVE_NODES;
+        }
+
+        @Override
+        public boolean undo(ICanvasEditor editor) {
+            Map<UUID, UUID> restoredIdMap = new HashMap<>();
+            for (RemovedNodeSnapshot snapshot : snapshots) {
+                INode restoredNode = editor.addNodeWithState(
+                    snapshot.nodeTypeId,
+                    snapshot.nodeId,
+                    snapshot.x,
+                    snapshot.y,
+                    snapshot.nodeState
+                );
+                if (restoredNode == null) {
+                    NodeCraft.LOGGER.error("批量撤销删除失败：无法恢复节点类型 {}", snapshot.nodeTypeId);
+                    return false;
+                }
+                restoredIdMap.put(snapshot.nodeId, restoredNode.getId());
+            }
+
+            Set<String> restoredConnections = new HashSet<>();
+            for (RemovedNodeSnapshot snapshot : snapshots) {
+                for (ConnectionInfo connection : snapshot.connections) {
+                    UUID sourceId = restoredIdMap.getOrDefault(connection.sourceNodeId, connection.sourceNodeId);
+                    UUID targetId = restoredIdMap.getOrDefault(connection.targetNodeId, connection.targetNodeId);
+                    String key = sourceId + "|" + connection.sourcePortId + "|" + targetId + "|" + connection.targetPortId;
+                    if (restoredConnections.contains(key)) {
+                        continue;
+                    }
+
+                    boolean connected = editor.connectPorts(sourceId, connection.sourcePortId, targetId, connection.targetPortId);
+                    if (connected) {
+                        restoredConnections.add(key);
+                    }
+                }
+            }
+
+            currentNodeIdMap.clear();
+            currentNodeIdMap.putAll(restoredIdMap);
+            return true;
+        }
+
+        @Override
+        public boolean redo(ICanvasEditor editor) {
+            NodeGraph graph = editor.getCurrentGraph();
+            if (graph == null) {
+                return false;
+            }
+
+            boolean success = true;
+            for (RemovedNodeSnapshot snapshot : snapshots) {
+                UUID currentNodeId = currentNodeIdMap.getOrDefault(snapshot.nodeId, snapshot.nodeId);
+                boolean removed = graph.removeNode(currentNodeId);
+                if (removed) {
+                    editor.removeNodePosition(currentNodeId);
+                    editor.removeSelectedNode(currentNodeId);
+                } else {
+                    success = false;
+                }
+            }
+            return success;
+        }
+    }
     
     /**
      * 连接信息类
      */
-    private static class ConnectionInfo {
+    public static class ConnectionInfo {
         public final UUID sourceNodeId;
         public final String sourcePortId;
         public final UUID targetNodeId;
@@ -603,6 +741,7 @@ public class ImGuiNodeHistory {
     public enum ActionType {
         ADD_NODE,
         REMOVE_NODE,
+        REMOVE_NODES,
         ADD_CONNECTION,
         REMOVE_CONNECTION
     }

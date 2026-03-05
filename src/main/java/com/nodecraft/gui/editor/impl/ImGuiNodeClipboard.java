@@ -498,22 +498,32 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
             if (editor instanceof ImGuiNodeEditor) {
                 history = ((ImGuiNodeEditor) editor).getHistory();
             }
+
+            List<ImGuiNodeHistory.RemovedNodeSnapshot> snapshots = new ArrayList<>();
+            if (history != null && history.isRecording()) {
+                for (UUID nodeId : new ArrayList<>(selectedNodeIds)) {
+                    INode node = graph.getNode(nodeId);
+                    if (node == null) {
+                        continue;
+                    }
+                    NodePosition pos = editor.getNodePosition(nodeId);
+                    if (pos == null) {
+                        pos = new NodePosition(0, 0);
+                    }
+                    ImGuiNodeHistory.RemovedNodeSnapshot snapshot = history.captureRemovedNodeSnapshot(node, pos.x, pos.y);
+                    if (snapshot != null) {
+                        snapshots.add(snapshot);
+                    }
+                }
+                if (!snapshots.isEmpty()) {
+                    history.recordRemoveNodes(snapshots);
+                }
+            }
             
             // 删除选中的节点
             for (UUID nodeId : new ArrayList<>(selectedNodeIds)) {
                 INode node = graph.getNode(nodeId);
                 if (node != null) {
-                    // 获取节点位置
-                    NodePosition pos = editor.getNodePosition(nodeId);
-                    if (pos == null) {
-                        pos = new NodePosition(0, 0); // 使用默认位置
-                    }
-                    
-                    // 记录历史操作，只有在历史记录启用时才记录
-                    if (history != null && history.isRecording()) {
-                        history.recordRemoveNode(node, pos.x, pos.y);
-                    }
-                    
                     // 删除节点
                     graph.removeNode(nodeId);
                     editor.removeNodePosition(nodeId);
