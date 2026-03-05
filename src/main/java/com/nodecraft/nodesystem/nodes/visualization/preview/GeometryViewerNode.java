@@ -1,0 +1,417 @@
+package com.nodecraft.nodesystem.nodes.visualization.preview;
+
+import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.preview.PreviewManager;
+import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.Coordinate;
+import imgui.ImGui;
+import imgui.type.ImBoolean;
+import imgui.type.ImString;
+import imgui.flag.ImGuiCol;
+import net.minecraft.block.Block;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Geometry Viewer 节点: 几何体查看器
+ * 将输入的方块坐标列表显示为幽灵方块预览，并提供"永久放置"按钮将几何体实际放置到Minecraft世界中。
+ * 
+ * 工作流:
+ *   几何体生成器 → GeometryViewer → 预览（幽灵方块）
+ *                                  → 按钮点击 → 永久放置到世界
+ */
+@NodeInfo(
+    id = "visualization.preview.geometry_viewer",
+    displayName = "几何体查看器",
+    description = "预览几何体（幽灵方块）并可永久放置到世界中",
+    category = "visualization.preview"
+)
+public class GeometryViewerNode extends BaseCustomUINode {
+
+    @NodeProperty(displayName = "预览颜色", category = "显示", order = 1)
+    private String previewColor = "#4CAF50";
+
+    @NodeProperty(displayName = "透明度", category = "显示", order = 2)
+    private float transparency = 0.4f;
+
+    @NodeProperty(displayName = "显示轮廓", category = "显示", order = 3)
+    private boolean showOutline = true;
+
+    @NodeProperty(displayName = "方块类型", category = "放置", order = 4)
+    private String blockType = "minecraft:stone";
+
+    @NodeProperty(displayName = "预览开启", category = "显示", order = 5)
+    private boolean previewEnabled = true;
+
+    @NodeProperty(displayName = "已放置", category = "状态", order = 6)
+    private boolean placed = false;
+
+    private UUID previewId = UUID.randomUUID();
+    private boolean placementRequested = false;
+    private int lastBlockCount = 0;
+    private String statusMessage = "等待输入...";
+
+    // --- 输入端口 IDs ---
+    private static final String INPUT_BLOCKS_ID = "input_blocks";
+    private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
+    private static final String INPUT_COLOR_ID = "input_color";
+    private static final String INPUT_TRANSPARENCY_ID = "input_transparency";
+
+    // --- 输出端口 IDs ---
+    private static final String OUTPUT_BLOCKS_ID = "output_blocks";
+    private static final String OUTPUT_COUNT_ID = "output_count";
+    private static final String OUTPUT_PLACED_ID = "output_placed";
+
+    // --- ImGui 缓冲 ---
+    private transient ImString colorBuffer = new ImString(16);
+    private transient ImString blockTypeBuffer = new ImString(128);
+    private transient boolean colorNeedsSync = true;
+    private transient boolean blockTypeNeedsSync = true;
+
+    public GeometryViewerNode() {
+        super(UUID.randomUUID(), "visualization.preview.geometry_viewer");
+
+        // 输入端口
+        addInputPort(new BasePort(INPUT_BLOCKS_ID, "Geometry", "几何体方块坐标列表（来自几何体生成器）", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "放置时使用的方块类型（默认stone）", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_COLOR_ID, "Preview Color", "预览颜色（十六进制）", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_TRANSPARENCY_ID, "Transparency", "预览透明度（0.0-1.0）", NodeDataType.FLOAT, this));
+
+        // 输出端口
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "传递的方块坐标列表", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Block Count", "方块数量", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_PLACED_ID, "Is Placed", "是否已永久放置", NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "预览几何体（幽灵方块）并可永久放置到世界中";
+    }
+
+    // --- 核心逻辑 ---
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
+        Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
+        Object colorObj = inputValues.get(INPUT_COLOR_ID);
+        Object transparencyObj = inputValues.get(INPUT_TRANSPARENCY_ID);
+
+        // 从输入获取参数
+        String color = (colorObj instanceof String) ? (String) colorObj : this.previewColor;
+        float trans = (transparencyObj instanceof Number) ? Math.max(0f, Math.min(1f, ((Number) transparencyObj).floatValue())) : this.transparency;
+        String bType = (blockTypeObj instanceof String) ? (String) blockTypeObj : this.blockType;
+
+        BlockPosList blocksList = null;
+        if (blocksObj instanceof BlockPosList) {
+            blocksList = (BlockPosList) blocksObj;
+        }
+
+        int blockCount = (blocksList != null) ? blocksList.size() : 0;
+        lastBlockCount = blockCount;
+
+        // === 幽灵方块预览 ===
+        if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
+            try {
+                // 清除旧预览
+                PreviewManager.hideNodePreviews(getId().toString());
+
+                // 转换为 Coordinate 列表
+                List<Coordinate> coordinates = new ArrayList<>();
+                for (BlockPos pos : blocksList) {
+                    coordinates.add(new Coordinate(pos.getX(), pos.getY(), pos.getZ()));
+                }
+
+                // 创建幽灵方块预览
+                PreviewOptions options = new PreviewOptions()
+                    .ghostBlockMode()
+                    .setOpacity(trans);
+                PreviewManager.showGhostBlocks(getId().toString(), coordinates, options);
+
+                statusMessage = "预览中: " + blockCount + " 方块";
+            } catch (Exception e) {
+                statusMessage = "预览失败: " + e.getMessage();
+                System.err.println("GeometryViewerNode preview error: " + e.getMessage());
+            }
+        } else if (!previewEnabled) {
+            PreviewManager.hideNodePreviews(getId().toString());
+            statusMessage = blockCount > 0 ? "预览已关闭 (" + blockCount + " 方块)" : "等待输入...";
+        } else {
+            PreviewManager.hideNodePreviews(getId().toString());
+            statusMessage = "等待输入...";
+        }
+
+        // === 永久放置逻辑 ===
+        if (placementRequested && blocksList != null && !blocksList.isEmpty()) {
+            placementRequested = false;
+            
+            if (context != null && context instanceof com.nodecraft.nodesystem.execution.ExecutionContext execCtx) {
+                if (execCtx.getWorld() != null) {
+                    try {
+                        BlockState targetState = resolveBlockState(bType);
+                        if (targetState != null) {
+                            int successCount = 0;
+                            for (BlockPos pos : blocksList) {
+                                boolean success = execCtx.getWorld().setBlockState(
+                                    pos.toImmutable(), targetState, Block.NOTIFY_ALL);
+                                if (success) successCount++;
+                            }
+                            placed = true;
+                            statusMessage = "已放置: " + successCount + "/" + blockCount + " 方块";
+                        } else {
+                            statusMessage = "无效方块类型: " + bType;
+                        }
+                    } catch (Exception e) {
+                        statusMessage = "放置失败: " + e.getMessage();
+                        System.err.println("GeometryViewerNode placement error: " + e.getMessage());
+                    }
+                } else {
+                    statusMessage = "无法放置: 世界不可用";
+                }
+            } else {
+                statusMessage = "无法放置: 需要执行上下文";
+            }
+        }
+
+        // 设置输出
+        outputValues.put(OUTPUT_BLOCKS_ID, blocksList);
+        outputValues.put(OUTPUT_COUNT_ID, blockCount);
+        outputValues.put(OUTPUT_PLACED_ID, placed);
+    }
+
+    /**
+     * 将方块ID字符串解析为 BlockState
+     */
+    private BlockState resolveBlockState(String blockId) {
+        if (blockId == null || blockId.isEmpty()) return null;
+        try {
+            Identifier id = Identifier.of(blockId);
+            Block block = Registries.BLOCK.get(id);
+            if (block != null) {
+                return block.getDefaultState();
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to resolve block state for: " + blockId);
+        }
+        return null;
+    }
+
+    // === UI 渲染 ===
+
+    @Override
+    protected float calculateUIHeight() {
+        float h = getMediumPadding();
+        h += ImGui.getTextLineHeight();     // 状态行
+        h += getSmallPadding();
+        h += ImGui.getTextLineHeight();     // 方块计数
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 预览颜色输入
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 透明度滑条
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 方块类型输入
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 预览开关
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 轮廓开关
+        h += getSmallPadding();
+        h += ImGui.getFrameHeight();        // 放置按钮
+        h += getMediumPadding();
+        return h;
+    }
+
+    @Override
+    protected float calculateMinUIWidth() {
+        return 200f + getContentMargin();
+    }
+
+    @Override
+    protected boolean renderCustomUIScaled(float width, float height, float zoom) {
+        return layout(zoom, l -> {
+            boolean changed = false;
+            try {
+                float aw = l.getAvailableContentWidth(width);
+                l.addVerticalSpacing(getMediumPadding());
+
+                // 状态行
+                int statusColor = placed ? 0xFF44DD44 : (previewEnabled ? 0xFF44AADD : 0xFF888888);
+                ImGui.pushStyleColor(ImGuiCol.Text, statusColor);
+                ImGui.text(statusMessage);
+                ImGui.popStyleColor();
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 方块计数
+                ImGui.text("方块数: " + lastBlockCount);
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 预览颜色输入
+                ensureColorBuffer();
+                l.pushFramePadding(4.0f, 3.0f);
+                l.setItemWidth(aw / zoom);
+                if (ImGui.inputTextWithHint("##gv_color", "#4CAF50", colorBuffer)) {
+                    setPreviewColor(colorBuffer.get());
+                    changed = true;
+                }
+                l.popItemWidth();
+                l.popStyleVar();
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 透明度滑条
+                float[] trans = {transparency};
+                l.pushFramePadding(4.0f, 3.0f);
+                l.setItemWidth(aw / zoom);
+                if (ImGui.sliderFloat("##gv_trans", trans, 0.0f, 1.0f, "透明度: %.2f")) {
+                    setTransparency(trans[0]);
+                    changed = true;
+                }
+                l.popItemWidth();
+                l.popStyleVar();
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 方块类型输入
+                ensureBlockTypeBuffer();
+                l.pushFramePadding(4.0f, 3.0f);
+                l.setItemWidth(aw / zoom);
+                if (ImGui.inputTextWithHint("##gv_blocktype", "minecraft:stone", blockTypeBuffer)) {
+                    setBlockType(blockTypeBuffer.get());
+                    changed = true;
+                }
+                l.popItemWidth();
+                l.popStyleVar();
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 预览开关
+                ImBoolean prevBool = new ImBoolean(previewEnabled);
+                if (ImGui.checkbox("预览##gv_prev", prevBool)) {
+                    setPreviewEnabled(prevBool.get());
+                    changed = true;
+                }
+                l.addVerticalSpacing(getSmallPadding());
+
+                // 轮廓开关
+                ImBoolean olBool = new ImBoolean(showOutline);
+                if (ImGui.checkbox("轮廓##gv_ol", olBool)) {
+                    setShowOutline(olBool.get());
+                    changed = true;
+                }
+                l.addVerticalSpacing(getSmallPadding());
+
+                // ======= 永久放置按钮 =======
+                if (placed) {
+                    ImGui.pushStyleColor(ImGuiCol.Button, 0xFF44DD44);
+                    ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF55EE55);
+                    ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF33CC33);
+                } else {
+                    ImGui.pushStyleColor(ImGuiCol.Button, 0xFFDD8844);
+                    ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFFEE9955);
+                    ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFFCC7733);
+                }
+                
+                String btnText = placed ? "✓ 已放置到世界" : "▶ 永久放置到世界";
+                if (ImGui.button(btnText, aw / zoom, 0)) {
+                    placementRequested = true;
+                    placed = false; // 重置状态以允许重新放置
+                    changed = true;
+                }
+                ImGui.popStyleColor(3);
+
+                l.addVerticalSpacing(getMediumPadding());
+            } catch (Exception e) {
+                System.err.println("GeometryViewerNode UI渲染失败: " + e.getMessage());
+            }
+            return changed;
+        });
+    }
+
+    // === ImGui 缓冲同步 ===
+
+    private void ensureColorBuffer() {
+        if (colorBuffer == null) colorBuffer = new ImString(16);
+        if (colorNeedsSync) {
+            colorBuffer.set(previewColor != null ? previewColor : "#4CAF50");
+            colorNeedsSync = false;
+        }
+    }
+
+    private void ensureBlockTypeBuffer() {
+        if (blockTypeBuffer == null) blockTypeBuffer = new ImString(128);
+        if (blockTypeNeedsSync) {
+            blockTypeBuffer.set(blockType != null ? blockType : "minecraft:stone");
+            blockTypeNeedsSync = false;
+        }
+    }
+
+    // === Getters/Setters ===
+
+    public String getPreviewColor() { return previewColor; }
+    public void setPreviewColor(String v) {
+        if (v != null) { this.previewColor = v; colorNeedsSync = true; markDirty(); }
+    }
+
+    public float getTransparency() { return transparency; }
+    public void setTransparency(float v) {
+        v = Math.max(0f, Math.min(1f, v));
+        if (this.transparency != v) { this.transparency = v; markDirty(); }
+    }
+
+    public boolean isShowOutline() { return showOutline; }
+    public void setShowOutline(boolean v) {
+        if (this.showOutline != v) { this.showOutline = v; markDirty(); }
+    }
+
+    public String getBlockType() { return blockType; }
+    public void setBlockType(String v) {
+        if (v != null) { this.blockType = v; blockTypeNeedsSync = true; markDirty(); }
+    }
+
+    public boolean isPreviewEnabled() { return previewEnabled; }
+    public void setPreviewEnabled(boolean v) {
+        if (this.previewEnabled != v) { this.previewEnabled = v; markDirty(); }
+    }
+
+    public boolean isPlaced() { return placed; }
+
+    // === 状态序列化 ===
+
+    @Override
+    public @Nullable Object getNodeState() {
+        java.util.Map<String, Object> s = new java.util.HashMap<>();
+        s.put("previewColor", previewColor);
+        s.put("transparency", transparency);
+        s.put("showOutline", showOutline);
+        s.put("blockType", blockType);
+        s.put("previewEnabled", previewEnabled);
+        s.put("placed", placed);
+        s.put("previewId", previewId.toString());
+        return s;
+    }
+
+    @Override
+    public void setNodeState(@Nullable Object state) {
+        if (state instanceof java.util.Map) {
+            java.util.Map<?, ?> m = (java.util.Map<?, ?>) state;
+            if (m.get("previewColor") instanceof String) setPreviewColor((String) m.get("previewColor"));
+            if (m.get("transparency") instanceof Number) setTransparency(((Number) m.get("transparency")).floatValue());
+            if (m.get("showOutline") instanceof Boolean) setShowOutline((Boolean) m.get("showOutline"));
+            if (m.get("blockType") instanceof String) setBlockType((String) m.get("blockType"));
+            if (m.get("previewEnabled") instanceof Boolean) setPreviewEnabled((Boolean) m.get("previewEnabled"));
+            if (m.get("placed") instanceof Boolean) placed = (Boolean) m.get("placed");
+            if (m.get("previewId") instanceof String) {
+                try { previewId = UUID.fromString((String) m.get("previewId")); }
+                catch (IllegalArgumentException e) { previewId = UUID.randomUUID(); }
+            }
+        }
+    }
+}
