@@ -254,9 +254,13 @@ public class IntegerInputNode extends BaseCustomUINode {
     }
     
     public void setMinValue(int minValue) {
-        this.minValue = minValue;
-        // 确保当前值仍在范围内
-        setValue(this.value);
+        if (this.minValue != minValue) {
+            this.minValue = minValue;
+            // 确保当前值仍在范围内
+            setValue(this.value);
+            invalidateCache();
+            markDirty();
+        }
     }
     
     public int getMaxValue() {
@@ -264,9 +268,13 @@ public class IntegerInputNode extends BaseCustomUINode {
     }
     
     public void setMaxValue(int maxValue) {
-        this.maxValue = maxValue;
-        // 确保当前值仍在范围内
-        setValue(this.value);
+        if (this.maxValue != maxValue) {
+            this.maxValue = maxValue;
+            // 确保当前值仍在范围内
+            setValue(this.value);
+            invalidateCache();
+            markDirty();
+        }
     }
 
     public boolean isShowRange() {
@@ -274,7 +282,11 @@ public class IntegerInputNode extends BaseCustomUINode {
     }
 
     public void setShowRange(boolean showRange) {
-        this.showRange = showRange;
+        if (this.showRange != showRange) {
+            this.showRange = showRange;
+            invalidateCache();
+            markDirty();
+        }
     }
 
     public boolean isShowLabel() {
@@ -282,7 +294,11 @@ public class IntegerInputNode extends BaseCustomUINode {
     }
 
     public void setShowLabel(boolean showLabel) {
-        this.showLabel = showLabel;
+        if (this.showLabel != showLabel) {
+            this.showLabel = showLabel;
+            invalidateCache();
+            markDirty();
+        }
     }
     
     // --- 节点状态序列化 ---

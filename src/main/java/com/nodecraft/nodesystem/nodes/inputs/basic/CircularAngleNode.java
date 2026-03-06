@@ -450,13 +450,37 @@ public class CircularAngleNode extends BaseCustomUINode {
 
     public double getAngle() { return angle; }
     public int getPrecision() { return precision; }
-    public void setPrecision(int precision) { this.precision = Math.max(0, Math.min(5, precision)); }
+    public void setPrecision(int precision) {
+        int clamped = Math.max(0, Math.min(5, precision));
+        if (this.precision != clamped) {
+            this.precision = clamped;
+            invalidateCache();
+            markDirty();
+        }
+    }
     public boolean isShowTicks() { return showTicks; }
-    public void setShowTicks(boolean showTicks) { this.showTicks = showTicks; }
+    public void setShowTicks(boolean showTicks) {
+        if (this.showTicks != showTicks) {
+            this.showTicks = showTicks;
+            invalidateCache();
+            markDirty();
+        }
+    }
     public boolean isShowValueInput() { return showValueInput; }
-    public void setShowValueInput(boolean showValueInput) { this.showValueInput = showValueInput; }
+    public void setShowValueInput(boolean showValueInput) {
+        if (this.showValueInput != showValueInput) {
+            this.showValueInput = showValueInput;
+            invalidateCache();
+            markDirty();
+        }
+    }
     public boolean isAllowDirectDrawing() { return allowDirectDrawing; }
-    public void setAllowDirectDrawing(boolean allowDirectDrawing) { this.allowDirectDrawing = allowDirectDrawing; }
+    public void setAllowDirectDrawing(boolean allowDirectDrawing) {
+        if (this.allowDirectDrawing != allowDirectDrawing) {
+            this.allowDirectDrawing = allowDirectDrawing;
+            markDirty();
+        }
+    }
 
     // === 添加缺失的助手方法 ===
     

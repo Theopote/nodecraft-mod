@@ -217,15 +217,23 @@ public class FloatInputNode extends BaseCustomUINode {
     public float getMinValue() { return minValue; }
     
     public void setMinValue(float minValue) {
-        this.minValue = minValue;
-        setValue(this.value);
+        if (this.minValue != minValue) {
+            this.minValue = minValue;
+            setValue(this.value);
+            invalidateCache();
+            markDirty();
+        }
     }
     
     public float getMaxValue() { return maxValue; }
     
     public void setMaxValue(float maxValue) {
-        this.maxValue = maxValue;
-        setValue(this.value);
+        if (this.maxValue != maxValue) {
+            this.maxValue = maxValue;
+            setValue(this.value);
+            invalidateCache();
+            markDirty();
+        }
     }
     
     public int getPrecision() { return precision; }
@@ -237,13 +245,17 @@ public class FloatInputNode extends BaseCustomUINode {
             updatePrecisionDependentValues();
             setValue(this.value);
             invalidateCache();
+            markDirty();
         }
     }
 
     public boolean isShowRange() { return showRange; }
     public void setShowRange(boolean showRange) { 
-        this.showRange = showRange; 
-        invalidateCache();
+        if (this.showRange != showRange) {
+            this.showRange = showRange;
+            invalidateCache();
+            markDirty();
+        }
     }
     
     // === 序列化 ===

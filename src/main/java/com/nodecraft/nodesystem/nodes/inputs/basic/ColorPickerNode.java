@@ -433,6 +433,7 @@ public class ColorPickerNode extends BaseCustomUINode {
             this.includeAlpha = includeAlpha;
             needsUIUpdate = true; // 标记需要更新UI
             invalidateCache(); // 使缓存无效，重新计算UI尺寸
+            markDirty();
         }
     }
     
@@ -444,6 +445,7 @@ public class ColorPickerNode extends BaseCustomUINode {
         if (this.showPreview != showPreview) {
             this.showPreview = showPreview;
             invalidateCache(); // 使缓存无效，重新计算UI尺寸
+            markDirty();
         }
     }
     
@@ -455,6 +457,7 @@ public class ColorPickerNode extends BaseCustomUINode {
         if (this.showHexValue != showHexValue) {
             this.showHexValue = showHexValue;
             invalidateCache(); // 使缓存无效，重新计算UI尺寸
+            markDirty();
         }
     }
     
@@ -466,6 +469,7 @@ public class ColorPickerNode extends BaseCustomUINode {
         if (this.showRGBValues != showRGBValues) {
             this.showRGBValues = showRGBValues;
             invalidateCache(); // 使缓存无效，重新计算UI尺寸
+            markDirty();
         }
     }
     
