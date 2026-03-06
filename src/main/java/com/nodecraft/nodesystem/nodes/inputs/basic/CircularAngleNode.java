@@ -266,9 +266,11 @@ public class CircularAngleNode extends BaseCustomUINode {
                 float deltaX = mousePos.x - absoluteCenterX;
                 float deltaY = mousePos.y - absoluteCenterY;
                 
-                // 计算鼠标相对于中心的角度
-                float mouseAngle = (float) Math.toDegrees(Math.atan2(-deltaY, deltaX));
+                // 计算鼠标相对于中心的角度（屏幕坐标系：Y 向下为正）。
+                // 结果语义与 drawAngleIndicator 保持一致：0° 在上方，顺时针递增。
+                float mouseAngle = (float) Math.toDegrees(Math.atan2(deltaY, deltaX)) + 90.0f;
                 if (mouseAngle < 0) mouseAngle += 360;
+                if (mouseAngle >= 360.0f) mouseAngle -= 360.0f;
                 
                 // 根据精度调整角度
                 float stepSize = (float) Math.pow(10, -precision);
