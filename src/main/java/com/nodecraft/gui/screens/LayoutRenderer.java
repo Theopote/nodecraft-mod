@@ -118,67 +118,14 @@ public class LayoutRenderer {
             // 处理分隔线拖拽（在组件渲染前处理拖拽，确保布局正确）
             handleSplitterDragging(contentStartX, contentWidth);
 
-            // 当前是否在拖拽状态
-            boolean isDraggingNow = isDraggingSplitter();
+            // 拖拽时也保持完整渲染，避免内容临时消失。
+            renderNonCanvasComponents(componentsToRender, delta);
 
-            // 仅当不在拖拽状态时才渲染完整组件
-            if (!isDraggingNow) {
-                // 优先渲染非画布组件
-                renderNonCanvasComponents(componentsToRender, delta);
-
-                // 最后渲染画布组件，使其始终显示在最上层
-                renderCanvasComponent(delta);
-            } else {
-                // 在拖拽过程中渲染一个简化版本，以提高性能
-                renderSimplifiedComponents(delta);
-            }
+            // 最后渲染画布组件，使其始终显示在最上层
+            renderCanvasComponent(delta);
 
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染组件布局时出错", e);
-        }
-    }
-
-    /**
-     * 在拖拽过程中渲染简化版组件，提高性能
-     * @param delta 渲染delta
-     */
-    private void renderSimplifiedComponents(float delta) {
-        // 只获取并渲染主要组件的边框，不渲染内容
-        CanvasComponent canvasComponent = componentManager.getCanvasComponent();
-        EditorComponent nodePanel = componentManager.getNodeLibraryComponent();
-        EditorComponent propertyPanel = componentManager.getPropertyPanelComponent();
-
-        // 渲染节点面板边框
-        if (nodePanel != null) {
-            LayoutDimensions dims = layoutManager.getComputedLayout(nodePanel);
-            if (dims != null && dims.width() > 0 && dims.height() > 0) {
-                ImGui.setCursorPos(dims.x(), dims.y());
-                String childId = "simp_" + nodePanel.getComponentId();
-                ImGui.beginChild(childId, dims.width(), dims.height(), true);
-                ImGui.endChild();
-            }
-        }
-
-        // 渲染画布边框
-        if (canvasComponent != null) {
-            LayoutDimensions dims = layoutManager.getComputedLayout(canvasComponent);
-            if (dims != null && dims.width() > 0 && dims.height() > 0) {
-                ImGui.setCursorPos(dims.x(), dims.y());
-                String childId = "simp_" + canvasComponent.getComponentId();
-                ImGui.beginChild(childId, dims.width(), dims.height(), true);
-                ImGui.endChild();
-            }
-        }
-
-        // 渲染属性面板边框
-        if (propertyPanel != null) {
-            LayoutDimensions dims = layoutManager.getComputedLayout(propertyPanel);
-            if (dims != null && dims.width() > 0 && dims.height() > 0) {
-                ImGui.setCursorPos(dims.x(), dims.y());
-                String childId = "simp_" + propertyPanel.getComponentId();
-                ImGui.beginChild(childId, dims.width(), dims.height(), true);
-                ImGui.endChild();
-            }
         }
     }
 
@@ -255,9 +202,6 @@ public class LayoutRenderer {
             // 关键修改：禁用窗口拖动
             ImGui.getIO().setWantCaptureMouse(true);
 
-            // 设置父窗口不可移动，避免在拖拽过程中移动整个面板
-            ImGui.getStyle().setWindowBorderSize(0); // 临时移除窗口边框
-
             // 显示调试信息
             if (debugSplitter) {
                 NodeCraft.LOGGER.debug("拖拽中 - 左侧={}, 右侧={}, 鼠标X={}, 鼠标Y={}",
@@ -268,8 +212,6 @@ public class LayoutRenderer {
             if (!ImGui.isMouseDown(ImGuiMouseButton.Left)) {
                 isDraggingLeftSplitter = false;
                 isDraggingRightSplitter = false;
-                // 恢复窗口边框
-                ImGui.getStyle().setWindowBorderSize(1);
                 ImGui.getIO().setWantCaptureMouse(false); // 释放鼠标捕获
                 NodeCraft.LOGGER.info("结束拖拽分隔线: 最终节点面板比例={}, 画布比例={}, 属性面板比例={}",
                         layoutConfig.nodePanelRatio(), layoutConfig.canvasRatio(), layoutConfig.propertyPanelRatio());
@@ -288,29 +230,33 @@ public class LayoutRenderer {
             if (isDraggingLeftSplitter) {
                 // 调整节点面板和画布的比例
                 newNodePanelRatio = initialNodePanelRatio + ratioChange;
-                newCanvasRatio = initialCanvasRatio - ratioChange;
+                newPropertyPanelRatio = initialPropertyPanelRatio;
 
                 // 确保比例在合理范围内
                 newNodePanelRatio = Math.max(0.05f, Math.min(0.5f, newNodePanelRatio));
                 newCanvasRatio = Math.max(0.2f, 1f - newNodePanelRatio - newPropertyPanelRatio);
+
+                // 画布触底时，回推节点库，保持右侧面板不漂移
+                if (newCanvasRatio <= 0.2f) {
+                    newNodePanelRatio = 1f - newPropertyPanelRatio - 0.2f;
+                    newNodePanelRatio = Math.max(0.05f, Math.min(0.5f, newNodePanelRatio));
+                    newCanvasRatio = 1f - newNodePanelRatio - newPropertyPanelRatio;
+                }
             } else if (isDraggingRightSplitter) {
                 // 调整画布和属性面板的比例
-                newCanvasRatio = initialCanvasRatio + ratioChange;
+                newNodePanelRatio = initialNodePanelRatio;
                 newPropertyPanelRatio = initialPropertyPanelRatio - ratioChange;
 
                 // 确保比例在合理范围内
                 newPropertyPanelRatio = Math.max(0.05f, Math.min(0.5f, newPropertyPanelRatio));
                 newCanvasRatio = Math.max(0.2f, 1f - newNodePanelRatio - newPropertyPanelRatio);
-            }
 
-            // 确保三个比例之和为1
-            float sum = newNodePanelRatio + newCanvasRatio + newPropertyPanelRatio;
-            if (Math.abs(sum - 1.0f) > 0.001f) {
-                // 修正比例，确保总和为1
-                float correction = (1.0f - sum) / 3.0f;
-                newNodePanelRatio += correction;
-                newCanvasRatio += correction;
-                newPropertyPanelRatio += correction;
+                // 画布触底时，回推属性面板，保持左侧面板不漂移
+                if (newCanvasRatio <= 0.2f) {
+                    newPropertyPanelRatio = 1f - newNodePanelRatio - 0.2f;
+                    newPropertyPanelRatio = Math.max(0.05f, Math.min(0.5f, newPropertyPanelRatio));
+                    newCanvasRatio = 1f - newNodePanelRatio - newPropertyPanelRatio;
+                }
             }
 
             try {
@@ -363,13 +309,11 @@ public class LayoutRenderer {
                 isDraggingLeftSplitter = true;
                 dragStartX = mouseX;
                 initialNodePanelRatio = layoutConfig.nodePanelRatio();
+                initialPropertyPanelRatio = layoutConfig.propertyPanelRatio();
                 initialCanvasRatio = layoutConfig.canvasRatio();
 
                 // 非常重要：强制捕获鼠标，阻止所有其他鼠标事件
                 ImGui.getIO().setWantCaptureMouse(true);
-
-                // 临时禁用窗口边框
-                ImGui.getStyle().setWindowBorderSize(0);
 
                 NodeCraft.LOGGER.info("开始拖拽左侧分隔线: 初始位置={}, 节点面板比例={}, 画布比例={}",
                         dragStartX, initialNodePanelRatio, initialCanvasRatio);
@@ -390,21 +334,16 @@ public class LayoutRenderer {
             if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
                 isDraggingRightSplitter = true;
                 dragStartX = mouseX;
+                initialNodePanelRatio = layoutConfig.nodePanelRatio();
                 initialPropertyPanelRatio = layoutConfig.propertyPanelRatio();
                 initialCanvasRatio = layoutConfig.canvasRatio();
 
                 // 非常重要：强制捕获鼠标，阻止所有其他鼠标事件
                 ImGui.getIO().setWantCaptureMouse(true);
 
-                // 临时禁用窗口边框
-                ImGui.getStyle().setWindowBorderSize(0);
-
                 NodeCraft.LOGGER.info("开始拖拽右侧分隔线: 初始位置={}, 属性面板比例={}, 画布比例={}",
                         dragStartX, initialPropertyPanelRatio, initialCanvasRatio);
             }
-        } else {
-            // 不在任何分隔线上，恢复窗口边框
-            ImGui.getStyle().setWindowBorderSize(1);
         }
     }
 
