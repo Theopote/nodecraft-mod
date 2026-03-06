@@ -113,7 +113,6 @@ public class CustomUIRenderer {
             float originalFramePaddingY = ImGui.getStyle().getFramePaddingY();
             float originalItemSpacingX = ImGui.getStyle().getItemSpacingX();
             float originalItemSpacingY = ImGui.getStyle().getItemSpacingY();
-            float originalFontGlobalScale = ImGui.getIO().getFontGlobalScale();
             float originalIndentSpacing = ImGui.getStyle().getIndentSpacing();
             float originalFrameBorderSize = ImGui.getStyle().getFrameBorderSize();
             float originalFrameRounding = ImGui.getStyle().getFrameRounding();
@@ -129,7 +128,6 @@ public class CustomUIRenderer {
             // 应用统一的缩放变换
             // 这样 ImGui 控件的所有部分（边框、内边距、交互区域等）都会正确缩放
             float zoom = info.zoom;
-            ImGui.getIO().setFontGlobalScale(originalFontGlobalScale * zoom);
             ImGui.getStyle().setFramePadding(originalFramePaddingX * zoom, originalFramePaddingY * zoom);
             // ItemSpacing 维持原样式比例进行等比缩放，避免垂直方向缩放幅度不足
             ImGui.getStyle().setItemSpacing(originalItemSpacingX * zoom, originalItemSpacingY * zoom);
@@ -156,7 +154,18 @@ public class CustomUIRenderer {
 
                 if (info.customUINode != null) {
                     try {
-                        info.customUINode.renderCustomUI(info.width, info.height, zoom);
+                        imgui.ImFont currentFont = ImGui.getFont();
+                        float originalFontObjectScale = currentFont != null ? currentFont.getScale() : 1.0f;
+                        try {
+                            if (currentFont != null) {
+                                currentFont.setScale(originalFontObjectScale * zoom);
+                            }
+                            info.customUINode.renderCustomUI(info.width, info.height, zoom);
+                        } finally {
+                            if (currentFont != null) {
+                                currentFont.setScale(originalFontObjectScale);
+                            }
+                        }
                     } catch (Exception e) {
                         NodeCraft.LOGGER.error("自定义UI渲染失败 (节点: {}): {}", info.nodeId, e.getMessage(), e);
                     }
@@ -203,7 +212,6 @@ public class CustomUIRenderer {
 
             } finally {
                 // 恢复原始样式状态
-                ImGui.getIO().setFontGlobalScale(originalFontGlobalScale);
                 ImGui.getStyle().setFramePadding(originalFramePaddingX, originalFramePaddingY);
                 ImGui.getStyle().setItemSpacing(originalItemSpacingX, originalItemSpacingY);
                 ImGui.getStyle().setIndentSpacing(originalIndentSpacing);
