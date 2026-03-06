@@ -128,15 +128,18 @@ public class CustomUIRenderer {
             // 应用统一的缩放变换
             // 这样 ImGui 控件的所有部分（边框、内边距、交互区域等）都会正确缩放
             float zoom = info.zoom;
-                // 统一做轻量紧凑化，减少控件与行间空隙，避免内容在底部溢出节点面板。
-                float compactFramePaddingFactor = 0.82f;
-                float compactItemSpacingFactor = 0.72f;
-                float compactInnerSpacingFactor = 0.80f;
+            // 统一做紧凑化，并通过 y 向 frame padding 归一化常见控件高度。
+            float compactFramePaddingFactor = 0.70f;
+            float compactItemSpacingFactor = 0.52f;
+            float compactInnerSpacingFactor = 0.68f;
 
-                ImGui.getStyle().setFramePadding(
-                    originalFramePaddingX * zoom * compactFramePaddingFactor,
-                    originalFramePaddingY * zoom * compactFramePaddingFactor);
-                ImGui.getStyle().setItemSpacing(
+            float framePadX = originalFramePaddingX * zoom * compactFramePaddingFactor;
+            float framePadY = originalFramePaddingY * zoom * compactFramePaddingFactor;
+            // 限制垂直 padding 区间，减少按钮/滑条/输入框高度差异。
+            framePadY = Math.max(1.0f * zoom, Math.min(framePadY, 2.8f * zoom));
+
+            ImGui.getStyle().setFramePadding(framePadX, framePadY);
+            ImGui.getStyle().setItemSpacing(
                     originalItemSpacingX * zoom * compactItemSpacingFactor,
                     originalItemSpacingY * zoom * compactItemSpacingFactor);
             ImGui.getStyle().setIndentSpacing(originalIndentSpacing * zoom);
@@ -145,10 +148,10 @@ public class CustomUIRenderer {
             ImGui.getStyle().setGrabRounding(originalGrabRounding * zoom);
             ImGui.getStyle().setScrollbarSize(originalScrollbarSize * zoom);
             ImGui.getStyle().setScrollbarRounding(originalScrollbarRounding * zoom);
-                ImGui.getStyle().setGrabMinSize(Math.max(8.0f * zoom, originalGrabMinSize * zoom * 0.88f));
+            ImGui.getStyle().setGrabMinSize(Math.max(8.0f * zoom, originalGrabMinSize * zoom * 0.82f));
             // 保持窗口内边距为 0，确保可用渲染区域与节点内容区一致
             ImGui.getStyle().setWindowPadding(0, 0);
-                ImGui.getStyle().setItemInnerSpacing(
+            ImGui.getStyle().setItemInnerSpacing(
                     originalItemInnerSpacingX * zoom * compactInnerSpacingFactor,
                     originalItemInnerSpacingY * zoom * compactInnerSpacingFactor);
 
@@ -163,8 +166,19 @@ public class CustomUIRenderer {
                 ImGui.beginGroup();
                 imgui.ImGui imguiInstance = new imgui.ImGui();
 
-                // 限定渲染区域，避免 separator 等元素横向无限延展到节点外。
-                ImGui.getWindowDrawList().pushClipRect(clipMinX, clipMinY, clipMaxX, clipMaxY, true);
+                // 记录当前窗口原始裁剪区域，用于“仅横向裁剪”。
+                imgui.ImVec2 windowClipMin = new imgui.ImVec2();
+                imgui.ImVec2 windowClipMax = new imgui.ImVec2();
+                ImGui.getWindowDrawList().getClipRectMin(windowClipMin);
+                ImGui.getWindowDrawList().getClipRectMax(windowClipMax);
+
+                // 仅限制 X 方向，防止 separator 横向外溢；Y 方向沿用窗口原始裁剪，避免底部误裁剪。
+                ImGui.getWindowDrawList().pushClipRect(
+                    clipMinX,
+                    windowClipMin.y,
+                    clipMaxX,
+                    windowClipMax.y,
+                    true);
 
                 if (info.customUINode != null) {
                     try {
