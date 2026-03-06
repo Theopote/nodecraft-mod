@@ -189,7 +189,8 @@ public class CircularAngleNode extends BaseCustomUINode {
         
         try {
             float scaledRadius = ZoomHelper.applyZoom(DIAL_RADIUS, zoom);
-            float centerX = screenX + width * zoom / 2;
+            // width/height are already scaled screen-space pixels in direct drawing mode.
+            float centerX = screenX + width / 2;
             float centerY = screenY + scaledRadius + ZoomHelper.applyZoom(getMediumPadding(), zoom);
             
             // 绘制旋转盘背景
@@ -243,6 +244,12 @@ public class CircularAngleNode extends BaseCustomUINode {
             setCenterX(availableWidth, buttonSize);
             
             ImGui.invisibleButton("dial_interaction", buttonSize, buttonSize);
+
+            // Anchor all geometry/interaction to the real item rect to avoid drift.
+            ImVec2 dialRectMin = ImGui.getItemRectMin();
+            ImVec2 dialRectMax = ImGui.getItemRectMax();
+            float absoluteCenterX = (dialRectMin.x + dialRectMax.x) * 0.5f;
+            float absoluteCenterY = (dialRectMin.y + dialRectMax.y) * 0.5f;
             
             boolean isHovered = ImGui.isItemHovered();
             boolean isClicked = ImGui.isItemClicked();
@@ -255,13 +262,6 @@ public class CircularAngleNode extends BaseCustomUINode {
             
             if (isDragging && ImGui.isMouseDown(0)) {
                 ImVec2 mousePos = ImGui.getMousePos();
-                ImVec2 windowPos = ImGui.getWindowPos();
-                ImVec2 cursorStartPos = ImGui.getCursorStartPos();
-                
-                // 计算圆心的绝对位置（考虑缩放和偏移）
-                float buttonOffsetX = getCenterOffset(availableWidth, buttonSize);
-                float absoluteCenterX = windowPos.x + cursorStartPos.x + buttonOffsetX + scaledDialRadius;
-                float absoluteCenterY = windowPos.y + cursorStartPos.y + scaledDialRadius + ZoomHelper.applyZoom(getMediumPadding(), zoom);
                 
                 float deltaX = mousePos.x - absoluteCenterX;
                 float deltaY = mousePos.y - absoluteCenterY;
@@ -288,13 +288,6 @@ public class CircularAngleNode extends BaseCustomUINode {
             
             // 获取绘制列表进行自定义绘制
             ImDrawList drawList = ImGui.getWindowDrawList();
-            ImVec2 windowPos = ImGui.getWindowPos();
-            ImVec2 cursorStartPos = ImGui.getCursorStartPos();
-            
-            // 计算圆心的绝对位置
-            float buttonOffsetX = getCenterOffset(availableWidth, buttonSize);
-            float absoluteCenterX = windowPos.x + cursorStartPos.x + buttonOffsetX + scaledDialRadius;
-            float absoluteCenterY = windowPos.y + cursorStartPos.y + scaledDialRadius + ZoomHelper.applyZoom(getMediumPadding(), zoom);
             
             // 绘制旋转盘（所有尺寸都应用缩放）
             int bgColor = isHovered ? brightenColor(DIAL_BG_COLOR, 0.1f) : DIAL_BG_COLOR;
@@ -313,8 +306,8 @@ public class CircularAngleNode extends BaseCustomUINode {
             // 绘制中心点
             drawList.addCircleFilled(absoluteCenterX, absoluteCenterY, ZoomHelper.applyZoom(3.0f, zoom), CENTER_DOT_COLOR);
             
-            // 移动光标到圆形UI下方
-            ImGui.setCursorPosY(ImGui.getCursorPosY() + buttonSize + ZoomHelper.applyZoom(getMediumPadding(), zoom));
+            // invisibleButton already consumed buttonSize vertical space; only add extra gap.
+            addVerticalSpacing(getMediumPadding(), zoom);
             
             // 数值输入框（如果启用）
             if (showValueInput) {
