@@ -3,7 +3,6 @@ package com.nodecraft.gui.editor.impl;
 import java.util.UUID;
 import com.nodecraft.nodesystem.api.INode;
 import imgui.ImGui;
-import imgui.flag.ImGuiWindowFlags;
 import com.nodecraft.core.NodeCraft;
 
 /**
