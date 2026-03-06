@@ -65,6 +65,11 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
     private String inputValidationError = null;
     private boolean hasInputValidationWarning = false;
     private String inputValidationWarning = null;
+
+    // --- UI折叠状态（影响节点高度计算） ---
+    private transient boolean infoSectionExpanded = true;
+    private transient boolean settingsSectionExpanded = false;
+    private transient boolean blockStateTreeExpanded = false;
     
     // --- 预览管理 ---
     private String currentGhostBlockPreviewId = null;
@@ -880,8 +885,8 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
     
     @Override
     protected float calculateUIHeight() {
-        // 计算基础高度，包含所有可能的UI元素
-        float baseHeight = 60f; // 拾取按钮的基础高度
+        // 基础高度：主按钮 + 顶部/基础间距
+        float baseHeight = 60f;
         
         // 如果正在拾取，为状态提示增加高度
         NodeEditorInteractionManager interactionManager = NodeEditorInteractionManager.getInstance();
@@ -897,19 +902,34 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             baseHeight += 20f;
         }
         
-        // 状态显示区域的高度（可折叠标题 + 内容）
+        // 状态显示区域高度（可折叠）
         if (hasPickedBlock || hasInputCoordinates()) {
-            baseHeight += 25f; // 可折叠标题
-            // 假设展开状态，为内容预留空间
-            baseHeight += 120f; // 方块信息 + 清除按钮
+            baseHeight += 25f; // 折叠标题行
+            if (infoSectionExpanded) {
+                // 来源/名称/ID/位置 四行基础信息
+                baseHeight += 4 * 18f;
+                // 状态树标题行
+                if (pickedBlockStateData != null && !pickedBlockStateData.isEmpty()) {
+                    baseHeight += 18f;
+                    // 状态树展开时按条目增加高度（设置上限防止异常撑爆）
+                    if (blockStateTreeExpanded) {
+                        int visibleStateLines = Math.min(12, pickedBlockStateData.size());
+                        baseHeight += visibleStateLines * 16f;
+                    }
+                }
+                // 分隔线 + 清除按钮 + 额外间距
+                baseHeight += 56f;
+            }
         } else {
             baseHeight += 20f; // "未选择方块"提示
         }
         
-        // 设置区域的高度（可折叠标题 + 内容）
-        baseHeight += 25f; // 设置标题
-        // 为设置内容预留空间（假设可能展开）
-        baseHeight += 80f; // 输入端口状态 + 复选框 + 滑块
+        // 设置区域高度（可折叠）
+        baseHeight += 25f; // 设置标题行
+        if (settingsSectionExpanded) {
+            // 输入端口状态文本 + 两个复选框 + 距离文本/滑块 + 间距
+            baseHeight += 92f;
+        }
         
         // 添加间距
         baseHeight += 20f; // 各种小间距的总和
@@ -1025,7 +1045,12 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             if (hasPickedBlock || hasInputCoordinates()) {
                 // 默认展开状态显示区
                 String headerText = hasPickedBlock ? "已选方块信息##info" : "输入坐标方块##info";
-                if (ImGui.collapsingHeader(headerText, ImGuiTreeNodeFlags.DefaultOpen)) {
+                boolean infoExpandedNow = ImGui.collapsingHeader(headerText, ImGuiTreeNodeFlags.DefaultOpen);
+                if (infoExpandedNow != infoSectionExpanded) {
+                    infoSectionExpanded = infoExpandedNow;
+                    markDirty();
+                }
+                if (infoExpandedNow) {
                     ImGui.indent(); // 缩进内容
                     addVerticalSpacing(getSmallPadding(), zoom);
                     
@@ -1078,7 +1103,12 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
                         
                         // 使用树形节点展示属性列表
                         String stateLabel = "属性 (" + pickedBlockStateData.size() + ")";
-                        if (ImGui.treeNode(stateLabel + "##blockState")) {
+                        boolean treeExpandedNow = ImGui.treeNode(stateLabel + "##blockState");
+                        if (treeExpandedNow != blockStateTreeExpanded) {
+                            blockStateTreeExpanded = treeExpandedNow;
+                            markDirty();
+                        }
+                        if (treeExpandedNow) {
                             for (Map.Entry<String, String> entry : pickedBlockStateData.entrySet()) {
                                 ImGui.bulletText(entry.getKey() + ": " + entry.getValue());
                             }
@@ -1116,7 +1146,12 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             }
 
             // === 3. 高级设置区 ===
-            if (ImGui.collapsingHeader("设置##settings")) {
+            boolean settingsExpandedNow = ImGui.collapsingHeader("设置##settings");
+            if (settingsExpandedNow != settingsSectionExpanded) {
+                settingsSectionExpanded = settingsExpandedNow;
+                markDirty();
+            }
+            if (settingsExpandedNow) {
                 addVerticalSpacing(getSmallPadding(), zoom);
                 
                 // 输入端口状态说明
