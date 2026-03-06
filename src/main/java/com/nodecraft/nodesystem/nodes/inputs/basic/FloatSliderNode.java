@@ -335,17 +335,18 @@ public class FloatSliderNode extends BaseCustomUINode {
 
         String minText = String.format("最小: " + formatString, minValue);
         String maxText = String.format("最大: " + formatString, maxValue);
+        float lineStartX = ImGui.getCursorPosX();
 
         // 左对齐最小值
         float padding = l.toPixels(getMediumPadding());
-        ImGui.setCursorPosX(ImGui.getCursorPosX() + padding);
+        ImGui.setCursorPosX(lineStartX + padding);
         ImGui.text(minText);
 
         // 右对齐最大值
         ImGui.sameLine();
         float maxTextWidth = ImGui.calcTextSize(maxText).x;
-        float rightOffset = availableWidth - maxTextWidth - padding;
-        ImGui.setCursorPosX(ImGui.getCursorPosX() + rightOffset - ImGui.getCursorPosX() + padding);
+        float maxTextX = lineStartX + Math.max(padding, availableWidth - maxTextWidth - padding);
+        ImGui.setCursorPosX(maxTextX);
         ImGui.text(maxText);
 
         ImGui.popStyleColor();
@@ -366,6 +367,7 @@ public class FloatSliderNode extends BaseCustomUINode {
         boolean clicked = ImGui.button(buttonText);
         if (clicked) {
             showSettingsPanel = !showSettingsPanel;
+            markDirty();
         }
 
         l.popItemWidth();
@@ -517,7 +519,10 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setShowMinMaxLabels(boolean showMinMaxLabels) {
-        this.showMinMaxLabels = showMinMaxLabels;
+        if (this.showMinMaxLabels != showMinMaxLabels) {
+            this.showMinMaxLabels = showMinMaxLabels;
+            markDirty();
+        }
     }
 
     public boolean isShowValueInput() {
@@ -525,7 +530,10 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setShowValueInput(boolean showValueInput) {
-        this.showValueInput = showValueInput;
+        if (this.showValueInput != showValueInput) {
+            this.showValueInput = showValueInput;
+            markDirty();
+        }
     }
 
     public boolean isShowSettingsPanel() {
@@ -533,7 +541,10 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setShowSettingsPanel(boolean showSettingsPanel) {
-        this.showSettingsPanel = showSettingsPanel;
+        if (this.showSettingsPanel != showSettingsPanel) {
+            this.showSettingsPanel = showSettingsPanel;
+            markDirty();
+        }
     }
 
     public double getStep() {

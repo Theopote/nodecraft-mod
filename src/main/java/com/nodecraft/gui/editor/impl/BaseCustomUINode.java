@@ -296,7 +296,15 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
 
         try {
             // 调用子类实现的缩放感知渲染方法
-            return renderCustomUIScaled(width, height, zoom);
+            boolean interacted = renderCustomUIScaled(width, height, zoom);
+
+            // 兜底：若节点在自定义UI区域内发生点击交互，自动失效尺寸缓存。
+            // 这可覆盖子类遗漏 markDirty() 的场景（例如展开/收起设置面板）。
+            if (interacted && ImGui.isMouseClicked(imgui.flag.ImGuiMouseButton.Left)) {
+                markDirty();
+            }
+
+            return interacted;
         } finally {
             // 确保在任何情况下都能正确弹出ID
             ImGui.popID();
