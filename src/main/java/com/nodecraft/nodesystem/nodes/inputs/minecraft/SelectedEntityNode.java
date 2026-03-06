@@ -358,6 +358,9 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
                     SelectionVisualFeedback.EntitySelectionState.SELECTED
                 );
             }
+
+            // 将显示高亮作为可序列化节点状态的一部分纳入脏标记。
+            markDirty();
         }
     }
     

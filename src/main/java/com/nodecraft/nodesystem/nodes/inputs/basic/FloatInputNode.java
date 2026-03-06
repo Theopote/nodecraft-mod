@@ -9,9 +9,7 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
-import imgui.type.ImFloat;
 import imgui.flag.ImGuiCol;
-import imgui.flag.ImGuiInputTextFlags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;

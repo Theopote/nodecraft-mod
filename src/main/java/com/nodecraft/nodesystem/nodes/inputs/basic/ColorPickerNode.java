@@ -514,9 +514,8 @@ public class ColorPickerNode extends BaseCustomUINode {
     
     @Override
     public void setNodeState(Object state) {
-        if (state instanceof java.util.Map) {
-            java.util.Map<?, ?> stateMap = (java.util.Map<?, ?>) state;
-            
+        if (state instanceof java.util.Map<?, ?> stateMap) {
+
             // 设置是否包含透明度
             if (stateMap.containsKey("includeAlpha")) {
                 Object includeAlpha = stateMap.get("includeAlpha");

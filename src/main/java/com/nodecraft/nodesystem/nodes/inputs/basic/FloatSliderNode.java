@@ -484,9 +484,12 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setMinValue(double minValue) {
-        this.minValue = minValue;
-        // 确保当前值仍在范围内
-        setCurrentValue(this.currentValue);
+        if (Double.compare(this.minValue, minValue) != 0) {
+            this.minValue = minValue;
+            // 确保当前值仍在范围内
+            setCurrentValue(this.currentValue);
+            markDirty();
+        }
     }
 
     public double getMaxValue() {
@@ -494,9 +497,12 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setMaxValue(double maxValue) {
-        this.maxValue = maxValue;
-        // 确保当前值仍在范围内
-        setCurrentValue(this.currentValue);
+        if (Double.compare(this.maxValue, maxValue) != 0) {
+            this.maxValue = maxValue;
+            // 确保当前值仍在范围内
+            setCurrentValue(this.currentValue);
+            markDirty();
+        }
     }
 
     public double getCurrentValue() {
@@ -508,10 +514,14 @@ public class FloatSliderNode extends BaseCustomUINode {
     }
 
     public void setDecimalPlaces(int decimalPlaces) {
-        this.decimalPlaces = Math.max(0, Math.min(9, decimalPlaces));
-        updatePrecisionDependentValues();
-        // 重新应用精度到当前值
-        setCurrentValue(this.currentValue);
+        int clamped = Math.max(0, Math.min(9, decimalPlaces));
+        if (this.decimalPlaces != clamped) {
+            this.decimalPlaces = clamped;
+            updatePrecisionDependentValues();
+            // 重新应用精度到当前值
+            setCurrentValue(this.currentValue);
+            markDirty();
+        }
     }
 
     public boolean isShowMinMaxLabels() {

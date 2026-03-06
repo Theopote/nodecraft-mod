@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 // 导入ImGui相关类用于自定义UI渲染
@@ -186,17 +187,8 @@ public class IntegerInputNode extends BaseCustomUINode {
 
                 // 范围信息（如果启用）
                 if (showRange) {
-                    String rangeText;
-                    if (minValue == Integer.MIN_VALUE && maxValue == Integer.MAX_VALUE) {
-                        rangeText = "范围: 无限制";
-                    } else if (minValue == Integer.MIN_VALUE) {
-                        rangeText = String.format("最大值: %d", maxValue);
-                    } else if (maxValue == Integer.MAX_VALUE) {
-                        rangeText = String.format("最小值: %d", minValue);
-                    } else {
-                        rangeText = String.format("范围: %d - %d", minValue, maxValue);
-                    }
-                    
+                    String rangeText = getString();
+
                     float rangeTextWidth = ImGui.calcTextSize(rangeText).x;
                     setCenterX(availableWidth, rangeTextWidth);
 
@@ -217,7 +209,21 @@ public class IntegerInputNode extends BaseCustomUINode {
             return valueChanged;
         });
     }
-    
+
+    private @NotNull String getString() {
+        String rangeText;
+        if (minValue == Integer.MIN_VALUE && maxValue == Integer.MAX_VALUE) {
+            rangeText = "范围: 无限制";
+        } else if (minValue == Integer.MIN_VALUE) {
+            rangeText = String.format("最大值: %d", maxValue);
+        } else if (maxValue == Integer.MAX_VALUE) {
+            rangeText = String.format("最小值: %d", minValue);
+        } else {
+            rangeText = String.format("范围: %d - %d", minValue, maxValue);
+        }
+        return rangeText;
+    }
+
     /**
      * 当用户在UI中输入值时调用此方法
      * @param value 新的整数值
