@@ -111,8 +111,11 @@ public class NodecraftWindowRenderer {
         ImGui.setNextWindowSize(parentScreen.windowWidth, parentScreen.windowHeight, ImGuiCond.Appearing);
         ImGui.setNextWindowCollapsed(false, ImGuiCond.Appearing);
         
-        // 创建窗口标志
-        int windowFlags = createWindowFlags(viewportsEnabled);
+        // 创建窗口标志。分割线交互期间锁定窗口移动，避免拖拽分割线时整体面板漂移。
+        LayoutRenderer layoutRenderer = parentScreen.getLayoutRenderer();
+        boolean lockWindowMoveForSplitter = layoutRenderer != null &&
+            (layoutRenderer.isDraggingSplitter() || layoutRenderer.isHoveringSplitter());
+        int windowFlags = createWindowFlags(viewportsEnabled, lockWindowMoveForSplitter);
         
         // 自定义窗口标题
         String windowTitle = viewportsEnabled ?
@@ -142,8 +145,12 @@ public class NodecraftWindowRenderer {
         }
     }
     
-    private int createWindowFlags(boolean viewportsEnabled) {
+    private int createWindowFlags(boolean viewportsEnabled, boolean lockWindowMove) {
         int windowFlags = ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoCollapse;
+
+        if (lockWindowMove) {
+            windowFlags |= ImGuiWindowFlags.NoMove;
+        }
         
         if (viewportsEnabled) {
             windowFlags |= ImGuiWindowFlags.NoDocking;
