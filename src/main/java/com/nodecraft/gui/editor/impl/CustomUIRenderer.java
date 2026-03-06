@@ -151,26 +151,21 @@ public class CustomUIRenderer {
                 float clipMaxY = info.screenY + safeHeight;
                 ImGui.setCursorScreenPos(info.screenX, info.screenY);
                 ImGui.beginGroup();
+                imgui.ImGui imguiInstance = new imgui.ImGui();
+
+                // 关键：使用窗口级字体缩放，让控件文字与控件尺寸同步缩放。
+                // 仅在当前自定义UI渲染段内生效，结束后恢复为 1.0。
+                imguiInstance.setWindowFontScale(zoom);
 
                 if (info.customUINode != null) {
                     try {
-                        imgui.ImFont currentFont = ImGui.getFont();
-                        float originalFontObjectScale = currentFont != null ? currentFont.getScale() : 1.0f;
-                        try {
-                            if (currentFont != null) {
-                                currentFont.setScale(originalFontObjectScale * zoom);
-                            }
-                            info.customUINode.renderCustomUI(info.width, info.height, zoom);
-                        } finally {
-                            if (currentFont != null) {
-                                currentFont.setScale(originalFontObjectScale);
-                            }
-                        }
+                        info.customUINode.renderCustomUI(info.width, info.height, zoom);
                     } catch (Exception e) {
                         NodeCraft.LOGGER.error("自定义UI渲染失败 (节点: {}): {}", info.nodeId, e.getMessage(), e);
                     }
                 }
 
+                imguiInstance.setWindowFontScale(1.0f);
                 ImGui.endGroup();
 
                 // === 自定义UI区域的鼠标事件处理 ===
