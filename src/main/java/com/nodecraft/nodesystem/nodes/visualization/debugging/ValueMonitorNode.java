@@ -10,6 +10,7 @@ import imgui.ImGui;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
 import imgui.flag.ImGuiWindowFlags;
+import com.nodecraft.gui.editor.impl.ZoomHelper;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,7 +58,7 @@ public class ValueMonitorNode extends BaseCustomUINode {
         float h = getMediumPadding();
         h += ImGui.getTextLineHeight();           // 标题行
         h += getSmallPadding();
-        h += 80f;                                 // 屏幕内容区最小高度
+        h += ImGui.getTextLineHeight() * 4;       // 内容区高度（4行文本高度，和PanelNode一致）
         h += getMediumPadding();
         return h;
     }
@@ -77,14 +78,19 @@ public class ValueMonitorNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.Text, 0xFFAAAAAA);
                 ImGui.text("数据预览");
                 ImGui.popStyleColor();
-                l.addVerticalSpacing(getSmallPadding());
+                l.addVerticalSpacing(ZoomHelper.applyZoom(getSmallPadding(), zoom));
 
                 // “屏幕”区域：深色背景 + 边框，像小电视
-                float screenH = 88f;
+                // 计算内容区高度，和calculateUIHeight保持一致，所有padding等都缩放
+                float scaledMediumPad = ZoomHelper.applyZoom(getMediumPadding(), zoom);
+                float scaledSmallPad = ZoomHelper.applyZoom(getSmallPadding(), zoom);
+                float scaledTextLine = ImGui.getTextLineHeight() * zoom;
+                float screenH = height - scaledMediumPad * 2 - scaledTextLine - scaledSmallPad;
+                if (screenH < scaledTextLine * 2) screenH = scaledTextLine * 2; // 最小高度保护
                 ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.08f, 0.08f, 0.10f, 0.98f);
-                ImGui.pushStyleVar(ImGuiStyleVar.ChildBorderSize, 1.2f);
-                ImGui.pushStyleVar(ImGuiStyleVar.ChildRounding, 4f);
-                ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 8f, 8f);
+                ImGui.pushStyleVar(ImGuiStyleVar.ChildBorderSize, ZoomHelper.applyZoom(1.2f, zoom));
+                ImGui.pushStyleVar(ImGuiStyleVar.ChildRounding, ZoomHelper.applyZoom(4f, zoom));
+                ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, ZoomHelper.applyZoom(8f, zoom), ZoomHelper.applyZoom(8f, zoom));
                 boolean childOpen = ImGui.beginChild("##value_monitor_screen", aw, screenH, true, ImGuiWindowFlags.AlwaysUseWindowPadding);
 
                 if (childOpen) {
@@ -93,8 +99,8 @@ public class ValueMonitorNode extends BaseCustomUINode {
                     ImGui.pushStyleColor(ImGuiCol.Text, 0xFF666666);
                     ImGui.text("[" + typeLabel + "]");
                     ImGui.popStyleColor();
-                    ImGui.sameLine(0, 6);
-                    ImGui.setCursorPosY(ImGui.getCursorPosY() - 2);
+                    ImGui.sameLine(0, ZoomHelper.applyZoom(6, zoom));
+                    ImGui.setCursorPosY(ImGui.getCursorPosY() - ZoomHelper.applyZoom(2, zoom));
 
                     // 主内容：自动换行，突出显示
                     ImGui.pushStyleColor(ImGuiCol.Text, 0xFFCCDDEE);
@@ -107,7 +113,7 @@ public class ValueMonitorNode extends BaseCustomUINode {
                 ImGui.popStyleVar(3);
                 ImGui.popStyleColor();
 
-                l.addVerticalSpacing(getMediumPadding());
+                l.addVerticalSpacing(scaledMediumPad);
             } catch (Exception e) {
                 System.err.println("ValueMonitorNode UI 渲染失败: " + e.getMessage());
             }
