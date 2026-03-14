@@ -44,7 +44,7 @@
 | 建议 | 说明 | 状态 |
 |------|------|------|
 | 撤销堆栈 | 永久放置时记录被覆盖的原有方块，支持 UndoLastBake | 已实现 |
-| UndoLastBakeNode | 或 ImGUI 面板中的历史记录，一键恢复上次 Bake | 已实现骨架 |
+| UndoLastBakeNode | 节点图中一键恢复上次 Bake，需放置时启用「记录撤销」 | 已实现 |
 | Schematic 导出 | 将 Bake 结果导出为 .schematic 或 .litematic | 规划中 |
 
 **已实现**：`BakeHistory` 记录每次 Bake 的 (BlockPos, BlockState) 列表；`BakePlacementService.undoLast()` 可恢复。
