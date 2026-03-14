@@ -53,6 +53,7 @@ public class BakeTask {
      * 处理本 tick 的放置工作
      * @return 本 tick 实际放置的方块数，若任务完成返回 -1
      */
+    @SuppressWarnings("deprecation") // WorldView.isChunkLoaded(BlockPos) 在 1.21 中仍可用
     public int processTick() {
         if (completed || world == null || targetState == null) return -1;
 
