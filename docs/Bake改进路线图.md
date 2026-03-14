@@ -19,8 +19,8 @@
 |------|------|------|
 | 分层渲染 | 不直接在世界放方块，使用 VertexConsumer/LevelRenderer 渲染虚影 | 规划中 |
 | BlockPos→BlockState 缓存 | GeometryViewerNode 维护内部 Map 缓存，参数变更时仅更新缓存并触发重绘 | 进行中 |
-| SDF 节点 | 引入 SDF (Signed Distance Fields)，方便复杂形状并集/交集计算 | 规划中 |
-| Voxelizer 节点 | 将 SDF 统一转化为方块坐标列表，配合 spatial.voxel 使用 | 规划中 |
+| SDF 节点 | 引入 SDF (Signed Distance Fields)，方便复杂形状并集/交集计算 | 已实现 |
+| Voxelizer 节点 | 将 SDF 统一转化为方块坐标列表，配合 spatial.voxel 使用 | 已实现 |
 
 **已实现**：GeometryViewerNode 增加 `geometryCache` (Map<BlockPos, BlockState>) 和 `cacheDirty` 脏标记，只有输入变化时重新计算并更新预览。
 
@@ -45,7 +45,7 @@
 |------|------|------|
 | 撤销堆栈 | 永久放置时记录被覆盖的原有方块，支持 UndoLastBake | 已实现 |
 | UndoLastBakeNode | 节点图中一键恢复上次 Bake，需放置时启用「记录撤销」 | 已实现 |
-| Schematic 导出 | 将 Bake 结果导出为 .schematic 或 .litematic | 规划中 |
+| Schematic 导出 | 将 Bake 结果导出为 NBT 结构文件（.nbt），可接方块列表或 Block Placements | 已实现 |
 
 **已实现**：`BakeHistory` 记录每次 Bake 的 (BlockPos, BlockState) 列表；`BakePlacementService.undoLast()` 可恢复。
 
@@ -55,8 +55,8 @@
 
 | 建议 | 说明 | 状态 |
 |------|------|------|
-| 材质代理 | 形状生成输出 POINT_LIST/REGION，材质节点单独分配 BlockType | 规划中 |
-| 草稿方块 | 先用彩色羊毛等调整形状，再用 MaterialMapper 一键更换材质 | 规划中 |
+| 材质代理 | 形状生成输出 BLOCK_LIST，MaterialMapperNode 按高度分配 BlockType，输出 Block Placements | 已实现 |
+| 草稿方块 | 先用彩色羊毛等调整形状，再用材质映射 + 应用修改一键更换材质 | 已实现 |
 
 ---
 
@@ -94,9 +94,17 @@ public enum PlacementMode {
 
 ---
 
-## 四、后续计划
+## 四、已实现与后续计划
 
-1. **SDF + Voxelizer**：引入 spatial.sdf 分类，实现 SDF 并/交/差运算及 Voxelizer 节点。
-2. **Schematic 导出**：Bake 完成后可选导出为 .schematic/.litematic。
-3. **MaterialMapper 节点**：按高度、斜率等属性分配不同 BlockType。
-4. **分层渲染**：将幽灵方块从当前实现迁移到 VertexConsumer 渲染，提升大体积预览性能。
+**已实现（本次/此前）：**
+- **ApplyChangesNode 放置模式**：覆盖/增量、异步放置、记录撤销；支持 Blocks+Block Type 或 Block Placements（来自材质映射）。
+- **UndoLastBakeNode**：节点图中一键撤销上次 Bake（需放置时启用「记录撤销」）。
+- **SDF + Voxelizer**：`spatial.sdf` 分类下 SDF 球体、SDF 方盒、体素化节点；可与 spatial.voxel 并/交/差配合。
+- **导出结构**：ExportSchematicNode 将方块列表或 Block Placements 导出为 NBT 结构文件（.nbt）。
+- **材质代理**：MaterialMapperNode 按相对高度分底层/中层/顶层分配方块类型，输出 Positions、Block IDs、Block Placements，可接应用修改或 Set Blocks。
+
+**后续可做：**
+1. **.schematic / .litematic**：兼容 WorldEdit/Litematica 的格式导出（当前为自定义 NBT）。
+2. **MaterialMapper 扩展**：按斜率、生物群系等属性分配 BlockType。
+3. **分层渲染**：将幽灵方块从当前实现迁移到 VertexConsumer 渲染，提升大体积预览性能。
+4. **SDF 并/交/差**：在 spatial.sdf 下增加 SDFUnionNode、SDFIntersectionNode、SDFDifferenceNode（或继续使用 spatial.voxel 的坐标集运算）。

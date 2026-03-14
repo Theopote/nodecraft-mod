@@ -79,6 +79,7 @@ public enum NodeDataType {
     LIST("list", "列表", java.util.List.class), // 通用列表
     COORDINATE_LIST("coordinate_list", "坐标列表", java.util.List.class), // 坐标列表
     BLOCK_INFO_LIST("block_info_list", "方块信息列表", java.util.List.class), // 方块信息列表
+    BLOCK_PLACEMENT_LIST("block_placement_list", "方块放置列表", java.util.List.class), // List<BlockPlacementData> 按位置分配方块
     VECTOR_LIST("vector_list", "向量列表", java.util.List.class), // 向量列表
     REGION_LIST("region_list", "区域列表", java.util.List.class), // 区域列表
     PLANT_STRUCTURE_LIST("plant_structure_list", "植物结构列表", java.util.List.class); // 植物结构列表
@@ -152,7 +153,10 @@ public enum NodeDataType {
         if (this == PLANT_STRUCTURE_LIST && value instanceof java.util.List) {
             return true;
         }
-        
+        if (this == BLOCK_PLACEMENT_LIST && value instanceof java.util.List) {
+            return true;
+        }
+
         // 数字类型的特殊处理
         if (this == DOUBLE && value instanceof Number) {
              return true;

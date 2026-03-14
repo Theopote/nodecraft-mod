@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
@@ -20,6 +21,9 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -60,6 +64,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
     private static final String INPUT_TRIGGER_ID = "input_trigger";
     private static final String INPUT_BLOCKS_ID = "input_blocks";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
+    private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
     private static final String INPUT_PREVIEW_IDS_ID = "input_preview_ids";
     private static final String INPUT_NOTIFY_ID = "input_notify";
     private static final String OUTPUT_SUCCESS_ID = "output_success";
@@ -72,6 +77,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "触发执行", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "要放置的方块坐标列表", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "方块类型（如 minecraft:stone）", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "按位置分配方块（来自材质映射等）", NodeDataType.BLOCK_PLACEMENT_LIST, this));
         addInputPort(new BasePort(INPUT_PREVIEW_IDS_ID, "Preview IDs", "要应用的预览ID列表（可选）", NodeDataType.LIST, this));
         addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify on Complete", "完成后是否通知", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "是否成功", NodeDataType.BOOLEAN, this));
@@ -97,66 +103,108 @@ public class ApplyChangesNode extends BaseCustomUINode {
 
         boolean notify = (notifyObj instanceof Boolean) ? (Boolean) notifyObj : this.notifyOnComplete;
         String blockType = (blockTypeObj instanceof String) ? (String) blockTypeObj : "minecraft:stone";
+        Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
 
-        if (triggerObj != null && !isExecuting && context != null && context.getWorld() != null
-                && blocksObj instanceof BlockPosList) {
-            BlockPosList blocks = (BlockPosList) blocksObj;
-            if (blocks.isEmpty()) {
-                status = "方块列表为空";
-                outputValues.put(OUTPUT_SUCCESS_ID, false);
-                outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
-                outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
-                outputValues.put(OUTPUT_STATUS_ID, status);
-                return;
-            }
-
-            BlockState targetState = resolveBlockState(blockType);
-            if (targetState == null) {
-                status = "无效方块类型: " + blockType;
-                outputValues.put(OUTPUT_SUCCESS_ID, false);
-                outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
-                outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
-                outputValues.put(OUTPUT_STATUS_ID, status);
-                return;
-            }
-
-            isExecuting = true;
-            long startTime = System.currentTimeMillis();
-            try {
-                progressPercentage = 0.2f;
-                statusMessage = "正在应用...";
-
-                if (useAsyncBake) {
-                    BakePlacementService.getInstance().enqueue(
-                            context.getWorld(),
-                            new ArrayList<>(blocks.getPositions()),
-                            targetState,
-                            placementMode,
-                            recordUndo,
-                            1000,
-                            null);
-                    operationCount = blocks.size();
-                    success = true;
-                    status = "已提交 " + operationCount + " 方块（异步）";
-                } else {
+        if (triggerObj != null && !isExecuting && context != null && context.getWorld() != null) {
+            // 路径 1：按位置分配方块（来自材质映射等）
+            if (placementsObj instanceof List && !((List<?>) placementsObj).isEmpty()) {
+                Map<String, List<BlockPos>> byBlockId = new LinkedHashMap<>();
+                for (Object e : (List<?>) placementsObj) {
+                    if (e instanceof BlockPlacementData bpd && bpd.pos() != null && bpd.blockId() != null && !bpd.blockId().isEmpty()) {
+                        byBlockId.computeIfAbsent(bpd.blockId(), k -> new ArrayList<>()).add(bpd.pos());
+                    }
+                }
+                isExecuting = true;
+                long startTime = System.currentTimeMillis();
+                try {
+                    progressPercentage = 0.2f;
+                    statusMessage = "正在应用（按材质）...";
                     int count = 0;
-                    for (BlockPos pos : blocks) {
-                        if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) continue;
-                        if (context.getWorld().setBlockState(pos.toImmutable(), targetState, Block.NOTIFY_ALL)) count++;
+                    for (Map.Entry<String, List<BlockPos>> entry : byBlockId.entrySet()) {
+                        BlockState state = resolveBlockState(entry.getKey());
+                        if (state == null) continue;
+                        List<BlockPos> positions = entry.getValue();
+                        if (useAsyncBake) {
+                            BakePlacementService.getInstance().enqueue(context.getWorld(), new ArrayList<>(positions), state, placementMode, recordUndo, 1000, null);
+                            count += positions.size();
+                        } else {
+                            for (BlockPos pos : positions) {
+                                if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) continue;
+                                if (context.getWorld().setBlockState(pos.toImmutable(), state, Block.NOTIFY_ALL)) count++;
+                            }
+                        }
                     }
                     operationCount = count;
                     success = true;
-                    status = "已放置 " + operationCount + "/" + blocks.size();
+                    status = useAsyncBake ? "已提交 " + operationCount + " 方块（异步）" : "已放置 " + operationCount + " 方块";
+                    progressPercentage = 1.0f;
+                    statusMessage = success ? "完成" : "失败";
+                    executionTime = (int) (System.currentTimeMillis() - startTime);
+                    if (notify) System.out.println("应用修改: " + status + ", " + executionTime + "ms");
+                } catch (Exception e) {
+                    status = "错误: " + e.getMessage();
+                    System.err.println("ApplyChangesNode: " + e.getMessage());
+                } finally {
+                    isExecuting = false;
                 }
-                progressPercentage = 1.0f;
-                statusMessage = success ? "完成" : "失败";
-                executionTime = (int) (System.currentTimeMillis() - startTime);
-                if (notify) System.out.println("应用修改: " + status + ", " + executionTime + "ms");
-            } catch (Exception e) {
-                status = "错误: " + e.getMessage();
-                System.err.println("ApplyChangesNode: " + e.getMessage());
-            } finally {
-                isExecuting = false;
+            }
+            // 路径 2：统一方块类型（Blocks + Block Type）
+            else if (blocksObj instanceof BlockPosList) {
+                BlockPosList blocks = (BlockPosList) blocksObj;
+                if (blocks.isEmpty()) {
+                    status = "方块列表为空";
+                    outputValues.put(OUTPUT_SUCCESS_ID, false);
+                    outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
+                    outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
+                    outputValues.put(OUTPUT_STATUS_ID, status);
+                    return;
+                }
+                BlockState targetState = resolveBlockState(blockType);
+                if (targetState == null) {
+                    status = "无效方块类型: " + blockType;
+                    outputValues.put(OUTPUT_SUCCESS_ID, false);
+                    outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
+                    outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
+                    outputValues.put(OUTPUT_STATUS_ID, status);
+                    return;
+                }
+                isExecuting = true;
+                long startTime = System.currentTimeMillis();
+                try {
+                    progressPercentage = 0.2f;
+                    statusMessage = "正在应用...";
+                    if (useAsyncBake) {
+                        BakePlacementService.getInstance().enqueue(
+                                context.getWorld(),
+                                new ArrayList<>(blocks.getPositions()),
+                                targetState,
+                                placementMode,
+                                recordUndo,
+                                1000,
+                                null);
+                        operationCount = blocks.size();
+                        success = true;
+                        status = "已提交 " + operationCount + " 方块（异步）";
+                    } else {
+                        int count = 0;
+                        for (BlockPos pos : blocks) {
+                            if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) continue;
+                            if (context.getWorld().setBlockState(pos.toImmutable(), targetState, Block.NOTIFY_ALL)) count++;
+                        }
+                        operationCount = count;
+                        success = true;
+                        status = "已放置 " + operationCount + "/" + blocks.size();
+                    }
+                    progressPercentage = 1.0f;
+                    statusMessage = success ? "完成" : "失败";
+                    executionTime = (int) (System.currentTimeMillis() - startTime);
+                    if (notify) System.out.println("应用修改: " + status + ", " + executionTime + "ms");
+                } catch (Exception e) {
+                    status = "错误: " + e.getMessage();
+                    System.err.println("ApplyChangesNode: " + e.getMessage());
+                } finally {
+                    isExecuting = false;
+                }
             }
         }
         outputValues.put(OUTPUT_SUCCESS_ID, success);
