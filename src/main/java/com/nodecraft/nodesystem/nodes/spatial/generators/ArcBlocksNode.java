@@ -9,12 +9,13 @@ import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * 圆弧生成器：在指定平面生成圆弧（圆心、半径、起止角度）的方块坐标列表。
  * 角度为度，0 为 X 正轴方向，逆时针为正。
- * 分类：spatial.generators
  */
 @NodeInfo(
     id = "spatial.generators.arc_blocks",
@@ -71,7 +72,7 @@ public class ArcBlocksNode extends BaseNode {
         double step = (endRad - startRad) / steps;
 
         int cx = center.getX(), cy = center.getY(), cz = center.getZ();
-        java.util.Set<String> seen = new java.util.HashSet<>();
+        Set<String> seen = new HashSet<>();
 
         for (int i = 0; i <= steps; i++) {
             double a = startRad + i * step;

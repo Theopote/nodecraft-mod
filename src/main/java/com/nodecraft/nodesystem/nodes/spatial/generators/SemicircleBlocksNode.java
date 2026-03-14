@@ -9,11 +9,12 @@ import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
  * 半圆生成器：在指定平面生成半圆（圆心、半径、方向）的方块坐标列表。
- * 分类：spatial.generators
  */
 @NodeInfo(
     id = "spatial.generators.semicircle_blocks",
@@ -23,9 +24,7 @@ import java.util.UUID;
 )
 public class SemicircleBlocksNode extends BaseNode {
 
-    /** 半圆开口方向 */
     public enum Half { RIGHT, DOWN, LEFT, UP }
-
     public enum Plane { XY, YZ, XZ }
 
     private static final String INPUT_CENTER_ID = "input_center";
@@ -62,7 +61,7 @@ public class SemicircleBlocksNode extends BaseNode {
         double startDeg;
         double endDeg;
         switch (half) {
-            case RIGHT: startDeg = -90; endDeg = 90; break;  // 开口向右
+            case RIGHT: startDeg = -90; endDeg = 90; break;
             case DOWN:  startDeg = 0;   endDeg = 180; break;
             case LEFT:  startDeg = 90;  endDeg = 270; break;
             case UP:    startDeg = 180; endDeg = 360; break;
@@ -75,7 +74,7 @@ public class SemicircleBlocksNode extends BaseNode {
         double step = (endRad - startRad) / steps;
 
         int cx = center.getX(), cy = center.getY(), cz = center.getZ();
-        java.util.Set<String> seen = new java.util.HashSet<>();
+        Set<String> seen = new HashSet<>();
 
         for (int i = 0; i <= steps; i++) {
             double a = startRad + i * step;

@@ -13,7 +13,6 @@ import java.util.UUID;
 
 /**
  * 椭圆生成器：在指定平面生成 2D 椭圆（实心或轮廓）的方块坐标列表。
- * 分类：spatial.generators
  */
 @NodeInfo(
     id = "spatial.generators.ellipse_blocks",

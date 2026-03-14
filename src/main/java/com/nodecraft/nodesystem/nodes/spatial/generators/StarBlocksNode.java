@@ -13,7 +13,6 @@ import java.util.UUID;
 
 /**
  * 星形生成器：在指定平面生成星形（外径+内径，实心或轮廓）的方块坐标列表。
- * 分类：spatial.generators
  */
 @NodeInfo(
     id = "spatial.generators.star_blocks",
