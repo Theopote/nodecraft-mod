@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.util;
 
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.CompositeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -9,6 +10,9 @@ import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * Shared geometry-to-voxel bridge for nodes that consume abstract geometry.
@@ -66,6 +70,9 @@ public final class GeometryVoxelizer {
     }
 
     public static BlockPosList voxelize(GeometryData geometry, boolean fillSolid) {
+        if (geometry instanceof CompositeGeometryData compositeGeometry) {
+            return voxelizeComposite(compositeGeometry, fillSolid);
+        }
         if (geometry instanceof BoxGeometryData boxGeometry) {
             return voxelizeBox(boxGeometry, fillSolid);
         }
@@ -82,6 +89,9 @@ public final class GeometryVoxelizer {
     }
 
     public static @Nullable RegionData createBoundingRegion(GeometryData geometry) {
+        if (geometry instanceof CompositeGeometryData compositeGeometry) {
+            return createCompositeBoundingRegion(compositeGeometry);
+        }
         if (geometry instanceof BoxGeometryData boxGeometry) {
             return boxGeometry.isOriented()
                 ? BoxBlockGenerator.createOrientedBoundingRegion(
@@ -101,6 +111,56 @@ public final class GeometryVoxelizer {
             return TorusBlockGenerator.createBoundingRegion(torusGeometry);
         }
         return null;
+    }
+
+    public static BlockPosList voxelizeComposite(CompositeGeometryData geometry, boolean fillSolid) {
+        Set<BlockPos> mergedPositions = new LinkedHashSet<>();
+
+        for (GeometryData child : geometry.getGeometries()) {
+            BlockPosList childBlocks = voxelize(child, fillSolid);
+            for (BlockPos pos : childBlocks) {
+                mergedPositions.add(pos.toImmutable());
+            }
+        }
+
+        return new BlockPosList(mergedPositions);
+    }
+
+    public static @Nullable RegionData createCompositeBoundingRegion(CompositeGeometryData geometry) {
+        BlockPos minCorner = null;
+        BlockPos maxCorner = null;
+
+        for (GeometryData child : geometry.getGeometries()) {
+            RegionData childRegion = createBoundingRegion(child);
+            if (childRegion == null || !childRegion.isComplete()) {
+                continue;
+            }
+
+            BlockPos childMin = childRegion.getMinCorner();
+            BlockPos childMax = childRegion.getMaxCorner();
+            if (childMin == null || childMax == null) {
+                continue;
+            }
+
+            if (minCorner == null || maxCorner == null) {
+                minCorner = childMin;
+                maxCorner = childMax;
+                continue;
+            }
+
+            minCorner = new BlockPos(
+                Math.min(minCorner.getX(), childMin.getX()),
+                Math.min(minCorner.getY(), childMin.getY()),
+                Math.min(minCorner.getZ(), childMin.getZ())
+            );
+            maxCorner = new BlockPos(
+                Math.max(maxCorner.getX(), childMax.getX()),
+                Math.max(maxCorner.getY(), childMax.getY()),
+                Math.max(maxCorner.getZ(), childMax.getZ())
+            );
+        }
+
+        return minCorner != null && maxCorner != null ? new RegionData(minCorner, maxCorner) : null;
     }
 
     public static BlockPosList voxelizeBox(BoxGeometryData geometry, boolean fillSolid) {

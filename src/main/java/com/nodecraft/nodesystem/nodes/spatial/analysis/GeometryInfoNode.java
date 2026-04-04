@@ -6,6 +6,7 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoundingBoxData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.CompositeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -38,9 +39,11 @@ public class GeometryInfoNode extends BaseNode {
     private static final String OUTPUT_IS_CYLINDER_ID = "output_is_cylinder";
     private static final String OUTPUT_IS_SPHERE_ID = "output_is_sphere";
     private static final String OUTPUT_IS_TORUS_ID = "output_is_torus";
+    private static final String OUTPUT_IS_COMPOSITE_ID = "output_is_composite";
     private static final String OUTPUT_BOUNDING_BOX_ID = "output_bounding_box";
     private static final String OUTPUT_REGION_ID = "output_region";
     private static final String OUTPUT_CENTER_ID = "output_center";
+    private static final String OUTPUT_CHILD_COUNT_ID = "output_child_count";
 
     public GeometryInfoNode() {
         super(UUID.randomUUID(), "spatial.analysis.geometry_info");
@@ -53,9 +56,11 @@ public class GeometryInfoNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_IS_CYLINDER_ID, "Is Cylinder", "Whether the geometry is a cylinder", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_SPHERE_ID, "Is Sphere", "Whether the geometry is a sphere", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_TORUS_ID, "Is Torus", "Whether the geometry is a torus", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_IS_COMPOSITE_ID, "Is Composite", "Whether the geometry is a composite", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_BOUNDING_BOX_ID, "Bounding Box", "Axis-aligned bounding box data", NodeDataType.BOUNDING_BOX, this));
         addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_CENTER_ID, "Center", "Bounding region center block", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_CHILD_COUNT_ID, "Child Count", "Number of child geometries when composite", NodeDataType.INTEGER, this));
     }
 
     @Override
@@ -77,11 +82,14 @@ public class GeometryInfoNode extends BaseNode {
         boolean isCylinder = geometryObj instanceof CylinderGeometryData;
         boolean isSphere = geometryObj instanceof SphereData;
         boolean isTorus = geometryObj instanceof TorusGeometryData;
+        boolean isComposite = geometryObj instanceof CompositeGeometryData;
+        int childCount = geometryObj instanceof CompositeGeometryData composite ? composite.size() : (hasGeometry ? 1 : 0);
 
         if (isBox) geometryType = "box";
         else if (isCylinder) geometryType = "cylinder";
         else if (isSphere) geometryType = "sphere";
         else if (isTorus) geometryType = "torus";
+        else if (isComposite) geometryType = "composite";
 
         if (geometryObj instanceof GeometryData geometry) {
             region = GeometryVoxelizer.createBoundingRegion(geometry);
@@ -108,8 +116,10 @@ public class GeometryInfoNode extends BaseNode {
         outputValues.put(OUTPUT_IS_CYLINDER_ID, isCylinder);
         outputValues.put(OUTPUT_IS_SPHERE_ID, isSphere);
         outputValues.put(OUTPUT_IS_TORUS_ID, isTorus);
+        outputValues.put(OUTPUT_IS_COMPOSITE_ID, isComposite);
         outputValues.put(OUTPUT_BOUNDING_BOX_ID, boundingBox);
         outputValues.put(OUTPUT_REGION_ID, region);
         outputValues.put(OUTPUT_CENTER_ID, center);
+        outputValues.put(OUTPUT_CHILD_COUNT_ID, childCount);
     }
 }
