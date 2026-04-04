@@ -477,11 +477,12 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         }
 
         long windowHandle = net.minecraft.client.MinecraftClient.getInstance().getWindow().getHandle();
+        boolean textInputActive = ImGui.getIO().getWantTextInput() || ImGui.isAnyItemActive();
 
         // Delete 键 - 删除选中节点
         boolean isDeleteDown = GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_DELETE) == GLFW.GLFW_PRESS;
         if (isDeleteDown && !wasDeleteKeyDown) {
-            if (!selectedNodeIds.isEmpty()) {
+            if (!selectedNodeIds.isEmpty() && !textInputActive) {
                 NodeCraft.LOGGER.info("[渲染循环] 检测到 Delete 键，删除 {} 个选中节点", selectedNodeIds.size());
                 deleteSelectedNodes();
             }
@@ -494,7 +495,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         boolean isZDown = GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_Z) == GLFW.GLFW_PRESS;
         boolean isCtrlZ = isCtrlPressed && isZDown;
         if (isCtrlZ && !wasCtrlZDown) {
-            if (getHistory().canUndo()) {
+            if (!textInputActive && getHistory().canUndo()) {
                 NodeCraft.LOGGER.info("[渲染循环] 检测到 Ctrl+Z，执行撤销");
                 undo();
             }
@@ -505,7 +506,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         boolean isYDown = GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_Y) == GLFW.GLFW_PRESS;
         boolean isCtrlY = isCtrlPressed && isYDown;
         if (isCtrlY && !wasCtrlYDown) {
-            if (getHistory().canRedo()) {
+            if (!textInputActive && getHistory().canRedo()) {
                 NodeCraft.LOGGER.info("[渲染循环] 检测到 Ctrl+Y，执行重做");
                 redo();
             }

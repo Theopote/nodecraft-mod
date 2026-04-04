@@ -59,7 +59,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private boolean previewEnabled = true;
 
     @NodeProperty(displayName = "Preview Backend", category = "Display", order = 6)
-    private PreviewBackend previewBackend = PreviewBackend.GHOST;
+    private PreviewBackend previewBackend = PreviewBackend.TRACKED_WORLD;
 
     @NodeProperty(displayName = "Solid Geometry", category = "Display", order = 7)
     private boolean previewSolidGeometry = true;
@@ -77,6 +77,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private boolean recordUndo = true;
 
     private boolean placementRequested = false;
+    private boolean placementPendingLogged = false;
     private int lastBlockCount = 0;
     private String statusMessage = "Waiting for input...";
 
@@ -194,12 +195,16 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (placementRequested && blocksList != null && !blocksList.isEmpty()) {
             if (!hasWorldContext) {
                 statusMessage = "Placement queued, waiting for execution context";
-                NodeCraft.LOGGER.info(
-                        "GeometryViewerNode[{}] placement still pending: backend={}, blockCount={}, blockType={}, contextWorldPresent=false",
-                        getId(), previewBackend, blockCount, effectiveBlockType
-                );
+                if (!placementPendingLogged) {
+                    NodeCraft.LOGGER.info(
+                            "GeometryViewerNode[{}] placement still pending: backend={}, blockCount={}, blockType={}, contextWorldPresent=false",
+                            getId(), previewBackend, blockCount, effectiveBlockType
+                    );
+                    placementPendingLogged = true;
+                }
             } else {
                 placementRequested = false;
+                placementPendingLogged = false;
                 NodeCraft.LOGGER.info(
                         "GeometryViewerNode[{}] placement requested: backend={}, blockCount={}, blockType={}",
                         getId(), previewBackend, blockCount, effectiveBlockType
@@ -224,6 +229,9 @@ public class GeometryViewerNode extends BaseCustomUINode {
                     }
                 }
             }
+        }
+        if (!placementRequested) {
+            placementPendingLogged = false;
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocksList);
