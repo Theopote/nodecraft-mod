@@ -1470,10 +1470,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
     // 渲染BlockInfo数据
     private void renderBlockInfo(Object blockInfo, String label) {
-        // 由于已经在 renderPortData 中创建了 treeNode，这里不再嵌套
         try {
-            // 使用反射获取字段值
-            // 确保这些方法存在于 BlockInfo 类中
             Method getIdMethod = blockInfo.getClass().getMethod("getId");
             Method getNameMethod = blockInfo.getClass().getMethod("getName");
             Method getPositionMethod = blockInfo.getClass().getMethod("getPosition");
@@ -1482,55 +1479,49 @@ public class PropertyPanelComponent implements EditorComponent {
             Object name = getNameMethod.invoke(blockInfo);
             Object position = getPositionMethod.invoke(blockInfo);
 
-            ImGui.text("方块ID: " + id);
-            ImGui.text("名称: " + name);
-            ImGui.text("位置: " + position);
+            ImGui.text("Block ID: " + id);
+            ImGui.text("Name: " + name);
+            ImGui.text("Position: " + position);
 
-            // 提供预览按钮
-            if (ImGui.button("在世界中高亮此方块")) {
+            if (ImGui.button("Highlight In World")) {
                 if (position instanceof Vec3 pos) {
                     highlightPoint(pos);
                 }
             }
         } catch (NoSuchMethodException e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "BlockInfo 缺少必要方法 (getId/getName/getPosition)。");
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "BlockInfo is missing required methods (getId/getName/getPosition).");
         } catch (Exception e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取方块信息: " + e.getMessage());
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Failed to read block info: " + e.getMessage());
         }
     }
 
     // 渲染MinecraftBlock数据
     private void renderMinecraftBlock(Object block, String label) {
         try {
-            // 使用反射获取字段值
-            // 确保这些方法存在于 MinecraftBlock 类中
             Method getIdMethod = block.getClass().getMethod("getId");
             Method getNameMethod = block.getClass().getMethod("getName");
 
             Object id = getIdMethod.invoke(block);
             Object name = getNameMethod.invoke(block);
 
-            ImGui.text("方块ID: " + id);
-            ImGui.text("名称: " + name);
+            ImGui.text("Block ID: " + id);
+            ImGui.text("Name: " + name);
         } catch (NoSuchMethodException e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "MinecraftBlock 缺少必要方法 (getId/getName)。");
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "MinecraftBlock is missing required methods (getId/getName).");
         } catch (Exception e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取方块信息: " + e.getMessage());
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Failed to read block info: " + e.getMessage());
         }
     }
 
     // 渲染ItemStack数据
     private void renderItemStack(Object itemStack, String label) {
         try {
-            // 使用反射获取字段值
-            // 确保这些方法存在于 ItemStack 类中
             Method getItemMethod = itemStack.getClass().getMethod("getItem");
             Method getCountMethod = itemStack.getClass().getMethod("getCount");
             Method getNameMethod = null;
             try {
-                getNameMethod = itemStack.getClass().getMethod("getName"); // 尝试获取getName方法
-            } catch (NoSuchMethodException ignored) { 
-                // getName方法可能不存在，这是正常的
+                getNameMethod = itemStack.getClass().getMethod("getName");
+            } catch (NoSuchMethodException ignored) {
             }
 
             Object item = getItemMethod.invoke(itemStack);
@@ -1540,27 +1531,24 @@ public class PropertyPanelComponent implements EditorComponent {
                 name = getNameMethod.invoke(itemStack);
             }
 
-            ImGui.text("物品: " + (name != null ? name : item));
-            ImGui.text("数量: " + count);
+            ImGui.text("Item: " + (name != null ? name : item));
+            ImGui.text("Count: " + count);
 
-            // 提供复制功能
-            if (ImGui.button("复制物品命令")) {
-                String itemId = (item != null) ? item.toString() : "minecraft:air"; // 假设 item.toString() 提供物品ID
+            if (ImGui.button("Copy Give Command")) {
+                String itemId = (item != null) ? item.toString() : "minecraft:air";
                 String command = "/give @p " + itemId + " " + count;
                 copyToClipboard(command);
             }
         } catch (NoSuchMethodException e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "ItemStack 缺少必要方法 (getItem/getCount)。");
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "ItemStack is missing required methods (getItem/getCount).");
         } catch (Exception e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取物品信息: " + e.getMessage());
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Failed to read item info: " + e.getMessage());
         }
     }
 
     // 渲染Region数据
     private void renderRegion(Object region, String label) {
         try {
-            // 使用反射获取字段值
-            // 确保这些方法存在于 Region 类中
             Method getMinMethod = region.getClass().getMethod("getMin");
             Method getMaxMethod = region.getClass().getMethod("getMax");
             Method getBlockCountMethod = region.getClass().getMethod("getBlockCount");
@@ -1570,87 +1558,77 @@ public class PropertyPanelComponent implements EditorComponent {
             Object blockCount = getBlockCountMethod.invoke(region);
 
             if (min instanceof Vec3 minVec && max instanceof Vec3 maxVec) {
-                ImGui.text(String.format("最小角点: (%.1f, %.1f, %.1f)", minVec.getX(), minVec.getY(), minVec.getZ()));
-                ImGui.text(String.format("最大角点: (%.1f, %.1f, %.1f)", maxVec.getX(), maxVec.getY(), maxVec.getZ()));
+                ImGui.text(String.format("Min Corner: (%.1f, %.1f, %.1f)", minVec.getX(), minVec.getY(), minVec.getZ()));
+                ImGui.text(String.format("Max Corner: (%.1f, %.1f, %.1f)", maxVec.getX(), maxVec.getY(), maxVec.getZ()));
             } else {
-                ImGui.text("最小角点: " + min);
-                ImGui.text("最大角点: " + max);
+                ImGui.text("Min Corner: " + min);
+                ImGui.text("Max Corner: " + max);
             }
 
-            ImGui.text("包含方块数: " + blockCount);
+            ImGui.text("Block Count: " + blockCount);
 
-            // 提供预览功能
-            if (ImGui.button("在世界中高亮此区域")) {
+            if (ImGui.button("Highlight Region")) {
                 highlightRegion(region);
             }
         } catch (NoSuchMethodException e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Region 缺少必要方法 (getMin/getMax/getBlockCount)。");
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Region is missing required methods (getMin/getMax/getBlockCount).");
         } catch (Exception e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取区域信息: " + e.getMessage());
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Failed to read region info: " + e.getMessage());
         }
     }
 
     // 渲染NBT数据
     private void renderNBT(Object nbt, String label) {
         try {
-            // 使用简单toString来显示NBT
             ImGui.textWrapped(nbt.toString());
 
-            // 提供复制功能
-            if (ImGui.button("复制NBT数据")) {
+            if (ImGui.button("Copy NBT")) {
                 copyToClipboard(nbt.toString());
             }
         } catch (Exception e) {
-            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无法读取NBT数据: " + e.getMessage());
+            ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Failed to read NBT data: " + e.getMessage());
         }
     }
 
     // 增强List渲染，根据列表项类型使用专门的渲染逻辑
     private void renderList(List<?> list, String label) {
         int size = list.size();
-        if (ImGui.treeNode(label + ": List (" + size + " 项)")) {
-            // 只显示前10个元素，避免过多数据
+        if (ImGui.treeNode(label + ": List (" + size + " items)")) {
             int displayLimit = Math.min(size, 10);
 
             if (!list.isEmpty()) {
                 for (int i = 0; i < displayLimit; i++) {
                     Object item = list.get(i);
-                    ImGui.pushID(i); // 为每个列表项提供唯一ID
+                    ImGui.pushID(i);
                     if (item == null) {
                         ImGui.text(String.format("[%d] null", i));
                     } else {
-                        // 递归调用 renderPortData 来渲染列表项
                         renderPortData(item, String.format("[%d]", i));
                     }
                     ImGui.popID();
                 }
             }
 
-            // 如果列表很长，显示"查看更多"按钮
             if (size > displayLimit) {
-                if (ImGui.button("查看所有 " + size + " 项...")) {
-                    // 创建一个弹窗显示完整列表
-                    ImGui.openPopup("完整列表: " + label); // 弹窗ID需要唯一
+                if (ImGui.button("View All " + size + " Items...")) {
+                    ImGui.openPopup("Full List: " + label);
                 }
             }
 
-            // 如果是坐标列表，提供预览按钮
             if (!list.isEmpty() && list.getFirst() instanceof Vec3) {
-                if (ImGui.button("预览坐标点集合")) {
+                if (ImGui.button("Preview Point Set")) {
                     highlightPoints(list);
                 }
             }
 
-            // 处理完整列表的弹窗
-            if (ImGui.beginPopup("完整列表: " + label)) { // 匹配弹窗ID
-                ImGui.text("完整列表 (" + size + " 项)");
+            if (ImGui.beginPopup("Full List: " + label)) {
+                ImGui.text("Full List (" + size + " items)");
                 ImGui.separator();
 
-                // 在弹窗中实现带有滚动条的列表显示
-                float heightLimit = ImGui.getWindowHeight() * 0.6f; // 限制高度为窗口的60%
+                float heightLimit = ImGui.getWindowHeight() * 0.6f;
                 float childHeight = Math.min(heightLimit, size * (ImGui.getFontSize() + ImGui.getStyle().getItemSpacingY()) + ImGui.getStyle().getWindowPaddingY() * 2);
 
-                if (ImGui.beginChild("列表内容_" + label, ImGui.getContentRegionAvailX(), childHeight, false, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+                if (ImGui.beginChild("ListContent_" + label, ImGui.getContentRegionAvailX(), childHeight, false, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
                     for (int i = 0; i < size; i++) {
                         Object item = list.get(i);
                         ImGui.text(String.format("[%d] %s", i, item != null ? item.toString() : "null"));
@@ -1659,7 +1637,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 }
 
                 ImGui.separator();
-                if (ImGui.button("关闭")) {
+                if (ImGui.button("Close")) {
                     ImGui.closeCurrentPopup();
                 }
 
@@ -1671,10 +1649,10 @@ public class PropertyPanelComponent implements EditorComponent {
     // 增强Map渲染
     private void renderMap(Map<?, ?> map, String label) {
         int size = map.size();
-        if (ImGui.treeNode(label + ": Map (" + size + " 项)")) {
+        if (ImGui.treeNode(label + ": Map (" + size + " entries)")) {
             if (ImGui.beginTable("mapTable_" + label, 2, ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingFixedFit)) {
-                ImGui.tableSetupColumn("键");
-                ImGui.tableSetupColumn("值");
+                ImGui.tableSetupColumn("Key");
+                ImGui.tableSetupColumn("Value");
                 ImGui.tableHeadersRow();
 
                 for (Map.Entry<?, ?> entry : map.entrySet()) {
@@ -1689,8 +1667,7 @@ public class PropertyPanelComponent implements EditorComponent {
                     if (value == null) {
                         ImGui.textDisabled("null");
                     } else {
-                        // 递归调用 renderPortData 来渲染 Map 的值
-                        renderPortData(value, ""); // 值不需要额外的标签
+                        renderPortData(value, "");
                     }
                 }
                 ImGui.endTable();
@@ -1700,17 +1677,16 @@ public class PropertyPanelComponent implements EditorComponent {
 
     // 渲染Vec3数据
     private void renderVec3(Vec3 vec, String label) {
-        // 已经在 renderPortData 中创建了 treeNode，这里不再嵌套
         ImGui.text(String.format("X: %.2f, Y: %.2f, Z: %.2f", vec.getX(), vec.getY(), vec.getZ()));
 
-        if (ImGui.button("复制到剪贴板")) {
+        if (ImGui.button("Copy To Clipboard")) {
             String vecStr = String.format("%.2f %.2f %.2f", vec.getX(), vec.getY(), vec.getZ());
             copyToClipboard(vecStr);
         }
 
         ImGui.sameLine();
 
-        if (ImGui.button("预览坐标点")) {
+        if (ImGui.button("Preview Point")) {
             highlightPoint(vec);
         }
     }
@@ -1721,79 +1697,69 @@ public class PropertyPanelComponent implements EditorComponent {
             java.awt.Toolkit.getDefaultToolkit()
                     .getSystemClipboard()
                     .setContents(new java.awt.datatransfer.StringSelection(text), null);
-            NodeCraft.LOGGER.info("已复制到剪贴板: {}", text);
+            NodeCraft.LOGGER.info("Copied to clipboard: {}", text);
         } catch (Exception e) {
-            NodeCraft.LOGGER.error("复制到剪贴板失败", e);
+            NodeCraft.LOGGER.error("Failed to copy to clipboard", e);
         }
     }
 
     // 高亮单个坐标点 (占位符)
     private void highlightPoint(Vec3 point) {
         if (selectedNode == null) return;
-        NodeCraft.LOGGER.info("预览坐标点: {}", point);
-        // TODO: 调用实际的预览系统
+        NodeCraft.LOGGER.info("Preview point: {}", point);
     }
 
     // 高亮坐标点集合 (占位符)
     private void highlightPoints(List<?> points) {
         if (selectedNode == null || points.isEmpty() || !(points.getFirst() instanceof Vec3)) return;
-        NodeCraft.LOGGER.info("预览{}个坐标点", points.size());
-        // TODO: 调用实际的预览系统
+        NodeCraft.LOGGER.info("Preview {} points", points.size());
     }
 
     // 高亮区域 (占位符)
     private void highlightRegion(Object region) {
         if (selectedNode == null) return;
-        NodeCraft.LOGGER.info("预览区域: {}", region);
-        // TODO: 调用实际的预览系统
+        NodeCraft.LOGGER.info("Preview region: {}", region);
     }
 
     // 新增：渲染调试工具
     private void renderDebugTools() {
-        ImGui.text("节点调试工具");
+        ImGui.text("Node Debug Tools");
         ImGui.separator();
 
-        // 单独预览按钮
-        if (ImGui.button("单独预览此节点", -1, 0)) {
+        if (ImGui.button("Preview This Node", -1, 0)) {
             previewCurrentNode();
-            ImGui.openPopup("预览操作");
+            ImGui.openPopup("Preview Actions");
         }
 
-        // 清除预览按钮
-        if (ImGui.button("清除此节点预览", -1, 0)) {
+        if (ImGui.button("Clear Node Preview", -1, 0)) {
             clearNodePreview();
         }
 
-        // 执行计算按钮
-        if (ImGui.button("重新计算此节点", -1, 0)) {
+        if (ImGui.button("Recalculate Node", -1, 0)) {
             recalculateNode();
         }
 
-        // 记录到控制台按钮
-        if (ImGui.button("记录节点信息到控制台", -1, 0)) {
+        if (ImGui.button("Log Node Info", -1, 0)) {
             logNodeInfo();
         }
 
-        // 性能统计
         ImGui.separator();
-        ImGui.text("性能统计");
+        ImGui.text("Performance");
         renderPerformanceStats();
 
-        // 弹出窗口：预览操作
-        // 使用 Flags.NoMove 防止被拖动
-        if (ImGui.beginPopup("预览操作", ImGuiWindowFlags.NoMove)) {
-            ImGui.text("预览选项");
+        if (ImGui.beginPopup("Preview Actions", ImGuiWindowFlags.NoMove)) {
+            ImGui.text("Preview Options");
             ImGui.separator();
 
-            if (ImGui.menuItem("高亮显示")) {
+            if (ImGui.menuItem("Highlight")) {
                 previewNodeWithMode(PreviewMode.HIGHLIGHT);
             }
 
-            if (ImGui.menuItem("线框模式")) {
+            if (ImGui.menuItem("Wireframe")) {
                 previewNodeWithMode(PreviewMode.WIREFRAME);
             }
 
-            if (ImGui.menuItem("实体模式")) {
+            if (ImGui.menuItem("Solid")) {
                 previewNodeWithMode(PreviewMode.SOLID);
             }
 
@@ -1804,8 +1770,6 @@ public class PropertyPanelComponent implements EditorComponent {
     // 实现单独预览当前节点功能
     private void previewCurrentNode() {
         if (selectedNode == null) return;
-
-        // 默认使用高亮模式预览
         previewNodeWithMode(PreviewMode.HIGHLIGHT);
     }
 
@@ -1813,16 +1777,14 @@ public class PropertyPanelComponent implements EditorComponent {
     private void previewNodeWithMode(PreviewMode mode) {
         if (selectedNode == null) return;
 
-        NodeCraft.LOGGER.info("预览节点: {}，模式: {}", selectedNode.getId(), mode);
-        // TODO: 在预览系统实现后，替换为实际预览逻辑
+        NodeCraft.LOGGER.info("Preview node: {}, mode: {}", selectedNode.getId(), mode);
     }
 
     // 清除节点预览
     private void clearNodePreview() {
         if (selectedNode == null) return;
 
-        NodeCraft.LOGGER.info("清除节点预览: {}", selectedNode.getId());
-        // TODO: 在预览系统实现后，替换为实际预览逻辑
+        NodeCraft.LOGGER.info("Clear node preview: {}", selectedNode.getId());
     }
 
     // 重新计算节点
@@ -1853,7 +1815,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
                 updatePerformanceStats(executionTime);
 
-                NodeCraft.LOGGER.info("节点重新计算完成: {}, 用时: {}ms", selectedNode.getDisplayName(), String.format("%.2f", executionTime));
+                NodeCraft.LOGGER.info("Node recalculation finished: {}, took {}ms", selectedNode.getDisplayName(), String.format("%.2f", executionTime));
 
                 // 如果节点是BaseNode，将其标记为脏以便触发下游更新
                 if (selectedNode instanceof BaseNode) {
@@ -1861,9 +1823,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 }
             }
         } catch (NoSuchMethodError e) { // 捕获方法不存在的错误
-            NodeCraft.LOGGER.error("节点 {} 没有实现 compute(Map<String, Object>) 方法或其签名不匹配。", selectedNode.getDisplayName());
+            NodeCraft.LOGGER.error("Node {} does not implement compute(Map<String, Object>) or its signature is incompatible.", selectedNode.getDisplayName());
         } catch (Exception e) {
-            NodeCraft.LOGGER.error("节点重新计算失败: {}", e.getMessage(), e);
+            NodeCraft.LOGGER.error("Node recalculation failed: {}", e.getMessage(), e);
         }
     }
 
@@ -1932,12 +1894,12 @@ public class PropertyPanelComponent implements EditorComponent {
         if (selectedNode == null) return;
 
         StringBuilder info = new StringBuilder();
-        info.append("节点详细信息:\n");
+        info.append("Node Details:\n");
         info.append("==============================================\n");
-        info.append("节点ID: ").append(selectedNode.getId()).append("\n");
-        info.append("类型: ").append(selectedNode.getTypeId()).append("\n");
-        info.append("显示名称: ").append(selectedNode.getDisplayName()).append("\n");
-        info.append("描述: ").append(selectedNode.getDescription()).append("\n");
+        info.append("Node ID: ").append(selectedNode.getId()).append("\n");
+        info.append("Type: ").append(selectedNode.getTypeId()).append("\n");
+        info.append("Display Name: ").append(selectedNode.getDisplayName()).append("\n");
+        info.append("Description: ").append(selectedNode.getDescription()).append("\n");
         // selectedNode 并没有 getPositionX/Y 方法，可能需要从 nodePositions 中获取
         // if (selectedNode instanceof ImGuiNodeEditor.NodePosition) { // 错误，selectedNode 不是 NodePosition
         //     info.append("位置: (").append(selectedNode.getPositionX()).append(", ")
@@ -1947,38 +1909,35 @@ public class PropertyPanelComponent implements EditorComponent {
         ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
         NodePosition pos = editor.getNodePosition(selectedNode.getId());
         if (pos != null) {
-            info.append("位置: (").append(String.format("%.1f", pos.x)).append(", ")
+            info.append("Position: (").append(String.format("%.1f", pos.x)).append(", ")
                     .append(String.format("%.1f", pos.y)).append(")\n");
         } else {
-            info.append("位置: 未知\n");
+            info.append("Position: Unknown\n");
         }
-        // }
 
-        info.append("\n输入端口:\n");
+        info.append("\nInput Ports:\n");
         info.append("----------------------------------------------\n");
         for (IPort port : selectedNode.getInputPorts()) {
             info.append(" - ").append(port.getDisplayName())
                     .append(" (").append(port.getDataType().name()).append("): ")
-                    .append(port.isConnected() ? "已连接" : "未连接").append("\n");
+                    .append(port.isConnected() ? "Connected" : "Disconnected").append("\n");
 
-            // 添加端口值信息
             Object value = port.getValue();
             if (value != null) {
-                info.append("   值: ").append(formatValueForLog(value)).append("\n");
+                info.append("   Value: ").append(formatValueForLog(value)).append("\n");
             }
         }
 
-        info.append("\n输出端口:\n");
+        info.append("\nOutput Ports:\n");
         info.append("----------------------------------------------\n");
         for (IPort port : selectedNode.getOutputPorts()) {
             info.append(" - ").append(port.getDisplayName())
                     .append(" (").append(port.getDataType().name()).append("): ")
-                    .append(port.isConnected() ? "已连接" : "未连接").append("\n");
+                    .append(port.isConnected() ? "Connected" : "Disconnected").append("\n");
 
-            // 添加端口值信息
             Object value = selectedNode.getOutput(port.getId());
             if (value != null) {
-                info.append("   值: ").append(formatValueForLog(value)).append("\n");
+                info.append("   Value: ").append(formatValueForLog(value)).append("\n");
             }
         }
 
@@ -1992,14 +1951,14 @@ public class PropertyPanelComponent implements EditorComponent {
         if (value == null) return "null";
 
         if (value instanceof List<?> list) {
-            return "List (" + list.size() + " 项)";
+            return "List (" + list.size() + " items)";
         } else if (value instanceof Map<?, ?> map) {
-            return "Map (" + map.size() + " 项)";
+            return "Map (" + map.size() + " entries)";
         } else if (value.getClass().getSimpleName().contains("NBT") ||
                 value.getClass().getSimpleName().equals("CompoundTag")) {
-            return "NBT数据";
+            return "NBT Data";
         } else if (value.getClass().getSimpleName().equals("Region")) {
-            return "区域";
+            return "Region";
         } else if (value instanceof Vec3 vec) {
             return String.format("Vec3(%.1f, %.1f, %.1f)", vec.getX(), vec.getY(), vec.getZ());
         } else {
@@ -2023,9 +1982,9 @@ public class PropertyPanelComponent implements EditorComponent {
 
     // 渲染性能统计
     private void renderPerformanceStats() {
-        ImGui.text("最近执行时间: " + (lastExecutionTime > 0 ? String.format("%.2f ms", lastExecutionTime) : "N/A"));
-        ImGui.text("平均执行时间: " + (executionCount > 0 ? String.format("%.2f ms", averageExecutionTime) : "N/A"));
-        ImGui.text("执行次数: " + (executionCount > 0 ? executionCount : "N/A"));
+        ImGui.text("Last Execution Time: " + (lastExecutionTime > 0 ? String.format("%.2f ms", lastExecutionTime) : "N/A"));
+        ImGui.text("Average Execution Time: " + (executionCount > 0 ? String.format("%.2f ms", averageExecutionTime) : "N/A"));
+        ImGui.text("Execution Count: " + (executionCount > 0 ? executionCount : "N/A"));
     }
 
     // 预览模式枚举
