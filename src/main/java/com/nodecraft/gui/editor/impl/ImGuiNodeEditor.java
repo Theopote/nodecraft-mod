@@ -12,6 +12,8 @@ import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import com.nodecraft.gui.components.CanvasComponent; // Needed for CanvasComponent.isNodeDragDropActive()
@@ -20,7 +22,11 @@ import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec2;
 import imgui.flag.ImGuiMouseButton;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.server.integrated.IntegratedServer;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -71,6 +77,13 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
     private boolean wasDeleteKeyDown = false;
     private boolean wasCtrlZDown = false;
     private boolean wasCtrlYDown = false;
+    private static final long AUTO_PREVIEW_DEBOUNCE_MS = 250L;
+    private static final long AUTO_PREVIEW_POLL_INTERVAL_MS = 750L;
+    private long lastObservedDirtyVersion = -1L;
+    private long pendingAutoPreviewVersion = -1L;
+    private long lastAutoPreviewDirtyChangeAt = 0L;
+    private long lastAutoPreviewExecutionAt = 0L;
+    private NodeExecutor autoPreviewExecutor = null;
 
     /**
      * 获取单例实例
@@ -368,6 +381,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
 
             // 15. 处理节点搜索弹窗
             menus.renderNodeSearchPopup(); // 渲染搜索弹窗（如果弹窗已打开）
+            maybeAutoExecutePreviewGraph();
 
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染ImGui编辑器时出错: {}", e.getMessage(), e);
@@ -984,6 +998,74 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             return false;
         }
         return !currentGraph.getNodes().isEmpty();
+    }
+
+    private void maybeAutoExecutePreviewGraph() {
+        if (currentGraph == null || io == null) {
+            return;
+        }
+
+        long currentDirtyVersion = io.getDirtyVersion();
+        long now = System.currentTimeMillis();
+        if (currentDirtyVersion != lastObservedDirtyVersion) {
+            lastObservedDirtyVersion = currentDirtyVersion;
+            pendingAutoPreviewVersion = currentDirtyVersion;
+            lastAutoPreviewDirtyChangeAt = now;
+        }
+
+        boolean hasPendingDirtyExecution = pendingAutoPreviewVersion >= 0;
+        boolean shouldPollPreview = now - lastAutoPreviewExecutionAt >= AUTO_PREVIEW_POLL_INTERVAL_MS;
+        if (!hasPendingDirtyExecution && !shouldPollPreview) {
+            return;
+        }
+
+        if (autoPreviewExecutor != null && autoPreviewExecutor.isExecuting()) {
+            return;
+        }
+
+        if (hasPendingDirtyExecution && now - lastAutoPreviewDirtyChangeAt < AUTO_PREVIEW_DEBOUNCE_MS) {
+            return;
+        }
+
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.world == null) {
+            return;
+        }
+
+        World world = client.world;
+        ServerPlayerEntity serverPlayer = null;
+        IntegratedServer integratedServer = client.getServer();
+        if (integratedServer != null && client.player != null) {
+            serverPlayer = integratedServer.getPlayerManager().getPlayer(client.player.getUuid());
+            if (serverPlayer != null) {
+                world = integratedServer.getOverworld();
+            }
+        }
+
+        final long executingVersion = hasPendingDirtyExecution ? pendingAutoPreviewVersion : currentDirtyVersion;
+        final String triggerReason = hasPendingDirtyExecution ? "dirty" : "poll";
+        pendingAutoPreviewVersion = -1L;
+        lastAutoPreviewExecutionAt = now;
+
+        autoPreviewExecutor = new NodeExecutor(currentGraph, new ExecutionContext(world, serverPlayer));
+        NodeCraft.LOGGER.info(
+                "自动执行预览图: reason={}, dirtyVersion={}, nodes={}",
+                triggerReason,
+                executingVersion,
+                currentGraph.getNodes().size()
+        );
+        autoPreviewExecutor.executeAsync().thenAccept(result -> {
+            if (result) {
+                NodeCraft.LOGGER.info("自动执行预览图完成: reason={}, dirtyVersion={}", triggerReason, executingVersion);
+            } else {
+                NodeCraft.LOGGER.warn("自动执行预览图失败: reason={}, dirtyVersion={}", triggerReason, executingVersion);
+            }
+            autoPreviewExecutor = null;
+        }).exceptionally(throwable -> {
+            NodeCraft.LOGGER.error("自动执行预览图异常: reason={}, dirtyVersion={}", triggerReason, executingVersion, throwable);
+            autoPreviewExecutor = null;
+            return null;
+        });
     }
 
     @Override

@@ -36,6 +36,7 @@ public class ImGuiNodeIO {
     private final Path defaultSavePath;
     private Path lastSavedPath = null;
     private boolean dirty = false; // 跟踪是否有未保存的更改
+    private long dirtyVersion = 0L;
     
     /**
      * 构造函数
@@ -256,12 +257,21 @@ public class ImGuiNodeIO {
     public boolean isDirty() {
         return dirty;
     }
+
+    /**
+     * 获取当前脏状态版本号。
+     * 每次调用 markDirty() 时递增，用于触发自动预览重算。
+     */
+    public long getDirtyVersion() {
+        return dirtyVersion;
+    }
     
     /**
      * 标记节点图已修改
      */
     public void markDirty() {
         dirty = true;
+        dirtyVersion++;
     }
     
     /**
