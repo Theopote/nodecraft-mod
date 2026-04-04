@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.preview;
 
+import com.nodecraft.core.NodeCraft;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.util.math.BlockPos;
@@ -45,6 +46,7 @@ public final class TrackedPreviewPlacementService {
 
         Map<BlockPos, BlockState> previousStates = new LinkedHashMap<>();
         int placedCount = 0;
+        int skippedCount = 0;
 
         for (BlockPos originalPos : positions) {
             if (originalPos == null) {
@@ -53,6 +55,7 @@ public final class TrackedPreviewPlacementService {
 
             BlockPos pos = originalPos.toImmutable();
             if (placementMode == PlacementMode.INCREMENTAL && !world.isAir(pos)) {
+                skippedCount++;
                 continue;
             }
 
@@ -67,6 +70,11 @@ public final class TrackedPreviewPlacementService {
                 .computeIfAbsent(world, ignored -> new LinkedHashMap<>())
                 .put(nodeId, new TrackedPreviewState(previousStates));
         }
+
+        NodeCraft.LOGGER.info(
+                "TrackedPreviewPlacementService.updateTrackedPreview nodeId={} requested={} placed={} skipped={} tracked={}",
+                nodeId, positions.size(), placedCount, skippedCount, previousStates.size()
+        );
 
         return placedCount;
     }
@@ -86,6 +94,7 @@ public final class TrackedPreviewPlacementService {
             if (byNode.isEmpty()) {
                 trackedPreviews.remove(world);
             }
+            NodeCraft.LOGGER.debug("TrackedPreviewPlacementService.clearTrackedPreview nodeId={} had no tracked state", nodeId);
             return 0;
         }
 
@@ -99,6 +108,11 @@ public final class TrackedPreviewPlacementService {
         if (byNode.isEmpty()) {
             trackedPreviews.remove(world);
         }
+
+        NodeCraft.LOGGER.info(
+                "TrackedPreviewPlacementService.clearTrackedPreview nodeId={} restored={}",
+                nodeId, restoredCount
+        );
 
         return restoredCount;
     }
@@ -117,6 +131,7 @@ public final class TrackedPreviewPlacementService {
         if (byNode.isEmpty()) {
             trackedPreviews.remove(world);
         }
+        NodeCraft.LOGGER.info("TrackedPreviewPlacementService.commitTrackedPreview nodeId={} committed={}", nodeId, removed);
         return removed;
     }
 

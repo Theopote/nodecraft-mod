@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.visualization.preview;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -150,6 +151,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
         BlockPosList blocksList = resolveBlocks(blocksObj, geometryObj, boxGeometryObj, cylinderGeometryObj, sphereGeometryObj, torusGeometryObj);
         int blockCount = blocksList == null ? 0 : blocksList.size();
         lastBlockCount = blockCount;
+        NodeCraft.LOGGER.debug(
+                "GeometryViewerNode[{}] processNode: previewEnabled={}, backend={}, blockCount={}, contextWorldPresent={}",
+                getId(), previewEnabled, previewBackend, blockCount, context != null && context.getWorld() != null
+        );
 
         int geometrySignature = computeGeometrySignature(blocksList);
         boolean previewDirty = geometrySignature != cachedGeometrySignature
@@ -185,16 +190,28 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (placementRequested && blocksList != null && !blocksList.isEmpty()) {
             placementRequested = false;
+            NodeCraft.LOGGER.info(
+                    "GeometryViewerNode[{}] placement requested: backend={}, blockCount={}, blockType={}",
+                    getId(), previewBackend, blockCount, effectiveBlockType
+            );
             if (context == null || context.getWorld() == null) {
                 statusMessage = "Missing execution context for placement";
+                NodeCraft.LOGGER.warn("GeometryViewerNode[{}] cannot place blocks: missing execution context", getId());
             } else if (previewBackend == PreviewBackend.TRACKED_WORLD) {
                 boolean committed = TrackedPreviewPlacementService.getInstance().commitTrackedPreview(context.getWorld(), getId().toString());
                 placed = committed;
                 statusMessage = committed ? "Build committed: " + blockCount + " blocks" : "No tracked preview to commit";
+                NodeCraft.LOGGER.info(
+                        "GeometryViewerNode[{}] tracked preview commit result: committed={}, trackedCountAfter={}",
+                        getId(),
+                        committed,
+                        TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
+                );
             } else {
                 BlockState targetState = resolveBlockState(effectiveBlockType);
                 if (targetState == null) {
                     statusMessage = "Invalid block type: " + effectiveBlockType;
+                    NodeCraft.LOGGER.warn("GeometryViewerNode[{}] invalid block type for placement: {}", getId(), effectiveBlockType);
                 } else {
                     placeBlocks(context, blocksList, targetState);
                 }
@@ -229,6 +246,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 .ghostBlockMode()
                 .setOpacity(trans);
         PreviewManager.showGhostBlockPlacements(getId().toString(), placements, options);
+        NodeCraft.LOGGER.debug(
+                "GeometryViewerNode[{}] ghost preview refreshed: placements={}, blockType={}, transparency={}",
+                getId(), placements.size(), effectiveBlockType, trans
+        );
     }
 
     private void refreshTrackedPreview(@Nullable ExecutionContext context,
@@ -238,12 +259,14 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (context == null || context.getWorld() == null) {
             statusMessage = "Tracked preview requires world context";
+            NodeCraft.LOGGER.warn("GeometryViewerNode[{}] tracked preview skipped: missing world context", getId());
             return;
         }
 
         BlockState trackedState = resolveBlockState(effectiveBlockType);
         if (trackedState == null) {
             statusMessage = "Invalid block type: " + effectiveBlockType;
+            NodeCraft.LOGGER.warn("GeometryViewerNode[{}] tracked preview skipped: invalid block type {}", getId(), effectiveBlockType);
             return;
         }
 
@@ -255,6 +278,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 placementMode
         );
         statusMessage = "Previewing " + trackedCount + " blocks (tracked)";
+        NodeCraft.LOGGER.info(
+                "GeometryViewerNode[{}] tracked preview refreshed: requested={}, placed={}, blockType={}, placementMode={}",
+                getId(), blocksList.size(), trackedCount, effectiveBlockType, placementMode
+        );
     }
 
     private void clearAllPreviewState(@Nullable ExecutionContext context) {
@@ -265,7 +292,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedPreviewBackend = null;
         PreviewManager.hideNodePreviews(getId().toString());
         if (context != null && context.getWorld() != null) {
-            TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
+            int cleared = TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
+            if (cleared > 0) {
+                NodeCraft.LOGGER.debug("GeometryViewerNode[{}] cleared {} tracked preview blocks", getId(), cleared);
+            }
         }
     }
 
@@ -287,6 +317,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             );
             statusMessage = "Queued placement task (" + positions.size() + " blocks, async)";
             placed = true;
+            NodeCraft.LOGGER.info("GeometryViewerNode[{}] queued async placement for {} blocks", getId(), positions.size());
             return;
         }
 
@@ -302,6 +333,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         placed = true;
         statusMessage = "Placed " + successCount + "/" + positions.size() + " blocks";
+        NodeCraft.LOGGER.info(
+                "GeometryViewerNode[{}] completed direct placement: placed={}, requested={}, mode={}",
+                getId(), successCount, positions.size(), placementMode
+        );
     }
 
     private BlockPosList resolveBlocks(Object blocksObj,
