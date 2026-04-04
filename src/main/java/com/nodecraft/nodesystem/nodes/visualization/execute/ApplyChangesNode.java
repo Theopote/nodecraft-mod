@@ -68,6 +68,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
     private static final String INPUT_TRIGGER_ID = "input_trigger";
     private static final String INPUT_BLOCKS_ID = "input_blocks";
     private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
+    private static final String INPUT_CYLINDER_GEOMETRY_ID = "input_cylinder_geometry";
     private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
@@ -84,6 +85,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "Execution trigger", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block coordinates to place", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry to voxelize and place", NodeDataType.BOX_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_CYLINDER_GEOMETRY_ID, "Cylinder Geometry", "Cylinder geometry to voxelize and place", NodeDataType.CYLINDER_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry to voxelize and place", NodeDataType.TORUS_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Fallback block type for uniform placement", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "Per-position block assignments", NodeDataType.BLOCK_PLACEMENT_LIST, this));
@@ -112,6 +114,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
         Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
+        Object cylinderGeometryObj = inputValues.get(INPUT_CYLINDER_GEOMETRY_ID);
         Object torusGeometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
         Object notifyObj = inputValues.get(INPUT_NOTIFY_ID);
@@ -163,7 +166,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
             return;
         }
 
-        BlockPosList blocks = resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj);
+        BlockPosList blocks = resolveBlocks(blocksObj, boxGeometryObj, cylinderGeometryObj, torusGeometryObj);
         if (blocks.isEmpty()) {
             publishOutputs(false, 0, 0, "No blocks or geometry to apply");
             return;
@@ -226,8 +229,8 @@ public class ApplyChangesNode extends BaseCustomUINode {
         return placements;
     }
 
-    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj, Object torusGeometryObj) {
-        return GeometryVoxelizer.resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj, solidGeometry);
+    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj, Object cylinderGeometryObj, Object torusGeometryObj) {
+        return GeometryVoxelizer.resolveBlocks(blocksObj, boxGeometryObj, cylinderGeometryObj, torusGeometryObj, solidGeometry);
     }
 
     private int applyPlacementList(ExecutionContext context, List<BlockPlacementData> placements) {
