@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.BoxBlockGenerator;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -151,113 +152,27 @@ public class BoxBlocksNode extends BaseNode {
         boolean rotated = hasRotation(rotationX, rotationY, rotationZ) || planeObj instanceof PlaneData;
 
         RegionData region = rotated
-            ? createOrientedBoundingRegion(centerVector, halfExtents, orientationMatrix)
-            : createAxisAlignedRegion(center, sizeX, sizeY, sizeZ);
+            ? BoxBlockGenerator.createOrientedBoundingRegion(centerVector, halfExtents, orientationMatrix)
+            : BoxBlockGenerator.createAxisAlignedRegion(center, sizeX, sizeY, sizeZ);
 
         return new BoxDefinition(region, centerVector, halfExtents, orientationMatrix, rotated);
     }
 
-    private RegionData createAxisAlignedRegion(BlockPos center, int sizeX, int sizeY, int sizeZ) {
-        BlockPos minCorner = new BlockPos(
-            center.getX() - ((sizeX - 1) / 2),
-            center.getY() - ((sizeY - 1) / 2),
-            center.getZ() - ((sizeZ - 1) / 2)
-        );
-
-        BlockPos maxCorner = new BlockPos(
-            minCorner.getX() + sizeX - 1,
-            minCorner.getY() + sizeY - 1,
-            minCorner.getZ() + sizeZ - 1
-        );
-
-        return new RegionData(minCorner, maxCorner);
-    }
-
-    private RegionData createOrientedBoundingRegion(
-        Vector3d center,
-        Vector3d halfExtents,
-        Matrix3d orientationMatrix
-    ) {
-        double minX = Double.POSITIVE_INFINITY;
-        double minY = Double.POSITIVE_INFINITY;
-        double minZ = Double.POSITIVE_INFINITY;
-        double maxX = Double.NEGATIVE_INFINITY;
-        double maxY = Double.NEGATIVE_INFINITY;
-        double maxZ = Double.NEGATIVE_INFINITY;
-
-        for (int sx = -1; sx <= 1; sx += 2) {
-            for (int sy = -1; sy <= 1; sy += 2) {
-                for (int sz = -1; sz <= 1; sz += 2) {
-                    Vector3d corner = new Vector3d(
-                        sx * halfExtents.x,
-                        sy * halfExtents.y,
-                        sz * halfExtents.z
-                    );
-                    orientationMatrix.transform(corner);
-                    corner.add(center);
-
-                    minX = Math.min(minX, corner.x);
-                    minY = Math.min(minY, corner.y);
-                    minZ = Math.min(minZ, corner.z);
-                    maxX = Math.max(maxX, corner.x);
-                    maxY = Math.max(maxY, corner.y);
-                    maxZ = Math.max(maxZ, corner.z);
-                }
-            }
-        }
-
-        BlockPos minCorner = BlockPos.ofFloored(minX, minY, minZ);
-        BlockPos maxCorner = BlockPos.ofFloored(maxX - 1e-9d, maxY - 1e-9d, maxZ - 1e-9d);
-        return new RegionData(minCorner, maxCorner);
-    }
-
     private void populateBlocks(BlockPosList blocksList, BlockPos minCorner, BlockPos maxCorner, BoxDefinition definition) {
-        for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
-            for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
-                for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    if (!containsBlock(definition, x, y, z)) {
-                        continue;
-                    }
-
-                    if (fillBox || isShellBlock(x, y, z, definition)) {
-                        blocksList.add(new BlockPos(x, y, z));
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean containsBlock(BoxDefinition definition, int x, int y, int z) {
-        if (definition == null || definition.center() == null || definition.halfExtents() == null) {
-            return false;
-        }
-
         if (!definition.rotated()) {
-            BlockPos minCorner = definition.region().getMinCorner();
-            BlockPos maxCorner = definition.region().getMaxCorner();
-            return minCorner != null && maxCorner != null
-                && x >= minCorner.getX() && x <= maxCorner.getX()
-                && y >= minCorner.getY() && y <= maxCorner.getY()
-                && z >= minCorner.getZ() && z <= maxCorner.getZ();
+            BoxBlockGenerator.populateAxisAlignedBox(blocksList, minCorner, maxCorner, fillBox);
+            return;
         }
 
-        Matrix3d inverseRotation = new Matrix3d(definition.orientationMatrix()).transpose();
-
-        Vector3d local = new Vector3d(x, y, z).sub(definition.center());
-        inverseRotation.transform(local);
-
-        return Math.abs(local.x) <= definition.halfExtents().x
-            && Math.abs(local.y) <= definition.halfExtents().y
-            && Math.abs(local.z) <= definition.halfExtents().z;
-    }
-
-    private boolean isShellBlock(int x, int y, int z, BoxDefinition definition) {
-        return !containsBlock(definition, x + 1, y, z)
-            || !containsBlock(definition, x - 1, y, z)
-            || !containsBlock(definition, x, y + 1, z)
-            || !containsBlock(definition, x, y - 1, z)
-            || !containsBlock(definition, x, y, z + 1)
-            || !containsBlock(definition, x, y, z - 1);
+        BoxBlockGenerator.populateOrientedBox(
+            blocksList,
+            minCorner,
+            maxCorner,
+            definition.center(),
+            definition.halfExtents(),
+            definition.orientationMatrix(),
+            fillBox
+        );
     }
 
     private boolean hasRotation(double rotationX, double rotationY, double rotationZ) {

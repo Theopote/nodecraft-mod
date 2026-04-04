@@ -8,10 +8,10 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoundingBoxData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.BoxBlockGenerator;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -122,31 +122,11 @@ public class RegionBoxBlocksNode extends BaseNode {
         if (!(boundingBoxObj instanceof BoundingBoxData boundingBox)) {
             return null;
         }
-
-        Vector3d min = boundingBox.getMin();
-        Vector3d max = boundingBox.getMax();
-
-        BlockPos minCorner = BlockPos.ofFloored(min.x, min.y, min.z);
-        BlockPos maxCorner = BlockPos.ofFloored(max.x - 1.0e-9d, max.y - 1.0e-9d, max.z - 1.0e-9d);
-        return new RegionData(minCorner, maxCorner);
+        return BoxBlockGenerator.regionFromBoundingBox(boundingBox);
     }
 
     private void populateBlocks(BlockPosList blocks, BlockPos minCorner, BlockPos maxCorner) {
-        for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
-            for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
-                for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    if (fillBox || isShellBlock(x, y, z, minCorner, maxCorner)) {
-                        blocks.add(new BlockPos(x, y, z));
-                    }
-                }
-            }
-        }
-    }
-
-    private boolean isShellBlock(int x, int y, int z, BlockPos minCorner, BlockPos maxCorner) {
-        return x == minCorner.getX() || x == maxCorner.getX()
-            || y == minCorner.getY() || y == maxCorner.getY()
-            || z == minCorner.getZ() || z == maxCorner.getZ();
+        BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, fillBox);
     }
 
     public boolean isFillBox() {
