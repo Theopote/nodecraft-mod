@@ -10,9 +10,10 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
-import imgui.type.ImBoolean;
 import imgui.flag.ImGuiCol;
+import imgui.type.ImBoolean;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
@@ -21,52 +22,58 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
 /**
- * Apply Changes 节点: 将预览/几何体结果实际应用到世界中。
- * 支持放置模式（覆盖/增量）、异步放置、记录撤销；可接方块列表与方块类型输入。
+ * Applies voxelized geometry or explicit placements to the world.
  */
 @NodeInfo(
     id = "visualization.execute.apply_changes",
-    displayName = "应用修改",
-    description = "将预览或几何体结果实际应用到世界中，支持放置模式与异步",
+    displayName = "Apply Changes",
+    description = "Applies explicit placements or voxelized geometry to the world.",
     category = "visualization.execute"
 )
 public class ApplyChangesNode extends BaseCustomUINode {
 
-    @NodeProperty(displayName = "显示进度条", category = "执行", order = 1)
+    @NodeProperty(displayName = "Show Progress Bar", category = "Execution", order = 1)
     private boolean showProgressBar = true;
 
-    @NodeProperty(displayName = "完成通知", category = "执行", order = 2)
+    @NodeProperty(displayName = "Notify On Complete", category = "Execution", order = 2)
     private boolean notifyOnComplete = true;
 
-    @NodeProperty(displayName = "超时时间", category = "执行", order = 3)
+    @NodeProperty(displayName = "Execution Timeout", category = "Execution", order = 3)
     private int executionTimeout = 30;
 
-    @NodeProperty(displayName = "放置模式", category = "放置", order = 4)
+    @NodeProperty(displayName = "Placement Mode", category = "Placement", order = 4)
     private PlacementMode placementMode = PlacementMode.OVERWRITE;
 
-    @NodeProperty(displayName = "异步放置", category = "放置", order = 5)
+    @NodeProperty(displayName = "Async Placement", category = "Placement", order = 5)
     private boolean useAsyncBake = true;
 
-    @NodeProperty(displayName = "记录撤销", category = "放置", order = 6)
+    @NodeProperty(displayName = "Record Undo", category = "Placement", order = 6)
     private boolean recordUndo = true;
+
+    @NodeProperty(displayName = "Solid Geometry", category = "Geometry", order = 7)
+    private boolean solidGeometry = true;
 
     private UUID executionId = UUID.randomUUID();
     private boolean isExecuting = false;
     private float progressPercentage = 0.0f;
-    private String statusMessage = "就绪";
+    private String statusMessage = "Idle";
 
     private static final String INPUT_TRIGGER_ID = "input_trigger";
     private static final String INPUT_BLOCKS_ID = "input_blocks";
+    private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
+    private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
     private static final String INPUT_PREVIEW_IDS_ID = "input_preview_ids";
     private static final String INPUT_NOTIFY_ID = "input_notify";
+
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_OPERATION_COUNT_ID = "output_operation_count";
     private static final String OUTPUT_EXECUTION_TIME_ID = "output_execution_time";
@@ -74,147 +81,224 @@ public class ApplyChangesNode extends BaseCustomUINode {
 
     public ApplyChangesNode() {
         super(UUID.randomUUID(), "visualization.execute.apply_changes");
-        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "触发执行", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "要放置的方块坐标列表", NodeDataType.BLOCK_LIST, this));
-        addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "方块类型（如 minecraft:stone）", NodeDataType.STRING, this));
-        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "按位置分配方块（来自材质映射等）", NodeDataType.BLOCK_PLACEMENT_LIST, this));
-        addInputPort(new BasePort(INPUT_PREVIEW_IDS_ID, "Preview IDs", "要应用的预览ID列表（可选）", NodeDataType.LIST, this));
-        addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify on Complete", "完成后是否通知", NodeDataType.BOOLEAN, this));
-        addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "是否成功", NodeDataType.BOOLEAN, this));
-        addOutputPort(new BasePort(OUTPUT_OPERATION_COUNT_ID, "Operation Count", "操作数量", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_EXECUTION_TIME_ID, "Execution Time", "执行时间(ms)", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_STATUS_ID, "Status", "状态信息", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "Execution trigger", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block coordinates to place", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry to voxelize and place", NodeDataType.BOX_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry to voxelize and place", NodeDataType.TORUS_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Fallback block type for uniform placement", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "Per-position block assignments", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addInputPort(new BasePort(INPUT_PREVIEW_IDS_ID, "Preview IDs", "Reserved preview identifiers", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify On Complete", "Overrides node notification behavior", NodeDataType.BOOLEAN, this));
+
+        addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether placement succeeded", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_OPERATION_COUNT_ID, "Operation Count", "Number of queued or placed blocks", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_EXECUTION_TIME_ID, "Execution Time", "Execution time in milliseconds", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_STATUS_ID, "Status", "Execution status message", NodeDataType.STRING, this));
     }
 
     @Override
-    public String getDescription() { return "将预览或几何体结果实际应用到世界中，支持放置模式与异步"; }
+    public String getDescription() {
+        return "Applies explicit placements or voxelized geometry to the world.";
+    }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
         int operationCount = 0;
         int executionTime = 0;
-        String status = "未执行操作";
+        String status = "No operation executed";
 
         Object triggerObj = inputValues.get(INPUT_TRIGGER_ID);
+        Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
+        Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
+        Object torusGeometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
         Object notifyObj = inputValues.get(INPUT_NOTIFY_ID);
 
-        boolean notify = (notifyObj instanceof Boolean) ? (Boolean) notifyObj : this.notifyOnComplete;
+        boolean notify = (notifyObj instanceof Boolean) ? (Boolean) notifyObj : notifyOnComplete;
         String blockType = (blockTypeObj instanceof String) ? (String) blockTypeObj : "minecraft:stone";
-        Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
 
-        if (triggerObj != null && !isExecuting && context != null && context.getWorld() != null) {
-            // 路径 1：按位置分配方块（来自材质映射等）
-            if (placementsObj instanceof List && !((List<?>) placementsObj).isEmpty()) {
-                Map<String, List<BlockPos>> byBlockId = new LinkedHashMap<>();
-                for (Object e : (List<?>) placementsObj) {
-                    if (e instanceof BlockPlacementData bpd && bpd.pos() != null && bpd.blockId() != null && !bpd.blockId().isEmpty()) {
-                        byBlockId.computeIfAbsent(bpd.blockId(), k -> new ArrayList<>()).add(bpd.pos());
-                    }
-                }
-                isExecuting = true;
-                long startTime = System.currentTimeMillis();
-                try {
-                    progressPercentage = 0.2f;
-                    statusMessage = "正在应用（按材质）...";
-                    int count = 0;
-                    for (Map.Entry<String, List<BlockPos>> entry : byBlockId.entrySet()) {
-                        BlockState state = resolveBlockState(entry.getKey());
-                        if (state == null) continue;
-                        List<BlockPos> positions = entry.getValue();
-                        if (useAsyncBake) {
-                            BakePlacementService.getInstance().enqueue(context.getWorld(), new ArrayList<>(positions), state, placementMode, recordUndo, 1000, null);
-                            count += positions.size();
-                        } else {
-                            for (BlockPos pos : positions) {
-                                if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) continue;
-                                if (context.getWorld().setBlockState(pos.toImmutable(), state, Block.NOTIFY_ALL)) count++;
-                            }
-                        }
-                    }
-                    operationCount = count;
-                    success = true;
-                    status = useAsyncBake ? "已提交 " + operationCount + " 方块（异步）" : "已放置 " + operationCount + " 方块";
-                    progressPercentage = 1.0f;
-                    statusMessage = success ? "完成" : "失败";
-                    executionTime = (int) (System.currentTimeMillis() - startTime);
-                    if (notify) System.out.println("应用修改: " + status + ", " + executionTime + "ms");
-                } catch (Exception e) {
-                    status = "错误: " + e.getMessage();
-                    System.err.println("ApplyChangesNode: " + e.getMessage());
-                } finally {
-                    isExecuting = false;
-                }
-            }
-            // 路径 2：统一方块类型（Blocks + Block Type）
-            else if (blocksObj instanceof BlockPosList) {
-                BlockPosList blocks = (BlockPosList) blocksObj;
-                if (blocks.isEmpty()) {
-                    status = "方块列表为空";
-                    outputValues.put(OUTPUT_SUCCESS_ID, false);
-                    outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
-                    outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
-                    outputValues.put(OUTPUT_STATUS_ID, status);
-                    return;
-                }
-                BlockState targetState = resolveBlockState(blockType);
-                if (targetState == null) {
-                    status = "无效方块类型: " + blockType;
-                    outputValues.put(OUTPUT_SUCCESS_ID, false);
-                    outputValues.put(OUTPUT_OPERATION_COUNT_ID, 0);
-                    outputValues.put(OUTPUT_EXECUTION_TIME_ID, 0);
-                    outputValues.put(OUTPUT_STATUS_ID, status);
-                    return;
-                }
-                isExecuting = true;
-                long startTime = System.currentTimeMillis();
-                try {
-                    progressPercentage = 0.2f;
-                    statusMessage = "正在应用...";
-                    if (useAsyncBake) {
-                        BakePlacementService.getInstance().enqueue(
-                                context.getWorld(),
-                                new ArrayList<>(blocks.getPositions()),
-                                targetState,
-                                placementMode,
-                                recordUndo,
-                                1000,
-                                null);
-                        operationCount = blocks.size();
-                        success = true;
-                        status = "已提交 " + operationCount + " 方块（异步）";
-                    } else {
-                        int count = 0;
-                        for (BlockPos pos : blocks) {
-                            if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) continue;
-                            if (context.getWorld().setBlockState(pos.toImmutable(), targetState, Block.NOTIFY_ALL)) count++;
-                        }
-                        operationCount = count;
-                        success = true;
-                        status = "已放置 " + operationCount + "/" + blocks.size();
-                    }
-                    progressPercentage = 1.0f;
-                    statusMessage = success ? "完成" : "失败";
-                    executionTime = (int) (System.currentTimeMillis() - startTime);
-                    if (notify) System.out.println("应用修改: " + status + ", " + executionTime + "ms");
-                } catch (Exception e) {
-                    status = "错误: " + e.getMessage();
-                    System.err.println("ApplyChangesNode: " + e.getMessage());
-                } finally {
-                    isExecuting = false;
-                }
-            }
+        if (triggerObj == null) {
+            publishOutputs(success, operationCount, executionTime, status);
+            return;
         }
+
+        if (isExecuting) {
+            publishOutputs(false, 0, 0, "Execution already in progress");
+            return;
+        }
+
+        if (context == null || context.getWorld() == null) {
+            publishOutputs(false, 0, 0, "Missing execution context");
+            return;
+        }
+
+        List<BlockPlacementData> placements = resolvePlacements(placementsObj);
+        if (!placements.isEmpty()) {
+            long startTime = System.currentTimeMillis();
+            isExecuting = true;
+            try {
+                progressPercentage = 0.2f;
+                statusMessage = "Applying material placements...";
+                operationCount = applyPlacementList(context, placements);
+                success = true;
+                executionTime = (int) (System.currentTimeMillis() - startTime);
+                status = useAsyncBake
+                    ? "Queued " + operationCount + " block placements"
+                    : "Placed " + operationCount + " blocks";
+                progressPercentage = 1.0f;
+                statusMessage = "Completed";
+                if (notify) {
+                    System.out.println("ApplyChangesNode: " + status + ", " + executionTime + "ms");
+                }
+            } catch (Exception e) {
+                status = "Error: " + e.getMessage();
+                statusMessage = status;
+                System.err.println("ApplyChangesNode: " + e.getMessage());
+            } finally {
+                isExecuting = false;
+            }
+            publishOutputs(success, operationCount, executionTime, status);
+            return;
+        }
+
+        BlockPosList blocks = resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj);
+        if (blocks.isEmpty()) {
+            publishOutputs(false, 0, 0, "No blocks or geometry to apply");
+            return;
+        }
+
+        BlockState targetState = resolveBlockState(blockType);
+        if (targetState == null) {
+            publishOutputs(false, 0, 0, "Invalid block type: " + blockType);
+            return;
+        }
+
+        long startTime = System.currentTimeMillis();
+        isExecuting = true;
+        try {
+            progressPercentage = 0.2f;
+            statusMessage = "Applying blocks...";
+            operationCount = applyUniformBlocks(context, blocks, targetState);
+            success = true;
+            executionTime = (int) (System.currentTimeMillis() - startTime);
+            status = useAsyncBake
+                ? "Queued " + operationCount + " blocks"
+                : "Placed " + operationCount + "/" + blocks.size() + " blocks";
+            progressPercentage = 1.0f;
+            statusMessage = "Completed";
+            if (notify) {
+                System.out.println("ApplyChangesNode: " + status + ", " + executionTime + "ms");
+            }
+        } catch (Exception e) {
+            status = "Error: " + e.getMessage();
+            statusMessage = status;
+            System.err.println("ApplyChangesNode: " + e.getMessage());
+        } finally {
+            isExecuting = false;
+        }
+
+        publishOutputs(success, operationCount, executionTime, status);
+    }
+
+    private void publishOutputs(boolean success, int operationCount, int executionTime, String status) {
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_OPERATION_COUNT_ID, operationCount);
         outputValues.put(OUTPUT_EXECUTION_TIME_ID, executionTime);
         outputValues.put(OUTPUT_STATUS_ID, status);
     }
 
+    private List<BlockPlacementData> resolvePlacements(Object placementsObj) {
+        List<BlockPlacementData> placements = new ArrayList<>();
+        if (!(placementsObj instanceof List<?> placementList) || placementList.isEmpty()) {
+            return placements;
+        }
+
+        for (Object entry : placementList) {
+            if (entry instanceof BlockPlacementData placement
+                && placement.pos() != null
+                && placement.blockId() != null
+                && !placement.blockId().isEmpty()) {
+                placements.add(placement);
+            }
+        }
+        return placements;
+    }
+
+    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj, Object torusGeometryObj) {
+        return GeometryVoxelizer.resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj, solidGeometry);
+    }
+
+    private int applyPlacementList(ExecutionContext context, List<BlockPlacementData> placements) {
+        Map<String, List<BlockPos>> byBlockId = new LinkedHashMap<>();
+        for (BlockPlacementData placement : placements) {
+            byBlockId.computeIfAbsent(placement.blockId(), ignored -> new ArrayList<>()).add(placement.pos().toImmutable());
+        }
+
+        int count = 0;
+        for (Map.Entry<String, List<BlockPos>> entry : byBlockId.entrySet()) {
+            BlockState state = resolveBlockState(entry.getKey());
+            if (state == null) {
+                continue;
+            }
+
+            List<BlockPos> positions = entry.getValue();
+            if (useAsyncBake) {
+                BakePlacementService.getInstance().enqueue(
+                    context.getWorld(),
+                    new ArrayList<>(positions),
+                    state,
+                    placementMode,
+                    recordUndo,
+                    1000,
+                    null
+                );
+                count += positions.size();
+            } else {
+                for (BlockPos pos : positions) {
+                    if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) {
+                        continue;
+                    }
+                    if (context.getWorld().setBlockState(pos, state, Block.NOTIFY_ALL)) {
+                        count++;
+                    }
+                }
+            }
+        }
+        return count;
+    }
+
+    private int applyUniformBlocks(ExecutionContext context, BlockPosList blocks, BlockState targetState) {
+        if (useAsyncBake) {
+            BakePlacementService.getInstance().enqueue(
+                context.getWorld(),
+                new ArrayList<>(blocks.getPositions()),
+                targetState,
+                placementMode,
+                recordUndo,
+                1000,
+                null
+            );
+            return blocks.size();
+        }
+
+        int count = 0;
+        for (BlockPos pos : blocks) {
+            if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) {
+                continue;
+            }
+            if (context.getWorld().setBlockState(pos.toImmutable(), targetState, Block.NOTIFY_ALL)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     private BlockState resolveBlockState(String blockId) {
-        if (blockId == null || blockId.isEmpty()) return null;
+        if (blockId == null || blockId.isEmpty()) {
+            return null;
+        }
         try {
             var block = Registries.BLOCK.get(Identifier.of(blockId));
             return block != null ? block.getDefaultState() : null;
@@ -226,26 +310,30 @@ public class ApplyChangesNode extends BaseCustomUINode {
     @Override
     protected float calculateUIHeight() {
         float h = getMediumPadding();
-        h += ImGui.getTextLineHeight();    // 状态行
+        h += ImGui.getTextLineHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // 进度条
+        if (showProgressBar) {
+            h += ImGui.getFrameHeight();
+            h += getSmallPadding();
+        }
+        h += ImGui.getFrameHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // showProgressBar
+        h += ImGui.getFrameHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // notifyOnComplete
+        h += ImGui.getFrameHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // 放置模式
+        h += ImGui.getFrameHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight() * 2;   // 异步、记录撤销
+        h += ImGui.getFrameHeight();
         h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // 超时滑条
+        h += ImGui.getFrameHeight();
         h += getMediumPadding();
         return h;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 190f + getContentMargin();
+        return 210f + getContentMargin();
     }
 
     @Override
@@ -256,102 +344,229 @@ public class ApplyChangesNode extends BaseCustomUINode {
                 float aw = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
 
-                // 状态行
                 int statusColor = isExecuting ? 0xFF44AADD : (progressPercentage >= 1.0f ? 0xFF44DD44 : 0xFF888888);
                 ImGui.pushStyleColor(ImGuiCol.Text, statusColor);
                 ImGui.text(statusMessage);
                 ImGui.popStyleColor();
                 l.addVerticalSpacing(getSmallPadding());
 
-                // 进度条
-                ImGui.progressBar(progressPercentage, aw, ImGui.getFrameHeight(),
-                    String.format("%.0f%%", progressPercentage * 100));
+                if (showProgressBar) {
+                    ImGui.progressBar(progressPercentage, aw, ImGui.getFrameHeight(), String.format("%.0f%%", progressPercentage * 100));
+                    l.addVerticalSpacing(getSmallPadding());
+                }
+
+                ImBoolean progressBool = new ImBoolean(showProgressBar);
+                if (ImGui.checkbox("Show Progress##ac_progress", progressBool)) {
+                    setShowProgressBar(progressBool.get());
+                    changed = true;
+                }
                 l.addVerticalSpacing(getSmallPadding());
 
-                // 显示进度条
-                ImBoolean spBool = new ImBoolean(showProgressBar);
-                if (ImGui.checkbox("显示进度条##sp", spBool)) { setShowProgressBar(spBool.get()); changed = true; }
+                ImBoolean notifyBool = new ImBoolean(notifyOnComplete);
+                if (ImGui.checkbox("Notify On Complete##ac_notify", notifyBool)) {
+                    setNotifyOnComplete(notifyBool.get());
+                    changed = true;
+                }
                 l.addVerticalSpacing(getSmallPadding());
 
-                // 完成通知
-                ImBoolean ncBool = new ImBoolean(notifyOnComplete);
-                if (ImGui.checkbox("完成通知##nc", ncBool)) { setNotifyOnComplete(ncBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                // 放置模式
-                if (ImGui.beginCombo("放置模式##ac", placementMode == PlacementMode.OVERWRITE ? "覆盖" : "增量")) {
-                    if (ImGui.selectable("覆盖", placementMode == PlacementMode.OVERWRITE)) { setPlacementMode(PlacementMode.OVERWRITE); changed = true; }
-                    if (ImGui.selectable("增量", placementMode == PlacementMode.INCREMENTAL)) { setPlacementMode(PlacementMode.INCREMENTAL); changed = true; }
+                if (ImGui.beginCombo("Placement Mode##ac_mode", placementMode == PlacementMode.OVERWRITE ? "Overwrite" : "Incremental")) {
+                    if (ImGui.selectable("Overwrite", placementMode == PlacementMode.OVERWRITE)) {
+                        setPlacementMode(PlacementMode.OVERWRITE);
+                        changed = true;
+                    }
+                    if (ImGui.selectable("Incremental", placementMode == PlacementMode.INCREMENTAL)) {
+                        setPlacementMode(PlacementMode.INCREMENTAL);
+                        changed = true;
+                    }
                     ImGui.endCombo();
                 }
                 l.addVerticalSpacing(getSmallPadding());
+
                 ImBoolean asyncBool = new ImBoolean(useAsyncBake);
-                if (ImGui.checkbox("异步放置##ac", asyncBool)) { setUseAsyncBake(asyncBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-                ImBoolean undoBool = new ImBoolean(recordUndo);
-                if (ImGui.checkbox("记录撤销##ac", undoBool)) { setRecordUndo(undoBool.get()); changed = true; }
+                if (ImGui.checkbox("Async Placement##ac_async", asyncBool)) {
+                    setUseAsyncBake(asyncBool.get());
+                    changed = true;
+                }
                 l.addVerticalSpacing(getSmallPadding());
 
-                // 超时滑条
+                ImBoolean undoBool = new ImBoolean(recordUndo);
+                if (ImGui.checkbox("Record Undo##ac_undo", undoBool)) {
+                    setRecordUndo(undoBool.get());
+                    changed = true;
+                }
+                l.addVerticalSpacing(getSmallPadding());
+
+                ImBoolean solidBool = new ImBoolean(solidGeometry);
+                if (ImGui.checkbox("Solid Geometry##ac_solid", solidBool)) {
+                    setSolidGeometry(solidBool.get());
+                    changed = true;
+                }
+                l.addVerticalSpacing(getSmallPadding());
+
                 int[] timeout = {executionTimeout};
                 l.pushFramePadding(4.0f, 3.0f);
                 l.setItemWidth(aw / zoom);
-                if (ImGui.sliderInt("##timeout", timeout, 5, 300, "超时: %d 秒")) {
-                    setExecutionTimeout(timeout[0]); changed = true;
+                if (ImGui.sliderInt("##ac_timeout", timeout, 5, 300, "Timeout: %d s")) {
+                    setExecutionTimeout(timeout[0]);
+                    changed = true;
                 }
                 l.popItemWidth();
                 l.popStyleVar();
 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
-                System.err.println("ApplyChangesNode UI渲染失败: " + e.getMessage());
+                System.err.println("ApplyChangesNode UI render failed: " + e.getMessage());
             }
             return changed;
         });
     }
 
-    public boolean isShowProgressBar() { return showProgressBar; }
-    public void setShowProgressBar(boolean v) { if (this.showProgressBar != v) { this.showProgressBar = v; markDirty(); } }
-    public boolean isNotifyOnComplete() { return notifyOnComplete; }
-    public void setNotifyOnComplete(boolean v) { if (this.notifyOnComplete != v) { this.notifyOnComplete = v; markDirty(); } }
-    public int getExecutionTimeout() { return executionTimeout; }
-    public void setExecutionTimeout(int v) { v = Math.max(5, v); if (this.executionTimeout != v) { this.executionTimeout = v; markDirty(); } }
-    public float getProgressPercentage() { return progressPercentage; }
-    public String getStatusMessage() { return statusMessage; }
-    public boolean isExecuting() { return isExecuting; }
-    public void resetExecutionId() { executionId = UUID.randomUUID(); markDirty(); }
+    public boolean isShowProgressBar() {
+        return showProgressBar;
+    }
 
-    public PlacementMode getPlacementMode() { return placementMode; }
-    public void setPlacementMode(PlacementMode v) { if (placementMode != v) { placementMode = v; markDirty(); } }
-    public boolean isUseAsyncBake() { return useAsyncBake; }
-    public void setUseAsyncBake(boolean v) { if (useAsyncBake != v) { useAsyncBake = v; markDirty(); } }
-    public boolean isRecordUndo() { return recordUndo; }
-    public void setRecordUndo(boolean v) { if (recordUndo != v) { recordUndo = v; markDirty(); } }
+    public void setShowProgressBar(boolean value) {
+        if (showProgressBar != value) {
+            showProgressBar = value;
+            markDirty();
+        }
+    }
+
+    public boolean isNotifyOnComplete() {
+        return notifyOnComplete;
+    }
+
+    public void setNotifyOnComplete(boolean value) {
+        if (notifyOnComplete != value) {
+            notifyOnComplete = value;
+            markDirty();
+        }
+    }
+
+    public int getExecutionTimeout() {
+        return executionTimeout;
+    }
+
+    public void setExecutionTimeout(int value) {
+        value = Math.max(5, value);
+        if (executionTimeout != value) {
+            executionTimeout = value;
+            markDirty();
+        }
+    }
+
+    public float getProgressPercentage() {
+        return progressPercentage;
+    }
+
+    public String getStatusMessage() {
+        return statusMessage;
+    }
+
+    public boolean isExecuting() {
+        return isExecuting;
+    }
+
+    public void resetExecutionId() {
+        executionId = UUID.randomUUID();
+        markDirty();
+    }
+
+    public PlacementMode getPlacementMode() {
+        return placementMode;
+    }
+
+    public void setPlacementMode(PlacementMode value) {
+        if (placementMode != value) {
+            placementMode = value;
+            markDirty();
+        }
+    }
+
+    public boolean isUseAsyncBake() {
+        return useAsyncBake;
+    }
+
+    public void setUseAsyncBake(boolean value) {
+        if (useAsyncBake != value) {
+            useAsyncBake = value;
+            markDirty();
+        }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean value) {
+        if (recordUndo != value) {
+            recordUndo = value;
+            markDirty();
+        }
+    }
+
+    public boolean isSolidGeometry() {
+        return solidGeometry;
+    }
+
+    public void setSolidGeometry(boolean value) {
+        if (solidGeometry != value) {
+            solidGeometry = value;
+            markDirty();
+        }
+    }
 
     @Override
     public @Nullable Object getNodeState() {
-        java.util.Map<String, Object> s = new java.util.HashMap<>();
-        s.put("showProgressBar", showProgressBar); s.put("notifyOnComplete", notifyOnComplete);
-        s.put("executionTimeout", executionTimeout); s.put("executionId", executionId.toString());
-        s.put("placementMode", placementMode.name()); s.put("useAsyncBake", useAsyncBake); s.put("recordUndo", recordUndo);
-        return s;
+        Map<String, Object> state = new HashMap<>();
+        state.put("showProgressBar", showProgressBar);
+        state.put("notifyOnComplete", notifyOnComplete);
+        state.put("executionTimeout", executionTimeout);
+        state.put("executionId", executionId.toString());
+        state.put("placementMode", placementMode.name());
+        state.put("useAsyncBake", useAsyncBake);
+        state.put("recordUndo", recordUndo);
+        state.put("solidGeometry", solidGeometry);
+        return state;
     }
 
     @Override
     public void setNodeState(@Nullable Object state) {
-        if (!(state instanceof java.util.Map)) return;
-        java.util.Map<?, ?> m = (java.util.Map<?, ?>) state;
-        Object v;
-        if ((v = m.get("showProgressBar")) instanceof Boolean) setShowProgressBar((Boolean) v);
-        if ((v = m.get("notifyOnComplete")) instanceof Boolean) setNotifyOnComplete((Boolean) v);
-        if ((v = m.get("executionTimeout")) instanceof Number) setExecutionTimeout(((Number) v).intValue());
-        if ((v = m.get("executionId")) instanceof String) {
-            try { executionId = UUID.fromString((String) v); } catch (IllegalArgumentException e) { resetExecutionId(); }
+        if (!(state instanceof Map<?, ?> map)) {
+            return;
         }
-        if ((v = m.get("placementMode")) instanceof String) {
-            try { setPlacementMode(PlacementMode.valueOf((String) v)); } catch (Exception ignored) {}
+
+        Object value;
+        if ((value = map.get("showProgressBar")) instanceof Boolean boolValue) {
+            setShowProgressBar(boolValue);
         }
-        if ((v = m.get("useAsyncBake")) instanceof Boolean) setUseAsyncBake((Boolean) v);
-        if ((v = m.get("recordUndo")) instanceof Boolean) setRecordUndo((Boolean) v);
+        if ((value = map.get("notifyOnComplete")) instanceof Boolean boolValue) {
+            setNotifyOnComplete(boolValue);
+        }
+        if ((value = map.get("executionTimeout")) instanceof Number numberValue) {
+            setExecutionTimeout(numberValue.intValue());
+        }
+        if ((value = map.get("executionId")) instanceof String idValue) {
+            try {
+                executionId = UUID.fromString(idValue);
+            } catch (IllegalArgumentException e) {
+                resetExecutionId();
+            }
+        }
+        if ((value = map.get("placementMode")) instanceof String modeValue) {
+            try {
+                setPlacementMode(PlacementMode.valueOf(modeValue));
+            } catch (Exception ignored) {
+            }
+        }
+        if ((value = map.get("useAsyncBake")) instanceof Boolean boolValue) {
+            setUseAsyncBake(boolValue);
+        }
+        if ((value = map.get("recordUndo")) instanceof Boolean boolValue) {
+            setRecordUndo(boolValue);
+        }
+        if ((value = map.get("solidGeometry")) instanceof Boolean boolValue) {
+            setSolidGeometry(boolValue);
+        }
     }
 }

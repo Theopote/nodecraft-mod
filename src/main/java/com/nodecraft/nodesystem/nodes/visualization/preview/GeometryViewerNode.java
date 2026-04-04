@@ -5,18 +5,14 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
-import com.nodecraft.nodesystem.datatypes.RegionData;
-import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.util.BlockPosList;
-import com.nodecraft.nodesystem.util.BoxBlockGenerator;
 import com.nodecraft.nodesystem.util.Coordinate;
-import com.nodecraft.nodesystem.util.TorusBlockGenerator;
+import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
@@ -27,7 +23,6 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -241,80 +236,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     }
 
     private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj, Object torusGeometryObj) {
-        if (blocksObj instanceof BlockPosList blockPosList) {
-            return blockPosList;
-        }
-
-        if (boxGeometryObj instanceof BoxGeometryData geometry) {
-            return voxelizeBoxGeometry(geometry);
-        }
-
-        if (torusGeometryObj instanceof TorusGeometryData geometry) {
-            return voxelizeTorusGeometry(geometry);
-        }
-
-        return null;
-    }
-
-    private BlockPosList voxelizeBoxGeometry(BoxGeometryData geometry) {
-        BlockPosList blocks = new BlockPosList();
-        RegionData region = geometry.isOriented()
-            ? BoxBlockGenerator.createOrientedBoundingRegion(
-                geometry.getCenter(),
-                geometry.getHalfExtents(),
-                geometry.getOrientationMatrix()
-            )
-            : createAxisAlignedRegion(geometry);
-
-        if (region == null || !region.isComplete()) {
-            return blocks;
-        }
-
-        BlockPos minCorner = region.getMinCorner();
-        BlockPos maxCorner = region.getMaxCorner();
-        if (minCorner == null || maxCorner == null) {
-            return blocks;
-        }
-
-        if (geometry.isOriented()) {
-            BoxBlockGenerator.populateOrientedBox(
-                blocks,
-                minCorner,
-                maxCorner,
-                geometry.getCenter(),
-                geometry.getHalfExtents(),
-                geometry.getOrientationMatrix(),
-                previewSolidGeometry
-            );
-        } else {
-            BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, previewSolidGeometry);
-        }
-
-        return blocks;
-    }
-
-    private BlockPosList voxelizeTorusGeometry(TorusGeometryData geometry) {
-        BlockPosList blocks = new BlockPosList();
-        RegionData region = TorusBlockGenerator.createBoundingRegion(geometry);
-        TorusBlockGenerator.populateTorus(blocks, region, geometry, previewSolidGeometry);
-        return blocks;
-    }
-
-    private RegionData createAxisAlignedRegion(BoxGeometryData geometry) {
-        Vector3d center = geometry.getCenter();
-        Vector3d halfExtents = geometry.getHalfExtents();
-
-        BlockPos minCorner = BlockPos.ofFloored(
-            center.x - halfExtents.x,
-            center.y - halfExtents.y,
-            center.z - halfExtents.z
-        );
-        BlockPos maxCorner = BlockPos.ofFloored(
-            center.x + halfExtents.x,
-            center.y + halfExtents.y,
-            center.z + halfExtents.z
-        );
-        return new RegionData(minCorner, maxCorner);
+        return GeometryVoxelizer.resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj, previewSolidGeometry);
     }
 
     /** 计算几何体签名，用于脏标记检测 */

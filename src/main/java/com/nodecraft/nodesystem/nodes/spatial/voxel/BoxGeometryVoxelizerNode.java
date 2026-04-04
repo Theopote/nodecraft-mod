@@ -9,10 +9,8 @@ import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
-import com.nodecraft.nodesystem.util.BoxBlockGenerator;
-import net.minecraft.util.math.BlockPos;
+import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -66,56 +64,19 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
         RegionData region = null;
 
         if (geometryObj instanceof BoxGeometryData geometry) {
+            blocks = GeometryVoxelizer.voxelizeBox(geometry, fillBox);
             region = geometry.isOriented()
-                ? BoxBlockGenerator.createOrientedBoundingRegion(
+                ? com.nodecraft.nodesystem.util.BoxBlockGenerator.createOrientedBoundingRegion(
                     geometry.getCenter(),
                     geometry.getHalfExtents(),
                     geometry.getOrientationMatrix()
                 )
-                : createAxisAlignedRegion(geometry);
-
-            if (region != null && region.isComplete()) {
-                BlockPos minCorner = region.getMinCorner();
-                BlockPos maxCorner = region.getMaxCorner();
-
-                if (minCorner != null && maxCorner != null) {
-                    if (geometry.isOriented()) {
-                        BoxBlockGenerator.populateOrientedBox(
-                            blocks,
-                            minCorner,
-                            maxCorner,
-                            geometry.getCenter(),
-                            geometry.getHalfExtents(),
-                            geometry.getOrientationMatrix(),
-                            fillBox
-                        );
-                    } else {
-                        BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, fillBox);
-                    }
-                }
-            }
+                : GeometryVoxelizer.createAxisAlignedRegion(geometry);
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);
         outputValues.put(OUTPUT_REGION_ID, region);
         outputValues.put(OUTPUT_COUNT_ID, blocks.size());
-    }
-
-    private RegionData createAxisAlignedRegion(BoxGeometryData geometry) {
-        Vector3d center = geometry.getCenter();
-        Vector3d halfExtents = geometry.getHalfExtents();
-
-        BlockPos minCorner = BlockPos.ofFloored(
-            center.x - halfExtents.x,
-            center.y - halfExtents.y,
-            center.z - halfExtents.z
-        );
-        BlockPos maxCorner = BlockPos.ofFloored(
-            center.x + halfExtents.x,
-            center.y + halfExtents.y,
-            center.z + halfExtents.z
-        );
-        return new RegionData(minCorner, maxCorner);
     }
 
     public boolean isFillBox() {

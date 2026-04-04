@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import com.nodecraft.nodesystem.util.TorusBlockGenerator;
 import org.jetbrains.annotations.Nullable;
 
@@ -63,8 +64,8 @@ public class TorusGeometryVoxelizerNode extends BaseNode {
         RegionData region = null;
 
         if (geometryObj instanceof TorusGeometryData geometry) {
+            blocks = GeometryVoxelizer.voxelizeTorus(geometry, fillTorus);
             region = TorusBlockGenerator.createBoundingRegion(geometry);
-            TorusBlockGenerator.populateTorus(blocks, region, geometry, fillTorus);
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);

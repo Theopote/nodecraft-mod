@@ -4,17 +4,12 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
-import com.nodecraft.nodesystem.datatypes.RegionData;
-import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
-import com.nodecraft.nodesystem.util.BoxBlockGenerator;
-import com.nodecraft.nodesystem.util.TorusBlockGenerator;
+import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -126,72 +121,6 @@ public class MaterialMapperNode extends BaseNode {
     }
 
     private BlockPosList resolveCoordinates(Object coordsObj, Object boxGeometryObj, Object torusGeometryObj) {
-        if (coordsObj instanceof BlockPosList blockPosList) {
-            return blockPosList;
-        }
-
-        if (boxGeometryObj instanceof BoxGeometryData geometry) {
-            return voxelizeBoxGeometry(geometry);
-        }
-
-        if (torusGeometryObj instanceof TorusGeometryData geometry) {
-            return voxelizeTorusGeometry(geometry);
-        }
-
-        return new BlockPosList();
-    }
-
-    private BlockPosList voxelizeBoxGeometry(BoxGeometryData geometry) {
-        BlockPosList blocks = new BlockPosList();
-
-        if (geometry.isOriented()) {
-            RegionData region = BoxBlockGenerator.createOrientedBoundingRegion(
-                geometry.getCenter(),
-                geometry.getHalfExtents(),
-                geometry.getOrientationMatrix()
-            );
-            if (region == null || !region.isComplete()) {
-                return blocks;
-            }
-
-            BlockPos minCorner = region.getMinCorner();
-            BlockPos maxCorner = region.getMaxCorner();
-            if (minCorner == null || maxCorner == null) {
-                return blocks;
-            }
-
-            BoxBlockGenerator.populateOrientedBox(
-                blocks,
-                minCorner,
-                maxCorner,
-                geometry.getCenter(),
-                geometry.getHalfExtents(),
-                geometry.getOrientationMatrix(),
-                true
-            );
-            return blocks;
-        }
-
-        Vector3d center = geometry.getCenter();
-        Vector3d halfExtents = geometry.getHalfExtents();
-        BlockPos minCorner = BlockPos.ofFloored(
-            center.x - halfExtents.x,
-            center.y - halfExtents.y,
-            center.z - halfExtents.z
-        );
-        BlockPos maxCorner = BlockPos.ofFloored(
-            center.x + halfExtents.x,
-            center.y + halfExtents.y,
-            center.z + halfExtents.z
-        );
-        BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, true);
-        return blocks;
-    }
-
-    private BlockPosList voxelizeTorusGeometry(TorusGeometryData geometry) {
-        BlockPosList blocks = new BlockPosList();
-        RegionData region = TorusBlockGenerator.createBoundingRegion(geometry);
-        TorusBlockGenerator.populateTorus(blocks, region, geometry, true);
-        return blocks;
+        return GeometryVoxelizer.resolveBlocks(coordsObj, boxGeometryObj, torusGeometryObj, true);
     }
 }
