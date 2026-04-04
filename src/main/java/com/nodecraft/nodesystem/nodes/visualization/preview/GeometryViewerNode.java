@@ -5,12 +5,15 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.BoxBlockGenerator;
 import com.nodecraft.nodesystem.util.Coordinate;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
@@ -22,6 +25,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,6 +90,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     // --- 输入端口 IDs ---
     private static final String INPUT_BLOCKS_ID = "input_blocks";
+    private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_COLOR_ID = "input_color";
     private static final String INPUT_TRANSPARENCY_ID = "input_transparency";
@@ -106,6 +111,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         // 输入端口
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Geometry", "几何体方块坐标列表（来自几何体生成器）", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data to preview", NodeDataType.BOX_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "放置时使用的方块类型（默认stone）", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_COLOR_ID, "Preview Color", "预览颜色（十六进制）", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_TRANSPARENCY_ID, "Transparency", "预览透明度（0.0-1.0）", NodeDataType.FLOAT, this));
@@ -125,6 +131,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
+        Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
         Object colorObj = inputValues.get(INPUT_COLOR_ID);
         Object transparencyObj = inputValues.get(INPUT_TRANSPARENCY_ID);
@@ -134,10 +141,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         float trans = (transparencyObj instanceof Number) ? Math.max(0f, Math.min(1f, ((Number) transparencyObj).floatValue())) : this.transparency;
         String bType = (blockTypeObj instanceof String) ? (String) blockTypeObj : this.blockType;
 
-        BlockPosList blocksList = null;
-        if (blocksObj instanceof BlockPosList) {
-            blocksList = (BlockPosList) blocksObj;
-        }
+        BlockPosList blocksList = resolveBlocks(blocksObj, boxGeometryObj);
 
         int blockCount = (blocksList != null) ? blocksList.size() : 0;
         lastBlockCount = blockCount;
@@ -226,6 +230,72 @@ public class GeometryViewerNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_BLOCKS_ID, blocksList);
         outputValues.put(OUTPUT_COUNT_ID, blockCount);
         outputValues.put(OUTPUT_PLACED_ID, placed);
+    }
+
+    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj) {
+        if (blocksObj instanceof BlockPosList blockPosList) {
+            return blockPosList;
+        }
+
+        if (boxGeometryObj instanceof BoxGeometryData geometry) {
+            return voxelizeBoxGeometry(geometry);
+        }
+
+        return null;
+    }
+
+    private BlockPosList voxelizeBoxGeometry(BoxGeometryData geometry) {
+        BlockPosList blocks = new BlockPosList();
+        RegionData region = geometry.isOriented()
+            ? BoxBlockGenerator.createOrientedBoundingRegion(
+                geometry.getCenter(),
+                geometry.getHalfExtents(),
+                geometry.getOrientationMatrix()
+            )
+            : createAxisAlignedRegion(geometry);
+
+        if (region == null || !region.isComplete()) {
+            return blocks;
+        }
+
+        BlockPos minCorner = region.getMinCorner();
+        BlockPos maxCorner = region.getMaxCorner();
+        if (minCorner == null || maxCorner == null) {
+            return blocks;
+        }
+
+        if (geometry.isOriented()) {
+            BoxBlockGenerator.populateOrientedBox(
+                blocks,
+                minCorner,
+                maxCorner,
+                geometry.getCenter(),
+                geometry.getHalfExtents(),
+                geometry.getOrientationMatrix(),
+                true
+            );
+        } else {
+            BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, true);
+        }
+
+        return blocks;
+    }
+
+    private RegionData createAxisAlignedRegion(BoxGeometryData geometry) {
+        Vector3d center = geometry.getCenter();
+        Vector3d halfExtents = geometry.getHalfExtents();
+
+        BlockPos minCorner = BlockPos.ofFloored(
+            center.x - halfExtents.x,
+            center.y - halfExtents.y,
+            center.z - halfExtents.z
+        );
+        BlockPos maxCorner = BlockPos.ofFloored(
+            center.x + halfExtents.x,
+            center.y + halfExtents.y,
+            center.z + halfExtents.z
+        );
+        return new RegionData(minCorner, maxCorner);
     }
 
     /** 计算几何体签名，用于脏标记检测 */
