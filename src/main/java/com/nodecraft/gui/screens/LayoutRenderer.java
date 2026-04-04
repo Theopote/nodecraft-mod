@@ -432,7 +432,7 @@ public class LayoutRenderer {
 
                     try {
                         if (!childBegun) {
-                            NodeCraft.LOGGER.warn("Failed to begin child window for component: {}",
+                            NodeCraft.LOGGER.debug("Skipped child window render for component: {}",
                                     component.getComponentId());
                             continue;
                         }

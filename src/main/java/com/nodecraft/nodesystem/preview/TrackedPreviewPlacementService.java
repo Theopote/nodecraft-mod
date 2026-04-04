@@ -118,7 +118,7 @@ public final class TrackedPreviewPlacementService {
             trackedPreviews.remove(world);
         }
 
-        NodeCraft.LOGGER.info(
+        NodeCraft.LOGGER.debug(
                 "TrackedPreviewPlacementService.updateTrackedPreview nodeId={} requested={} placed={} skipped={} restored={} unchanged={} tracked={}",
                 nodeId, requestedPositions.size(), placedCount, skippedCount, restoredCount, unchangedCount, trackedOriginalStates.size()
         );
@@ -156,7 +156,7 @@ public final class TrackedPreviewPlacementService {
             trackedPreviews.remove(world);
         }
 
-        NodeCraft.LOGGER.info(
+        NodeCraft.LOGGER.debug(
                 "TrackedPreviewPlacementService.clearTrackedPreview nodeId={} restored={}",
                 nodeId, restoredCount
         );

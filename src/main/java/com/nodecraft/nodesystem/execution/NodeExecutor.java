@@ -158,7 +158,7 @@ public class NodeExecutor {
             return false;
         }
         
-        LOGGER.info("开始执行节点图，共 {} 个节点", sortedNodes.size());
+        LOGGER.debug("开始执行节点图，共 {} 个节点", sortedNodes.size());
         
         // 执行节点
         int executedCount = 0;
@@ -180,7 +180,7 @@ public class NodeExecutor {
             }
         }
         
-        LOGGER.info("节点图执行完成，成功执行 {}/{} 个节点", executedCount, sortedNodes.size());
+        LOGGER.debug("节点图执行完成，成功执行 {}/{} 个节点", executedCount, sortedNodes.size());
         return true;
     }
     
