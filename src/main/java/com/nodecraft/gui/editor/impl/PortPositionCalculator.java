@@ -1,11 +1,14 @@
 package com.nodecraft.gui.editor.impl;
 
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.nodes.visualization.preview.GeometryViewerNode;
 import imgui.ImGui;
 import imgui.ImVec2;
 
@@ -71,14 +74,16 @@ public class PortPositionCalculator {
             float nodeHeaderHeightScaled = (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
             float portYOffset = nodeScreenY + nodeHeaderHeightScaled + (NodeRenderConstants.NODE_VERTICAL_PADDING / 2) * canvasZoom;
 
-            boolean hasInputPorts = !node.getInputPorts().isEmpty();
-            boolean hasOutputPorts = !node.getOutputPorts().isEmpty();
+            List<IPort> visibleInputPorts = getVisibleInputPorts(node);
+            List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
+            boolean hasInputPorts = !visibleInputPorts.isEmpty();
+            boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
 
             if (useFlatPortManager) {
                 if (hasInputPorts) {
-                    int numInputPorts = node.getInputPorts().size();
+                    int numInputPorts = visibleInputPorts.size();
                     for (int i = 0; i < numInputPorts; i++) {
-                        IPort port = node.getInputPorts().get(i);
+                        IPort port = visibleInputPorts.get(i);
                         float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
                         flatPortManager.setPortPosition(nodeId, port.getId(), nodeScreenX, currentPortY);
                         portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(nodeScreenX, currentPortY));
@@ -87,9 +92,9 @@ public class PortPositionCalculator {
 
                 if (hasOutputPorts) {
                     float outputPortCircleX = nodeScreenX + finalNodeWidthScaled;
-                    int numOutputPorts = node.getOutputPorts().size();
+                    int numOutputPorts = visibleOutputPorts.size();
                     for (int i = 0; i < numOutputPorts; i++) {
-                        IPort port = node.getOutputPorts().get(i);
+                        IPort port = visibleOutputPorts.get(i);
                         float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
                         flatPortManager.setPortPosition(nodeId, port.getId(), outputPortCircleX, currentPortY);
                         portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(outputPortCircleX, currentPortY));
@@ -101,9 +106,9 @@ public class PortPositionCalculator {
                     float localFinalNodeWidthScaled = pos.width * canvasZoom;
 
                     if (hasInputPorts) {
-                        int numInputPorts = nodeParam.getInputPorts().size();
+                        int numInputPorts = visibleInputPorts.size();
                         for (int i = 0; i < numInputPorts; i++) {
-                            IPort port = nodeParam.getInputPorts().get(i);
+                            IPort port = visibleInputPorts.get(i);
                             float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
                             positions.setPosition(port.getId(), localNodeScreenX, currentPortY);
                             portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(localNodeScreenX, currentPortY));
@@ -112,9 +117,9 @@ public class PortPositionCalculator {
 
                     if (hasOutputPorts) {
                         float outputPortCircleX = localNodeScreenX + localFinalNodeWidthScaled;
-                        int numOutputPorts = nodeParam.getOutputPorts().size();
+                        int numOutputPorts = visibleOutputPorts.size();
                         for (int i = 0; i < numOutputPorts; i++) {
-                            IPort port = nodeParam.getOutputPorts().get(i);
+                            IPort port = visibleOutputPorts.get(i);
                             float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
                             positions.setPosition(port.getId(), outputPortCircleX, currentPortY);
                             portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(outputPortCircleX, currentPortY));
@@ -150,20 +155,22 @@ public class PortPositionCalculator {
         String nodeDisplayName = node.getDisplayName();
         float unscaledTitleTextWidth = getCachedTextWidth(nodeDisplayName);
 
-        boolean hasInputPorts = !node.getInputPorts().isEmpty();
-        boolean hasOutputPorts = !node.getOutputPorts().isEmpty();
+        List<IPort> visibleInputPorts = getVisibleInputPorts(node);
+        List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
+        boolean hasInputPorts = !visibleInputPorts.isEmpty();
+        boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
         boolean hasAnyPorts = hasInputPorts || hasOutputPorts;
 
         float maxInputTextWidthUnscaled = 0;
         float maxOutputTextWidthUnscaled = 0;
         if (hasAnyPorts) {
             if (hasInputPorts) {
-                for (IPort p : node.getInputPorts()) {
+                for (IPort p : visibleInputPorts) {
                     maxInputTextWidthUnscaled = Math.max(maxInputTextWidthUnscaled, getCachedTextWidth(p.getDisplayName()));
                 }
             }
             if (hasOutputPorts) {
-                for (IPort p : node.getOutputPorts()) {
+                for (IPort p : visibleOutputPorts) {
                     maxOutputTextWidthUnscaled = Math.max(maxOutputTextWidthUnscaled, getCachedTextWidth(p.getDisplayName()));
                 }
             }
@@ -235,8 +242,8 @@ public class PortPositionCalculator {
 
         float unscaledPortsRegionHeight = 0;
         if (hasAnyPorts) {
-            int numInputPorts = node.getInputPorts().size();
-            int numOutputPorts = node.getOutputPorts().size();
+            int numInputPorts = visibleInputPorts.size();
+            int numOutputPorts = visibleOutputPorts.size();
             float inputPortsVisualHeight = (numInputPorts > 0) ? (numInputPorts * baseTextLineHeight + Math.max(0, numInputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
             float outputPortsVisualHeight = (numOutputPorts > 0) ? (numOutputPorts * baseTextLineHeight + Math.max(0, numOutputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
             unscaledPortsRegionHeight = Math.max(inputPortsVisualHeight, outputPortsVisualHeight);
@@ -262,15 +269,54 @@ public class PortPositionCalculator {
      * 预计算端口文本大小
      */
     public void precalculatePortTextSizes(INode node) {
-        if (node.getInputPorts() != null) {
-            for (IPort port : node.getInputPorts()) {
+        List<IPort> visibleInputPorts = getVisibleInputPorts(node);
+        List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
+        if (visibleInputPorts != null) {
+            for (IPort port : visibleInputPorts) {
                 getCachedTextWidth(port.getDisplayName());
             }
         }
-        if (node.getOutputPorts() != null) {
-            for (IPort port : node.getOutputPorts()) {
+        if (visibleOutputPorts != null) {
+            for (IPort port : visibleOutputPorts) {
                 getCachedTextWidth(port.getDisplayName());
             }
         }
     }
-} 
+
+    private List<IPort> getVisibleInputPorts(INode node) {
+        return filterViewerPorts(node.getInputPorts(), node);
+    }
+
+    private List<IPort> getVisibleOutputPorts(INode node) {
+        return filterViewerPorts(node.getOutputPorts(), node);
+    }
+
+    private List<IPort> filterViewerPorts(List<IPort> ports, INode node) {
+        if (!(node instanceof GeometryViewerNode) || ports == null || ports.isEmpty()) {
+            return ports;
+        }
+
+        List<IPort> visiblePorts = new ArrayList<>();
+        for (IPort port : ports) {
+            if (port == null) {
+                continue;
+            }
+
+            String portId = port.getId();
+            boolean isLegacyInput =
+                    "input_box_geometry".equals(portId) ||
+                    "input_cylinder_geometry".equals(portId) ||
+                    "input_sphere_geometry".equals(portId) ||
+                    "input_torus_geometry".equals(portId) ||
+                    "input_color".equals(portId) ||
+                    "input_transparency".equals(portId);
+
+            if (isLegacyInput && !port.isConnected()) {
+                continue;
+            }
+
+            visiblePorts.add(port);
+        }
+        return visiblePorts;
+    }
+}

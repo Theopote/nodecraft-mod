@@ -1,6 +1,8 @@
 package com.nodecraft.gui.editor.impl;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -9,6 +11,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.nodes.visualization.preview.GeometryViewerNode;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -110,20 +113,22 @@ public class ImGuiNodeRenderer {
         String nodeDisplayName = node.getDisplayName();
         float unscaledTitleTextWidth = cache.getCachedTextWidth(nodeDisplayName);
 
-        boolean hasInputPorts = !node.getInputPorts().isEmpty();
-        boolean hasOutputPorts = !node.getOutputPorts().isEmpty();
+        List<IPort> visibleInputPorts = getVisibleInputPorts(node);
+        List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
+        boolean hasInputPorts = !visibleInputPorts.isEmpty();
+        boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
         boolean hasAnyPorts = hasInputPorts || hasOutputPorts;
 
         float maxInputTextWidthUnscaled = 0;
         float maxOutputTextWidthUnscaled = 0;
         if (hasAnyPorts) {
             if (hasInputPorts) {
-                for (IPort p : node.getInputPorts()) {
+                for (IPort p : visibleInputPorts) {
                     maxInputTextWidthUnscaled = Math.max(maxInputTextWidthUnscaled, cache.getCachedTextWidth(p.getDisplayName()));
                 }
             }
             if (hasOutputPorts) {
-                for (IPort p : node.getOutputPorts()) {
+                for (IPort p : visibleOutputPorts) {
                     maxOutputTextWidthUnscaled = Math.max(maxOutputTextWidthUnscaled, cache.getCachedTextWidth(p.getDisplayName()));
                 }
             }
@@ -162,8 +167,8 @@ public class ImGuiNodeRenderer {
 
         float unscaledPortsRegionHeight = 0;
         if (hasAnyPorts) {
-            int numInputPorts = node.getInputPorts().size();
-            int numOutputPorts = node.getOutputPorts().size();
+            int numInputPorts = visibleInputPorts.size();
+            int numOutputPorts = visibleOutputPorts.size();
             float inputPortsVisualHeight = (numInputPorts > 0) ? (numInputPorts * baseTextLineHeight + Math.max(0, numInputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
             float outputPortsVisualHeight = (numOutputPorts > 0) ? (numOutputPorts * baseTextLineHeight + Math.max(0, numOutputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
             unscaledPortsRegionHeight = Math.max(inputPortsVisualHeight, outputPortsVisualHeight);
@@ -282,15 +287,17 @@ public class ImGuiNodeRenderer {
         float titleY = nodeScreenY + ((baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom - scaledTextLineHeight) / 2;
         drawList.addText(font, baseFontSize * canvasZoom, titleX, titleY, textColor, node.getDisplayName());
 
-        boolean hasInputPorts = !node.getInputPorts().isEmpty();
-        boolean hasOutputPorts = !node.getOutputPorts().isEmpty();
+        List<IPort> visibleInputPorts = getVisibleInputPorts(node);
+        List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
+        boolean hasInputPorts = !visibleInputPorts.isEmpty();
+        boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
         boolean hasAnyPorts = hasInputPorts || hasOutputPorts;
 
         float nodeHeaderHeightScaled = (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
         float portYOffset = nodeScreenY + nodeHeaderHeightScaled + scaledNodeVerticalPadding / 2;
 
         if (hasAnyPorts) {
-            renderNodePorts(drawList, node, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset,
+            renderNodePorts(drawList, node, visibleInputPorts, visibleOutputPorts, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset,
                     portRadiusScaled, scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight, 
@@ -323,25 +330,25 @@ public class ImGuiNodeRenderer {
         ImGui.popID();
     }
 
-    private void renderNodePorts(ImDrawList drawList, INode node, UUID nodeId, float nodeScreenX, float finalNodeWidthScaled,
+    private void renderNodePorts(ImDrawList drawList, INode node, List<IPort> visibleInputPorts, List<IPort> visibleOutputPorts, UUID nodeId, float nodeScreenX, float finalNodeWidthScaled,
                                  float portYOffset, float portRadiusScaled, float scaledTextLineHeight, float scaledPortVerticalSpacing,
                                  float scaledPortCircleToTextPadding, imgui.ImFont font, float baseFontSize, float canvasZoom,
                                  int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId, 
                                  boolean isHoveredPortOutput, boolean shouldHighlight, float highlightSinValue, 
                                  float highlightCosValue, Map<UUID, Map<String, ImVec2>> portScreenPositions) {
 
-        boolean hasInputPorts = !node.getInputPorts().isEmpty();
-        boolean hasOutputPorts = !node.getOutputPorts().isEmpty();
+        boolean hasInputPorts = !visibleInputPorts.isEmpty();
+        boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
 
         float maxInputTextWidthUnscaled = 0;
         float maxOutputTextWidthUnscaled = 0;
         if (hasInputPorts) {
-            for (IPort p : node.getInputPorts()) {
+            for (IPort p : visibleInputPorts) {
                 maxInputTextWidthUnscaled = Math.max(maxInputTextWidthUnscaled, cache.getCachedTextWidth(p.getDisplayName()));
             }
         }
         if (hasOutputPorts) {
-            for (IPort p : node.getOutputPorts()) {
+            for (IPort p : visibleOutputPorts) {
                 maxOutputTextWidthUnscaled = Math.max(maxOutputTextWidthUnscaled, cache.getCachedTextWidth(p.getDisplayName()));
             }
         }
@@ -384,7 +391,7 @@ public class ImGuiNodeRenderer {
 
         // 渲染输入端口
         if (hasInputPorts) {
-            renderInputPorts(drawList, node, nodeId, nodeScreenX, portYOffset, portRadiusScaled, 
+            renderInputPorts(drawList, visibleInputPorts, nodeId, nodeScreenX, portYOffset, portRadiusScaled,
                     scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight,
@@ -393,7 +400,7 @@ public class ImGuiNodeRenderer {
 
         // 渲染输出端口
         if (hasOutputPorts) {
-            renderOutputPorts(drawList, node, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset, 
+            renderOutputPorts(drawList, visibleOutputPorts, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset,
                     portRadiusScaled, scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight,
@@ -401,7 +408,7 @@ public class ImGuiNodeRenderer {
         }
     }
 
-    private void renderInputPorts(ImDrawList drawList, INode node, UUID nodeId, float nodeScreenX, float portYOffset,
+    private void renderInputPorts(ImDrawList drawList, List<IPort> visibleInputPorts, UUID nodeId, float nodeScreenX, float portYOffset,
                                   float portRadiusScaled, float scaledTextLineHeight, float scaledPortVerticalSpacing,
                                   float scaledPortCircleToTextPadding, imgui.ImFont font, float baseFontSize, float canvasZoom,
                                   int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId,
@@ -409,9 +416,9 @@ public class ImGuiNodeRenderer {
                                   float highlightCosValue, float unscaledAvailableWidthForInputText, 
                                   Map<UUID, Map<String, ImVec2>> portScreenPositions) {
 
-        int numInputPorts = node.getInputPorts().size();
+        int numInputPorts = visibleInputPorts.size();
         for (int i = 0; i < numInputPorts; i++) {
-            IPort port = node.getInputPorts().get(i);
+            IPort port = visibleInputPorts.get(i);
             float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
 
             boolean isPortHighlighted = shouldHighlight && nodeId.equals(hoveredNodeId) && port.getId().equals(hoveredPortId) && !isHoveredPortOutput;
@@ -440,7 +447,7 @@ public class ImGuiNodeRenderer {
         }
     }
 
-    private void renderOutputPorts(ImDrawList drawList, INode node, UUID nodeId, float nodeScreenX, float finalNodeWidthScaled,
+    private void renderOutputPorts(ImDrawList drawList, List<IPort> visibleOutputPorts, UUID nodeId, float nodeScreenX, float finalNodeWidthScaled,
                                    float portYOffset, float portRadiusScaled, float scaledTextLineHeight, float scaledPortVerticalSpacing,
                                    float scaledPortCircleToTextPadding, imgui.ImFont font, float baseFontSize, float canvasZoom,
                                    int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId,
@@ -449,9 +456,9 @@ public class ImGuiNodeRenderer {
                                    Map<UUID, Map<String, ImVec2>> portScreenPositions) {
 
         float outputPortCircleX = nodeScreenX + finalNodeWidthScaled;
-        int numOutputPorts = node.getOutputPorts().size();
+        int numOutputPorts = visibleOutputPorts.size();
         for (int i = 0; i < numOutputPorts; i++) {
-            IPort port = node.getOutputPorts().get(i);
+            IPort port = visibleOutputPorts.get(i);
             float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
 
             String displayText = cache.truncateTextWithEllipsisOptimized(port.getDisplayName(), unscaledAvailableWidthForOutputText);
@@ -538,12 +545,49 @@ public class ImGuiNodeRenderer {
 
     private static float getUnscaledPortsRegionHeight(INode node, float baseTextLineHeight, float baseItemSpacingY) {
         float unscaledPortsRegionHeight;
-        int numInputPorts = node.getInputPorts().size();
-        int numOutputPorts = node.getOutputPorts().size();
+        int numInputPorts = getVisibleInputPorts(node).size();
+        int numOutputPorts = getVisibleOutputPorts(node).size();
         float inputPortsVisualHeight = (numInputPorts > 0) ? (numInputPorts * baseTextLineHeight + Math.max(0, numInputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
         float outputPortsVisualHeight = (numOutputPorts > 0) ? (numOutputPorts * baseTextLineHeight + Math.max(0, numOutputPorts - 1) * baseItemSpacingY * 0.8f) : 0;
         unscaledPortsRegionHeight = Math.max(inputPortsVisualHeight, outputPortsVisualHeight);
         return unscaledPortsRegionHeight;
+    }
+
+    private static List<IPort> getVisibleInputPorts(INode node) {
+        return filterViewerPorts(node.getInputPorts(), node);
+    }
+
+    private static List<IPort> getVisibleOutputPorts(INode node) {
+        return filterViewerPorts(node.getOutputPorts(), node);
+    }
+
+    private static List<IPort> filterViewerPorts(List<IPort> ports, INode node) {
+        if (!(node instanceof GeometryViewerNode) || ports == null || ports.isEmpty()) {
+            return ports;
+        }
+
+        List<IPort> visiblePorts = new ArrayList<>();
+        for (IPort port : ports) {
+            if (port == null) {
+                continue;
+            }
+
+            String portId = port.getId();
+            boolean isLegacyInput =
+                    "input_box_geometry".equals(portId) ||
+                    "input_cylinder_geometry".equals(portId) ||
+                    "input_sphere_geometry".equals(portId) ||
+                    "input_torus_geometry".equals(portId) ||
+                    "input_color".equals(portId) ||
+                    "input_transparency".equals(portId);
+
+            if (isLegacyInput && !port.isConnected()) {
+                continue;
+            }
+
+            visiblePorts.add(port);
+        }
+        return visiblePorts;
     }
 
     private void handleNodeInteraction(UUID nodeId, java.util.Set<UUID> selectedNodeIds,

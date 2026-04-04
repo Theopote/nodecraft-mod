@@ -394,7 +394,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         height += getSmallPadding();
         height += ImGui.getTextLineHeight();
         height += getSmallPadding();
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 5; i++) {
             height += ImGui.getFrameHeight();
             height += getSmallPadding();
         }
@@ -422,28 +422,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
             layout.addVerticalSpacing(getSmallPadding());
 
             ImGui.text("Blocks: " + lastBlockCount);
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ensureColorBuffer();
-            layout.pushFramePadding(4.0f, 3.0f);
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.inputTextWithHint("##gv_color", "#4CAF50", colorBuffer)) {
-                setPreviewColor(colorBuffer.get());
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.popStyleVar();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            float[] transparencyValue = {transparency};
-            layout.pushFramePadding(4.0f, 3.0f);
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.sliderFloat("##gv_transparency", transparencyValue, 0.0f, 1.0f, "Transparency %.2f")) {
-                setTransparency(transparencyValue[0]);
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.popStyleVar();
             layout.addVerticalSpacing(getSmallPadding());
 
             ensureBlockTypeBuffer();
@@ -480,40 +458,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
             ImBoolean solidValue = new ImBoolean(previewSolidGeometry);
             if (ImGui.checkbox("Solid Geometry##gv_solid", solidValue)) {
                 setPreviewSolidGeometry(solidValue.get());
-                changed = true;
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean outlineValue = new ImBoolean(showOutline);
-            if (ImGui.checkbox("Show Outline##gv_outline", outlineValue)) {
-                setShowOutline(outlineValue.get());
-                changed = true;
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            if (ImGui.beginCombo("##gv_placement_mode", placementMode == PlacementMode.OVERWRITE ? "Overwrite" : "Incremental")) {
-                if (ImGui.selectable("Overwrite", placementMode == PlacementMode.OVERWRITE)) {
-                    setPlacementMode(PlacementMode.OVERWRITE);
-                    changed = true;
-                }
-                if (ImGui.selectable("Incremental", placementMode == PlacementMode.INCREMENTAL)) {
-                    setPlacementMode(PlacementMode.INCREMENTAL);
-                    changed = true;
-                }
-                ImGui.endCombo();
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean asyncValue = new ImBoolean(useAsyncBake);
-            if (ImGui.checkbox("Async Placement##gv_async", asyncValue)) {
-                setUseAsyncBake(asyncValue.get());
-                changed = true;
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean undoValue = new ImBoolean(recordUndo);
-            if (ImGui.checkbox("Record Undo##gv_undo", undoValue)) {
-                setRecordUndo(undoValue.get());
                 changed = true;
             }
             layout.addVerticalSpacing(getSmallPadding());
