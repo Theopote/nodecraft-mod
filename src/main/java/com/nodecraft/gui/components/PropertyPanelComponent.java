@@ -1377,10 +1377,7 @@ public class PropertyPanelComponent implements EditorComponent {
                                 // 查找源端口并显示其数据
                                 for (IPort sourcePort : sourceNode.getOutputPorts()) {
                                     if (sourcePort.getId().equals(sourcePortId)) {
-                                        Object value = sourceNode.getOutput(sourcePortId);
-                                        if (value == null) {
-                                            value = sourcePort.getValue();
-                                        }
+                                        Object value = resolveNodeOutput(graph, sourceNode, sourcePortId, new HashSet<>());
                                         renderPortData(value, "输入数据"); // 递归调用，传递标签
                                         break;
                                     }
@@ -1431,8 +1428,11 @@ public class PropertyPanelComponent implements EditorComponent {
 
                 ImGui.tableSetColumnIndex(1);
 
+                NodeGraph graph = getNodeGraph();
                 // 获取当前值
-                Object value = selectedNode.getOutput(port.getId());
+                Object value = graph != null
+                        ? resolveNodeOutput(graph, selectedNode, port.getId(), new HashSet<>())
+                        : selectedNode.getOutput(port.getId());
                 if (value != null) {
                     renderPortData(value, "输出数据"); // 递归调用，传递标签
                 } else {
@@ -1441,7 +1441,6 @@ public class PropertyPanelComponent implements EditorComponent {
                 }
 
                 // 如果连接到其他节点，显示连接信息
-                NodeGraph graph = getNodeGraph();
                 if (graph != null && port.isConnected()) {
                     Map<UUID, String> connectedInputs = graph.getConnectedInputs(selectedNode.getId(), port.getId());
                     if (!connectedInputs.isEmpty()) {
@@ -1888,10 +1887,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 // 确保 selectedNode.compute 方法存在并能够处理输入
                 // compute 方法可能依赖于 ExecutionContext 或其他参数
                 // 这里假设 compute(Map<String, Object> inputs) 存在
-                Map<String, Object> inputs = new HashMap<>();
-                // 收集所有输入端口的当前值
+                Map<String, Object> inputs = collectConnectedInputs(graph, selectedNode, new HashSet<>());
                 for (IPort port : selectedNode.getInputPorts()) {
-                    inputs.put(port.getId(), port.getValue());
+                    inputs.putIfAbsent(port.getId(), port.getValue());
                 }
 
                 // 执行计算
@@ -1915,6 +1913,66 @@ public class PropertyPanelComponent implements EditorComponent {
         } catch (Exception e) {
             NodeCraft.LOGGER.error("节点重新计算失败: {}", e.getMessage(), e);
         }
+    }
+
+    private Map<String, Object> collectConnectedInputs(NodeGraph graph, INode node, Set<UUID> visiting) {
+        Map<String, Object> inputs = new HashMap<>();
+        if (graph == null || node == null) {
+            return inputs;
+        }
+
+        for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (connection.targetNode.getId().equals(node.getId())) {
+                Object value = resolveNodeOutput(graph, connection.sourceNode, connection.sourcePort.getId(), visiting);
+                inputs.put(connection.targetPort.getId(), value);
+            }
+        }
+        return inputs;
+    }
+
+    private Object resolveNodeOutput(NodeGraph graph, INode node, String outputPortId, Set<UUID> visiting) {
+        if (node == null || outputPortId == null) {
+            return null;
+        }
+
+        if (visiting.contains(node.getId())) {
+            Object cached = node.getOutput(outputPortId);
+            return cached != null ? cached : getPortValue(node, outputPortId, false);
+        }
+
+        boolean hasIncomingConnections = false;
+        for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (connection.targetNode.getId().equals(node.getId())) {
+                hasIncomingConnections = true;
+                break;
+            }
+        }
+
+        if (hasIncomingConnections) {
+            visiting.add(node.getId());
+            try {
+                Map<String, Object> inputs = collectConnectedInputs(graph, node, visiting);
+                for (IPort port : node.getInputPorts()) {
+                    inputs.putIfAbsent(port.getId(), port.getValue());
+                }
+                node.compute(inputs);
+            } finally {
+                visiting.remove(node.getId());
+            }
+        }
+
+        Object value = node.getOutput(outputPortId);
+        return value != null ? value : getPortValue(node, outputPortId, false);
+    }
+
+    private Object getPortValue(INode node, String portId, boolean inputPort) {
+        List<IPort> ports = inputPort ? node.getInputPorts() : node.getOutputPorts();
+        for (IPort port : ports) {
+            if (port.getId().equals(portId)) {
+                return port.getValue();
+            }
+        }
+        return null;
     }
 
     // 记录节点详细信息到日志

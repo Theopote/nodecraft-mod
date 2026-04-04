@@ -318,6 +318,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             
             // 更新幽灵方块预览
             updateGhostBlockPreview();
+            updateOutputsWithPickedBlock();
             
             NodeCraft.LOGGER.debug("节点 {} 从输入坐标获取方块: {} at {}", getId(), blockId, position);
             
@@ -727,6 +728,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         this.pickedBlockId = blockId;
         this.pickedBlockStateData = blockStateData;
         this.hasPickedBlock = true;
+        updateOutputsWithPickedBlock();
         
         // 标记节点为脏，触发重新计算
         markDirty();
@@ -789,6 +791,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         
         // 隐藏幽灵方块预览
         hideGhostBlockPreview();
+        resetOutputs();
         
         markDirty();
     }
