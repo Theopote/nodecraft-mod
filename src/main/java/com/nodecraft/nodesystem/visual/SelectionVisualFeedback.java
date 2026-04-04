@@ -203,6 +203,13 @@ public class SelectionVisualFeedback {
      */
     public void showBlockSelection(String nodeId, Coordinate position, SelectionState state) {
         try {
+            if (nodeId == null || nodeId.isBlank() || position == null || state == null) {
+                if (nodeId != null && !nodeId.isBlank()) {
+                    clearFeedback(nodeId);
+                }
+                NodeCraft.LOGGER.debug("Skipping block selection feedback: nodeId={}, position={}, state={}", nodeId, position, state);
+                return;
+            }
             // 清除之前的预览
             clearFeedback(nodeId);
 

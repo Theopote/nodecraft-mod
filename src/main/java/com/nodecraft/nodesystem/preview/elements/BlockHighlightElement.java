@@ -124,7 +124,6 @@ public class BlockHighlightElement extends AbstractPreviewElement {
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
         if (renderingDisabled || blockPositions.isEmpty()) {
-            NodeCraft.LOGGER.warn("BlockHighlightElement.render: blockPositions为空");
             return;
         }
 
