@@ -5,8 +5,10 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.TorusBlockGenerator;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -36,6 +38,7 @@ public class TorusBlocksNode extends BaseNode {
 
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_COUNT_ID = "output_count";
+    private static final String OUTPUT_TORUS_GEOMETRY_ID = "output_torus_geometry";
 
     public TorusBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.torusblocks");
@@ -47,6 +50,7 @@ public class TorusBlocksNode extends BaseNode {
 
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Blocks composing the torus", NodeDataType.BLOCK_LIST, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Block count", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Resolved torus geometry", NodeDataType.TORUS_GEOMETRY, this));
     }
 
     @Override
@@ -67,6 +71,7 @@ public class TorusBlocksNode extends BaseNode {
         Object minorRObj = inputValues.get(INPUT_MINOR_RADIUS_ID);
 
         BlockPosList result = new BlockPosList();
+        TorusGeometryData geometry = null;
 
         if (majorRObj instanceof Number majorRadiusObj &&
             minorRObj instanceof Number minorRadiusObj) {
@@ -91,38 +96,18 @@ public class TorusBlocksNode extends BaseNode {
                 }
             }
 
-            Vector3d tangent = buildOrthogonalBasisVector(axis);
-            Vector3d bitangent = new Vector3d(axis).cross(tangent).normalize();
-
-            int bound = (int) Math.ceil(majorRadius + minorRadius);
-            int cx = center.getX();
-            int cy = center.getY();
-            int cz = center.getZ();
-            double minorRadiusSquared = minorRadius * minorRadius;
-
-            for (int dx = -bound; dx <= bound; dx++) {
-                for (int dy = -bound; dy <= bound; dy++) {
-                    for (int dz = -bound; dz <= bound; dz++) {
-                        Vector3d relative = new Vector3d(dx, dy, dz);
-
-                        double localX = relative.dot(tangent);
-                        double localY = relative.dot(bitangent);
-                        double localZ = relative.dot(axis);
-
-                        double radialDistance = Math.sqrt(localX * localX + localY * localY);
-                        double torusEquation = (radialDistance - majorRadius) * (radialDistance - majorRadius)
-                            + localZ * localZ;
-
-                        if (torusEquation <= minorRadiusSquared) {
-                            result.add(new BlockPos(cx + dx, cy + dy, cz + dz));
-                        }
-                    }
-                }
-            }
+            geometry = new TorusGeometryData(
+                new Vector3d(center.getX(), center.getY(), center.getZ()),
+                axis,
+                majorRadius,
+                minorRadius
+            );
+            TorusBlockGenerator.populateTorus(result, TorusBlockGenerator.createBoundingRegion(geometry), geometry, true);
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, result);
         outputValues.put(OUTPUT_COUNT_ID, result.size());
+        outputValues.put(OUTPUT_TORUS_GEOMETRY_ID, geometry);
     }
 
     private BlockPos resolveCenter(Object centerObj, Object planeObj) {
@@ -136,18 +121,6 @@ public class TorusBlocksNode extends BaseNode {
         }
 
         return null;
-    }
-
-    private Vector3d buildOrthogonalBasisVector(Vector3d axis) {
-        Vector3d reference = Math.abs(axis.y) < 0.99d
-            ? new Vector3d(0.0d, 1.0d, 0.0d)
-            : new Vector3d(1.0d, 0.0d, 0.0d);
-
-        Vector3d tangent = reference.cross(axis, new Vector3d());
-        if (tangent.lengthSquared() < 1e-9) {
-            tangent = new Vector3d(0.0d, 0.0d, 1.0d);
-        }
-        return tangent.normalize();
     }
 
     @Override

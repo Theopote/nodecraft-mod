@@ -7,6 +7,7 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
+import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
@@ -15,6 +16,7 @@ import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.BoxBlockGenerator;
 import com.nodecraft.nodesystem.util.Coordinate;
+import com.nodecraft.nodesystem.util.TorusBlockGenerator;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
@@ -63,6 +65,9 @@ public class GeometryViewerNode extends BaseCustomUINode {
     @NodeProperty(displayName = "预览开启", category = "显示", order = 5)
     private boolean previewEnabled = true;
 
+    @NodeProperty(displayName = "Geometry Solid Preview", category = "Display", order = 6)
+    private boolean previewSolidGeometry = true;
+
     @NodeProperty(displayName = "已放置", category = "状态", order = 6)
     private boolean placed = false;
 
@@ -91,6 +96,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     // --- 输入端口 IDs ---
     private static final String INPUT_BLOCKS_ID = "input_blocks";
     private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
+    private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_COLOR_ID = "input_color";
     private static final String INPUT_TRANSPARENCY_ID = "input_transparency";
@@ -112,6 +118,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         // 输入端口
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Geometry", "几何体方块坐标列表（来自几何体生成器）", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data to preview", NodeDataType.BOX_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry data to preview", NodeDataType.TORUS_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "放置时使用的方块类型（默认stone）", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_COLOR_ID, "Preview Color", "预览颜色（十六进制）", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_TRANSPARENCY_ID, "Transparency", "预览透明度（0.0-1.0）", NodeDataType.FLOAT, this));
@@ -132,6 +139,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     public void processNode(@Nullable ExecutionContext context) {
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
         Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
+        Object torusGeometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
         Object colorObj = inputValues.get(INPUT_COLOR_ID);
         Object transparencyObj = inputValues.get(INPUT_TRANSPARENCY_ID);
@@ -141,7 +149,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         float trans = (transparencyObj instanceof Number) ? Math.max(0f, Math.min(1f, ((Number) transparencyObj).floatValue())) : this.transparency;
         String bType = (blockTypeObj instanceof String) ? (String) blockTypeObj : this.blockType;
 
-        BlockPosList blocksList = resolveBlocks(blocksObj, boxGeometryObj);
+        BlockPosList blocksList = resolveBlocks(blocksObj, boxGeometryObj, torusGeometryObj);
 
         int blockCount = (blocksList != null) ? blocksList.size() : 0;
         lastBlockCount = blockCount;
@@ -232,13 +240,17 @@ public class GeometryViewerNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_PLACED_ID, placed);
     }
 
-    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj) {
+    private BlockPosList resolveBlocks(Object blocksObj, Object boxGeometryObj, Object torusGeometryObj) {
         if (blocksObj instanceof BlockPosList blockPosList) {
             return blockPosList;
         }
 
         if (boxGeometryObj instanceof BoxGeometryData geometry) {
             return voxelizeBoxGeometry(geometry);
+        }
+
+        if (torusGeometryObj instanceof TorusGeometryData geometry) {
+            return voxelizeTorusGeometry(geometry);
         }
 
         return null;
@@ -272,12 +284,19 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 geometry.getCenter(),
                 geometry.getHalfExtents(),
                 geometry.getOrientationMatrix(),
-                true
+                previewSolidGeometry
             );
         } else {
-            BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, true);
+            BoxBlockGenerator.populateAxisAlignedBox(blocks, minCorner, maxCorner, previewSolidGeometry);
         }
 
+        return blocks;
+    }
+
+    private BlockPosList voxelizeTorusGeometry(TorusGeometryData geometry) {
+        BlockPosList blocks = new BlockPosList();
+        RegionData region = TorusBlockGenerator.createBoundingRegion(geometry);
+        TorusBlockGenerator.populateTorus(blocks, region, geometry, previewSolidGeometry);
         return blocks;
     }
 
@@ -427,6 +446,13 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 l.addVerticalSpacing(getSmallPadding());
 
                 // 轮廓开关
+                ImBoolean solidBool = new ImBoolean(previewSolidGeometry);
+                if (ImGui.checkbox("Solid Geometry##gv_solid", solidBool)) {
+                    setPreviewSolidGeometry(solidBool.get());
+                    changed = true;
+                }
+                l.addVerticalSpacing(getSmallPadding());
+
                 ImBoolean olBool = new ImBoolean(showOutline);
                 if (ImGui.checkbox("轮廓##gv_ol", olBool)) {
                     setShowOutline(olBool.get());
@@ -537,6 +563,11 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (this.previewEnabled != v) { this.previewEnabled = v; markDirty(); }
     }
 
+    public boolean isPreviewSolidGeometry() { return previewSolidGeometry; }
+    public void setPreviewSolidGeometry(boolean v) {
+        if (this.previewSolidGeometry != v) { this.previewSolidGeometry = v; markDirty(); }
+    }
+
     public boolean isPlaced() { return placed; }
 
     public PlacementMode getPlacementMode() { return placementMode; }
@@ -564,6 +595,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         s.put("showOutline", showOutline);
         s.put("blockType", blockType);
         s.put("previewEnabled", previewEnabled);
+        s.put("previewSolidGeometry", previewSolidGeometry);
         s.put("placed", placed);
         s.put("previewId", previewId.toString());
         s.put("placementMode", placementMode.name());
@@ -581,6 +613,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             if (m.get("showOutline") instanceof Boolean) setShowOutline(Boolean.TRUE.equals(m.get("showOutline")));
             if (m.get("blockType") instanceof String) setBlockType((String) m.get("blockType"));
             if (m.get("previewEnabled") instanceof Boolean) setPreviewEnabled(Boolean.TRUE.equals(m.get("previewEnabled")));
+            if (m.get("previewSolidGeometry") instanceof Boolean) setPreviewSolidGeometry(Boolean.TRUE.equals(m.get("previewSolidGeometry")));
             if (m.get("placed") instanceof Boolean) placed = Boolean.TRUE.equals(m.get("placed"));
             if (m.get("previewId") instanceof String) {
                 try { previewId = UUID.fromString((String) m.get("previewId")); }
