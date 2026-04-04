@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
-import com.nodecraft.nodesystem.util.CylinderBlockGenerator;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import org.jetbrains.annotations.Nullable;
 
@@ -55,7 +54,7 @@ public class CylinderGeometryVoxelizerNode extends BaseNode {
 
         if (geometryObj instanceof CylinderGeometryData geometry) {
             blocks = GeometryVoxelizer.voxelizeCylinder(geometry, fillCylinder);
-            region = CylinderBlockGenerator.createBoundingRegion(geometry);
+            region = GeometryVoxelizer.createBoundingRegion(geometry);
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);

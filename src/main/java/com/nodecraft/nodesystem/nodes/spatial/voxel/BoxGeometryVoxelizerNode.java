@@ -65,13 +65,7 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
 
         if (geometryObj instanceof BoxGeometryData geometry) {
             blocks = GeometryVoxelizer.voxelizeBox(geometry, fillBox);
-            region = geometry.isOriented()
-                ? com.nodecraft.nodesystem.util.BoxBlockGenerator.createOrientedBoundingRegion(
-                    geometry.getCenter(),
-                    geometry.getHalfExtents(),
-                    geometry.getOrientationMatrix()
-                )
-                : GeometryVoxelizer.createAxisAlignedRegion(geometry);
+            region = GeometryVoxelizer.createBoundingRegion(geometry);
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);

@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * Represents an oriented torus geometry.
  */
-public class TorusGeometryData {
+public class TorusGeometryData implements GeometryData {
     private final Vector3d center;
     private final Vector3d axis;
     private final double majorRadius;

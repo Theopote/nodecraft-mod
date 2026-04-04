@@ -8,7 +8,7 @@ import java.util.Objects;
 /**
  * Represents an axis-aligned or oriented box geometry in local space.
  */
-public class BoxGeometryData {
+public class BoxGeometryData implements GeometryData {
     private final Vector3d center;
     private final Vector3d halfExtents;
     private final Matrix3d orientationMatrix;

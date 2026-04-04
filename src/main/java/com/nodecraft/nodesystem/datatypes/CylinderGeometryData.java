@@ -7,7 +7,7 @@ import java.util.Objects;
 /**
  * Represents a cylinder defined by an axis segment and radius.
  */
-public class CylinderGeometryData {
+public class CylinderGeometryData implements GeometryData {
     private final Vector3d start;
     private final Vector3d end;
     private final double radius;
