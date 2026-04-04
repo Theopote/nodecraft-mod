@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
@@ -75,6 +76,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
     private static final String INPUT_PREVIEW_IDS_ID = "input_preview_ids";
+    private static final String INPUT_PREVIEW_TRACKING_ID = "input_preview_tracking_id";
     private static final String INPUT_NOTIFY_ID = "input_notify";
 
     private static final String OUTPUT_SUCCESS_ID = "output_success";
@@ -94,6 +96,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Fallback block type for uniform placement", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "Per-position block assignments", NodeDataType.BLOCK_PLACEMENT_LIST, this));
         addInputPort(new BasePort(INPUT_PREVIEW_IDS_ID, "Preview IDs", "Reserved preview identifiers", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_PREVIEW_TRACKING_ID, "Preview Tracking ID", "Tracked-world preview identifier to commit", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify On Complete", "Overrides node notification behavior", NodeDataType.BOOLEAN, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether placement succeeded", NodeDataType.BOOLEAN, this));
@@ -123,6 +126,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         Object sphereGeometryObj = inputValues.get(INPUT_SPHERE_GEOMETRY_ID);
         Object torusGeometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
+        Object previewTrackingIdObj = inputValues.get(INPUT_PREVIEW_TRACKING_ID);
         Object notifyObj = inputValues.get(INPUT_NOTIFY_ID);
 
         boolean notify = (notifyObj instanceof Boolean) ? (Boolean) notifyObj : notifyOnComplete;
@@ -140,6 +144,25 @@ public class ApplyChangesNode extends BaseCustomUINode {
 
         if (context == null || context.getWorld() == null) {
             publishOutputs(false, 0, 0, "Missing execution context");
+            return;
+        }
+
+        List<String> previewTrackingIds = resolvePreviewTrackingIds(previewTrackingIdObj, inputValues.get(INPUT_PREVIEW_IDS_ID));
+        if (!previewTrackingIds.isEmpty()) {
+            long startTime = System.currentTimeMillis();
+            int commitCount = 0;
+            for (String previewTrackingId : previewTrackingIds) {
+                if (TrackedPreviewPlacementService.getInstance().commitTrackedPreview(context.getWorld(), previewTrackingId)) {
+                    commitCount++;
+                }
+            }
+            success = commitCount > 0;
+            operationCount = commitCount;
+            executionTime = (int) (System.currentTimeMillis() - startTime);
+            status = success
+                    ? "Committed " + commitCount + " tracked preview(s)"
+                    : "No tracked previews were committed";
+            publishOutputs(success, operationCount, executionTime, status);
             return;
         }
 
@@ -233,6 +256,24 @@ public class ApplyChangesNode extends BaseCustomUINode {
             }
         }
         return placements;
+    }
+
+    private List<String> resolvePreviewTrackingIds(Object previewTrackingIdObj, Object previewIdsObj) {
+        List<String> ids = new ArrayList<>();
+
+        if (previewTrackingIdObj instanceof String previewTrackingId && !previewTrackingId.isBlank()) {
+            ids.add(previewTrackingId);
+        }
+
+        if (previewIdsObj instanceof List<?> previewIdList) {
+            for (Object entry : previewIdList) {
+                if (entry instanceof String previewId && !previewId.isBlank()) {
+                    ids.add(previewId);
+                }
+            }
+        }
+
+        return ids;
     }
 
     private BlockPosList resolveBlocks(Object blocksObj, Object geometryObj, Object boxGeometryObj, Object cylinderGeometryObj, Object sphereGeometryObj, Object torusGeometryObj) {
