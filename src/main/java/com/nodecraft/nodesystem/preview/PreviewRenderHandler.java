@@ -3,7 +3,6 @@ package com.nodecraft.nodesystem.preview;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
-import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 
 /**
@@ -33,11 +32,10 @@ public class PreviewRenderHandler {
                 
                 Camera camera = client.gameRenderer.getCamera();
                 MatrixStack matrices = context.matrices();
-                VertexConsumerProvider consumers = context.consumers();
                 float tickDelta = client.getRenderTickCounter().getTickProgress(true);
                 
                 // 调用预览渲染器
-                PreviewRenderer.getInstance().setActiveVertexConsumers(consumers);
+                PreviewRenderer.getInstance().setActiveVertexConsumers(null);
                 PreviewRenderer.getInstance().renderAll(matrices, camera, tickDelta);
                 PreviewRenderer.getInstance().setActiveVertexConsumers(null);
                 

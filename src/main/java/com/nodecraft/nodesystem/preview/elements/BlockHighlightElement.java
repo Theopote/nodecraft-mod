@@ -23,6 +23,7 @@ import java.util.List;
  * 用于在世界中显示单个或多个方块的线框高亮效果。
  */
 public class BlockHighlightElement extends AbstractPreviewElement {
+    private boolean renderingDisabled = false;
 
     private List<Coordinate> blockPositions = new ArrayList<>(); // 存储方块的整数坐标
     private Vector3f color = new Vector3f(1.0f, 0.8f, 0.0f); // 默认橙黄色 (RGBA)
@@ -122,7 +123,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
      */
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (blockPositions.isEmpty()) {
+        if (renderingDisabled || blockPositions.isEmpty()) {
             NodeCraft.LOGGER.warn("BlockHighlightElement.render: blockPositions为空");
             return;
         }
@@ -160,17 +161,9 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             return;
         }
 
-        VertexConsumerProvider vertexConsumerProvider = PreviewRenderer.getInstance().getActiveVertexConsumers();
-        boolean shouldFlushImmediately = false;
-        if (vertexConsumerProvider == null) {
-            vertexConsumerProvider = client.getBufferBuilders().getEntityVertexConsumers();
-            shouldFlushImmediately = true;
-        }
-
-        VertexConsumerProvider.Immediate immediateConsumers =
-            vertexConsumerProvider instanceof VertexConsumerProvider.Immediate
-                ? (VertexConsumerProvider.Immediate) vertexConsumerProvider
-                : null;
+        VertexConsumerProvider.Immediate immediateConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumerProvider vertexConsumerProvider = immediateConsumers;
+        boolean shouldFlushImmediately = true;
 
         VertexConsumer lineVertexConsumer = vertexConsumerProvider.getBuffer(RenderLayers.lines());
         VertexConsumer fillVertexConsumer = showFill ? vertexConsumerProvider.getBuffer(RenderLayers.debugFilledBox()) : null;
@@ -193,11 +186,20 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             }
 
             // 使用简化的方块边框渲染
-            if (showFill && fillVertexConsumer != null) {
-                renderSimpleBlockFill(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, fillVertexConsumer);
-            }
-            if (showOutline) {
-                renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, lineVertexConsumer);
+            try {
+                if (showFill && fillVertexConsumer != null) {
+                    renderSimpleBlockFill(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, fillVertexConsumer);
+                }
+                if (showOutline) {
+                    renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, lineVertexConsumer);
+                }
+            } catch (IllegalStateException e) {
+                if (e.getMessage() != null && e.getMessage().contains("Not building")) {
+                    renderingDisabled = true;
+                    NodeCraft.LOGGER.warn("Disabling block highlight preview {} after render pipeline error: {}", getId(), e.getMessage());
+                    break;
+                }
+                throw e;
             }
         }
 
