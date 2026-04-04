@@ -645,97 +645,78 @@ public class PropertyPanelComponent implements EditorComponent {
         selectedNode = null;
     }
 
-    @Override
+        @Override
     public void render(float x, float y, float width, float height, float windowPaddingX, float windowPaddingY) {
         if (!visible) return;
 
         try {
-            // 检查和清理过期的编辑锁
             checkAndCleanExpiredEditLocks();
 
-            ImGui.text("属性面板");
+            ImGui.text("Properties");
             ImGui.separator();
 
             if (selectedNode != null) {
-                // 节点基本信息
-                if (ImGui.collapsingHeader("基本信息", ImGuiTreeNodeFlags.DefaultOpen)) {
+                if (ImGui.collapsingHeader("Basic Info", ImGuiTreeNodeFlags.DefaultOpen)) {
                     renderNodeInfo();
                 }
 
-                // 节点自定义属性 (由 @NodeProperty 标记的属性)
-                if (ImGui.collapsingHeader("节点属性", ImGuiTreeNodeFlags.DefaultOpen)) {
+                if (ImGui.collapsingHeader("Node Properties", ImGuiTreeNodeFlags.DefaultOpen)) {
                     renderNodeProperties();
                 }
 
-                // 输入端口信息
-                if (ImGui.collapsingHeader("输入端口", ImGuiTreeNodeFlags.DefaultOpen)) {
+                if (ImGui.collapsingHeader("Input Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
                     renderInputPorts();
                 }
 
-                // 输出端口信息
-                if (ImGui.collapsingHeader("输出端口", ImGuiTreeNodeFlags.DefaultOpen)) {
+                if (ImGui.collapsingHeader("Output Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
                     renderOutputPorts();
                 }
 
-                // 调试功能
-                if (ImGui.collapsingHeader("调试工具", ImGuiTreeNodeFlags.None)) {
+                if (ImGui.collapsingHeader("Debug Tools (Advanced)", ImGuiTreeNodeFlags.None)) {
                     renderDebugTools();
                 }
 
-                // 节点操作
-                if (ImGui.collapsingHeader("操作", ImGuiTreeNodeFlags.DefaultOpen)) {
+                if (ImGui.collapsingHeader("Actions", ImGuiTreeNodeFlags.DefaultOpen)) {
                     renderActionButtons();
                 }
 
-                // 特殊处理：如果节点有自定义UI状态 (例如 BaseNode)
                 if (selectedNode instanceof BaseNode) {
                     Object nodeState = selectedNode.getNodeState();
-                    if (nodeState != null) {
-                        if (ImGui.collapsingHeader("自定义状态")) {
-                            ImGui.textWrapped("对象类型: " + nodeState.getClass().getSimpleName());
-                            // 这里可以添加更多nodeState的渲染逻辑
-                            // 例如，如果 nodeState 是一个 Map，可以遍历并显示
-                            if (nodeState instanceof Map<?, ?> stateMap) {
-                                renderMap(stateMap, "状态数据");
-                            } else {
-                                ImGui.textWrapped("值: " + nodeState);
-                            }
+                    if (nodeState != null && ImGui.collapsingHeader("Runtime State (Advanced)", ImGuiTreeNodeFlags.None)) {
+                        ImGui.textWrapped("Object Type: " + nodeState.getClass().getSimpleName());
+                        if (nodeState instanceof Map<?, ?> stateMap) {
+                            renderMap(stateMap, "State Data");
+                        } else {
+                            ImGui.textWrapped("Value: " + nodeState);
                         }
                     }
                 }
-
             } else {
-                ImGui.text("未选择节点");
+                ImGui.text("No node selected");
             }
 
         } catch (Exception e) {
-            NodeCraft.LOGGER.error("渲染属性面板时出错", e);
-            ImGui.textColored(1.0f, 0.2f, 0.2f, 1.0f, "渲染错误: " + e.getMessage());
+            NodeCraft.LOGGER.error("Failed to render property panel", e);
+            ImGui.textColored(1.0f, 0.2f, 0.2f, 1.0f, "Render error: " + e.getMessage());
         }
     }
-
-    private void renderNodeInfo() {
+        private void renderNodeInfo() {
         String idStr = selectedNode.getId().toString();
-        ImGui.text("节点 ID: " + idStr.substring(0, Math.min(8, idStr.length())) + "...");
-
-        // 类型与名称
         String typeId = selectedNode.getTypeId();
-        // 显示分类名称，而不是重复显示节点名称
         String categoryName = getCategoryNameForNode(typeId);
-        ImGui.text("分类: " + categoryName); // 更改为分类
-        ImGui.text("类型: " + formatTypeId(typeId)); // 格式化类型ID
-        ImGui.text("名称: " + selectedNode.getDisplayName());
 
-        // 节点描述
+        ImGui.text("Name: " + selectedNode.getDisplayName());
+        ImGui.text("Category: " + categoryName);
+        ImGui.textDisabled("Node ID: " + idStr.substring(0, Math.min(8, idStr.length())) + "...");
+
         String description = selectedNode.getDescription();
         if (description != null && !description.isEmpty()) {
             ImGui.separator();
-            ImGui.textWrapped("描述: " + description);
+            ImGui.textWrapped("Description: " + description);
         }
 
-        // 节点状态显示
         ImGui.separator();
-        ImGui.text("状态: ");
+        ImGui.text("Status: ");
         ImGui.sameLine();
 
         String nodeStatus = getNodeStatus();
@@ -743,18 +724,18 @@ public class PropertyPanelComponent implements EditorComponent {
 
         ImGui.textColored(statusColor.x, statusColor.y, statusColor.z, statusColor.w, nodeStatus);
 
-        // 如果状态为错误或警告，显示详细信息
-        if (nodeStatus.equals("错误") || nodeStatus.equals("警告")) {
+        if (nodeStatus.equals("Error") || nodeStatus.equals("Warning")) {
             ImGui.sameLine();
             ImGui.textDisabled("(?)");
             if (ImGui.isItemHovered()) {
                 ImGui.beginTooltip();
-                ImGui.textWrapped(getNodeStatusMessage());
+                ImGui.pushTextWrapPos(ImGui.getCursorPosX() + 320.0f);
+                ImGui.textUnformatted(getNodeStatusMessage());
+                ImGui.popTextWrapPos();
                 ImGui.endTooltip();
             }
         }
     }
-
     /**
      * 获取节点所属的分类名称
      * @param typeId 节点类型ID
@@ -832,25 +813,21 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     // 获取节点状态 (示例实现，需要根据实际节点系统修改)
-    private String getNodeStatus() {
-        if (selectedNode == null) return "未选择";
+        private String getNodeStatus() {
+        if (selectedNode == null) return "Unselected";
 
-        // 1. 检查节点是否有错误状态 (例如通过节点自身的属性或日志)
-        // 假设 INode 实现了 getErrorState() 或类似方法
         try {
             Method getErrorMethod = selectedNode.getClass().getMethod("getErrorState");
             Object errorState = getErrorMethod.invoke(selectedNode);
             if (errorState instanceof String && !((String) errorState).isEmpty()) {
-                return "错误";
+                return "Error";
             }
             if (errorState instanceof Boolean && (Boolean) errorState) {
-                return "错误";
+                return "Error";
             }
-        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-            // 方法不存在或调用失败，忽略
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignored) {
         }
 
-        // 2. 检查是否有未连接的输出端口
         boolean hasOutputPorts = !selectedNode.getOutputPorts().isEmpty();
         boolean allOutputsConnected = true;
         if (hasOutputPorts) {
@@ -861,66 +838,62 @@ public class PropertyPanelComponent implements EditorComponent {
                 }
             }
             if (!allOutputsConnected) {
-                return "警告"; // 有输出端口但未连接
+                return "Warning";
             }
         }
 
-        // 3. 检查是否有未连接的输入端口，且该输入端口没有默认值
         boolean hasInputPorts = !selectedNode.getInputPorts().isEmpty();
         boolean allInputsReady = true;
         if (hasInputPorts) {
             for (IPort port : selectedNode.getInputPorts()) {
-                if (!port.isConnected() && port.getValue() == null) { // 如果未连接且无默认值
+                if (!port.isConnected() && port.getValue() == null) {
                     allInputsReady = false;
                     break;
                 }
             }
             if (!allInputsReady) {
-                return "警告"; // 有未连接且无默认值的输入端口
+                return "Warning";
             }
         }
 
-        // 4. 如果有自定义状态，例如 '计算中'
         if (selectedNode instanceof BaseNode) {
             Object nodeState = selectedNode.getNodeState();
             if (nodeState instanceof Map<?, ?> stateMap && stateMap.containsKey("status")) {
                 Object status = stateMap.get("status");
-                if (status instanceof String) {
-                    if (status.equals("calculating")) return "计算中";
-                    if (status.equals("disabled")) return "禁用";
+                if (status instanceof String statusString) {
+                    if (statusString.equals("calculating")) return "Calculating";
+                    if (statusString.equals("disabled")) return "Disabled";
                 }
             }
         }
 
-        return "就绪"; // 默认状态
+        return "Ready";
     }
 
-    // 获取状态信息 (示例实现)
     private String getNodeStatusMessage() {
         String status = getNodeStatus();
 
         return switch (status) {
-            case "错误" -> "节点执行过程中发生错误，无法生成有效输出。请检查输入参数和连接。";
-            case "警告" -> "节点有未连接的端口，或输入/输出存在潜在问题。";
-            case "计算中" -> "节点正在执行计算，请等待完成。";
-            case "禁用" -> "节点当前已被禁用，不会参与计算过程。";
-            case "就绪" -> "节点状态正常，准备就绪。";
-            default -> "未知节点状态。";
+            case "Error" -> "The node failed to evaluate and could not produce a valid result.";
+            case "Warning" -> "The node has missing links or incomplete input/output state.";
+            case "Calculating" -> "The node is currently evaluating.";
+            case "Disabled" -> "The node is disabled and will not participate in execution.";
+            case "Ready" -> "The node is ready.";
+            case "Unselected" -> "No node is currently selected.";
+            default -> "Unknown node status.";
         };
     }
 
-    // 获取状态对应的颜色
     private ImVec4 getStatusColor(String status) {
         return switch (status) {
-            case "错误" -> new ImVec4(1.0f, 0.3f, 0.3f, 1.0f); // 红色
-            case "警告" -> new ImVec4(1.0f, 0.9f, 0.3f, 1.0f); // 黄色
-            case "计算中" -> new ImVec4(0.3f, 0.7f, 1.0f, 1.0f); // 蓝色
-            case "禁用" -> new ImVec4(0.5f, 0.5f, 0.5f, 1.0f); // 灰色
-            case "就绪" -> new ImVec4(0.3f, 0.9f, 0.3f, 1.0f); // 绿色
-            default -> new ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // 白色
+            case "Error" -> new ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
+            case "Warning" -> new ImVec4(1.0f, 0.9f, 0.3f, 1.0f);
+            case "Calculating" -> new ImVec4(0.3f, 0.7f, 1.0f, 1.0f);
+            case "Disabled" -> new ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+            case "Ready" -> new ImVec4(0.3f, 0.9f, 0.3f, 1.0f);
+            default -> new ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
         };
     }
-
     private void renderNodeProperties() {
         if (selectedNode == null) return;
 
