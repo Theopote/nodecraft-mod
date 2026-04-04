@@ -10,6 +10,7 @@ import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
@@ -22,6 +23,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -87,6 +89,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private int cachedGeometrySignature = 0;
     private float cachedTransparency = -1f;
     private String cachedColor = null;
+    private String cachedBlockType = null;
 
     // --- 输入端口 IDs ---
     private static final String INPUT_BLOCKS_ID = "input_blocks";
@@ -162,7 +165,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
         int geometrySignature = computeGeometrySignature(blocksList);
         boolean previewDirty = (geometrySignature != cachedGeometrySignature)
                 || (trans != cachedTransparency)
-                || !Objects.equals(color, cachedColor);
+                || !Objects.equals(color, cachedColor)
+                || !Objects.equals(bType, cachedBlockType);
 
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
             if (previewDirty) {
@@ -170,16 +174,21 @@ public class GeometryViewerNode extends BaseCustomUINode {
                     cachedGeometrySignature = geometrySignature;
                     cachedTransparency = trans;
                     cachedColor = color;
+                    cachedBlockType = bType;
 
                     PreviewManager.hideNodePreviews(getId().toString());
-                    List<Coordinate> coordinates = new ArrayList<>();
+                    List<GhostBlockElement.BlockPlacement> placements = new ArrayList<>();
                     for (BlockPos pos : blocksList) {
-                        coordinates.add(new Coordinate(pos.getX(), pos.getY(), pos.getZ()));
+                        placements.add(new GhostBlockElement.BlockPlacement(
+                                new Vec3d(pos.getX(), pos.getY(), pos.getZ()),
+                                bType,
+                                trans
+                        ));
                     }
                     PreviewOptions options = new PreviewOptions()
                         .ghostBlockMode()
                         .setOpacity(trans);
-                    PreviewManager.showGhostBlocks(getId().toString(), coordinates, options);
+                    PreviewManager.showGhostBlockPlacements(getId().toString(), placements, options);
                 } catch (Exception e) {
                     statusMessage = "预览失败: " + e.getMessage();
                     System.err.println("GeometryViewerNode preview error: " + e.getMessage());
@@ -194,6 +203,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             cachedGeometrySignature = 0;
             cachedTransparency = -1f;
             cachedColor = null;
+            cachedBlockType = null;
             PreviewManager.hideNodePreviews(getId().toString());
             statusMessage = "等待输入...";
         }

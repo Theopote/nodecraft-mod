@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.preview;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.util.Coordinate;
+import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
 import net.minecraft.util.math.Vec3d;
 
 import java.util.List;
@@ -69,6 +70,13 @@ public class PreviewManager {
      */
     public static String showGhostBlocks(String nodeId, List<Coordinate> positions, PreviewOptions options) {
         return renderer.showPreview(nodeId, "ghost_block", positions, options);
+    }
+
+    /**
+     * 显示带方块类型的幽灵方块。
+     */
+    public static String showGhostBlockPlacements(String nodeId, List<GhostBlockElement.BlockPlacement> placements, PreviewOptions options) {
+        return renderer.showPreview(nodeId, "ghost_block", placements, options);
     }
 
     // ================= 区域框 API =================

@@ -30,6 +30,16 @@ import java.util.UUID;
     category = "inputs.selectors"
 )
 public class BlockTypeSelectorNode extends BaseCustomUINode {
+    private static final String[] QUICK_BLOCKS = {
+        "minecraft:stone",
+        "minecraft:cobblestone",
+        "minecraft:stone_bricks",
+        "minecraft:polished_andesite",
+        "minecraft:smooth_stone",
+        "minecraft:glass",
+        "minecraft:oak_planks",
+        "minecraft:quartz_block"
+    };
     
     @NodeProperty(displayName = "选中方块", category = "选择", order = 1,
                   description = "当前选中的方块ID")
@@ -107,6 +117,24 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.Text, 0.4f, 0.8f, 0.4f, 1.0f);
                 ImGui.text("▪ " + displayName);
                 ImGui.popStyleColor();
+                
+                l.addVerticalSpacing(getSmallPadding());
+                ImGui.text("Common:");
+                for (int i = 0; i < QUICK_BLOCKS.length; i++) {
+                    String quickBlock = QUICK_BLOCKS[i];
+                    String quickLabel = quickBlock.split(":", 2)[1];
+                    if (i > 0 && i % 2 != 0) {
+                        ImGui.sameLine();
+                    }
+                    if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
+                        setSelectedBlock(quickBlock);
+                        searchBuffer.set("");
+                        filteredBlocks.clear();
+                        showDropdown = false;
+                        lastSearchText = "";
+                        changed = true;
+                    }
+                }
                 
                 l.addVerticalSpacing(getSmallPadding());
                 
@@ -193,7 +221,15 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     
     private void updateFilteredList(String searchText) {
         filteredBlocks.clear();
-        if (searchText.isEmpty()) return;
+        if (searchText.isEmpty()) {
+            for (String quickBlock : QUICK_BLOCKS) {
+                if (allowModded || quickBlock.startsWith("minecraft:")) {
+                    filteredBlocks.add(quickBlock);
+                }
+            }
+            invalidateCache();
+            return;
+        }
         
         try {
             for (Identifier id : Registries.BLOCK.getIds()) {
@@ -235,6 +271,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_NAMESPACE, namespace);
         outputValues.put(OUTPUT_BLOCK_PATH, path);
         outputValues.put(OUTPUT_IS_MODDED, !namespace.equals("minecraft"));
+        syncOutputPorts();
     }
     
     public String getSelectedBlock() { return selectedBlock; }

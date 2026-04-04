@@ -9,11 +9,15 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
+import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import imgui.ImGui;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import imgui.flag.ImGuiCol;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
@@ -95,22 +99,39 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         boolean outline = (showOutlineObj instanceof Boolean) ? (Boolean) showOutlineObj : this.showOutline;
         String defaultBlockType = (blockTypeObj instanceof String) ? (String) blockTypeObj : "minecraft:stone";
 
-        List<?> blocksList = (blocksObj instanceof List && !((List<?>) blocksObj).isEmpty()) ? (List<?>) blocksObj : null;
+        Iterable<?> blocksList = null;
+        if (blocksObj instanceof BlockPosList blockPosList && !blockPosList.isEmpty()) {
+            blocksList = blockPosList;
+        } else if (blocksObj instanceof List<?> list && !list.isEmpty()) {
+            blocksList = list;
+        }
         List<?> coordsList = (coordsObj instanceof List && !((List<?>) coordsObj).isEmpty()) ? (List<?>) coordsObj : null;
 
         if (blocksList != null || coordsList != null) {
             try {
                 PreviewManager.hideNodePreviews(getId().toString());
-                List<Coordinate> coordinates = new ArrayList<>();
-                if (blocksList != null) { blockCount += blocksList.size(); }
-                if (coordsList != null) {
-                    for (Object obj : coordsList) {
-                        if (obj instanceof Coordinate) { coordinates.add((Coordinate) obj); blockCount++; }
+                List<GhostBlockElement.BlockPlacement> placements = new ArrayList<>();
+                if (blocksList != null) {
+                    for (Object obj : blocksList) {
+                        GhostBlockElement.BlockPlacement placement = toPlacement(obj, defaultBlockType, trans);
+                        if (placement != null) {
+                            placements.add(placement);
+                            blockCount++;
+                        }
                     }
                 }
-                if (!coordinates.isEmpty()) {
+                if (coordsList != null) {
+                    for (Object obj : coordsList) {
+                        GhostBlockElement.BlockPlacement placement = toPlacement(obj, defaultBlockType, trans);
+                        if (placement != null) {
+                            placements.add(placement);
+                            blockCount++;
+                        }
+                    }
+                }
+                if (!placements.isEmpty()) {
                     PreviewOptions options = new PreviewOptions().ghostBlockMode().setOpacity(trans).setDuration(dur);
-                    String newPreviewId = PreviewManager.showGhostBlocks(getId().toString(), coordinates, options);
+                    String newPreviewId = PreviewManager.showGhostBlockPlacements(getId().toString(), placements, options);
                     if (newPreviewId != null) success = true;
                 }
                 if (blockCount > 0) success = true;
@@ -121,6 +142,16 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_PREVIEW_ID_ID, previewIdStr);
         outputValues.put(OUTPUT_BLOCK_COUNT_ID, blockCount);
+    }
+
+    private GhostBlockElement.BlockPlacement toPlacement(Object obj, String blockType, float opacity) {
+        if (obj instanceof Coordinate coord) {
+            return new GhostBlockElement.BlockPlacement(new Vec3d(coord.getX(), coord.getY(), coord.getZ()), blockType, opacity);
+        }
+        if (obj instanceof BlockPos pos) {
+            return new GhostBlockElement.BlockPlacement(new Vec3d(pos.getX(), pos.getY(), pos.getZ()), blockType, opacity);
+        }
+        return null;
     }
 
     @Override
