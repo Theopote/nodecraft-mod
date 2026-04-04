@@ -124,7 +124,7 @@ public class BoxBlocksNode extends BaseNode {
 
         if (cornerAObj instanceof BlockPos cornerA && cornerBObj instanceof BlockPos cornerB) {
             RegionData region = new RegionData(cornerA.toImmutable(), cornerB.toImmutable());
-            return new BoxDefinition(region, null, null, 0.0d, 0.0d, 0.0d, false);
+            return new BoxDefinition(region, null, null, null, false);
         }
 
         Object centerObj = inputValues.get(INPUT_CENTER_ID);
