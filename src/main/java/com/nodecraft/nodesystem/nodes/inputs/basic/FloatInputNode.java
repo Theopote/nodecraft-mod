@@ -207,6 +207,7 @@ public class FloatInputNode extends BaseCustomUINode {
     
     private void updateOutput() {
         outputValues.put(OUTPUT_VALUE_ID, this.value);
+        syncOutputPorts();
     }
 
     private void updatePrecisionDependentValues() {

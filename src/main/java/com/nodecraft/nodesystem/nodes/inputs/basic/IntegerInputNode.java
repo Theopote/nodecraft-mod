@@ -247,6 +247,7 @@ public class IntegerInputNode extends BaseCustomUINode {
      */
     private void updateOutput() {
         outputValues.put(OUTPUT_VALUE_ID, this.value);
+        syncOutputPorts();
     }
     
     // --- Getters/Setters for Properties ---

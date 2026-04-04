@@ -1377,7 +1377,10 @@ public class PropertyPanelComponent implements EditorComponent {
                                 // 查找源端口并显示其数据
                                 for (IPort sourcePort : sourceNode.getOutputPorts()) {
                                     if (sourcePort.getId().equals(sourcePortId)) {
-                                        Object value = sourcePort.getValue();
+                                        Object value = sourceNode.getOutput(sourcePortId);
+                                        if (value == null) {
+                                            value = sourcePort.getValue();
+                                        }
                                         renderPortData(value, "输入数据"); // 递归调用，传递标签
                                         break;
                                     }

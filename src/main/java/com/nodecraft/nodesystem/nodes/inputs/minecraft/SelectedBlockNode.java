@@ -476,6 +476,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         // 方块实体检查
         boolean hasBlockEntity = checkHasBlockEntity(pickedBlockId, pickedBlockPosition);
         outputValues.put(OUTPUT_HAS_BLOCK_ENTITY, hasBlockEntity);
+        syncOutputPorts();
     }
     
     private void resetOutputs() {
@@ -488,6 +489,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         outputValues.put(OUTPUT_BLOCK_X_ID, 0);
         outputValues.put(OUTPUT_BLOCK_Y_ID, 0);
         outputValues.put(OUTPUT_BLOCK_Z_ID, 0);
+        syncOutputPorts();
     }
     
     // === 数据记录和验证结果 ===
