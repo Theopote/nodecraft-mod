@@ -17,6 +17,7 @@ public class SpatialPointNodes {
         registry.registerNode(new NodeInfo("spatial.points.block_to_point", "Block To Point", "", "spatial.points", BlockToPointNode.class));
         registry.registerNode(new NodeInfo("spatial.points.snap_point_to_block", "Snap Point To Block", "", "spatial.points", SnapPointToBlockNode.class));
         registry.registerNode(new NodeInfo("spatial.points.is_grid_point", "Is Grid Point", "", "spatial.points", IsGridPointNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.point_to_block_if_grid", "Point To Block If Grid", "", "spatial.points", PointToBlockIfGridNode.class));
         registry.registerNode(new NodeInfo("spatial.points.filter_grid_points", "Filter Grid Points", "", "spatial.points", FilterGridPointsNode.class));
         registry.registerNode(new NodeInfo("spatial.points.snap_point_list_to_blocks", "Snap Point List To Blocks", "", "spatial.points", SnapPointListToBlocksNode.class));
         registry.registerNode(new NodeInfo("spatial.points.offsetcoordinates", "Offset Coordinates", "", "spatial.points", OffsetCoordinatesNode.class));
