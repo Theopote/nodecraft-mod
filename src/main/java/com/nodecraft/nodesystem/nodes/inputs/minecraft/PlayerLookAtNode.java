@@ -8,9 +8,6 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.minecraft.PlayerAccessor;
 import com.nodecraft.nodesystem.util.Vector3;
-import imgui.ImGui;
-import imgui.type.ImBoolean;
-import imgui.type.ImFloat;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -53,10 +50,6 @@ public class PlayerLookAtNode extends BaseCustomUINode {
     private static final String OUTPUT_HIT_DISTANCE_ID = "output_hit_distance";
     private static final String OUTPUT_HAS_HIT_ID = "output_has_hit";
 
-    private transient ImFloat distanceFloat = new ImFloat(100.0f);
-    private transient ImBoolean includeEntitiesBool = new ImBoolean(true);
-    private transient ImBoolean includeFluidsBool = new ImBoolean(false);
-
     public PlayerLookAtNode() {
         super(UUID.randomUUID(), "inputs.minecraft.player_look_at");
 
@@ -92,62 +85,17 @@ public class PlayerLookAtNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        float frame = ImGui.getFrameHeight();
-        float small = getSmallPadding();
-        float medium = getMediumPadding();
-
-        float height = medium;
-        height += frame * 3.0f;
-        height += small * 3.0f;
-        height += medium;
-        return height;
+        return 0.0f;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 168f + getContentMargin();
+        return 0.0f;
     }
 
     @Override
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
-        return layout(zoom, layout -> {
-            boolean changed = false;
-            float availableWidth = layout.getAvailableContentWidth(width);
-
-            layout.addVerticalSpacing(getMediumPadding());
-
-            distanceFloat.set(maxDistance);
-            layout.pushFramePadding(4.0f, 3.0f);
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.sliderFloat("##player_look_distance", distanceFloat.getData(), 1.0f, 500.0f, "Distance %.0f")) {
-                float newDistance = distanceFloat.get();
-                if (newDistance != maxDistance) {
-                    setMaxDistance(newDistance);
-                    changed = true;
-                }
-            }
-            layout.popItemWidth();
-            layout.popStyleVar();
-
-            layout.addVerticalSpacing(getSmallPadding());
-
-            includeEntitiesBool.set(includeEntities);
-            if (ImGui.checkbox("Include Entities##player_look_entities", includeEntitiesBool)) {
-                setIncludeEntities(includeEntitiesBool.get());
-                changed = true;
-            }
-
-            layout.addVerticalSpacing(getSmallPadding());
-
-            includeFluidsBool.set(includeFluids);
-            if (ImGui.checkbox("Include Fluids##player_look_fluids", includeFluidsBool)) {
-                setIncludeFluids(includeFluidsBool.get());
-                changed = true;
-            }
-
-            layout.addVerticalSpacing(getSmallPadding());
-            return changed;
-        });
+        return false;
     }
 
     private void performRaycast(PlayerAccessor playerAccessor) {
