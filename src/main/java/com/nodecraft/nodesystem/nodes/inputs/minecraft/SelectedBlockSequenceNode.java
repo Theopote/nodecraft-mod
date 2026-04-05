@@ -292,12 +292,12 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     @Override
     protected float calculateUIHeight() {
         float frame = ImGui.getFrameHeight();
-        float small = getSmallPadding();
-        float edgeMargin = getMediumPadding();
+        float buttonGap = 1.0f;
+        float edgeMargin = getSmallPadding();
 
         float height = edgeMargin;
         height += frame * 3.0f;      // Start/Stop + Remove Last + Clear Sequence
-        height += small * 3.0f;
+        height += buttonGap * 2.0f;
         height += edgeMargin;
         return height;
     }
@@ -316,10 +316,10 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, layout -> {
             boolean changed = false;
-            float edgeMargin = layout.toPixels(getMediumPadding());
+            float edgeMargin = layout.toPixels(getSmallPadding());
             float buttonWidth = Math.max(0.0f, layout.toPixelsExact(width) - edgeMargin * 2.0f);
 
-            layout.addVerticalSpacing(getMediumPadding());
+            layout.addVerticalSpacing(getSmallPadding());
             float baseCursorX = ImGui.getCursorPosX();
 
             if (!pickingActive) {
@@ -340,7 +340,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 ImGui.popStyleColor(3);
             }
 
-            layout.addVerticalSpacing(getSmallPadding());
+            layout.addVerticalSpacing(1.0f);
 
             boolean hasBlocks = !pickedBlocks.isEmpty();
             if (hasBlocks) {
@@ -359,14 +359,14 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 ImGui.popStyleColor(4);
             }
 
-            layout.addVerticalSpacing(getSmallPadding());
+            layout.addVerticalSpacing(1.0f);
 
             ImGui.setCursorPosX(baseCursorX + edgeMargin);
             if (ImGui.button("Clear Sequence##clearSequence", buttonWidth, 0)) {
                 clearSequence();
                 changed = true;
             }
-            layout.addVerticalSpacing(getMediumPadding());
+            layout.addVerticalSpacing(getSmallPadding());
             return changed;
         });
     }
