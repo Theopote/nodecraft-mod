@@ -255,7 +255,7 @@ public class PortPositionCalculator {
             finalUnscaledNodeHeight += unscaledPortsRegionHeight + NodeRenderConstants.NODE_VERTICAL_PADDING;
         }
         if (hasCustomUI && customUIUnscaledHeight > 0) {
-            finalUnscaledNodeHeight += customUIUnscaledHeight + NodeRenderConstants.NODE_VERTICAL_PADDING;
+            finalUnscaledNodeHeight += customUIUnscaledHeight + NodeRenderConstants.NODE_HORIZONTAL_PADDING;
         }
 
         pos.setSize(finalUnscaledNodeWidth, finalUnscaledNodeHeight);

@@ -292,13 +292,14 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     @Override
     protected float calculateUIHeight() {
         float frame = ImGui.getFrameHeight();
-        float buttonGap = 1.0f;
-        float edgeMargin = getSmallPadding();
+        float buttonGap = 0.5f;
+        float topMargin = getSmallPadding();
+        float bottomMargin = getSmallPadding();
 
-        float height = edgeMargin;
-        height += frame * 3.0f;      // Start/Stop + Remove Last + Clear Sequence
+        float height = topMargin;
+        height += frame * 3.0f; // Start/Stop + Remove Last + Clear Sequence
         height += buttonGap * 2.0f;
-        height += edgeMargin;
+        height += bottomMargin;
         return height;
     }
 
@@ -340,7 +341,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 ImGui.popStyleColor(3);
             }
 
-            layout.addVerticalSpacing(1.0f);
+            layout.addVerticalSpacing(0.5f);
 
             boolean hasBlocks = !pickedBlocks.isEmpty();
             if (hasBlocks) {
@@ -359,7 +360,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 ImGui.popStyleColor(4);
             }
 
-            layout.addVerticalSpacing(1.0f);
+            layout.addVerticalSpacing(0.5f);
 
             ImGui.setCursorPosX(baseCursorX + edgeMargin);
             if (ImGui.button("Clear Sequence##clearSequence", buttonWidth, 0)) {
