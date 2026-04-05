@@ -329,22 +329,23 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        float height = getMediumPadding();
-        height += ImGui.getTextLineHeight();
-        height += getSmallPadding();
-        height += ImGui.getTextLineHeight();
-        height += getSmallPadding();
-        for (int i = 0; i < 5; i++) {
-            height += ImGui.getFrameHeight();
-            height += getSmallPadding();
-        }
-        height += getMediumPadding();
+        float textLine = ImGui.getTextLineHeight();
+        float frame = ImGui.getFrameHeight();
+        float small = getSmallPadding();
+        float medium = getMediumPadding();
+
+        float height = medium;
+        height += textLine;      // compact status + block count summary
+        height += small;
+        height += frame * 4.0f;  // block type + preview + solid + action
+        height += small * 4.0f;
+        height += medium;
         return height;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 220f + getContentMargin();
+        return 196f + getContentMargin();
     }
 
     @Override
@@ -357,11 +358,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
             int statusColor = placed ? 0xFF44DD44 : (previewEnabled ? 0xFF44AADD : 0xFF888888);
             ImGui.pushStyleColor(ImGuiCol.Text, statusColor);
-            ImGui.text(statusMessage);
+            ImGui.text(statusMessage + "  |  " + lastBlockCount + " blocks");
             ImGui.popStyleColor();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImGui.text("Blocks: " + lastBlockCount);
             layout.addVerticalSpacing(getSmallPadding());
 
             ensureBlockTypeBuffer();
@@ -380,9 +378,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 setPreviewEnabled(previewEnabledValue.get());
                 changed = true;
             }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImGui.textDisabled("Preview Mode: Tracked temporary blocks");
             layout.addVerticalSpacing(getSmallPadding());
 
             ImBoolean solidValue = new ImBoolean(previewSolidGeometry);
