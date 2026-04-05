@@ -129,6 +129,10 @@ public class PreviewManager {
         return renderer.showPreview(nodeId, "vectors", vectorData, options);
     }
 
+    public static String showPlaneGrid(String nodeId, PlaneGridPreviewData planeGridData, PreviewOptions options) {
+        return renderer.showPreview(nodeId, "plane_grid", planeGridData, options);
+    }
+
     // ================= 变换 Gizmo API =================
 
     /**
@@ -166,6 +170,10 @@ public class PreviewManager {
      */
     public static void clearAllPreviews() {
         renderer.clearAllPreviews();
+    }
+
+    public static int getActivePreviewCount() {
+        return renderer.getActivePreviewCount();
     }
 
     /**

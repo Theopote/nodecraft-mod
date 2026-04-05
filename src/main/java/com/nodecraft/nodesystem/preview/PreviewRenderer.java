@@ -84,6 +84,7 @@ public class PreviewRenderer {
         registerElementType("semi_transparent_block", GhostBlockElement::new);
         registerElementType("region_box", RegionBoxElement::new);
         registerElementType("spatial_shape", RegionBoxElement::new);
+        registerElementType("plane_grid", PlaneGridElement::new);
         registerElementType("points", PointsElement::new);
         registerElementType("vectors", VectorsElement::new);
         registerElementType("arrows", VectorsElement::new);
@@ -243,6 +244,10 @@ public class PreviewRenderer {
     /**
      * 检查某个节点是否有活跃预览
      */
+    public int getActivePreviewCount() {
+        return activeElements.size();
+    }
+
     public boolean isAnyPreviewActive(String ownerNodeId) {
         List<String> previews = nodeToPreviewsMap.get(ownerNodeId);
         return previews != null && !previews.isEmpty();
