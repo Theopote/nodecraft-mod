@@ -95,69 +95,17 @@ public class PrintToChatNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        float h = getMediumPadding();
-        h += ImGui.getFrameHeight();       // 前缀输入
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // includeNodeName
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // includeDataType
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // autoFormat
-        h += getSmallPadding();
-        h += ImGui.getTextLineHeight();    // 颜色标签
-        h += getMediumPadding();
-        return h;
+        return 0f;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 180f + getContentMargin();
+        return 0f;
     }
 
     @Override
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
-        return layout(zoom, l -> {
-            boolean changed = false;
-            try {
-                float aw = l.getAvailableContentWidth(width);
-                l.addVerticalSpacing(getMediumPadding());
-
-                // 前缀输入
-                ensurePrefixBuffer();
-                l.pushFramePadding(4.0f, 3.0f);
-                l.setItemWidth(aw / zoom);
-                if (ImGui.inputTextWithHint("##prefix", "前缀...", prefixBuffer)) {
-                    setPrefix(prefixBuffer.get());
-                    changed = true;
-                }
-                l.popItemWidth();
-                l.popStyleVar();
-
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean inBool = new ImBoolean(includeNodeName);
-                if (ImGui.checkbox("包含节点名##inn", inBool)) { setIncludeNodeName(inBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean idBool = new ImBoolean(includeDataType);
-                if (ImGui.checkbox("包含类型##idt", idBool)) { setIncludeDataType(idBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean afBool = new ImBoolean(autoFormat);
-                if (ImGui.checkbox("自动格式化##af", afBool)) { setAutoFormat(afBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                // 颜色标签
-                ImGui.pushStyleColor(ImGuiCol.Text, 0xFFFFCC44);
-                ImGui.text("颜色: " + textColor);
-                ImGui.popStyleColor();
-
-                l.addVerticalSpacing(getMediumPadding());
-            } catch (Exception e) {
-                System.err.println("PrintToChatNode UI渲染失败: " + e.getMessage());
-            }
-            return changed;
-        });
+        return false;
     }
 
     private void ensurePrefixBuffer() {

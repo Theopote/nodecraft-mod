@@ -107,21 +107,13 @@ public class ExecutionTimerNode extends BaseCustomUINode {
         h += ImGui.getTextLineHeight();    // 平均/总计
         h += getSmallPadding();
         h += ImGui.getTextLineHeight();    // 执行次数
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // autoReset
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // showMilliseconds
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // printToConsole
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();       // precision slider
         h += getMediumPadding();
         return h;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 190f + getContentMargin();
+        return 168f + getContentMargin();
     }
 
     @Override
@@ -129,7 +121,6 @@ public class ExecutionTimerNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float aw = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
 
                 // === 时间统计显示 ===
@@ -147,31 +138,6 @@ public class ExecutionTimerNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.Text, 0xFFAAAACC);
                 ImGui.text("执行次数: " + executionCount);
                 ImGui.popStyleColor();
-                l.addVerticalSpacing(getSmallPadding());
-
-                // === 复选框 ===
-                ImBoolean arBool = new ImBoolean(autoReset);
-                if (ImGui.checkbox("自动重置##ar", arBool)) { setAutoReset(arBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean smBool = new ImBoolean(showMilliseconds);
-                if (ImGui.checkbox("显示毫秒##sm", smBool)) { setShowMilliseconds(smBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean pcBool = new ImBoolean(printToConsole);
-                if (ImGui.checkbox("打印到控制台##pc", pcBool)) { setPrintToConsole(pcBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                // === 精度滑条 ===
-                int[] prec = {precision};
-                l.pushFramePadding(4.0f, 3.0f);
-                l.setItemWidth(aw / zoom);
-                if (ImGui.sliderInt("##prec", prec, 0, 6, "精度: %d")) {
-                    setPrecision(prec[0]); changed = true;
-                }
-                l.popItemWidth();
-                l.popStyleVar();
-
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
                 System.err.println("ExecutionTimerNode UI渲染失败: " + e.getMessage());
