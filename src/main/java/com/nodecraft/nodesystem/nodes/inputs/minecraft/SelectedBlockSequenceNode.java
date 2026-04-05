@@ -8,6 +8,9 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.interaction.IBlockPickerCallback;
 import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
+import com.nodecraft.nodesystem.preview.PreviewManager;
+import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import imgui.ImGui;
@@ -37,6 +40,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private static final String OUTPUT_FIRST_ID = "output_first";
     private static final String OUTPUT_LAST_ID = "output_last";
     private static final String OUTPUT_COUNT_ID = "output_count";
+    private static final String OUTPUT_SEGMENT_COUNT_ID = "output_segment_count";
+    private static final String OUTPUT_IS_CLOSED_ID = "output_is_closed";
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     private final List<Coordinate> pickedBlocks = new ArrayList<>();
@@ -46,6 +51,9 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private float maxDistance = 100.0f;
     private boolean includeFluids = false;
     private boolean allowDuplicates = false;
+    private boolean autoPreviewPath = true;
+    private boolean closePath = false;
+    private String previewPathColor = "#FFD933";
 
     public SelectedBlockSequenceNode() {
         super(UUID.randomUUID(), "inputs.minecraft.selected_block_sequence");
@@ -57,6 +65,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         addOutputPort(new BasePort(OUTPUT_FIRST_ID, "First", "First picked block in the sequence", NodeDataType.COORDINATE, this));
         addOutputPort(new BasePort(OUTPUT_LAST_ID, "Last", "Last picked block in the sequence", NodeDataType.COORDINATE, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of picked blocks in the sequence", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_SEGMENT_COUNT_ID, "Segment Count", "Number of path segments implied by the current ordered sequence", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_IS_CLOSED_ID, "Is Closed", "Whether the ordered sequence is currently treated as a closed path", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether the sequence currently contains at least one picked block", NodeDataType.BOOLEAN, this));
 
         updateOutputs();
@@ -82,6 +92,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             }
         }
         updateOutputs();
+        updatePathPreview();
     }
 
     @Override
@@ -100,12 +111,15 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         if (pickingActive) {
             pendingRepick = true;
         }
+
+        updatePathPreview();
     }
 
     @Override
     public void onPickingCancelled() {
         pickingActive = false;
         pendingRepick = false;
+        updatePathPreview();
         markDirty();
     }
 
@@ -120,6 +134,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     public void clearSequence() {
         pickedBlocks.clear();
         updateOutputs();
+        updatePathPreview();
         markDirty();
     }
 
@@ -129,6 +144,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         }
         pickedBlocks.remove(pickedBlocks.size() - 1);
         updateOutputs();
+        updatePathPreview();
         markDirty();
     }
 
@@ -136,6 +152,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = true;
         pendingRepick = false;
         requestNextPick();
+        updatePathPreview();
         markDirty();
     }
 
@@ -143,6 +160,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = false;
         pendingRepick = false;
         NodeEditorInteractionManager.getInstance().cancelBlockPick();
+        updatePathPreview();
         markDirty();
     }
 
@@ -153,21 +171,20 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private void updateOutputs() {
         List<Coordinate> coordinates = new ArrayList<>(pickedBlocks);
         BlockPosList blocks = new BlockPosList();
-        List<PointData> pointList = new ArrayList<>(pickedBlocks.size());
-        List<Vector3d> centers = new ArrayList<>(pickedBlocks.size());
+        List<PointData> pointList = new ArrayList<>();
+        List<Vector3d> centers = new ArrayList<>();
 
         for (Coordinate coordinate : pickedBlocks) {
-            blocks.add(new BlockPos(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
-            pointList.add(new PointData(
-                coordinate.getX() + 0.5d,
-                coordinate.getY() + 0.5d,
-                coordinate.getZ() + 0.5d
-            ));
-            centers.add(new Vector3d(
-                coordinate.getX() + 0.5d,
-                coordinate.getY() + 0.5d,
-                coordinate.getZ() + 0.5d
-            ));
+            appendOutputs(coordinate, blocks, pointList, centers);
+        }
+
+        if (closePath && pickedBlocks.size() >= 2) {
+            Coordinate first = pickedBlocks.get(0);
+            Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
+            if (!first.equals(last)) {
+                coordinates.add(first);
+                appendOutputs(first, blocks, pointList, centers);
+            }
         }
 
         outputValues.put(OUTPUT_COORDINATES_ID, coordinates);
@@ -177,7 +194,61 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         outputValues.put(OUTPUT_FIRST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(0));
         outputValues.put(OUTPUT_LAST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(pickedBlocks.size() - 1));
         outputValues.put(OUTPUT_COUNT_ID, pickedBlocks.size());
+        outputValues.put(OUTPUT_SEGMENT_COUNT_ID, Math.max(0, coordinates.size() - 1));
+        outputValues.put(OUTPUT_IS_CLOSED_ID, closePath && pickedBlocks.size() >= 2);
         outputValues.put(OUTPUT_VALID_ID, !pickedBlocks.isEmpty());
+    }
+
+    private void updatePathPreview() {
+        PreviewManager.hideNodePreviews(getId().toString());
+
+        if (!autoPreviewPath || pickedBlocks.size() < 2) {
+            return;
+        }
+
+        List<PointData> pointList = new ArrayList<>();
+        for (Coordinate coordinate : pickedBlocks) {
+            pointList.add(new PointData(
+                coordinate.getX() + 0.5d,
+                coordinate.getY() + 0.5d,
+                coordinate.getZ() + 0.5d
+            ));
+        }
+        if (closePath) {
+            Coordinate first = pickedBlocks.get(0);
+            Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
+            if (!first.equals(last)) {
+                pointList.add(new PointData(
+                    first.getX() + 0.5d,
+                    first.getY() + 0.5d,
+                    first.getZ() + 0.5d
+                ));
+            }
+        }
+
+        Color color = Color.fromHex(previewPathColor);
+        PreviewOptions options = new PreviewOptions()
+            .setColor(color.getRed(), color.getGreen(), color.getBlue())
+            .setLineWidth(1.5f)
+            .setDuration(30);
+        options.showArrows = true;
+        options.arrowSize = 0.2f;
+
+        PreviewManager.showPaths(getId().toString(), pointList, options);
+    }
+
+    private void appendOutputs(Coordinate coordinate, BlockPosList blocks, List<PointData> pointList, List<Vector3d> centers) {
+        blocks.add(new BlockPos(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
+        pointList.add(new PointData(
+            coordinate.getX() + 0.5d,
+            coordinate.getY() + 0.5d,
+            coordinate.getZ() + 0.5d
+        ));
+        centers.add(new Vector3d(
+            coordinate.getX() + 0.5d,
+            coordinate.getY() + 0.5d,
+            coordinate.getZ() + 0.5d
+        ));
     }
 
     @Override
@@ -220,10 +291,23 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
             if (ImGui.checkbox("Allow Duplicates##allowDuplicates", allowDuplicates)) {
                 allowDuplicates = !allowDuplicates;
+                updatePathPreview();
                 changed = true;
             }
             if (ImGui.checkbox("Include Fluids##includeFluids", includeFluids)) {
                 includeFluids = !includeFluids;
+                changed = true;
+            }
+
+            if (ImGui.checkbox("Auto Preview Path##autoPreviewPath", autoPreviewPath)) {
+                autoPreviewPath = !autoPreviewPath;
+                updatePathPreview();
+                changed = true;
+            }
+            if (ImGui.checkbox("Close Path##closePath", closePath)) {
+                closePath = !closePath;
+                updateOutputs();
+                updatePathPreview();
                 changed = true;
             }
 
@@ -233,6 +317,20 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             ImGui.text("Pick Distance: " + String.format("%.1f", maxDistance));
             if (ImGui.sliderFloat("##pickDistance", distance, 1.0f, 300.0f)) {
                 maxDistance = distance[0];
+                changed = true;
+            }
+
+            ImGui.text("Preview Path Color");
+            ImGui.textDisabled(previewPathColor);
+            if (ImGui.button("Yellow##pathColorYellow", availableWidth / 2.0f - 2.0f, 0)) {
+                previewPathColor = "#FFD933";
+                updatePathPreview();
+                changed = true;
+            }
+            ImGui.sameLine();
+            if (ImGui.button("Cyan##pathColorCyan", availableWidth / 2.0f - 2.0f, 0)) {
+                previewPathColor = "#4DE3FF";
+                updatePathPreview();
                 changed = true;
             }
 
@@ -290,6 +388,9 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         state.put("maxDistance", maxDistance);
         state.put("includeFluids", includeFluids);
         state.put("allowDuplicates", allowDuplicates);
+        state.put("autoPreviewPath", autoPreviewPath);
+        state.put("closePath", closePath);
+        state.put("previewPathColor", previewPathColor);
 
         List<Map<String, Integer>> blocks = new ArrayList<>(pickedBlocks.size());
         for (Coordinate coordinate : pickedBlocks) {
@@ -320,6 +421,15 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         if (map.get("allowDuplicates") instanceof Boolean bool) {
             allowDuplicates = bool;
         }
+        if (map.get("autoPreviewPath") instanceof Boolean bool) {
+            autoPreviewPath = bool;
+        }
+        if (map.get("closePath") instanceof Boolean bool) {
+            closePath = bool;
+        }
+        if (map.get("previewPathColor") instanceof String value) {
+            previewPathColor = value;
+        }
         if (map.get("pickedBlocks") instanceof List<?> list) {
             for (Object item : list) {
                 if (item instanceof Map<?, ?> blockMap) {
@@ -336,11 +446,13 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = false;
         pendingRepick = false;
         updateOutputs();
+        updatePathPreview();
     }
 
     public void onNodeRemoved() {
         if (pickingActive) {
             NodeEditorInteractionManager.getInstance().cancelBlockPick();
         }
+        PreviewManager.hideNodePreviews(getId().toString());
     }
 }
