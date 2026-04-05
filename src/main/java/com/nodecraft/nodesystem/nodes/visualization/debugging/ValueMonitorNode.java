@@ -56,8 +56,6 @@ public class ValueMonitorNode extends BaseCustomUINode {
     @Override
     protected float calculateUIHeight() {
         float h = getMediumPadding();
-        h += ImGui.getTextLineHeight();           // 标题行
-        h += getSmallPadding();
         h += ImGui.getTextLineHeight() * 4;       // 内容区高度（4行文本高度，和PanelNode一致）
         h += getMediumPadding();
         return h;
@@ -65,7 +63,7 @@ public class ValueMonitorNode extends BaseCustomUINode {
 
     @Override
     protected float calculateMinUIWidth() {
-        return 220f + getContentMargin();
+        return 188f + getContentMargin();
     }
 
     @Override
@@ -74,18 +72,12 @@ public class ValueMonitorNode extends BaseCustomUINode {
             try {
                 float aw = l.getAvailableContentWidth(width);
 
-                // 标题：像“小电视”的顶栏
-                ImGui.pushStyleColor(ImGuiCol.Text, 0xFFAAAAAA);
-                ImGui.text("数据预览");
-                ImGui.popStyleColor();
-                l.addVerticalSpacing(ZoomHelper.applyZoom(getSmallPadding(), zoom));
-
                 // “屏幕”区域：深色背景 + 边框，像小电视
                 // 计算内容区高度，和calculateUIHeight保持一致，所有padding等都缩放
                 float scaledMediumPad = ZoomHelper.applyZoom(getMediumPadding(), zoom);
                 float scaledSmallPad = ZoomHelper.applyZoom(getSmallPadding(), zoom);
                 float scaledTextLine = ImGui.getTextLineHeight() * zoom;
-                float screenH = height - scaledMediumPad * 2 - scaledTextLine - scaledSmallPad;
+                float screenH = height - scaledMediumPad * 2;
                 if (screenH < scaledTextLine * 2) screenH = scaledTextLine * 2; // 最小高度保护
                 ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.08f, 0.08f, 0.10f, 0.98f);
                 ImGui.pushStyleVar(ImGuiStyleVar.ChildBorderSize, ZoomHelper.applyZoom(1.2f, zoom));

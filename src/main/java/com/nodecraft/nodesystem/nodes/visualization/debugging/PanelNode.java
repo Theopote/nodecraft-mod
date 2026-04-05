@@ -91,21 +91,13 @@ public class PanelNode extends BaseCustomUINode {
     protected float calculateUIHeight() {
         float h = getMediumPadding();
         h += ImGui.getTextLineHeight() * 4; // 数据预览区（4行）
-        h += getSmallPadding();
-        h += ImGui.getTextLineHeight();     // 类型/长度信息行
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();        // useFormatting
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();        // autoRefresh
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();        // wrapText
         h += getMediumPadding();
         return h;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 200f + getContentMargin();
+        return 176f + getContentMargin();
     }
 
     @Override
@@ -131,29 +123,6 @@ public class PanelNode extends BaseCustomUINode {
                     }
                 }
                 ImGui.popStyleColor();
-
-                l.addVerticalSpacing(getSmallPadding());
-
-                // === 类型和长度信息 ===
-                ImGui.pushStyleColor(ImGuiCol.Text, 0xFF888888);
-                Object dataObj = inputValues.get(INPUT_DATA_ID);
-                String info = getDataTypeName(dataObj) + " | " + panelContent.length() + " 字符";
-                ImGui.text(info);
-                ImGui.popStyleColor();
-
-                l.addVerticalSpacing(getSmallPadding());
-
-                // === 复选框 ===
-                ImBoolean fmtBool = new ImBoolean(useFormatting);
-                if (ImGui.checkbox("格式化##fmt", fmtBool)) { setUseFormatting(fmtBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean arBool = new ImBoolean(autoRefresh);
-                if (ImGui.checkbox("自动刷新##ar", arBool)) { setAutoRefresh(arBool.get()); changed = true; }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean wtBool = new ImBoolean(wrapText);
-                if (ImGui.checkbox("自动换行##wt", wtBool)) { setWrapText(wtBool.get()); changed = true; }
 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
