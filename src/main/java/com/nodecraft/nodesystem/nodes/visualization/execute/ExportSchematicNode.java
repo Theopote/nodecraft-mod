@@ -150,12 +150,12 @@ public class ExportSchematicNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        return 40f;
+        return 0f;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 180f;
+        return 0f;
     }
 
     @Override

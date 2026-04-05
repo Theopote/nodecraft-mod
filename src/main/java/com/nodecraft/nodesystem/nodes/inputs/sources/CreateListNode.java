@@ -62,18 +62,14 @@ public class CreateListNode extends BaseCustomUINode {
     @Override
     protected float calculateUIHeight() {
         float height = getMediumPadding();
-        height += ImGui.getTextLineHeight(); // 标题
-        height += getSmallPadding();
         height += ImGui.getFrameHeight(); // +/- 按钮行
-        height += getSmallPadding();
-        height += ImGui.getTextLineHeight(); // 信息行
         height += getMediumPadding();
         return height;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 160f + getContentMargin();
+        return 132f + getContentMargin();
     }
 
     @Override
@@ -83,13 +79,6 @@ public class CreateListNode extends BaseCustomUINode {
             try {
                 float availableWidth = l.getAvailableContentWidth(width);
                 l.addVerticalSpacing(getMediumPadding());
-                
-                // === 输入数量显示 ===
-                ImGui.pushStyleColor(ImGuiCol.Text, 0.6f, 0.8f, 1.0f, 1.0f);
-                ImGui.text("输入端口: " + inputCount);
-                ImGui.popStyleColor();
-                
-                l.addVerticalSpacing(getSmallPadding());
                 
                 // === +/- 按钮 ===
                 float buttonWidth = ZoomHelper.applyZoom(40f, zoom);
@@ -127,13 +116,6 @@ public class CreateListNode extends BaseCustomUINode {
                 if (!canAdd) {
                     ImGui.popStyleColor(2);
                 }
-                
-                l.addVerticalSpacing(getSmallPadding());
-                
-                // === 类型信息 ===
-                ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 1.0f);
-                ImGui.text(allowDifferentTypes ? "混合类型" : "同类型");
-                ImGui.popStyleColor();
                 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
