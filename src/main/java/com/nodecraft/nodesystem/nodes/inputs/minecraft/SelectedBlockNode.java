@@ -951,11 +951,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         }
         
         // 设置区域高度（可折叠）
-        baseHeight += 25f; // 设置标题行
-        if (settingsSectionExpanded) {
-            // 输入端口状态文本 + 两个复选框 + 距离文本/滑块 + 间距
-            baseHeight += 92f;
-        }
+        baseHeight += 0f; // settings moved to the property panel
         
         // 添加间距
         baseHeight += 20f; // 各种小间距的总和
@@ -1166,8 +1162,8 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             }
 
             // === 3. 高级设置区 ===
-            boolean settingsExpandedNow = ImGui.collapsingHeader("设置##settings");
-            settingsSectionExpanded = syncExpandableUiState(settingsSectionExpanded, settingsExpandedNow);
+            boolean settingsExpandedNow = false;
+            settingsSectionExpanded = false;
             if (settingsExpandedNow) {
                 addVerticalSpacing(getSmallPadding(), zoom);
                 
@@ -1701,19 +1697,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             updateGhostBlockPreview();
         }
     }
-    
-    /**
-     * 获取节点预览状态的详细信息（用于调试）
-     * 包含游戏内可见性状态
-     */
-    public String getPreviewStateInfo() {
-        boolean isVisibleInGame = isNodeVisibleInGame();
-        return String.format("SelectedBlockNode[%s] 预览状态: isVisibleInGame=%s, showGhostBlock=%s, hasPickedBlock=%s, " +
-                "position=%s, blockId=%s, previewId=%s", 
-                getId().toString().substring(0, 8), 
-                isVisibleInGame, showGhostBlock, hasPickedBlock, pickedBlockPosition, pickedBlockId, currentGhostBlockPreviewId);
-    }
-    
+
     // === 新增的辅助方法 ===
     
     /**
