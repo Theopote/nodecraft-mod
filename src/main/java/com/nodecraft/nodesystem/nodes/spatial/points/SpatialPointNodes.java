@@ -15,6 +15,7 @@ public class SpatialPointNodes {
         NodeRegistry registry = NodeRegistry.getInstance();
 
         registry.registerNode(new NodeInfo("spatial.points.block_to_point", "Block To Point", "Convert a block coordinate into a geometric point for geometry workflows.", "spatial.points", BlockToPointNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.project_point_to_plane", "Project Point To Plane", "Project a geometric point onto a plane.", "spatial.points", ProjectPointToPlaneNode.class));
         registry.registerNode(new NodeInfo("spatial.points.snap_point_to_block", "Snap Point To Block", "Explicitly snap a geometric point onto the block grid.", "spatial.points", SnapPointToBlockNode.class));
         registry.registerNode(new NodeInfo("spatial.points.is_grid_point", "Is Grid Point", "Check whether a point is already on the block grid.", "spatial.points", IsGridPointNode.class));
         registry.registerNode(new NodeInfo("spatial.points.point_to_block_if_grid", "Point To Block If Grid", "Strictly convert only grid-aligned points into block coordinates.", "spatial.points", PointToBlockIfGridNode.class));

@@ -67,16 +67,17 @@ public class NodeLibraryComponent implements EditorComponent {
 
         Map<String, Integer> spatialPointsOrder = new HashMap<>();
         spatialPointsOrder.put("spatial.points.block_to_point", 0);
-        spatialPointsOrder.put("spatial.points.is_grid_point", 1);
-        spatialPointsOrder.put("spatial.points.point_to_block_if_grid", 2);
-        spatialPointsOrder.put("spatial.points.snap_point_to_block", 3);
-        spatialPointsOrder.put("spatial.points.filter_grid_points", 4);
-        spatialPointsOrder.put("spatial.points.snap_point_list_to_blocks", 5);
-        spatialPointsOrder.put("spatial.points.offsetcoordinates", 6);
-        spatialPointsOrder.put("spatial.points.rotatecoordinates", 7);
-        spatialPointsOrder.put("spatial.points.scalecoordinates", 8);
-        spatialPointsOrder.put("spatial.points.mirrorcoordinates", 9);
-        spatialPointsOrder.put("spatial.points.randomizecoordinates", 10);
+        spatialPointsOrder.put("spatial.points.project_point_to_plane", 1);
+        spatialPointsOrder.put("spatial.points.is_grid_point", 2);
+        spatialPointsOrder.put("spatial.points.point_to_block_if_grid", 3);
+        spatialPointsOrder.put("spatial.points.snap_point_to_block", 4);
+        spatialPointsOrder.put("spatial.points.filter_grid_points", 5);
+        spatialPointsOrder.put("spatial.points.snap_point_list_to_blocks", 6);
+        spatialPointsOrder.put("spatial.points.offsetcoordinates", 7);
+        spatialPointsOrder.put("spatial.points.rotatecoordinates", 8);
+        spatialPointsOrder.put("spatial.points.scalecoordinates", 9);
+        spatialPointsOrder.put("spatial.points.mirrorcoordinates", 10);
+        spatialPointsOrder.put("spatial.points.randomizecoordinates", 11);
         categoryOrder.put("spatial.points", spatialPointsOrder);
 
         return categoryOrder;
