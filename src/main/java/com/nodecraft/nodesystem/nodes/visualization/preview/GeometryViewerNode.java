@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.visualization.preview;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
@@ -12,6 +13,7 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewBackend;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
@@ -37,7 +39,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "visualization.preview.geometry_viewer",
     displayName = "Geometry Viewer",
-    description = "Previews geometry and can commit the current result into the world.",
+    description = "Previews geometry visually and can commit the current result into the world.",
     category = "visualization.preview"
 )
 public class GeometryViewerNode extends BaseCustomUINode {
@@ -77,9 +79,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     private boolean placementRequested = false;
     private boolean placementPendingLogged = false;
-    private boolean trackedPreviewDeferredLogged = false;
     private int lastBlockCount = 0;
-    private String statusMessage = "等待输入...";
+    private String statusMessage = "Waiting for input...";
 
     private int cachedGeometrySignature = 0;
     private float cachedTransparency = -1f;
@@ -128,7 +129,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     @Override
     public String getDescription() {
-        return "预览几何体，并且只有点击 Finish Build 后才会真正构建到世界中。";
+        return "Previews geometry visually and only builds into the world after clicking Finish Build.";
     }
 
     @Override
@@ -168,18 +169,13 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
             if (previewDirty) {
                 placed = false;
-
-                trackedPreviewDeferredLogged = false;
                 refreshGhostPreview(context, blocksList, effectiveBlockType, trans);
                 cachePreviewState(geometrySignature, trans, color, effectiveBlockType);
-                statusMessage = "预览中: " + blockCount + " 个方块";
-            } else {
-                statusMessage = "预览中: " + blockCount + " 个方块";
             }
+            statusMessage = "Previewing " + blockCount + " blocks";
         } else {
-            trackedPreviewDeferredLogged = false;
             clearAllPreviewState(context);
-            statusMessage = previewEnabled ? "等待输入..." : "预览已关闭";
+            statusMessage = previewEnabled ? "Waiting for input..." : "Preview disabled";
         }
 
         if (placementRequested && blocksList != null && !blocksList.isEmpty()) {
@@ -201,7 +197,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 );
                 BlockState targetState = resolveBlockState(effectiveBlockType);
                 if (targetState == null) {
-                    statusMessage = "无效方块类型: " + effectiveBlockType;
+                    statusMessage = "Invalid block type: " + effectiveBlockType;
                     NodeCraft.LOGGER.warn("GeometryViewerNode[{}] invalid block type for placement: {}", getId(), effectiveBlockType);
                 } else {
                     placeBlocks(context, blocksList, targetState);
@@ -231,7 +227,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
                                      String effectiveBlockType,
                                      float trans) {
         if (context != null && context.getWorld() != null) {
-            com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
+            TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
         }
 
         PreviewManager.hideNodePreviews(getId().toString());
@@ -255,7 +251,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
     }
 
     private void clearAllPreviewState(@Nullable ExecutionContext context) {
-        trackedPreviewDeferredLogged = false;
         cachedGeometrySignature = 0;
         cachedTransparency = -1f;
         cachedColor = null;
@@ -263,7 +258,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedPreviewBackend = null;
         PreviewManager.hideNodePreviews(getId().toString());
         if (context != null && context.getWorld() != null) {
-            int cleared = com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
+            int cleared = TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
             if (cleared > 0) {
                 NodeCraft.LOGGER.debug("GeometryViewerNode[{}] cleared {} tracked preview blocks", getId(), cleared);
             }
@@ -286,7 +281,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
                     1000,
                     null
             );
-            statusMessage = "已加入构建队列 (" + positions.size() + " 个方块)";
+            statusMessage = "Queued placement task (" + positions.size() + " blocks, async)";
             placed = true;
             NodeCraft.LOGGER.info("GeometryViewerNode[{}] queued async placement for {} blocks", getId(), positions.size());
             return;
@@ -303,7 +298,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         }
 
         placed = true;
-        statusMessage = "已放置 " + successCount + "/" + positions.size() + " 个方块";
+        statusMessage = "Placed " + successCount + "/" + positions.size() + " blocks";
         NodeCraft.LOGGER.info(
                 "GeometryViewerNode[{}] completed direct placement: placed={}, requested={}, mode={}",
                 getId(), successCount, positions.size(), placementMode
@@ -413,7 +408,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             }
             layout.addVerticalSpacing(getSmallPadding());
 
-            ImGui.textDisabled("预览模式: 纯视觉预览");
+            ImGui.textDisabled("Preview Mode: Visual only");
             layout.addVerticalSpacing(getSmallPadding());
 
             ImBoolean solidValue = new ImBoolean(previewSolidGeometry);
@@ -433,10 +428,11 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFFCC7733);
             }
 
-            String buttonText = placed ? "已构建" : "Finish Build";
+            String buttonText = placed ? "Built" : "Finish Build";
             if (ImGui.button(buttonText, availableWidth, 0)) {
                 placementRequested = true;
                 placed = false;
+                requestEditorPreviewRefresh();
                 changed = true;
             }
             ImGui.popStyleColor(3);
@@ -581,6 +577,22 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (recordUndo != value) {
             recordUndo = value;
             markDirty();
+        }
+    }
+
+    @Override
+    public void markDirty() {
+        super.markDirty();
+        requestEditorPreviewRefresh();
+    }
+
+    private void requestEditorPreviewRefresh() {
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        if (editor == null || editor.getNodeIO() == null || editor.getCurrentGraph() == null) {
+            return;
+        }
+        if (editor.getCurrentGraph().getNode(getId()) != null) {
+            editor.getNodeIO().markDirty();
         }
     }
 
