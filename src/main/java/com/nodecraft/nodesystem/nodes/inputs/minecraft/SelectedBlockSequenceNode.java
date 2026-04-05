@@ -149,7 +149,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         if (pickedBlocks.isEmpty()) {
             return;
         }
-        pickedBlocks.remove(pickedBlocks.size() - 1);
+        pickedBlocks.removeLast();
         updateOutputs();
         updatePathPreview();
         markDirty();
@@ -187,8 +187,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         }
 
         if (closePath && pickedBlocks.size() >= 2) {
-            Coordinate first = pickedBlocks.get(0);
-            Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
+            Coordinate first = pickedBlocks.getFirst();
+            Coordinate last = pickedBlocks.getLast();
             if (!first.equals(last)) {
                 coordinates.add(first);
                 appendOutputs(first, blocks, pointList, polylinePoints, centers);
@@ -204,8 +204,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         outputValues.put(OUTPUT_LINE_ID, line);
         outputValues.put(OUTPUT_POLYLINE_ID, polyline);
         outputValues.put(OUTPUT_CENTERS_ID, centers);
-        outputValues.put(OUTPUT_FIRST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(0));
-        outputValues.put(OUTPUT_LAST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(pickedBlocks.size() - 1));
+        outputValues.put(OUTPUT_FIRST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.getFirst());
+        outputValues.put(OUTPUT_LAST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.getLast());
         outputValues.put(OUTPUT_COUNT_ID, pickedBlocks.size());
         outputValues.put(OUTPUT_SEGMENT_COUNT_ID, Math.max(0, coordinates.size() - 1));
         outputValues.put(OUTPUT_IS_CLOSED_ID, closePath && pickedBlocks.size() >= 2);
@@ -228,8 +228,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             ));
         }
         if (closePath) {
-            Coordinate first = pickedBlocks.get(0);
-            Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
+            Coordinate first = pickedBlocks.getFirst();
+            Coordinate last = pickedBlocks.getLast();
             if (!first.equals(last)) {
                 pointList.add(new PointData(
                     first.getX() + 0.5d,
@@ -301,8 +301,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             ImGui.pushStyleColor(ImGuiCol.Text, 0.80f, 0.80f, 0.85f, 1.0f);
             ImGui.text("Ordered blocks: " + pickedBlocks.size());
             if (!pickedBlocks.isEmpty()) {
-                Coordinate first = pickedBlocks.get(0);
-                Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
+                Coordinate first = pickedBlocks.getFirst();
+                Coordinate last = pickedBlocks.getLast();
                 ImGui.text(String.format("First: %d, %d, %d", first.getX(), first.getY(), first.getZ()));
                 ImGui.text(String.format("Last: %d, %d, %d", last.getX(), last.getY(), last.getZ()));
             } else {

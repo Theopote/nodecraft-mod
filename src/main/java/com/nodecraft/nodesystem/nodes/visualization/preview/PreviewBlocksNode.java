@@ -12,7 +12,6 @@ import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import imgui.ImGui;
-import imgui.flag.ImGuiCol;
 import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import net.minecraft.util.math.BlockPos;
@@ -170,21 +169,20 @@ public class PreviewBlocksNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        float height = getMediumPadding();
-        height += ImGui.getFrameHeight();
-        height += getSmallPadding();
-        height += ImGui.getFrameHeight();
-        height += getSmallPadding();
-        height += ImGui.getFrameHeight();
-        height += getSmallPadding();
-        height += ImGui.getFrameHeight();
-        height += getMediumPadding();
+        float frame = ImGui.getFrameHeight();
+        float small = getSmallPadding();
+        float medium = getMediumPadding();
+
+        float height = medium;
+        height += frame * 4.0f;   // block type + transparency + duration + outline
+        height += small * 4.0f;   // spacing between compact controls
+        height += medium;
         return height;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 200f + getContentMargin();
+        return 184f + getContentMargin();
     }
 
     @Override
@@ -227,12 +225,7 @@ public class PreviewBlocksNode extends BaseCustomUINode {
                 setShowOutline(outlineValue.get());
                 changed = true;
             }
-
-            ImGui.pushStyleColor(ImGuiCol.Text, 0xFFBBBBBB);
-            ImGui.text("Ghost block preview");
-            ImGui.popStyleColor();
-
-            layout.addVerticalSpacing(getMediumPadding());
+            layout.addVerticalSpacing(getSmallPadding());
             return changed;
         });
     }
