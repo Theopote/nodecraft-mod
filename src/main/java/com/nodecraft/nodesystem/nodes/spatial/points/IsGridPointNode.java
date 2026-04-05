@@ -20,7 +20,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.is_grid_point",
     displayName = "Is Grid Point",
-    description = "Checks whether a geometric point lies on an integer block grid position",
+    description = "Checks whether a geometric point already lies on the block grid without snapping",
     category = "spatial.points"
 )
 public class IsGridPointNode extends BaseNode {
@@ -39,7 +39,7 @@ public class IsGridPointNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.is_grid_point");
 
         addInputPort(new BasePort(INPUT_POINT_ID, "Point",
-            "Point to test. Supports Point, Vector, Position, or Block Coordinate.",
+            "Point to test against the integer block grid. Supports Point, Vector, Position, or Block Coordinate.",
             NodeDataType.ANY, this));
 
         addOutputPort(new BasePort(OUTPUT_IS_GRID_POINT_ID, "Is Grid Point",
@@ -61,7 +61,7 @@ public class IsGridPointNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Checks whether a geometric point lies on an integer block grid position";
+        return "Checks whether a geometric point already lies on the block grid without snapping";
     }
 
     @Override

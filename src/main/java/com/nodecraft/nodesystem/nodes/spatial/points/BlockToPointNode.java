@@ -17,7 +17,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.block_to_point",
     displayName = "Block To Point",
-    description = "Converts a block coordinate into a geometric point, optionally using the block center",
+    description = "Converts a block coordinate into a geometric point for downstream geometry operations",
     category = "spatial.points"
 )
 public class BlockToPointNode extends BaseNode {
@@ -37,7 +37,7 @@ public class BlockToPointNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.block_to_point");
 
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate",
-            "Block coordinate to convert into a geometric point",
+            "Block coordinate to convert into a geometric point or block-center point",
             NodeDataType.BLOCK_POS, this));
 
         addOutputPort(new BasePort(OUTPUT_POINT_ID, "Point",
@@ -61,7 +61,7 @@ public class BlockToPointNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a block coordinate into a geometric point, optionally using the block center";
+        return "Converts a block coordinate into a geometric point for downstream geometry operations";
     }
 
     @Override

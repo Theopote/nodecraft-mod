@@ -20,7 +20,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.snap_point_to_block",
     displayName = "Snap Point To Block",
-    description = "Converts a geometric point into a block coordinate using floor, nearest, or ceil snapping",
+    description = "Explicitly snaps a geometric point onto the block grid using floor, nearest, or ceil",
     category = "spatial.points"
 )
 public class SnapPointToBlockNode extends BaseNode {
@@ -46,7 +46,7 @@ public class SnapPointToBlockNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.snap_point_to_block");
 
         addInputPort(new BasePort(INPUT_POINT_ID, "Point",
-            "Geometric point to snap. Supports Point, Vector, Position, or Block Coordinate.",
+            "Geometric point to snap onto the block grid. Supports Point, Vector, Position, or Block Coordinate.",
             NodeDataType.ANY, this));
 
         addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate",
@@ -70,7 +70,7 @@ public class SnapPointToBlockNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a geometric point into a block coordinate using floor, nearest, or ceil snapping";
+        return "Explicitly snaps a geometric point onto the block grid using floor, nearest, or ceil";
     }
 
     @Override

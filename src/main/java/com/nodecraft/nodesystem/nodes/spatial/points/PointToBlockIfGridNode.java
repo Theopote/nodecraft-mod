@@ -17,7 +17,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.point_to_block_if_grid",
     displayName = "Point To Block If Grid",
-    description = "Converts a geometric point to a block coordinate only when it already lies on the integer grid",
+    description = "Strict conversion: outputs a block coordinate only when the point is already grid-aligned",
     category = "spatial.points"
 )
 public class PointToBlockIfGridNode extends BaseNode {
@@ -36,7 +36,7 @@ public class PointToBlockIfGridNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.point_to_block_if_grid");
 
         addInputPort(new BasePort(INPUT_POINT_ID, "Point",
-            "Point to convert. Supports Point, Vector, Position, or Block Coordinate.",
+            "Point to convert without snapping. Supports Point, Vector, Position, or Block Coordinate.",
             NodeDataType.ANY, this));
 
         addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate",
@@ -58,7 +58,7 @@ public class PointToBlockIfGridNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a geometric point to a block coordinate only when it already lies on the integer grid";
+        return "Strict conversion: outputs a block coordinate only when the point is already grid-aligned";
     }
 
     @Override

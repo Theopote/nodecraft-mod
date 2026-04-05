@@ -21,7 +21,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.filter_grid_points",
     displayName = "Filter Grid Points",
-    description = "Splits a point list into grid-aligned points and off-grid points",
+    description = "Splits a point list into grid-aligned points and off-grid points without snapping",
     category = "spatial.points"
 )
 public class FilterGridPointsNode extends BaseNode {
@@ -42,7 +42,7 @@ public class FilterGridPointsNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.filter_grid_points");
 
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points",
-            "Collection of Point, Vector, Position, or Block Coordinate values to classify",
+            "Collection of Point, Vector, Position, or Block Coordinate values to classify against the block grid",
             NodeDataType.LIST, this));
 
         addOutputPort(new BasePort(OUTPUT_GRID_POINTS_ID, "Grid Points",
@@ -68,7 +68,7 @@ public class FilterGridPointsNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Splits a point list into grid-aligned points and off-grid points";
+        return "Splits a point list into grid-aligned points and off-grid points without snapping";
     }
 
     @Override

@@ -14,12 +14,12 @@ public class SpatialPointNodes {
     public static void registerNodes() {
         NodeRegistry registry = NodeRegistry.getInstance();
 
-        registry.registerNode(new NodeInfo("spatial.points.block_to_point", "Block To Point", "", "spatial.points", BlockToPointNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.snap_point_to_block", "Snap Point To Block", "", "spatial.points", SnapPointToBlockNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.is_grid_point", "Is Grid Point", "", "spatial.points", IsGridPointNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.point_to_block_if_grid", "Point To Block If Grid", "", "spatial.points", PointToBlockIfGridNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.filter_grid_points", "Filter Grid Points", "", "spatial.points", FilterGridPointsNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.snap_point_list_to_blocks", "Snap Point List To Blocks", "", "spatial.points", SnapPointListToBlocksNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.block_to_point", "Block To Point", "Convert a block coordinate into a geometric point for geometry workflows.", "spatial.points", BlockToPointNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.snap_point_to_block", "Snap Point To Block", "Explicitly snap a geometric point onto the block grid.", "spatial.points", SnapPointToBlockNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.is_grid_point", "Is Grid Point", "Check whether a point is already on the block grid.", "spatial.points", IsGridPointNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.point_to_block_if_grid", "Point To Block If Grid", "Strictly convert only grid-aligned points into block coordinates.", "spatial.points", PointToBlockIfGridNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.filter_grid_points", "Filter Grid Points", "Split a point list into grid-aligned and off-grid subsets.", "spatial.points", FilterGridPointsNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.snap_point_list_to_blocks", "Snap Point List To Blocks", "Snap a point list onto the block grid using a chosen mode.", "spatial.points", SnapPointListToBlocksNode.class));
         registry.registerNode(new NodeInfo("spatial.points.offsetcoordinates", "Offset Coordinates", "", "spatial.points", OffsetCoordinatesNode.class));
         registry.registerNode(new NodeInfo("spatial.points.rotatecoordinates", "Rotate Coordinates", "", "spatial.points", RotateCoordinatesNode.class));
         registry.registerNode(new NodeInfo("spatial.points.scalecoordinates", "Scale Coordinates", "", "spatial.points", ScaleCoordinatesNode.class));

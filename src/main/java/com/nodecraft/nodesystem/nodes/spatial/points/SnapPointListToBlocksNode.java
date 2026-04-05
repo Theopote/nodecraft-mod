@@ -20,7 +20,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.points.snap_point_list_to_blocks",
     displayName = "Snap Point List To Blocks",
-    description = "Converts a list of geometric points into block coordinates using an explicit snap mode",
+    description = "Snaps a point list onto the block grid using an explicit snap mode",
     category = "spatial.points"
 )
 public class SnapPointListToBlocksNode extends BaseNode {
@@ -39,7 +39,7 @@ public class SnapPointListToBlocksNode extends BaseNode {
         super(UUID.randomUUID(), "spatial.points.snap_point_list_to_blocks");
 
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points",
-            "Collection of Point, Vector, Position, or Block Coordinate values to snap",
+            "Collection of Point, Vector, Position, or Block Coordinate values to snap onto the block grid",
             NodeDataType.LIST, this));
 
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks",
@@ -59,7 +59,7 @@ public class SnapPointListToBlocksNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a list of geometric points into block coordinates using an explicit snap mode";
+        return "Snaps a point list onto the block grid using an explicit snap mode";
     }
 
     @Override
