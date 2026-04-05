@@ -24,6 +24,9 @@ public class LinesElement extends AbstractPreviewElement {
     private final List<Vec3d> points = new ArrayList<>();
     private Vector3f color = new Vector3f(1.0f, 0.85f, 0.2f);
     private boolean smoothCurves = false;
+    private float lineWidth = 1.5f;
+    private boolean showDirection = false;
+    private float arrowSize = 0.25f;
 
     public LinesElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
@@ -34,6 +37,15 @@ public class LinesElement extends AbstractPreviewElement {
         }
         if (options.smoothCurves != null) {
             this.smoothCurves = options.smoothCurves;
+        }
+        if (options.lineWidth != null) {
+            this.lineWidth = Math.max(0.25f, options.lineWidth);
+        }
+        if (options.showArrows != null) {
+            this.showDirection = options.showArrows;
+        }
+        if (options.arrowSize != null) {
+            this.arrowSize = Math.max(0.05f, options.arrowSize);
         }
     }
 
@@ -80,7 +92,30 @@ public class LinesElement extends AbstractPreviewElement {
             drawLine(vertexConsumer, matrix, start, end, finalOpacity);
         }
 
+        if (showDirection && points.size() >= 2) {
+            Vec3d start = points.get(points.size() - 2).subtract(cameraPos);
+            Vec3d end = points.get(points.size() - 1).subtract(cameraPos);
+            drawArrowHead(vertexConsumer, matrix, start, end, finalOpacity);
+        }
+
         immediate.draw();
+    }
+
+    private void drawArrowHead(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d start, Vec3d end, float alpha) {
+        Vec3d direction = end.subtract(start);
+        double length = direction.length();
+        if (length < 1.0e-6d) {
+            return;
+        }
+
+        double scaledArrowSize = Math.max(0.05d, arrowSize * Math.max(0.5d, lineWidth * 0.6d));
+        Vec3d dir = direction.normalize();
+        Vec3d reference = Math.abs(dir.y) < 0.95d ? new Vec3d(0.0d, 1.0d, 0.0d) : new Vec3d(1.0d, 0.0d, 0.0d);
+        Vec3d side = dir.crossProduct(reference).normalize().multiply(scaledArrowSize);
+        Vec3d back = dir.multiply(-scaledArrowSize * 1.6d);
+
+        drawLine(vertexConsumer, matrix, end, end.add(back).add(side), alpha);
+        drawLine(vertexConsumer, matrix, end, end.add(back).subtract(side), alpha);
     }
 
     private void drawLine(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d start, Vec3d end, float alpha) {
