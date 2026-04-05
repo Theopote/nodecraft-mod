@@ -11,9 +11,6 @@ import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
-import imgui.ImGui;
-import imgui.type.ImBoolean;
-import imgui.type.ImString;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -56,9 +53,6 @@ public class PreviewBlocksNode extends BaseCustomUINode {
     private int duration = 30;
 
     private UUID previewId = UUID.randomUUID();
-    private transient ImString blockTypeBuffer = new ImString(128);
-    private transient boolean blockTypeNeedsSync = true;
-
     public PreviewBlocksNode() {
         super(UUID.randomUUID(), "visualization.preview.preview_blocks");
 
@@ -169,75 +163,17 @@ public class PreviewBlocksNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        float frame = ImGui.getFrameHeight();
-        float small = getSmallPadding();
-        float medium = getMediumPadding();
-
-        float height = medium;
-        height += frame * 4.0f;   // block type + transparency + duration + outline
-        height += small * 4.0f;   // spacing between compact controls
-        height += medium;
-        return height;
+        return 0.0f;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 184f + getContentMargin();
+        return 0.0f;
     }
 
     @Override
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
-        return layout(zoom, layout -> {
-            boolean changed = false;
-            float availableWidth = layout.getAvailableContentWidth(width);
-
-            layout.addVerticalSpacing(getMediumPadding());
-
-            ensureBlockTypeBuffer();
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.inputTextWithHint("##preview_blocks_block_type", "minecraft:stone", blockTypeBuffer)) {
-                setBlockType(blockTypeBuffer.get());
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            float[] transparencyValue = {transparency};
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.sliderFloat("##preview_blocks_transparency", transparencyValue, 0.0f, 1.0f, "Transparency %.2f")) {
-                setTransparency(transparencyValue[0]);
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            int[] durationValue = {duration};
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.sliderInt("##preview_blocks_duration", durationValue, 1, 300, "Duration %d s")) {
-                setDuration(durationValue[0]);
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean outlineValue = new ImBoolean(showOutline);
-            if (ImGui.checkbox("Show Outline##preview_blocks_outline", outlineValue)) {
-                setShowOutline(outlineValue.get());
-                changed = true;
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-            return changed;
-        });
-    }
-
-    private void ensureBlockTypeBuffer() {
-        if (blockTypeBuffer == null) {
-            blockTypeBuffer = new ImString(128);
-        }
-        if (blockTypeNeedsSync) {
-            blockTypeBuffer.set(blockType != null ? blockType : "minecraft:stone");
-            blockTypeNeedsSync = false;
-        }
+        return false;
     }
 
     public String getBlockType() {
@@ -247,7 +183,6 @@ public class PreviewBlocksNode extends BaseCustomUINode {
     public void setBlockType(String value) {
         if (value != null && !value.equals(blockType)) {
             blockType = value;
-            blockTypeNeedsSync = true;
             markDirty();
         }
     }
@@ -320,7 +255,6 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         }
         if (map.get("blockType") instanceof String value) {
             blockType = value;
-            blockTypeNeedsSync = true;
         }
         if (map.get("transparency") instanceof Number value) {
             transparency = Math.max(0.0f, Math.min(1.0f, value.floatValue()));

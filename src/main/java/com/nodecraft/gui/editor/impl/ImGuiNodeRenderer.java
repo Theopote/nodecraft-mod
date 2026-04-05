@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 import com.nodecraft.core.NodeCraft;
@@ -279,7 +278,7 @@ public class ImGuiNodeRenderer {
             float stripeSpacing = 15.0f * canvasZoom;
             drawDiagonalStripes(drawList, nodeScreenX, nodeScreenY, 
                                nodeScreenX + finalNodeWidthScaled, nodeScreenY + finalNodeHeightScaled,
-                               stripeColor, stripeSpacing, 1.0f * canvasZoom);
+                               stripeColor, stripeSpacing, canvasZoom);
         }
 
         float titleTextWidthUnscaled = cache.getCachedTextWidth(node.getDisplayName());
@@ -573,7 +572,7 @@ public class ImGuiNodeRenderer {
             }
 
             String portId = port.getId();
-            boolean isLegacyInput = false;
+            boolean isLegacyInput;
 
             if (node instanceof GeometryViewerNode) {
                 isLegacyInput =

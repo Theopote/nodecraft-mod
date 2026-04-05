@@ -16,7 +16,6 @@ import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
-import imgui.type.ImBoolean;
 import imgui.type.ImString;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
@@ -337,15 +336,20 @@ public class GeometryViewerNode extends BaseCustomUINode {
         float height = medium;
         height += textLine;      // compact status + block count summary
         height += small;
-        height += frame * 4.0f;  // block type + preview + solid + action
-        height += small * 4.0f;
+        height += frame;         // finish build action
+        height += small;
         height += medium;
         return height;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 196f + getContentMargin();
+        float buttonPadding = 24.0f;
+        float labelWidth = Math.max(
+                ImGui.calcTextSize("Finish Build").x,
+                ImGui.calcTextSize("Built").x
+        );
+        return Math.max(152f, labelWidth + buttonPadding);
     }
 
     @Override
@@ -360,31 +364,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
             ImGui.pushStyleColor(ImGuiCol.Text, statusColor);
             ImGui.text(statusMessage + "  |  " + lastBlockCount + " blocks");
             ImGui.popStyleColor();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ensureBlockTypeBuffer();
-            layout.pushFramePadding(4.0f, 3.0f);
-            layout.setItemWidth(availableWidth / zoom);
-            if (ImGui.inputTextWithHint("##gv_block_type", "minecraft:stone", blockTypeBuffer)) {
-                setBlockType(blockTypeBuffer.get());
-                changed = true;
-            }
-            layout.popItemWidth();
-            layout.popStyleVar();
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean previewEnabledValue = new ImBoolean(previewEnabled);
-            if (ImGui.checkbox("Preview##gv_preview_enabled", previewEnabledValue)) {
-                setPreviewEnabled(previewEnabledValue.get());
-                changed = true;
-            }
-            layout.addVerticalSpacing(getSmallPadding());
-
-            ImBoolean solidValue = new ImBoolean(previewSolidGeometry);
-            if (ImGui.checkbox("Solid Geometry##gv_solid", solidValue)) {
-                setPreviewSolidGeometry(solidValue.get());
-                changed = true;
-            }
             layout.addVerticalSpacing(getSmallPadding());
 
             if (placed) {
