@@ -272,11 +272,16 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
     @Override
     protected float calculateUIHeight() {
-        float height = getMediumPadding();
-        height += ImGui.getTextLineHeight() * 3.0f;
-        height += getSmallPadding() * 4.0f;
-        height += ImGui.getFrameHeight() * 3.0f;
-        height += getMediumPadding();
+        float textLine = ImGui.getTextLineHeight();
+        float frame = ImGui.getFrameHeight();
+        float small = getSmallPadding();
+        float medium = getMediumPadding();
+
+        float height = medium;
+        height += textLine * 4.0f;   // Ordered blocks / First / Last / color label
+        height += frame * 8.0f;      // 4 checkboxes + slider + 2 color buttons row + 3 action buttons
+        height += small * 11.0f;     // compact vertical spacing between groups
+        height += medium;
         return height;
     }
 
@@ -317,7 +322,6 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 includeFluids = !includeFluids;
                 changed = true;
             }
-
             if (ImGui.checkbox("Auto Preview Path##autoPreviewPath", autoPreviewPath)) {
                 autoPreviewPath = !autoPreviewPath;
                 updatePathPreview();
@@ -332,6 +336,9 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
             layout.addVerticalSpacing(getSmallPadding());
 
+            ImGui.text("Preview");
+            ImGui.sameLine();
+            ImGui.textDisabled(previewPathColor);
             float[] distance = {maxDistance};
             ImGui.text("Pick Distance: " + String.format("%.1f", maxDistance));
             if (ImGui.sliderFloat("##pickDistance", distance, 1.0f, 300.0f)) {
@@ -339,8 +346,6 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 changed = true;
             }
 
-            ImGui.text("Preview Path Color");
-            ImGui.textDisabled(previewPathColor);
             if (ImGui.button("Yellow##pathColorYellow", availableWidth / 2.0f - 2.0f, 0)) {
                 previewPathColor = "#FFD933";
                 updatePathPreview();
@@ -394,8 +399,6 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
                 clearSequence();
                 changed = true;
             }
-
-            layout.addVerticalSpacing(getMediumPadding());
             return changed;
         });
     }
