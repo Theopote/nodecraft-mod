@@ -104,9 +104,13 @@ public class PanelNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float aw = l.getAvailableContentWidth(width);
+                float edgeMargin = ZoomHelper.applyZoom(getContentMargin(), zoom);
+                float aw = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
+                float totalHeightPixels = l.toPixelsExact(height);
                 float topBottomPadding = ZoomHelper.applyZoom(getMediumPadding(), zoom);
-                float screenH = Math.max(ImGui.getTextLineHeight() * 2.0f, height - topBottomPadding * 2.0f);
+                float screenH = Math.max(ImGui.getTextLineHeight() * 2.0f, totalHeightPixels - topBottomPadding * 2.0f);
+                float baseCursorX = ImGui.getCursorPosX();
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
 
                 ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.08f, 0.08f, 0.10f, 0.98f);
                 ImGui.pushStyleVar(ImGuiStyleVar.ChildBorderSize, ZoomHelper.applyZoom(1.2f, zoom));
