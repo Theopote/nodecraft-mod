@@ -85,6 +85,7 @@ public class PreviewRenderer {
         registerElementType("region_box", RegionBoxElement::new);
         registerElementType("spatial_shape", RegionBoxElement::new);
         registerElementType("plane_grid", PlaneGridElement::new);
+        registerElementType("frame_axes", FrameAxesElement::new);
         registerElementType("points", PointsElement::new);
         registerElementType("vectors", VectorsElement::new);
         registerElementType("arrows", VectorsElement::new);

@@ -133,6 +133,10 @@ public class PreviewManager {
         return renderer.showPreview(nodeId, "plane_grid", planeGridData, options);
     }
 
+    public static String showFrameAxes(String nodeId, FrameAxesPreviewData frameAxesData, PreviewOptions options) {
+        return renderer.showPreview(nodeId, "frame_axes", frameAxesData, options);
+    }
+
     // ================= 变换 Gizmo API =================
 
     /**
