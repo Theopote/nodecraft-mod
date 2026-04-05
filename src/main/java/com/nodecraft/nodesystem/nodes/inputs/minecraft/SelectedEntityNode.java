@@ -185,7 +185,7 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
 
         try {
             float edgeMargin = toPixels(getSmallPadding(), zoom);
-            float availableWidth = Math.max(0.0f, getAvailableWidth(width, zoom) - edgeMargin * 2.0f);
+            float availableWidth = Math.max(0.0f, toPixelsExact(width, zoom) - edgeMargin * 2.0f);
             float baseCursorX = ImGui.getCursorPosX();
 
             addVerticalSpacing(getSmallPadding(), zoom);
@@ -223,12 +223,6 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
         }
 
         return changed;
-    }
-
-    protected final float getAvailableWidth(float unscaledNodeWidth, float zoom) {
-        float totalPx = toPixelsExact(unscaledNodeWidth, zoom);
-        float marginPx = toPixels(getMediumPadding() * 2, zoom);
-        return Math.max(0, totalPx - marginPx);
     }
 
     public float getMaxDistance() {
