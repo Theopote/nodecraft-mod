@@ -344,19 +344,20 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     @Override
     protected float calculateMinUIWidth() {
-        float buttonPadding = 24.0f;
+        float buttonPadding = 20.0f;
         float labelWidth = Math.max(
                 ImGui.calcTextSize("Finish Build").x,
                 ImGui.calcTextSize("Built").x
         );
-        return Math.max(152f, labelWidth + buttonPadding);
+        return Math.max(144f, labelWidth + buttonPadding);
     }
 
     @Override
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, layout -> {
             boolean changed = false;
-            float availableWidth = layout.getAvailableContentWidth(width);
+            float edgeMargin = layout.toPixels(getSmallPadding());
+            float buttonWidth = Math.max(0.0f, layout.toPixelsExact(width) - edgeMargin * 2.0f);
 
             layout.addVerticalSpacing(getMediumPadding());
 
@@ -365,6 +366,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             ImGui.text(statusMessage + "  |  " + lastBlockCount + " blocks");
             ImGui.popStyleColor();
             layout.addVerticalSpacing(getSmallPadding());
+            float baseCursorX = ImGui.getCursorPosX();
 
             if (placed) {
                 ImGui.pushStyleColor(ImGuiCol.Button, 0xFF44DD44);
@@ -377,7 +379,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
             }
 
             String buttonText = placed ? "Built" : "Finish Build";
-            if (ImGui.button(buttonText, availableWidth, 0)) {
+            ImGui.setCursorPosX(baseCursorX + edgeMargin);
+            if (ImGui.button(buttonText, buttonWidth, 0)) {
                 placementRequested = true;
                 placed = false;
                 requestEditorPreviewRefresh();
