@@ -6,8 +6,6 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewManager;
-import imgui.ImGui;
-import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -60,23 +58,16 @@ public class ClearAllPreviewsNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
-        return getMediumPadding() + ImGui.getTextLineHeight() + getMediumPadding();
+        return 0.0f;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 160f + getContentMargin();
+        return 0.0f;
     }
 
     @Override
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
-        return layout(zoom, l -> {
-            l.addVerticalSpacing(getMediumPadding());
-            ImGui.pushStyleColor(ImGuiCol.Text, 0xFF888888);
-            ImGui.text("Last cleared: " + lastClearedCount);
-            ImGui.popStyleColor();
-            l.addVerticalSpacing(getMediumPadding());
-            return false;
-        });
+        return false;
     }
 }
