@@ -11,6 +11,17 @@ import java.util.Objects;
  * Represents an axis-aligned or oriented box geometry in local space.
  */
 public class BoxGeometryData implements GeometryData {
+    private static final String[] CORNER_NAMES = {
+        "Left Bottom Back",
+        "Right Bottom Back",
+        "Right Top Back",
+        "Left Top Back",
+        "Left Bottom Front",
+        "Right Bottom Front",
+        "Right Top Front",
+        "Left Top Front"
+    };
+
     private static final int[][] FACE_CORNER_INDICES = {
         {0, 1, 5, 4}, // bottom (-Y)
         {3, 7, 6, 2}, // top (+Y)
@@ -70,6 +81,35 @@ public class BoxGeometryData implements GeometryData {
         return oriented;
     }
 
+    public int getCornerCount() {
+        return CORNER_NAMES.length;
+    }
+
+    public int getFaceCount() {
+        return FACE_NAMES.length;
+    }
+
+    public List<String> getCornerNames() {
+        return List.of(CORNER_NAMES);
+    }
+
+    public String getCornerName(int index) {
+        return CORNER_NAMES[index];
+    }
+
+    public List<String> getFaceNames() {
+        return List.of(FACE_NAMES);
+    }
+
+    public String getFaceName(int index) {
+        return FACE_NAMES[index];
+    }
+
+    public List<Integer> getFaceCornerIndices(int faceIndex) {
+        int[] indices = FACE_CORNER_INDICES[faceIndex];
+        return List.of(indices[0], indices[1], indices[2], indices[3]);
+    }
+
     public List<Vector3d> getCorners() {
         List<Vector3d> corners = new ArrayList<>(8);
         corners.add(transformLocalCorner(-halfExtents.x, -halfExtents.y, -halfExtents.z));
@@ -88,13 +128,12 @@ public class BoxGeometryData implements GeometryData {
         List<BoxFaceData> faces = new ArrayList<>(FACE_CORNER_INDICES.length);
 
         for (int faceIndex = 0; faceIndex < FACE_CORNER_INDICES.length; faceIndex++) {
-            int[] indices = FACE_CORNER_INDICES[faceIndex];
-            List<Integer> cornerIndices = List.of(indices[0], indices[1], indices[2], indices[3]);
+            List<Integer> cornerIndices = getFaceCornerIndices(faceIndex);
             List<Vector3d> faceCorners = List.of(
-                new Vector3d(corners.get(indices[0])),
-                new Vector3d(corners.get(indices[1])),
-                new Vector3d(corners.get(indices[2])),
-                new Vector3d(corners.get(indices[3]))
+                new Vector3d(corners.get(cornerIndices.get(0))),
+                new Vector3d(corners.get(cornerIndices.get(1))),
+                new Vector3d(corners.get(cornerIndices.get(2))),
+                new Vector3d(corners.get(cornerIndices.get(3)))
             );
 
             Vector3d faceCenter = new Vector3d();

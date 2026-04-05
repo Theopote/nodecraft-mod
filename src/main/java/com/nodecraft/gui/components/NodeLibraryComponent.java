@@ -63,7 +63,23 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialGeneratorsOrder.put("spatial.generators.box_corner_size", 2);
         spatialGeneratorsOrder.put("spatial.generators.box_blocks", 3);
         spatialGeneratorsOrder.put("spatial.generators.region_box_blocks", 4);
+        spatialGeneratorsOrder.put("spatial.generators.push_pull_box_face", 5);
+        spatialGeneratorsOrder.put("spatial.generators.extrude_box_face", 6);
         categoryOrder.put("spatial.generators", spatialGeneratorsOrder);
+
+        Map<String, Integer> spatialAnalysisOrder = new HashMap<>();
+        spatialAnalysisOrder.put("spatial.analysis.bounding_box", 0);
+        spatialAnalysisOrder.put("spatial.analysis.geometry_bounds", 1);
+        spatialAnalysisOrder.put("spatial.analysis.deconstruct_box_geometry", 2);
+        spatialAnalysisOrder.put("spatial.analysis.get_box_corner", 3);
+        spatialAnalysisOrder.put("spatial.analysis.get_box_face", 4);
+        spatialAnalysisOrder.put("spatial.analysis.deconstruct_box_face", 5);
+        spatialAnalysisOrder.put("spatial.analysis.offset_box_face", 6);
+        spatialAnalysisOrder.put("spatial.analysis.get_face_edge", 7);
+        spatialAnalysisOrder.put("spatial.analysis.deconstruct_face_edge", 8);
+        spatialAnalysisOrder.put("spatial.analysis.point_list_bounds", 9);
+        spatialAnalysisOrder.put("spatial.analysis.point_list_center", 10);
+        categoryOrder.put("spatial.analysis", spatialAnalysisOrder);
 
         Map<String, Integer> spatialPointsOrder = new HashMap<>();
         spatialPointsOrder.put("spatial.points.block_to_point", 0);

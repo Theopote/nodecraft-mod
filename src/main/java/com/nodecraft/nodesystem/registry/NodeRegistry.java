@@ -22,6 +22,7 @@ import java.util.ServiceLoader;
 public class NodeRegistry {
 
     private static NodeRegistry instance;
+    private static final Map<String, String> NODE_ID_ALIASES = createNodeIdAliases();
 
     private final Map<String, NodeInfo> nodeInfoMap = new HashMap<>();
     private final Map<String, NodeCategory> categoryMap = new HashMap<>();
@@ -41,6 +42,24 @@ public class NodeRegistry {
             instance = new NodeRegistry();
         }
         return instance;
+    }
+
+    private static Map<String, String> createNodeIdAliases() {
+        Map<String, String> aliases = new HashMap<>();
+        aliases.put("spatial.points.offsetcoordinates", "spatial.points.offset_coordinates");
+        aliases.put("spatial.points.rotatecoordinates", "spatial.points.rotate_coordinates");
+        aliases.put("spatial.points.scalecoordinates", "spatial.points.scale_coordinates");
+        aliases.put("spatial.points.mirrorcoordinates", "spatial.points.mirror_coordinates");
+        aliases.put("spatial.points.randomizecoordinates", "spatial.points.randomize_coordinates");
+        return Collections.unmodifiableMap(aliases);
+    }
+
+    private String normalizeNodeId(String nodeId) {
+        if (nodeId == null) {
+            return null;
+        }
+        String normalizedId = nodeId.toLowerCase();
+        return NODE_ID_ALIASES.getOrDefault(normalizedId, normalizedId);
     }
 
     /**
@@ -197,7 +216,8 @@ public class NodeRegistry {
      * @throws RuntimeException         如果实例化节点时发生错误 (如构造函数问题)。
      */
     public INode createNodeInstance(String nodeId) {
-        NodeInfo nodeInfo = nodeInfoMap.get(nodeId);
+        String resolvedNodeId = normalizeNodeId(nodeId);
+        NodeInfo nodeInfo = nodeInfoMap.get(resolvedNodeId);
         if (nodeInfo == null) {
             throw new IllegalArgumentException("未注册的节点类型 ID: " + nodeId);
         }
@@ -259,7 +279,7 @@ public class NodeRegistry {
      * @return 对应的 NodeInfo 对象，如果不存在则返回 null。
      */
     public NodeInfo getNodeInfo(String nodeId) {
-        return nodeInfoMap.get(nodeId);
+        return nodeInfoMap.get(normalizeNodeId(nodeId));
     }
 
     /**

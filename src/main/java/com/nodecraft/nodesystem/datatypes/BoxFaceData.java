@@ -55,6 +55,21 @@ public final class BoxFaceData {
         return cornerIndices;
     }
 
+    public int getEdgeCount() {
+        return corners.size();
+    }
+
+    public List<int[]> getEdgeCornerIndexPairs() {
+        List<int[]> result = new ArrayList<>(cornerIndices.size());
+        for (int i = 0; i < cornerIndices.size(); i++) {
+            result.add(new int[]{
+                cornerIndices.get(i),
+                cornerIndices.get((i + 1) % cornerIndices.size())
+            });
+        }
+        return List.copyOf(result);
+    }
+
     public List<Vector3d> getCorners() {
         return copyVectors(corners);
     }
