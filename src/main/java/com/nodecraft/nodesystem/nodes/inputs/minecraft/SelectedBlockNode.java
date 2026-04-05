@@ -81,6 +81,50 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
     private String pickedBlockId = "minecraft:air";
     private BlockStateData pickedBlockStateData = null;
     private boolean hasPickedBlock = false;
+
+    @NodeProperty(
+        displayName = "Has Selection",
+        readOnly = true,
+        category = "Selection",
+        order = 10,
+        description = "Whether this node currently has a selected block."
+    )
+    public boolean isSelectionActive() {
+        return hasPickedBlock || hasInputCoordinates();
+    }
+
+    @NodeProperty(
+        displayName = "Selected Block Name",
+        readOnly = true,
+        category = "Selection",
+        order = 11,
+        description = "Human-readable name of the current block."
+    )
+    public String getSelectedBlockDisplayName() {
+        return getBlockDisplayName(pickedBlockId);
+    }
+
+    @NodeProperty(
+        displayName = "Selected Block ID",
+        readOnly = true,
+        category = "Selection",
+        order = 12,
+        description = "Identifier of the current block."
+    )
+    public String getSelectedBlockIdForPanel() {
+        return pickedBlockId;
+    }
+
+    @NodeProperty(
+        displayName = "Selected Position",
+        readOnly = true,
+        category = "Selection",
+        order = 13,
+        description = "Grid-aligned position of the current block."
+    )
+    public Coordinate getSelectedBlockPositionForPanel() {
+        return pickedBlockPosition;
+    }
     
     // --- 输入验证状态 ---
     private String inputValidationError = null;
@@ -928,30 +972,12 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             baseHeight += 20f;
         }
         
-        // 状态显示区域高度（可折叠）
-        if (hasPickedBlock || hasInputCoordinates()) {
-            baseHeight += 25f; // 折叠标题行
-            if (infoSectionExpanded) {
-                // 来源/名称/ID/位置 四行基础信息
-                baseHeight += 4 * 18f;
-                // 状态树标题行
-                if (pickedBlockStateData != null && !pickedBlockStateData.isEmpty()) {
-                    baseHeight += 18f;
-                    // 状态树展开时按条目增加高度（设置上限防止异常撑爆）
-                    if (blockStateTreeExpanded) {
-                        int visibleStateLines = Math.min(12, pickedBlockStateData.size());
-                        baseHeight += visibleStateLines * 16f;
-                    }
-                }
-                // 分隔线 + 清除按钮 + 额外间距
-                baseHeight += 56f;
-            }
-        } else {
-            baseHeight += 20f; // "未选择方块"提示
+        if (hasPickedBlock) {
+            baseHeight += 28f; // spacing + clear button
         }
         
-        // 设置区域高度（可折叠）
-        baseHeight += 0f; // settings moved to the property panel
+        // Settings moved to the property panel.
+        baseHeight += 0f;
         
         // 添加间距
         baseHeight += 20f; // 各种小间距的总和
@@ -1017,7 +1043,9 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
         // 注意：缩放变换现在由 CustomUIRenderer 统一处理，这里只需要应用主题颜色
         try (MinecraftUITheme.MinecraftStyleScope themeScope = MinecraftUITheme.apply(1.0f)) {
             // 将逻辑宽度和边距统一转换为像素后再做减法，确保缩放一致
-            float availableWidth = ZoomHelper.toScaledPixels(width - getMediumPadding() * 2, zoom);
+            float edgeMargin = ZoomHelper.toScaledPixels(getSmallPadding(), zoom);
+            float availableWidth = Math.max(0.0f, ZoomHelper.toScaledPixels(width, zoom) - edgeMargin * 2.0f);
+            float baseCursorX = ImGui.getCursorPosX();
             
             // 添加顶部间距（较小）
             addVerticalSpacing(getSmallPadding(), zoom);
@@ -1029,6 +1057,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             String pickButtonText = isCurrentlyPicking ? "取消拾取" : "拾取方块";
             float buttonHeight = ImGui.getFrameHeight();
             
+            ImGui.setCursorPosX(baseCursorX + edgeMargin);
             if (ImGui.button(pickButtonText + "##pickBlock", availableWidth, buttonHeight)) {
                 if (isCurrentlyPicking) {
                     // 取消当前拾取
@@ -1067,8 +1096,8 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             if (hasPickedBlock || hasInputCoordinates()) {
                 // 默认展开状态显示区
                 String headerText = hasPickedBlock ? "已选方块信息##info" : "输入坐标方块##info";
-                boolean infoExpandedNow = ImGui.collapsingHeader(headerText, ImGuiTreeNodeFlags.DefaultOpen);
-                infoSectionExpanded = syncExpandableUiState(infoSectionExpanded, infoExpandedNow);
+                boolean infoExpandedNow = false;
+                infoSectionExpanded = false;
                 if (infoExpandedNow) {
                     ImGui.indent(); // 缩进内容
                     addVerticalSpacing(getSmallPadding(), zoom);
@@ -1155,10 +1184,6 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
                     
                     addVerticalSpacing(getSmallPadding(), zoom);
                 }
-            } else {
-                ImGui.pushStyleColor(ImGuiCol.Text, 0.6f, 0.6f, 0.6f, 1.0f);
-                ImGui.text("未选择方块");
-                ImGui.popStyleColor();
             }
 
             // === 3. 高级设置区 ===
@@ -1206,6 +1231,19 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
                 ImGui.popItemWidth();
                 
                 addVerticalSpacing(getSmallPadding(), zoom);
+            }
+
+            if (hasPickedBlock) {
+                addVerticalSpacing(getSmallPadding(), zoom);
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
+                ImGui.pushStyleColor(ImGuiCol.Button, 0.8f, 0.2f, 0.2f, 1.0f);
+                ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0.9f, 0.3f, 0.3f, 1.0f);
+                ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0.7f, 0.1f, 0.1f, 1.0f);
+                if (ImGui.button("Clear Selection##clearBlock", availableWidth, buttonHeight)) {
+                    clearPickedBlock();
+                    changed = true;
+                }
+                ImGui.popStyleColor(3);
             }
 
         } catch (NullPointerException e) {
