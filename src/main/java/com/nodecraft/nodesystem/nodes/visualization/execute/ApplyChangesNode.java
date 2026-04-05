@@ -14,7 +14,6 @@ import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
-import imgui.type.ImBoolean;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
@@ -364,20 +363,15 @@ public class ApplyChangesNode extends BaseCustomUINode {
         h += getSmallPadding();
         if (showProgressBar) {
             h += ImGui.getFrameHeight();
-            h += getSmallPadding();
         }
-        h += ImGui.getFrameHeight();
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();
-        h += getSmallPadding();
-        h += ImGui.getFrameHeight();
         h += getMediumPadding();
         return h;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 210f + getContentMargin();
+        float statusWidth = ImGui.calcTextSize("Applying material placements...").x;
+        return Math.max(176.0f, statusWidth + 20.0f);
     }
 
     @Override
@@ -396,40 +390,6 @@ public class ApplyChangesNode extends BaseCustomUINode {
 
                 if (showProgressBar) {
                     ImGui.progressBar(progressPercentage, aw, ImGui.getFrameHeight(), String.format("%.0f%%", progressPercentage * 100));
-                    l.addVerticalSpacing(getSmallPadding());
-                }
-
-                ImBoolean notifyBool = new ImBoolean(notifyOnComplete);
-                if (ImGui.checkbox("Notify On Complete##ac_notify", notifyBool)) {
-                    setNotifyOnComplete(notifyBool.get());
-                    changed = true;
-                }
-                l.addVerticalSpacing(getSmallPadding());
-
-                if (ImGui.beginCombo("Placement Mode##ac_mode", placementMode == PlacementMode.OVERWRITE ? "Overwrite" : "Incremental")) {
-                    if (ImGui.selectable("Overwrite", placementMode == PlacementMode.OVERWRITE)) {
-                        setPlacementMode(PlacementMode.OVERWRITE);
-                        changed = true;
-                    }
-                    if (ImGui.selectable("Incremental", placementMode == PlacementMode.INCREMENTAL)) {
-                        setPlacementMode(PlacementMode.INCREMENTAL);
-                        changed = true;
-                    }
-                    ImGui.endCombo();
-                }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean asyncBool = new ImBoolean(useAsyncBake);
-                if (ImGui.checkbox("Async Placement##ac_async", asyncBool)) {
-                    setUseAsyncBake(asyncBool.get());
-                    changed = true;
-                }
-                l.addVerticalSpacing(getSmallPadding());
-
-                ImBoolean solidBool = new ImBoolean(solidGeometry);
-                if (ImGui.checkbox("Solid Geometry##ac_solid", solidBool)) {
-                    setSolidGeometry(solidBool.get());
-                    changed = true;
                 }
 
                 l.addVerticalSpacing(getMediumPadding());
