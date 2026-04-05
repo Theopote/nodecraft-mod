@@ -4,7 +4,9 @@ import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
+import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.interaction.IBlockPickerCallback;
 import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
@@ -16,6 +18,7 @@ import com.nodecraft.nodesystem.util.Coordinate;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -36,6 +39,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private static final String OUTPUT_COORDINATES_ID = "output_coordinates";
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_POINT_LIST_ID = "output_point_list";
+    private static final String OUTPUT_LINE_ID = "output_line";
+    private static final String OUTPUT_POLYLINE_ID = "output_polyline";
     private static final String OUTPUT_CENTERS_ID = "output_centers";
     private static final String OUTPUT_FIRST_ID = "output_first";
     private static final String OUTPUT_LAST_ID = "output_last";
@@ -61,6 +66,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         addOutputPort(new BasePort(OUTPUT_COORDINATES_ID, "Coordinates", "Ordered list of picked block coordinates", NodeDataType.COORDINATE_LIST, this));
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Ordered list of picked block positions", NodeDataType.BLOCK_LIST, this));
         addOutputPort(new BasePort(OUTPUT_POINT_LIST_ID, "Point List", "Ordered geometric point list derived from the picked blocks", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_LINE_ID, "Line", "Line built directly from the ordered point list when exactly 2 points exist", NodeDataType.LINE, this));
+        addOutputPort(new BasePort(OUTPUT_POLYLINE_ID, "Polyline", "Polyline built directly from the ordered point list when at least 2 points exist", NodeDataType.POLYLINE, this));
         addOutputPort(new BasePort(OUTPUT_CENTERS_ID, "Centers", "Ordered list of block center points", NodeDataType.VECTOR_LIST, this));
         addOutputPort(new BasePort(OUTPUT_FIRST_ID, "First", "First picked block in the sequence", NodeDataType.COORDINATE, this));
         addOutputPort(new BasePort(OUTPUT_LAST_ID, "Last", "Last picked block in the sequence", NodeDataType.COORDINATE, this));
@@ -172,10 +179,11 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         List<Coordinate> coordinates = new ArrayList<>(pickedBlocks);
         BlockPosList blocks = new BlockPosList();
         List<PointData> pointList = new ArrayList<>();
+        List<Vec3d> polylinePoints = new ArrayList<>();
         List<Vector3d> centers = new ArrayList<>();
 
         for (Coordinate coordinate : pickedBlocks) {
-            appendOutputs(coordinate, blocks, pointList, centers);
+            appendOutputs(coordinate, blocks, pointList, polylinePoints, centers);
         }
 
         if (closePath && pickedBlocks.size() >= 2) {
@@ -183,13 +191,18 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             Coordinate last = pickedBlocks.get(pickedBlocks.size() - 1);
             if (!first.equals(last)) {
                 coordinates.add(first);
-                appendOutputs(first, blocks, pointList, centers);
+                appendOutputs(first, blocks, pointList, polylinePoints, centers);
             }
         }
+
+        LineData line = polylinePoints.size() == 2 ? new LineData(polylinePoints.get(0), polylinePoints.get(1)) : null;
+        PolylineData polyline = polylinePoints.size() >= 2 ? new PolylineData(polylinePoints) : null;
 
         outputValues.put(OUTPUT_COORDINATES_ID, coordinates);
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);
         outputValues.put(OUTPUT_POINT_LIST_ID, pointList);
+        outputValues.put(OUTPUT_LINE_ID, line);
+        outputValues.put(OUTPUT_POLYLINE_ID, polyline);
         outputValues.put(OUTPUT_CENTERS_ID, centers);
         outputValues.put(OUTPUT_FIRST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(0));
         outputValues.put(OUTPUT_LAST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.get(pickedBlocks.size() - 1));
@@ -237,17 +250,23 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         PreviewManager.showPaths(getId().toString(), pointList, options);
     }
 
-    private void appendOutputs(Coordinate coordinate, BlockPosList blocks, List<PointData> pointList, List<Vector3d> centers) {
+    private void appendOutputs(Coordinate coordinate, BlockPosList blocks, List<PointData> pointList, List<Vec3d> polylinePoints, List<Vector3d> centers) {
         blocks.add(new BlockPos(coordinate.getX(), coordinate.getY(), coordinate.getZ()));
+        Vec3d centerPos = new Vec3d(
+            coordinate.getX() + 0.5d,
+            coordinate.getY() + 0.5d,
+            coordinate.getZ() + 0.5d
+        );
         pointList.add(new PointData(
-            coordinate.getX() + 0.5d,
-            coordinate.getY() + 0.5d,
-            coordinate.getZ() + 0.5d
+            centerPos.x,
+            centerPos.y,
+            centerPos.z
         ));
+        polylinePoints.add(centerPos);
         centers.add(new Vector3d(
-            coordinate.getX() + 0.5d,
-            coordinate.getY() + 0.5d,
-            coordinate.getZ() + 0.5d
+            centerPos.x,
+            centerPos.y,
+            centerPos.z
         ));
     }
 
