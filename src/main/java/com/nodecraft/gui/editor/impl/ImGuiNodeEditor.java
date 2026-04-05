@@ -337,6 +337,10 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             if (interaction.isCreatingConnection()) {
                 boolean previewTypeMismatch = computeConnectionPreviewTypeMismatch(currentGraph, interaction);
                 renderer.drawConnectionPreview(drawList, interaction.getDragPreviewLineStartPos(), canvasZoom, interaction.isFromOutputPort(), previewTypeMismatch);
+                String previewInvalidReason = getConnectionPreviewInvalidReason(currentGraph, interaction);
+                if (previewInvalidReason != null) {
+                    ImGui.setTooltip(previewInvalidReason);
+                }
             }
 
             // 12. 绘制框选框 (如果正在框选)
@@ -433,21 +437,24 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
     }
 
     /**
-     * 计算当前拖拽连接预览线是否因类型不匹配应显示为红色。
-     * 当鼠标悬停在目标端口上且输出类型与输入类型不兼容时返回 true。
+     * 计算当前拖拽连接预览线是否应显示为红色。
      */
     private boolean computeConnectionPreviewTypeMismatch(NodeGraph graph, ImGuiNodeInteraction interaction) {
-        if (graph == null || !interaction.isCreatingConnection()) return false;
+        return getConnectionPreviewInvalidReason(graph, interaction) != null;
+    }
+
+    private String getConnectionPreviewInvalidReason(NodeGraph graph, ImGuiNodeInteraction interaction) {
+        if (graph == null || !interaction.isCreatingConnection()) return null;
         UUID sourceNodeId = interaction.getSourceNodeId();
         String sourcePortId = interaction.getSourcePortId();
         UUID hoveredNodeId = interaction.getHoveredNodeId();
         String hoveredPortId = interaction.getHoveredPortId();
         boolean isFromOutput = interaction.isFromOutputPort();
         boolean hoveredIsOutput = interaction.isHoveredPortOutput();
-        if (sourceNodeId == null || sourcePortId == null || hoveredNodeId == null || hoveredPortId == null) return false;
+        if (sourceNodeId == null || sourcePortId == null || hoveredNodeId == null || hoveredPortId == null) return null;
         INode sourceNode = graph.getNode(sourceNodeId);
         INode hoveredNode = graph.getNode(hoveredNodeId);
-        if (sourceNode == null || hoveredNode == null) return false;
+        if (sourceNode == null || hoveredNode == null) return null;
         IPort sourcePort = null;
         IPort targetPort = null;
         if (isFromOutput && !hoveredIsOutput) {
@@ -456,9 +463,31 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         } else if (!isFromOutput && hoveredIsOutput) {
             for (IPort p : sourceNode.getInputPorts()) if (p.getId().equals(sourcePortId)) { targetPort = p; break; }
             for (IPort p : hoveredNode.getOutputPorts()) if (p.getId().equals(hoveredPortId)) { sourcePort = p; break; }
+        } else {
+            return isFromOutput ? "只能连接到输入端" : "只能连接到输出端";
         }
-        if (sourcePort == null || targetPort == null) return true;
-        return !graph.canConnect(sourcePort.getNode().getId(), sourcePort.getId(), targetPort.getNode().getId(), targetPort.getId());
+        if (sourcePort == null || targetPort == null) return "目标端口不可连接";
+        if (sourcePort.getNode().getId().equals(targetPort.getNode().getId())) {
+            return "不能连接到同一节点";
+        }
+        if (!NodeDataType.isConnectableTo(sourcePort.getDataType(), targetPort.getDataType())) {
+            return String.format("类型不匹配: 输出 %s 无法连接到输入 %s",
+                    sourcePort.getDataType().getDisplayName(),
+                    targetPort.getDataType().getDisplayName());
+        }
+        UUID connectedNodeId = graph.getConnectedOutputNodeId(targetPort.getNode().getId(), targetPort.getId());
+        String connectedPortId = graph.getConnectedOutputPortId(targetPort.getNode().getId(), targetPort.getId());
+        boolean isSameExistingConnection = connectedNodeId != null &&
+                connectedNodeId.equals(sourcePort.getNode().getId()) &&
+                connectedPortId != null &&
+                connectedPortId.equals(sourcePort.getId());
+        if (connectedNodeId != null && !isSameExistingConnection) {
+            return "该输入端只允许一个输入连接";
+        }
+        if (!graph.canConnect(sourcePort.getNode().getId(), sourcePort.getId(), targetPort.getNode().getId(), targetPort.getId())) {
+            return "该连接无效";
+        }
+        return null;
     }
 
     /**
