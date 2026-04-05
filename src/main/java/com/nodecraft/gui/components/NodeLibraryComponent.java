@@ -78,11 +78,11 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialPointsOrder.put("spatial.points.snap_point_to_block", 9);
         spatialPointsOrder.put("spatial.points.filter_grid_points", 10);
         spatialPointsOrder.put("spatial.points.snap_point_list_to_blocks", 11);
-        spatialPointsOrder.put("spatial.points.offsetcoordinates", 12);
-        spatialPointsOrder.put("spatial.points.rotatecoordinates", 13);
-        spatialPointsOrder.put("spatial.points.scalecoordinates", 14);
-        spatialPointsOrder.put("spatial.points.mirrorcoordinates", 15);
-        spatialPointsOrder.put("spatial.points.randomizecoordinates", 16);
+        spatialPointsOrder.put("spatial.points.offset_coordinates", 12);
+        spatialPointsOrder.put("spatial.points.rotate_coordinates", 13);
+        spatialPointsOrder.put("spatial.points.scale_coordinates", 14);
+        spatialPointsOrder.put("spatial.points.mirror_coordinates", 15);
+        spatialPointsOrder.put("spatial.points.randomize_coordinates", 16);
         categoryOrder.put("spatial.points", spatialPointsOrder);
 
         return categoryOrder;

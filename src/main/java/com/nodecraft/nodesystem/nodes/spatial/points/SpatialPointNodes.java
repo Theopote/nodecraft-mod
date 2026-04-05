@@ -26,10 +26,10 @@ public class SpatialPointNodes {
         registry.registerNode(new NodeInfo("spatial.points.point_to_block_if_grid", "Point To Block If Grid", "Strictly convert only grid-aligned points into block coordinates.", "spatial.points", PointToBlockIfGridNode.class));
         registry.registerNode(new NodeInfo("spatial.points.filter_grid_points", "Filter Grid Points", "Split a point list into grid-aligned and off-grid subsets.", "spatial.points", FilterGridPointsNode.class));
         registry.registerNode(new NodeInfo("spatial.points.snap_point_list_to_blocks", "Snap Point List To Blocks", "Snap a point list onto the block grid using a chosen mode.", "spatial.points", SnapPointListToBlocksNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.offsetcoordinates", "Offset Coordinates", "", "spatial.points", OffsetCoordinatesNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.rotatecoordinates", "Rotate Coordinates", "", "spatial.points", RotateCoordinatesNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.scalecoordinates", "Scale Coordinates", "", "spatial.points", ScaleCoordinatesNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.mirrorcoordinates", "Mirror Coordinates", "", "spatial.points", MirrorCoordinatesNode.class));
-        registry.registerNode(new NodeInfo("spatial.points.randomizecoordinates", "Randomize Coordinates", "", "spatial.points", RandomizeCoordinatesNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.offset_coordinates", "Offset Coordinates", "Translate a block coordinate list by an offset vector.", "spatial.points", OffsetCoordinatesNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.rotate_coordinates", "Rotate Coordinates", "Rotate a block coordinate list around a center and axis.", "spatial.points", RotateCoordinatesNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.scale_coordinates", "Scale Coordinates", "Scale a block coordinate list relative to a center point.", "spatial.points", ScaleCoordinatesNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.mirror_coordinates", "Mirror Coordinates", "Mirror a block coordinate list across a plane.", "spatial.points", MirrorCoordinatesNode.class));
+        registry.registerNode(new NodeInfo("spatial.points.randomize_coordinates", "Randomize Coordinates", "Apply random offsets to a block coordinate list.", "spatial.points", RandomizeCoordinatesNode.class));
     }
 }
