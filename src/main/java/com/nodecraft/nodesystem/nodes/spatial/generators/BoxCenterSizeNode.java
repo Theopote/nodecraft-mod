@@ -7,8 +7,8 @@ import net.minecraft.util.math.BlockPos;
 
 @NodeInfo(
     id = "spatial.generators.box_center_size",
-    displayName = "Box by Center",
-    description = "Generates a box from its center point and X/Y/Z sizes",
+    displayName = "Box by Center + Size",
+    description = "Generates a box from a center point and explicit X/Y/Z sizes",
     category = "spatial.generators"
 )
 public class BoxCenterSizeNode extends AbstractBoxGeneratorNode {
@@ -26,23 +26,23 @@ public class BoxCenterSizeNode extends AbstractBoxGeneratorNode {
         super("spatial.generators.box_center_size");
 
         addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center point of the box", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional plane used to orient the box", NodeDataType.PLANE, this));
-        addInputPort(new BasePort(INPUT_SIZE_X_ID, "Size X", "Width in blocks on the X axis", NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_SIZE_Y_ID, "Size Y", "Height in blocks on the Y axis", NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_SIZE_Z_ID, "Size Z", "Depth in blocks on the Z axis", NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_ROT_X_ID, "Rotation X", "Rotation around the X axis in degrees", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_ROT_Y_ID, "Rotation Y", "Rotation around the Y axis in degrees", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_ROT_Z_ID, "Rotation Z", "Rotation around the Z axis in degrees", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional reference plane used to orient the local X/Y/Z axes", NodeDataType.PLANE, this));
+        addInputPort(new BasePort(INPUT_SIZE_X_ID, "Size X", "Box size along local X. Negative values use the same size magnitude.", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_SIZE_Y_ID, "Size Y", "Box size along local Y. Negative values use the same size magnitude.", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_SIZE_Z_ID, "Size Z", "Box size along local Z. Negative values use the same size magnitude.", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_ROT_X_ID, "Rotation X", "Additional local rotation around the box X axis in degrees", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_ROT_Y_ID, "Rotation Y", "Additional local rotation around the box Y axis in degrees", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_ROT_Z_ID, "Rotation Z", "Additional local rotation around the box Z axis in degrees", NodeDataType.DOUBLE, this));
     }
 
     @Override
     public String getDescription() {
-        return "Generates a box from its center point and X/Y/Z sizes";
+        return "Generates a box from a center point and explicit X/Y/Z sizes";
     }
 
     @Override
     public String getDisplayName() {
-        return "Box by Center";
+        return "Box by Center + Size";
     }
 
     @Override

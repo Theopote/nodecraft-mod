@@ -80,15 +80,15 @@ abstract class AbstractBoxGeneratorNode extends BaseNode {
     protected abstract BoxDefinition resolveBoxDefinition();
 
     protected void addCommonOutputs() {
-        addOutputPort(new BasePort(OUTPUT_BOX_BLOCKS_ID, "Blocks", "Blocks forming the box", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Box region", NodeDataType.REGION, this));
-        addOutputPort(new BasePort(OUTPUT_MIN_CORNER_ID, "Min Corner", "Minimum corner of the box", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_MAX_CORNER_ID, "Max Corner", "Maximum corner of the box", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Generated block count", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Unified geometry output", NodeDataType.GEOMETRY, this));
-        addOutputPort(new BasePort(OUTPUT_BOX_GEOMETRY_ID, "Box Geometry", "Resolved box geometry", NodeDataType.BOX_GEOMETRY, this));
-        addOutputPort(new BasePort(OUTPUT_CORNERS_ID, "Corners", "Ordered list of the 8 box corners (0-7)", NodeDataType.VECTOR_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_FACES_ID, "Faces", "Ordered list of the 6 box faces", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_BOX_BLOCKS_ID, "Blocks", "Voxelized blocks generated from the box", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Axis-aligned bounding region of the box result", NodeDataType.REGION, this));
+        addOutputPort(new BasePort(OUTPUT_MIN_CORNER_ID, "Min Corner", "Minimum corner of the bounding region", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_MAX_CORNER_ID, "Max Corner", "Maximum corner of the bounding region", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of generated blocks", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Unified geometry output for downstream geometry nodes", NodeDataType.GEOMETRY, this));
+        addOutputPort(new BasePort(OUTPUT_BOX_GEOMETRY_ID, "Box Geometry", "Resolved box geometry for analysis and editing", NodeDataType.BOX_GEOMETRY, this));
+        addOutputPort(new BasePort(OUTPUT_CORNERS_ID, "Corners", "Ordered list of the 8 box corners. Use Get Box Corner to access one by index 0-7.", NodeDataType.VECTOR_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_FACES_ID, "Faces", "Ordered list of the 6 box faces. Use Get Box Face to access one by index 0-5.", NodeDataType.LIST, this));
     }
 
     protected BoxDefinition createAxisAlignedDefinition(BlockPos minCorner, BlockPos maxCorner) {

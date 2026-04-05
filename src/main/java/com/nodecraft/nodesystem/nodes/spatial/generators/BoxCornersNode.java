@@ -7,8 +7,8 @@ import net.minecraft.util.math.BlockPos;
 
 @NodeInfo(
     id = "spatial.generators.box_corners",
-    displayName = "Box by Corners",
-    description = "Generates an axis-aligned box from two opposite corners",
+    displayName = "Box by Two Corners",
+    description = "Generates an axis-aligned box from two opposite corner points",
     category = "spatial.generators"
 )
 public class BoxCornersNode extends AbstractBoxGeneratorNode {
@@ -20,17 +20,17 @@ public class BoxCornersNode extends AbstractBoxGeneratorNode {
         super("spatial.generators.box_corners");
 
         addInputPort(new BasePort(INPUT_CORNER_A_ID, "Corner A", "First corner of the box", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_CORNER_B_ID, "Corner B", "Opposite corner of the box", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_CORNER_B_ID, "Corner B", "Opposite corner of the box. The result stays axis-aligned.", NodeDataType.BLOCK_POS, this));
     }
 
     @Override
     public String getDescription() {
-        return "Generates an axis-aligned box from two opposite corners";
+        return "Generates an axis-aligned box from two opposite corner points";
     }
 
     @Override
     public String getDisplayName() {
-        return "Box by Corners";
+        return "Box by Two Corners";
     }
 
     @Override

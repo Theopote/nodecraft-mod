@@ -11,8 +11,8 @@ import net.minecraft.util.math.BlockPos;
  */
 @NodeInfo(
     id = "spatial.generators.box_blocks",
-    displayName = "Box (Legacy)",
-    description = "Legacy combined box generator. Prefer the dedicated center, corners, or corner + size box nodes.",
+    displayName = "Box (Legacy Combined)",
+    description = "Legacy combined box generator kept for compatibility. Prefer Box by Center + Size, Box by Two Corners, or Box by Corner + Size.",
     category = "spatial.generators"
 )
 public class BoxBlocksNode extends AbstractBoxGeneratorNode {
@@ -49,12 +49,12 @@ public class BoxBlocksNode extends AbstractBoxGeneratorNode {
 
     @Override
     public String getDescription() {
-        return "Legacy combined box generator. Prefer the dedicated center, corners, or corner + size box nodes.";
+        return "Legacy combined box generator kept for compatibility. Prefer Box by Center + Size, Box by Two Corners, or Box by Corner + Size.";
     }
 
     @Override
     public String getDisplayName() {
-        return "Box (Legacy)";
+        return "Box (Legacy Combined)";
     }
 
     @Override
