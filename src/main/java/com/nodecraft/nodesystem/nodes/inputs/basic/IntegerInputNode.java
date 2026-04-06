@@ -85,7 +85,7 @@ public class IntegerInputNode extends BaseCustomUINode {
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, l -> {
             boolean changed = false;
-            float edgeMargin = l.toPixels(getMediumPadding());
+            float edgeMargin = l.toPixels(getSmallPadding());
             float availableWidth = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
             float baseCursorX = ImGui.getCursorPosX();
 

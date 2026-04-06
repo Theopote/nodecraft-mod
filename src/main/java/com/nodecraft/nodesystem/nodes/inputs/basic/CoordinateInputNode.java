@@ -80,26 +80,36 @@ public class CoordinateInputNode extends BaseCustomUINode {
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, l -> {
             boolean changed = false;
-            float availableWidth = getAvailableContentWidth(width, zoom);
+            float edgeMargin = l.toPixels(getSmallPadding());
+            float availableWidth = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
+            float baseCursorX = ImGui.getCursorPosX();
 
             l.addVerticalSpacing(getMediumPadding());
 
-            changed |= renderComponentInput("X", x, this::setX);
+            changed |= renderComponentInput("X", x, this::setX, availableWidth, baseCursorX, edgeMargin);
             l.addVerticalSpacing(getSmallPadding());
-            changed |= renderComponentInput("Y", y, this::setY);
+            changed |= renderComponentInput("Y", y, this::setY, availableWidth, baseCursorX, edgeMargin);
             l.addVerticalSpacing(getSmallPadding());
-            changed |= renderComponentInput("Z", z, this::setZ);
+            changed |= renderComponentInput("Z", z, this::setZ, availableWidth, baseCursorX, edgeMargin);
 
             l.addVerticalSpacing(getMediumPadding());
             return changed;
         });
     }
 
-    private boolean renderComponentInput(String label, int currentValue, java.util.function.IntConsumer setter) {
+    private boolean renderComponentInput(String label, int currentValue, java.util.function.IntConsumer setter,
+                                         float availableWidth, float baseCursorX, float edgeMargin) {
+        float labelWidth = ImGui.calcTextSize(label).x;
+        float spacing = ImGui.getStyle().getItemSpacingX();
+        float inputWidth = Math.max(availableWidth - labelWidth - spacing, 56.0f);
+
+        ImGui.setCursorPosX(baseCursorX + edgeMargin);
         ImGui.text(label);
         ImGui.sameLine();
+        ImGui.pushItemWidth(inputWidth);
         ImInt valueInput = new ImInt(currentValue);
         boolean changed = ImGui.inputInt("##" + label.toLowerCase(), valueInput, 1, 10);
+        ImGui.popItemWidth();
         if (changed) {
             setter.accept(valueInput.get());
         }

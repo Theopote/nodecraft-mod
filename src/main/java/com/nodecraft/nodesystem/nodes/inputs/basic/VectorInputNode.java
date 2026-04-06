@@ -81,23 +81,27 @@ public class VectorInputNode extends BaseCustomUINode {
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, l -> {
             boolean changed = false;
-            float availableWidth = getAvailableContentWidth(width, zoom);
+            float edgeMargin = l.toPixels(getSmallPadding());
+            float availableWidth = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
+            float baseCursorX = ImGui.getCursorPosX();
 
             l.addVerticalSpacing(getMediumPadding());
 
-            changed |= renderComponentInput("X", availableWidth, l, x, this::setX);
+            changed |= renderComponentInput("X", availableWidth, l, x, this::setX, baseCursorX, edgeMargin);
             l.addVerticalSpacing(getSmallPadding());
-            changed |= renderComponentInput("Y", availableWidth, l, y, this::setY);
+            changed |= renderComponentInput("Y", availableWidth, l, y, this::setY, baseCursorX, edgeMargin);
             l.addVerticalSpacing(getSmallPadding());
-            changed |= renderComponentInput("Z", availableWidth, l, z, this::setZ);
+            changed |= renderComponentInput("Z", availableWidth, l, z, this::setZ, baseCursorX, edgeMargin);
 
             l.addVerticalSpacing(getMediumPadding());
             return changed;
         });
     }
 
-    private boolean renderComponentInput(String label, float availableWidth, LayoutHelper l, double currentValue, java.util.function.DoubleConsumer setter) {
+    private boolean renderComponentInput(String label, float availableWidth, LayoutHelper l, double currentValue,
+                                         java.util.function.DoubleConsumer setter, float baseCursorX, float edgeMargin) {
         float labelWidth = ImGui.calcTextSize(label).x;
+        ImGui.setCursorPosX(baseCursorX + edgeMargin);
         ImGui.text(label);
         ImGui.sameLine();
 
