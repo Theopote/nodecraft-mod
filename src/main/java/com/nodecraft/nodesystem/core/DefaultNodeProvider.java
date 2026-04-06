@@ -50,6 +50,7 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("math", "Math & Logic"));
         registry.registerCategory(new NodeRegistry.NodeCategory("spatial", "Spatial & Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities & Workflow"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist & Reroute"));
         registry.registerCategory(new NodeRegistry.NodeCategory("visualization", "Visualization & Execution"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world", "World Interaction"));
         
