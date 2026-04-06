@@ -1218,8 +1218,6 @@ public class NodeLibraryComponent implements EditorComponent {
             boolean isLastItem = i == nodesToRender.size() - 1;
             if (!isEndOfRow && !isLastItem) {
                 ImGui.sameLine(0.0f, spacingX);
-            } else if (!isLastItem) {
-                ImGui.dummy(0.0f, spacingY);
             }
         }
     }
