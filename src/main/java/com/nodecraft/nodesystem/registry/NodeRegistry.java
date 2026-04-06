@@ -47,35 +47,55 @@ public class NodeRegistry {
 
     private static Map<String, String> createNodeIdAliases() {
         Map<String, String> aliases = new HashMap<>();
-        aliases.put("spatial.points.offsetcoordinates", "spatial.points.offset_coordinates");
-        aliases.put("spatial.points.rotatecoordinates", "spatial.points.rotate_coordinates");
-        aliases.put("spatial.points.scalecoordinates", "spatial.points.scale_coordinates");
-        aliases.put("spatial.points.mirrorcoordinates", "spatial.points.mirror_coordinates");
-        aliases.put("spatial.points.randomizecoordinates", "spatial.points.randomize_coordinates");
-        aliases.put("spatial.generators.box_center_size", "spatial.construct.box_center_size");
-        aliases.put("spatial.generators.box_corners", "spatial.construct.box_corners");
-        aliases.put("spatial.generators.box_corner_size", "spatial.construct.box_corner_size");
-        aliases.put("spatial.generators.sphere_by_center_radius", "spatial.construct.sphere_by_center_radius");
-        aliases.put("spatial.generators.sphere_by_diameter", "spatial.construct.sphere_by_diameter");
-        aliases.put("spatial.generators.push_pull_box_face", "spatial.modeling.push_pull_box_face");
-        aliases.put("spatial.generators.extrude_box_face", "spatial.modeling.extrude_box_face");
-        aliases.put("spatial.generators.grow_along_normals", "spatial.instancing.grow_along_normals");
-        aliases.put("spatial.generators.grow_along_sphere_normal", "spatial.instancing.grow_along_sphere_normal");
-        aliases.put("spatial.generators.lineblocks", "spatial.generators.line_blocks");
-        aliases.put("spatial.generators.rectangleblocks", "spatial.generators.rectangle_blocks");
-        aliases.put("spatial.generators.boxblocks", "spatial.generators.box_blocks");
-        aliases.put("spatial.generators.circlesphereblocks", "spatial.generators.circle_sphere_blocks");
-        aliases.put("spatial.generators.cylinderblocks", "spatial.generators.cylinder_blocks");
-        aliases.put("spatial.generators.polylineblocks", "spatial.generators.polyline_blocks");
-        aliases.put("spatial.generators.curveblocks", "spatial.generators.curve_blocks");
-        aliases.put("spatial.generators.ellipsoidblocks", "spatial.generators.ellipsoid_blocks");
-        aliases.put("spatial.generators.coneblocks", "spatial.generators.cone_blocks");
-        aliases.put("spatial.generators.torusblocks", "spatial.generators.torus_blocks");
-        aliases.put("spatial.generators.octahedronblocks", "spatial.generators.octahedron_blocks");
-        aliases.put("spatial.generators.tetrahedronblocks", "spatial.generators.tetrahedron_blocks");
-        aliases.put("spatial.generators.triangularpyramidblocks", "spatial.generators.triangular_pyramid_blocks");
-        aliases.put("spatial.generators.triangularprismblocks", "spatial.generators.triangular_prism_blocks");
+        addAlias(aliases, "spatial.points.offsetcoordinates", "spatial.points.offset_coordinates");
+        addAlias(aliases, "spatial.points.rotatecoordinates", "spatial.points.rotate_coordinates");
+        addAlias(aliases, "spatial.points.scalecoordinates", "spatial.points.scale_coordinates");
+        addAlias(aliases, "spatial.points.mirrorcoordinates", "spatial.points.mirror_coordinates");
+        addAlias(aliases, "spatial.points.randomizecoordinates", "spatial.points.randomize_coordinates");
+
+        addMovedNodeAlias(aliases, "spatial.generators.box_center_size", "spatial.construct.box_center_size");
+        addMovedNodeAlias(aliases, "spatial.generators.box_corners", "spatial.construct.box_corners");
+        addMovedNodeAlias(aliases, "spatial.generators.box_corner_size", "spatial.construct.box_corner_size");
+        addMovedNodeAlias(aliases, "spatial.generators.sphere_by_center_radius", "spatial.construct.sphere_by_center_radius");
+        addMovedNodeAlias(aliases, "spatial.generators.sphere_by_diameter", "spatial.construct.sphere_by_diameter");
+        addMovedNodeAlias(aliases, "spatial.generators.push_pull_box_face", "spatial.modeling.push_pull_box_face");
+        addMovedNodeAlias(aliases, "spatial.generators.extrude_box_face", "spatial.modeling.extrude_box_face");
+        addMovedNodeAlias(aliases, "spatial.generators.grow_along_normals", "spatial.instancing.grow_along_normals");
+        addMovedNodeAlias(aliases, "spatial.generators.grow_along_sphere_normal", "spatial.instancing.grow_along_sphere_normal");
+
+        addCompactLegacyAlias(aliases, "spatial.generators.line_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.rectangle_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.box_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.circle_sphere_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.cylinder_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.polyline_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.curve_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.ellipsoid_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.cone_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.torus_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.octahedron_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.tetrahedron_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.triangular_pyramid_blocks");
+        addCompactLegacyAlias(aliases, "spatial.generators.triangular_prism_blocks");
         return Collections.unmodifiableMap(aliases);
+    }
+
+    private static void addAlias(Map<String, String> aliases, String legacyId, String canonicalId) {
+        aliases.put(legacyId, canonicalId);
+    }
+
+    private static void addMovedNodeAlias(Map<String, String> aliases, String legacyId, String canonicalId) {
+        addAlias(aliases, legacyId, canonicalId);
+    }
+
+    private static void addCompactLegacyAlias(Map<String, String> aliases, String canonicalId) {
+        int lastDot = canonicalId.lastIndexOf('.');
+        if (lastDot < 0 || lastDot >= canonicalId.length() - 1) {
+            return;
+        }
+        String prefix = canonicalId.substring(0, lastDot + 1);
+        String leaf = canonicalId.substring(lastDot + 1);
+        addAlias(aliases, prefix + leaf.replace("_", ""), canonicalId);
     }
 
     private static Map<String, String> createNodeCategoryOverrides() {
