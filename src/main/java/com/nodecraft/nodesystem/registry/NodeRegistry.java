@@ -111,6 +111,10 @@ public class NodeRegistry {
         return NODE_ID_ALIASES.getOrDefault(normalizedId, normalizedId);
     }
 
+    public String resolveCanonicalNodeId(String nodeId) {
+        return normalizeNodeId(nodeId);
+    }
+
     private String remapCategory(String normalizedNodeId, String categoryId) {
         String normalizedCategoryId = categoryId == null ? "" : categoryId.toLowerCase();
         String explicitOverride = NODE_CATEGORY_OVERRIDES.get(normalizedNodeId);
