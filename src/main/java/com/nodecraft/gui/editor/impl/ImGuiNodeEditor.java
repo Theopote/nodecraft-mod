@@ -232,13 +232,8 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
 
             ImDrawList drawList = ImGui.getWindowDrawList();
 
-            // 1. 绘制背景和网格
-            drawList.addRectFilled(canvasPos.x, canvasPos.y, canvasPos.x + canvasWidth, canvasPos.y + canvasHeight,
-                    ImGui.getColorU32(imgui.flag.ImGuiCol.FrameBg));
-
-            if (showGrid) {
-                renderer.drawGrid(drawList, canvasPos, canvasWidth, canvasHeight);
-            }
+            // 1. 背景与网格由 CanvasComponent 统一绘制与控透明度，
+            //    这里不再重复绘制，避免出现“画布透明度为0但仍有底色/网格”的叠层现象。
 
             // 清除端口屏幕位置缓存，每帧重新计算
             portScreenPositions.clear();
