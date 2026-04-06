@@ -16,7 +16,9 @@ import com.nodecraft.gui.node.NodeInfo;
 import com.nodecraft.gui.style.MinecraftTheme;
 import com.nodecraft.nodesystem.registry.NodeRegistry.NodeCategory;
 import com.nodecraft.gui.utils.NodeIconManager;
+import com.nodecraft.gui.utils.UserPreferences;
 import com.nodecraft.gui.components.search.NodeSearchManager;
+import org.jspecify.annotations.NonNull;
 import org.lwjgl.opengl.GL11;
 
 import imgui.ImGui;
@@ -45,6 +47,90 @@ public class NodeLibraryComponent implements EditorComponent {
     private static Map<String, Map<String, Integer>> createCategoryNodeOrder() {
         Map<String, Map<String, Integer>> categoryOrder = new HashMap<>();
 
+        Map<String, Integer> previewOrder = getPreviewOrder();
+        categoryOrder.put("visualization.preview", previewOrder);
+
+        Map<String, Integer> inputsMinecraftOrder = getInputsMinecraftOrder();
+        categoryOrder.put("inputs.minecraft", inputsMinecraftOrder);
+
+        Map<String, Integer> spatialGeneratorsOrder = new HashMap<>();
+        spatialGeneratorsOrder.put("spatial.generators.box_blocks", 0);
+        spatialGeneratorsOrder.put("spatial.generators.region_box_blocks", 1);
+        categoryOrder.put("spatial.generators", spatialGeneratorsOrder);
+
+        Map<String, Integer> spatialConstructOrder = getSpatialConstructOrder();
+        categoryOrder.put("spatial.construct", spatialConstructOrder);
+
+        Map<String, Integer> spatialAnalysisOrder = getMap();
+        categoryOrder.put("spatial.analysis", spatialAnalysisOrder);
+
+        Map<String, Integer> spatialPointsOrder = getIntegerMap();
+        categoryOrder.put("spatial.points", spatialPointsOrder);
+
+        Map<String, Integer> spatialModelingOrder = getSpatialModelingOrder();
+        categoryOrder.put("spatial.modeling", spatialModelingOrder);
+
+        Map<String, Integer> spatialInstancingOrder = new HashMap<>();
+        spatialInstancingOrder.put("spatial.instancing.grow_along_normals", 0);
+        spatialInstancingOrder.put("spatial.instancing.grow_along_sphere_normal", 1);
+        categoryOrder.put("spatial.instancing", spatialInstancingOrder);
+
+        Map<String, Integer> spatialVoxelOrder = getSpatialVoxelOrder();
+        categoryOrder.put("spatial.voxel", spatialVoxelOrder);
+
+        Map<String, Integer> spatialLegacyOrder = getStringIntegerMap();
+        categoryOrder.put("spatial.legacy", spatialLegacyOrder);
+
+        return categoryOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getInputsMinecraftOrder() {
+        Map<String, Integer> inputsMinecraftOrder = new HashMap<>();
+        inputsMinecraftOrder.put("inputs.minecraft.selected_block", 0);
+        inputsMinecraftOrder.put("inputs.minecraft.selected_block_sequence", 1);
+        inputsMinecraftOrder.put("inputs.minecraft.selected_region", 2);
+        inputsMinecraftOrder.put("inputs.minecraft.selected_entity", 3);
+        inputsMinecraftOrder.put("inputs.minecraft.player_position", 4);
+        inputsMinecraftOrder.put("inputs.minecraft.player_look_at", 5);
+        inputsMinecraftOrder.put("inputs.minecraft.dimension_info", 6);
+        inputsMinecraftOrder.put("inputs.minecraft.current_time", 7);
+        inputsMinecraftOrder.put("inputs.minecraft.biome_at_player", 8);
+        return inputsMinecraftOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
+        Map<String, Integer> spatialVoxelOrder = new HashMap<>();
+        spatialVoxelOrder.put("spatial.voxel.geometry_to_blocks", 0);
+        spatialVoxelOrder.put("spatial.voxel.surface_strip_to_blocks", 1);
+        spatialVoxelOrder.put("spatial.voxel.box_geometry_voxelizer", 2);
+        spatialVoxelOrder.put("spatial.voxel.sphere_geometry_voxelizer", 3);
+        spatialVoxelOrder.put("spatial.voxel.cylinder_geometry_voxelizer", 4);
+        spatialVoxelOrder.put("spatial.voxel.cone_geometry_voxelizer", 5);
+        spatialVoxelOrder.put("spatial.voxel.ellipsoid_geometry_voxelizer", 6);
+        spatialVoxelOrder.put("spatial.voxel.prism_geometry_voxelizer", 7);
+        spatialVoxelOrder.put("spatial.voxel.octahedron_geometry_voxelizer", 8);
+        spatialVoxelOrder.put("spatial.voxel.tetrahedron_geometry_voxelizer", 9);
+        spatialVoxelOrder.put("spatial.voxel.torus_geometry_voxelizer", 10);
+        return spatialVoxelOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getSpatialModelingOrder() {
+        Map<String, Integer> spatialModelingOrder = new HashMap<>();
+        spatialModelingOrder.put("spatial.modeling.resample_polygon_profile", 0);
+        spatialModelingOrder.put("spatial.modeling.extrude_profile", 1);
+        spatialModelingOrder.put("spatial.modeling.loft_profiles", 2);
+        spatialModelingOrder.put("spatial.modeling.sweep_profile_along_path", 3);
+        spatialModelingOrder.put("spatial.modeling.twist_point_list", 4);
+        spatialModelingOrder.put("spatial.modeling.extrude_point_list", 5);
+        spatialModelingOrder.put("spatial.modeling.loft_point_lists", 6);
+        spatialModelingOrder.put("spatial.modeling.sweep_point_list_along_path", 7);
+        spatialModelingOrder.put("spatial.modeling.surface_strip_to_geometry", 8);
+        spatialModelingOrder.put("spatial.modeling.push_pull_box_face", 9);
+        spatialModelingOrder.put("spatial.modeling.extrude_box_face", 10);
+        return spatialModelingOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getPreviewOrder() {
         Map<String, Integer> previewOrder = new HashMap<>();
         previewOrder.put("visualization.preview.geometry_viewer", 0);
         previewOrder.put("visualization.preview.preview_blocks", 1);
@@ -58,25 +144,10 @@ public class NodeLibraryComponent implements EditorComponent {
         previewOrder.put("visualization.preview.preview_surface_strip", 9);
         previewOrder.put("visualization.preview.preview_polygon_profiles", 10);
         previewOrder.put("visualization.preview.clear_all_previews", 11);
-        categoryOrder.put("visualization.preview", previewOrder);
+        return previewOrder;
+    }
 
-        Map<String, Integer> inputsMinecraftOrder = new HashMap<>();
-        inputsMinecraftOrder.put("inputs.minecraft.selected_block", 0);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_block_sequence", 1);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_region", 2);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_entity", 3);
-        inputsMinecraftOrder.put("inputs.minecraft.player_position", 4);
-        inputsMinecraftOrder.put("inputs.minecraft.player_look_at", 5);
-        inputsMinecraftOrder.put("inputs.minecraft.dimension_info", 6);
-        inputsMinecraftOrder.put("inputs.minecraft.current_time", 7);
-        inputsMinecraftOrder.put("inputs.minecraft.biome_at_player", 8);
-        categoryOrder.put("inputs.minecraft", inputsMinecraftOrder);
-
-        Map<String, Integer> spatialGeneratorsOrder = new HashMap<>();
-        spatialGeneratorsOrder.put("spatial.generators.box_blocks", 0);
-        spatialGeneratorsOrder.put("spatial.generators.region_box_blocks", 1);
-        categoryOrder.put("spatial.generators", spatialGeneratorsOrder);
-
+    private static @NonNull Map<String, Integer> getSpatialConstructOrder() {
         Map<String, Integer> spatialConstructOrder = new HashMap<>();
         spatialConstructOrder.put("spatial.construct.rectangle_on_plane", 0);
         spatialConstructOrder.put("spatial.construct.regular_polygon_on_plane", 1);
@@ -93,8 +164,10 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialConstructOrder.put("spatial.construct.box_corner_size", 12);
         spatialConstructOrder.put("spatial.construct.sphere_by_center_radius", 13);
         spatialConstructOrder.put("spatial.construct.sphere_by_diameter", 14);
-        categoryOrder.put("spatial.construct", spatialConstructOrder);
+        return spatialConstructOrder;
+    }
 
+    private static @NonNull Map<String, Integer> getMap() {
         Map<String, Integer> spatialAnalysisOrder = new HashMap<>();
         spatialAnalysisOrder.put("spatial.analysis.bounding_box", 0);
         spatialAnalysisOrder.put("spatial.analysis.geometry_bounds", 1);
@@ -112,8 +185,10 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialAnalysisOrder.put("spatial.analysis.deconstruct_face_edge", 13);
         spatialAnalysisOrder.put("spatial.analysis.point_list_bounds", 14);
         spatialAnalysisOrder.put("spatial.analysis.point_list_center", 15);
-        categoryOrder.put("spatial.analysis", spatialAnalysisOrder);
+        return spatialAnalysisOrder;
+    }
 
+    private static @NonNull Map<String, Integer> getIntegerMap() {
         Map<String, Integer> spatialPointsOrder = new HashMap<>();
         spatialPointsOrder.put("spatial.points.block_to_point", 0);
         spatialPointsOrder.put("spatial.points.project_point_to_plane", 1);
@@ -132,41 +207,10 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialPointsOrder.put("spatial.points.scale_coordinates", 14);
         spatialPointsOrder.put("spatial.points.mirror_coordinates", 15);
         spatialPointsOrder.put("spatial.points.randomize_coordinates", 16);
-        categoryOrder.put("spatial.points", spatialPointsOrder);
+        return spatialPointsOrder;
+    }
 
-        Map<String, Integer> spatialModelingOrder = new HashMap<>();
-        spatialModelingOrder.put("spatial.modeling.resample_polygon_profile", 0);
-        spatialModelingOrder.put("spatial.modeling.extrude_profile", 1);
-        spatialModelingOrder.put("spatial.modeling.loft_profiles", 2);
-        spatialModelingOrder.put("spatial.modeling.sweep_profile_along_path", 3);
-        spatialModelingOrder.put("spatial.modeling.twist_point_list", 4);
-        spatialModelingOrder.put("spatial.modeling.extrude_point_list", 5);
-        spatialModelingOrder.put("spatial.modeling.loft_point_lists", 6);
-        spatialModelingOrder.put("spatial.modeling.sweep_point_list_along_path", 7);
-        spatialModelingOrder.put("spatial.modeling.surface_strip_to_geometry", 8);
-        spatialModelingOrder.put("spatial.modeling.push_pull_box_face", 9);
-        spatialModelingOrder.put("spatial.modeling.extrude_box_face", 10);
-        categoryOrder.put("spatial.modeling", spatialModelingOrder);
-
-        Map<String, Integer> spatialInstancingOrder = new HashMap<>();
-        spatialInstancingOrder.put("spatial.instancing.grow_along_normals", 0);
-        spatialInstancingOrder.put("spatial.instancing.grow_along_sphere_normal", 1);
-        categoryOrder.put("spatial.instancing", spatialInstancingOrder);
-
-        Map<String, Integer> spatialVoxelOrder = new HashMap<>();
-        spatialVoxelOrder.put("spatial.voxel.geometry_to_blocks", 0);
-        spatialVoxelOrder.put("spatial.voxel.surface_strip_to_blocks", 1);
-        spatialVoxelOrder.put("spatial.voxel.box_geometry_voxelizer", 2);
-        spatialVoxelOrder.put("spatial.voxel.sphere_geometry_voxelizer", 3);
-        spatialVoxelOrder.put("spatial.voxel.cylinder_geometry_voxelizer", 4);
-        spatialVoxelOrder.put("spatial.voxel.cone_geometry_voxelizer", 5);
-        spatialVoxelOrder.put("spatial.voxel.ellipsoid_geometry_voxelizer", 6);
-        spatialVoxelOrder.put("spatial.voxel.prism_geometry_voxelizer", 7);
-        spatialVoxelOrder.put("spatial.voxel.octahedron_geometry_voxelizer", 8);
-        spatialVoxelOrder.put("spatial.voxel.tetrahedron_geometry_voxelizer", 9);
-        spatialVoxelOrder.put("spatial.voxel.torus_geometry_voxelizer", 10);
-        categoryOrder.put("spatial.voxel", spatialVoxelOrder);
-
+    private static @NonNull Map<String, Integer> getStringIntegerMap() {
         Map<String, Integer> spatialLegacyOrder = new HashMap<>();
         spatialLegacyOrder.put("spatial.generators.line_blocks", 0);
         spatialLegacyOrder.put("spatial.generators.rectangle_blocks", 1);
@@ -188,19 +232,28 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialLegacyOrder.put("spatial.generators.triangular_pyramid_blocks", 17);
         spatialLegacyOrder.put("spatial.generators.polyline_blocks", 18);
         spatialLegacyOrder.put("spatial.generators.curve_blocks", 19);
-        categoryOrder.put("spatial.legacy", spatialLegacyOrder);
-
-        return categoryOrder;
+        return spatialLegacyOrder;
     }
 
     // 内部常量类
     private static class NodeLibraryConstants {
+        static final String PREF_DISPLAY_MODE_KEY = "node_library.display_mode";
+        static final String PREF_GRID_TILE_SCALE_KEY = "node_library.grid_tile_scale";
         static final float CHILD_WINDOW_MIN_WIDTH = 50;
         static final float CHILD_WINDOW_MIN_HEIGHT = 50;
         static final float CATEGORY_INDENT = 10f;
         static final float CATEGORY_SPACING_EXPANDED = 3f; // 减小展开类别下方的间距
         static final float CATEGORY_SPACING_COLLAPSED = 2f;
         static final float CATEGORY_ITEM_SPACING = 2f; // 新增：类别项目之间的间距
+        static final float GRID_TILE_WIDTH = 92f;
+        static final float GRID_TILE_HEIGHT = 84f;
+        static final float GRID_ICON_SIZE = 28f;
+        static final float GRID_TILE_SPACING_X = 8f;
+        static final float GRID_TILE_SPACING_Y = 8f;
+        static final float GRID_TILE_TEXT_PADDING = 6f;
+        static final float GRID_TILE_SIZE_SCALE = 1.5f;
+        static final float GRID_TILE_SIZE_SCALE_MIN = 1.0f;
+        static final float GRID_TILE_SIZE_SCALE_MAX = 3.0f;
         static final String DRAG_DROP_PAYLOAD_TYPE = "DND_NODE_FROM_LIBRARY";
 
         static final Map<String, float[]> CATEGORY_COLORS_FLOAT = new HashMap<>();
@@ -395,10 +448,17 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     // Node library state
+    public enum DisplayMode {
+        LIST,
+        GRID
+    }
+
     private final List<NodeCategory> allCategories; // 所有分类
     private final Map<String, Boolean> expandedCategories = new HashMap<>();
     private List<DisplayCategory> filteredCategories; // 过滤后的分类
     private boolean visible = true;
+    private DisplayMode displayMode = DisplayMode.LIST;
+    private float gridTileSizeScale = NodeLibraryConstants.GRID_TILE_SIZE_SCALE;
 
     // 图标管理器
     private final NodeIconManager iconManager = NodeIconManager.getInstance();
@@ -495,6 +555,20 @@ public class NodeLibraryComponent implements EditorComponent {
         for (String key : keyCategories) {
             expandedCategories.put(key, true);
         }
+
+        // 加载节点库显示模式偏好
+        String storedMode = UserPreferences.getString(NodeLibraryConstants.PREF_DISPLAY_MODE_KEY, DisplayMode.LIST.name());
+        try {
+            this.displayMode = DisplayMode.valueOf(storedMode);
+        } catch (IllegalArgumentException e) {
+            this.displayMode = DisplayMode.LIST;
+        }
+
+        float storedGridScale = UserPreferences.getFloat(
+            NodeLibraryConstants.PREF_GRID_TILE_SCALE_KEY,
+            NodeLibraryConstants.GRID_TILE_SIZE_SCALE
+        );
+        setGridTileSizeScale(storedGridScale);
         
         // 初始化图标管理器
         iconManager.initialize();
@@ -611,6 +685,32 @@ public class NodeLibraryComponent implements EditorComponent {
     @Override
     public boolean isVisible() {
         return visible;
+    }
+
+    public DisplayMode getDisplayMode() {
+        return displayMode;
+    }
+
+    public void setDisplayMode(DisplayMode mode) {
+        if (mode == null || this.displayMode == mode) {
+            return;
+        }
+        this.displayMode = mode;
+        UserPreferences.setString(NodeLibraryConstants.PREF_DISPLAY_MODE_KEY, mode.name());
+    }
+
+    public float getGridTileSizeScale() {
+        return gridTileSizeScale;
+    }
+
+    public void setGridTileSizeScale(float scale) {
+        float clamped = Math.max(NodeLibraryConstants.GRID_TILE_SIZE_SCALE_MIN,
+            Math.min(NodeLibraryConstants.GRID_TILE_SIZE_SCALE_MAX, scale));
+        if (Math.abs(this.gridTileSizeScale - clamped) < 0.001f) {
+            return;
+        }
+        this.gridTileSizeScale = clamped;
+        UserPreferences.setFloat(NodeLibraryConstants.PREF_GRID_TILE_SCALE_KEY, clamped);
     }
     
     /**
@@ -1046,103 +1146,10 @@ public class NodeLibraryComponent implements EditorComponent {
                 // If searching and no nodes matched in this category (but category name might have matched)
                 // Do nothing, the main "No matching nodes found" message handles this.
             } else {
-                for (NodeInfo node : nodesToRender) {
-                    // 为节点获取颜色 - 使用分类颜色作为基础
-                    String nodeCategory = node.getCategoryId();
-                    int nodeColorPacked;
-                    if (NodeLibraryConstants.CATEGORY_COLORS_INT.containsKey(nodeCategory)) {
-                        nodeColorPacked = NodeLibraryConstants.CATEGORY_COLORS_INT.get(nodeCategory);
-                    } else {
-                        nodeColorPacked = NodeLibraryConstants.getPackedColor(nodeCategory);
-                    }
-                    
-                    // 计算图标位置和大小
-                    float lineHeight = ImGui.getTextLineHeight();
-                    // 确保图标大小与行高一致
-                    float iconPadding = 4.0f; // 图标与文本间距
-                    
-                    ImVec2 cursorPos = ImGui.getCursorScreenPos();
-                    float textStartX = cursorPos.x + lineHeight + iconPadding;
-                    
-                    // 计算可用宽度
-                    float availableWidth = ImGui.getContentRegionAvailX();
-                    
-                    // 创建一个透明的选择器，高度设置为行高，确保正好容纳图标
-                    boolean selected = ImGui.selectable("##node_selector_" + node.getId(), false, 
-                        ImGuiSelectableFlags.AllowItemOverlap, availableWidth, lineHeight);
-                    
-                    // 获取选择器区域以计算图标位置
-                    ImVec2 rectMin = ImGui.getItemRectMin();
-                    ImVec2 rectMax = ImGui.getItemRectMax();
-                    
-                    // 在相同位置绘制图标和文本
-                    ImDrawList drawList = ImGui.getWindowDrawList();
-                    
-                    // 绘制图标纹理
-                    renderNode(drawList, rectMin, new ImVec2(lineHeight, lineHeight), node, nodeCategory, lineHeight, iconPadding);
-                    
-                    // 处理选择事件
-                    if (selected) {
-                        // 节点被选中
-                        if (selectCallback != null) {
-                            selectCallback.onNodeSelected(node.getId(), node.getDisplayName());
-                            // 节点选择事件值得记录，但也应该在调试模式下
-                            if (NodeCraft.LOGGER.isDebugEnabled()) {
-                                NodeCraft.LOGGER.debug("节点选择: {} ({})", node.getDisplayName(), node.getId());
-                            }
-                        }
-                    }
-
-                    // --- 拖放源设置 --- 使用常量定义载荷类型
-                    if (ImGui.beginDragDropSource(ImGuiDragDropFlags.None)) {
-                        // 载荷需要是字节数组
-                        byte[] payloadBytes = node.getId().getBytes(StandardCharsets.UTF_8);
-                        ImGui.setDragDropPayload(NodeLibraryConstants.DRAG_DROP_PAYLOAD_TYPE, payloadBytes);
-                        
-                        // 在拖拽预览中显示图标和节点标题
-                        float dragIconSize = lineHeight * 0.8f; // 拖拽时略小的图标
-                        ImGui.dummy(dragIconSize, dragIconSize); // 创建占位符
-                        ImVec2 iconPos = ImGui.getItemRectMin();
-                        
-                        // 绘制拖拽时的图标
-                        ImDrawList dragDrawList = ImGui.getWindowDrawList();
-                        renderNode(dragDrawList, iconPos, new ImVec2(dragIconSize, dragIconSize), node, nodeCategory, dragIconSize, 0);
-                        
-                        ImGui.sameLine(0, 5.0f);
-                        ImGui.text(node.getDisplayName()); // 在图标旁显示文本
-                        ImGui.endDragDropSource();
-                    }
-
-                    // --- 工具提示 ---
-                    if (ImGui.isItemHovered()) {
-                        ImGui.beginTooltip();
-                        
-                        // 在工具提示标题中也绘制带颜色的图标
-                        float tooltipIconSize = ImGui.getTextLineHeight() * 1.2f; // 提示中稍大的图标
-                        ImVec2 tooltipPos = ImGui.getCursorScreenPos();
-                        
-                        ImDrawList tooltipDrawList = ImGui.getWindowDrawList();
-                        renderNode(tooltipDrawList, tooltipPos, new ImVec2(tooltipIconSize, tooltipIconSize), node, nodeCategory, tooltipIconSize, 0);
-                        
-                        ImGui.dummy(tooltipIconSize, tooltipIconSize); // 创建与图标相同大小的空间
-                        ImGui.sameLine();
-                        ImGui.textUnformatted(node.getDisplayName());
-                        
-                        ImGui.textDisabled(node.getId());
-                        
-                        // 显示节点描述（如果有）
-                        String description = node.getDescription() != null ? node.getDescription() : "";
-                        if (!description.isEmpty()) {
-                            ImGui.separator();
-                            ImGui.textWrapped(description);
-                        }
-                        
-                        // 显示节点分类
-                        ImGui.separator();
-                        ImGui.textDisabled("分类: " + displayCategory.getDisplayName());
-                        
-                        ImGui.endTooltip();
-                    }
+                if (displayMode == DisplayMode.GRID) {
+                    renderNodesAsGrid(nodesToRender, displayCategory);
+                } else {
+                    renderNodesAsList(nodesToRender, displayCategory);
                 }
             }
             ImGui.unindent(NodeLibraryConstants.CATEGORY_INDENT);
@@ -1151,6 +1158,168 @@ public class NodeLibraryComponent implements EditorComponent {
              // Optional: Add very small spacing below collapsed header for visual separation
              ImGui.dummy(0, NodeLibraryConstants.CATEGORY_SPACING_COLLAPSED);
         }
+    }
+
+    private void renderNodesAsList(List<NodeInfo> nodesToRender, DisplayCategory displayCategory) {
+        for (NodeInfo node : nodesToRender) {
+            String nodeCategory = node.getCategoryId();
+            float lineHeight = ImGui.getTextLineHeight();
+            float iconPadding = 4.0f;
+            float availableWidth = ImGui.getContentRegionAvailX();
+
+            boolean selected = ImGui.selectable("##node_selector_" + node.getId(), false,
+                ImGuiSelectableFlags.AllowItemOverlap, availableWidth, lineHeight);
+
+            ImVec2 rectMin = ImGui.getItemRectMin();
+            ImDrawList drawList = ImGui.getWindowDrawList();
+
+            renderNode(drawList, rectMin, new ImVec2(lineHeight, lineHeight), node, nodeCategory, lineHeight, iconPadding);
+            handleNodeInteraction(node, nodeCategory, displayCategory, lineHeight);
+
+            if (selected && selectCallback != null) {
+                selectCallback.onNodeSelected(node.getId(), node.getDisplayName());
+                if (NodeCraft.LOGGER.isDebugEnabled()) {
+                    NodeCraft.LOGGER.debug("节点选择: {} ({})", node.getDisplayName(), node.getId());
+                }
+            }
+        }
+    }
+
+    private void renderNodesAsGrid(List<NodeInfo> nodesToRender, DisplayCategory displayCategory) {
+        float listLikeSpacing = ImGui.getStyle().getItemSpacingY();
+        float tileSide = ImGui.getTextLineHeight() * gridTileSizeScale;
+        float spacingX = listLikeSpacing;
+        float spacingY = listLikeSpacing;
+        float availableWidth = Math.max(tileSide, ImGui.getContentRegionAvailX());
+        int columns = Math.max(1, (int) ((availableWidth + spacingX) / (tileSide + spacingX)));
+
+        for (int i = 0; i < nodesToRender.size(); i++) {
+            NodeInfo node = nodesToRender.get(i);
+            String nodeCategory = node.getCategoryId();
+
+            boolean selected = ImGui.selectable("##node_tile_" + node.getId(), false,
+                ImGuiSelectableFlags.AllowItemOverlap, tileSide, tileSide);
+
+            ImVec2 rectMin = ImGui.getItemRectMin();
+            ImDrawList drawList = ImGui.getWindowDrawList();
+
+            drawGridPlaceholderIcon(drawList, rectMin, tileSide, nodeCategory);
+            handleNodeInteraction(node, nodeCategory, displayCategory, tileSide);
+
+            if (selected && selectCallback != null) {
+                selectCallback.onNodeSelected(node.getId(), node.getDisplayName());
+                if (NodeCraft.LOGGER.isDebugEnabled()) {
+                    NodeCraft.LOGGER.debug("节点选择: {} ({})", node.getDisplayName(), node.getId());
+                }
+            }
+
+            boolean isEndOfRow = (i + 1) % columns == 0;
+            boolean isLastItem = i == nodesToRender.size() - 1;
+            if (!isEndOfRow && !isLastItem) {
+                ImGui.sameLine(0.0f, spacingX);
+            } else if (!isLastItem) {
+                ImGui.dummy(0.0f, spacingY);
+            }
+        }
+    }
+
+    private void drawGridPlaceholderIcon(ImDrawList drawList, ImVec2 topLeft, float tileSide, String nodeCategory) {
+        int categoryColor = NodeLibraryConstants.getPackedColor(nodeCategory);
+        imgui.ImVec4 colorVec = new imgui.ImVec4();
+        ImGui.colorConvertU32ToFloat4(categoryColor, colorVec);
+
+        int fillColor = ImGui.colorConvertFloat4ToU32(
+            colorVec.x * 0.55f,
+            colorVec.y * 0.55f,
+            colorVec.z * 0.55f,
+            0.90f
+        );
+        int borderColor = ImGui.colorConvertFloat4ToU32(
+            Math.min(1.0f, colorVec.x * 1.15f),
+            Math.min(1.0f, colorVec.y * 1.15f),
+            Math.min(1.0f, colorVec.z * 1.15f),
+            1.0f
+        );
+
+        drawList.addRectFilled(
+            topLeft.x,
+            topLeft.y,
+            topLeft.x + tileSide,
+            topLeft.y + tileSide,
+            fillColor,
+            0.0f
+        );
+        drawList.addRect(
+            topLeft.x,
+            topLeft.y,
+            topLeft.x + tileSide,
+            topLeft.y + tileSide,
+            borderColor,
+            0.0f,
+            0,
+            1.0f
+        );
+    }
+
+    private void handleNodeInteraction(NodeInfo node, String nodeCategory, DisplayCategory displayCategory, float dragIconSizeRef) {
+        if (ImGui.beginDragDropSource(ImGuiDragDropFlags.None)) {
+            byte[] payloadBytes = node.getId().getBytes(StandardCharsets.UTF_8);
+            ImGui.setDragDropPayload(NodeLibraryConstants.DRAG_DROP_PAYLOAD_TYPE, payloadBytes);
+
+            float dragIconSize = dragIconSizeRef * 0.8f;
+            ImGui.dummy(dragIconSize, dragIconSize);
+            ImVec2 iconPos = ImGui.getItemRectMin();
+
+            ImDrawList dragDrawList = ImGui.getWindowDrawList();
+            drawNodeIcon(dragDrawList, iconPos, node, nodeCategory, dragIconSize);
+
+            ImGui.sameLine(0, 5.0f);
+            ImGui.text(node.getDisplayName());
+            ImGui.endDragDropSource();
+        }
+
+        if (ImGui.isItemHovered()) {
+            ImGui.beginTooltip();
+
+            float tooltipIconSize = ImGui.getTextLineHeight() * 1.2f;
+            ImVec2 tooltipPos = ImGui.getCursorScreenPos();
+
+            ImDrawList tooltipDrawList = ImGui.getWindowDrawList();
+            drawNodeIcon(tooltipDrawList, tooltipPos, node, nodeCategory, tooltipIconSize);
+
+            ImGui.dummy(tooltipIconSize, tooltipIconSize);
+            ImGui.sameLine();
+            ImGui.textUnformatted(node.getDisplayName());
+
+            ImGui.textDisabled(node.getId());
+
+            String description = node.getDescription() != null ? node.getDescription() : "";
+            if (!description.isEmpty()) {
+                ImGui.separator();
+                ImGui.textWrapped(description);
+            }
+
+            ImGui.separator();
+            ImGui.textDisabled("分类: " + displayCategory.getDisplayName());
+
+            ImGui.endTooltip();
+        }
+    }
+
+    private String ellipsizeText(String text, float maxWidth) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        if (ImGui.calcTextSize(text).x <= maxWidth) {
+            return text;
+        }
+
+        String ellipsis = "...";
+        String candidate = text;
+        while (!candidate.isEmpty() && ImGui.calcTextSize(candidate + ellipsis).x > maxWidth) {
+            candidate = candidate.substring(0, candidate.length() - 1);
+        }
+        return candidate.isEmpty() ? ellipsis : candidate + ellipsis;
     }
 
     private List<NodeInfo> getSortedNodesForDisplay(DisplayCategory displayCategory) {
@@ -1188,47 +1357,12 @@ public class NodeLibraryComponent implements EditorComponent {
      * 修改renderNode方法，使用搜索管理器高亮文本
      */
     private void renderNode(ImDrawList drawList, ImVec2 rectMin, ImVec2 textSize, NodeInfo node, String nodeCategory, float iconSize, float iconPadding) {
-        // 获取节点ID和分类
-        String nodeId = node.getId();
-        
-        // 首先尝试加载节点特定的图标
-        int textureId = iconManager.loadNodeIcon(nodeId, nodeCategory);
-        
-        // 计算图标的UV坐标 (对于纹理图标，UV坐标范围是0-1)
-        float u0 = 0.0f;
-        float v0 = 0.0f;
-        float u1 = 1.0f;
-        float v1 = 1.0f;
-        
-        // 确保图标位置精确对齐文本行高
         float actualLineHeight = ImGui.getTextLineHeight();
         float yOffset = 0;
         if (iconSize < actualLineHeight) {
-            // 如果图标小于行高，居中显示
             yOffset = (actualLineHeight - iconSize) * 0.5f;
         }
-        
-        // 绘制图标纹理
-        if (textureId > 0) {
-            // 绑定纹理
-            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
-            
-            // 绘制纹理图标
-            drawList.addImage(
-                textureId, 
-                rectMin.x, rectMin.y + yOffset, 
-                rectMin.x + iconSize, rectMin.y + yOffset + iconSize,
-                u0, v0, u1, v1
-            );
-        } else {
-            // 如果纹理加载失败，回退到使用矩形
-            int bgColor = ImGui.colorConvertFloat4ToU32(0.7f, 0.7f, 0.7f, 0.7f);
-            drawList.addRectFilled(
-                rectMin.x, rectMin.y + yOffset, 
-                rectMin.x + iconSize, rectMin.y + yOffset + iconSize,
-                bgColor, 0.0f // 方形矩形，无圆角
-            );
-        }
+        drawNodeIcon(drawList, new ImVec2(rectMin.x, rectMin.y + yOffset), node, nodeCategory, iconSize);
         
         // 如果需要绘制文本（只有在正常显示节点时，拖放和工具提示时不需要）
         if (iconPadding > 0) {
@@ -1294,6 +1428,28 @@ public class NodeLibraryComponent implements EditorComponent {
                 // 普通模式下直接绘制文本
                 drawList.addText(textStartX, textPosY, textColor, nodeDisplayName);
             }
+        }
+    }
+
+    private void drawNodeIcon(ImDrawList drawList, ImVec2 topLeft, NodeInfo node, String nodeCategory, float iconSize) {
+        String nodeId = node.getId();
+        int textureId = iconManager.loadNodeIcon(nodeId, nodeCategory);
+
+        if (textureId > 0) {
+            GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+            drawList.addImage(
+                textureId,
+                topLeft.x, topLeft.y,
+                topLeft.x + iconSize, topLeft.y + iconSize,
+                0.0f, 0.0f, 1.0f, 1.0f
+            );
+        } else {
+            int bgColor = ImGui.colorConvertFloat4ToU32(0.7f, 0.7f, 0.7f, 0.7f);
+            drawList.addRectFilled(
+                topLeft.x, topLeft.y,
+                topLeft.x + iconSize, topLeft.y + iconSize,
+                bgColor, 0.0f
+            );
         }
     }
 } 

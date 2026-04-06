@@ -5,6 +5,7 @@ import java.nio.file.Paths;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.components.CanvasComponent;
+import com.nodecraft.gui.components.NodeLibraryComponent;
 import com.nodecraft.gui.dialogs.ConfirmationDialog;
 import com.nodecraft.gui.dialogs.FileDialogManager;
 import com.nodecraft.gui.dialogs.MessageDialog;
@@ -198,6 +199,35 @@ public class MenuBarRenderer {
                         
                         ImGui.separator();
                     }
+
+                    NodeLibraryComponent nodeLibrary = componentManager.getNodeLibraryComponent();
+                    if (nodeLibrary != null && ImGui.beginMenu("节点库显示方式")) {
+                        NodeLibraryComponent.DisplayMode mode = nodeLibrary.getDisplayMode();
+                        if (ImGui.menuItem("列表", null, mode == NodeLibraryComponent.DisplayMode.LIST)) {
+                            nodeLibrary.setDisplayMode(NodeLibraryComponent.DisplayMode.LIST);
+                        }
+                        if (ImGui.menuItem("平铺", null, mode == NodeLibraryComponent.DisplayMode.GRID)) {
+                            nodeLibrary.setDisplayMode(NodeLibraryComponent.DisplayMode.GRID);
+                        }
+
+                        ImGui.separator();
+                        if (ImGui.beginMenu("平铺尺寸倍率")) {
+                            float scale = nodeLibrary.getGridTileSizeScale();
+                            if (ImGui.menuItem("1.2x", null, Math.abs(scale - 1.2f) < 0.001f)) {
+                                nodeLibrary.setGridTileSizeScale(1.2f);
+                            }
+                            if (ImGui.menuItem("1.5x", null, Math.abs(scale - 1.5f) < 0.001f)) {
+                                nodeLibrary.setGridTileSizeScale(1.5f);
+                            }
+                            if (ImGui.menuItem("2.0x", null, Math.abs(scale - 2.0f) < 0.001f)) {
+                                nodeLibrary.setGridTileSizeScale(2.0f);
+                            }
+                            ImGui.endMenu();
+                        }
+                        ImGui.endMenu();
+                    }
+
+                    ImGui.separator();
                 }
                 
                 // 网格显示选项
