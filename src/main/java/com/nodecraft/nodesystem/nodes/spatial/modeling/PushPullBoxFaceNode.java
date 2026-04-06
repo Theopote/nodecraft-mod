@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.generators;
+package com.nodecraft.nodesystem.nodes.spatial.modeling;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -17,7 +17,7 @@ import java.util.UUID;
     id = "spatial.generators.push_pull_box_face",
     displayName = "Push/Pull Box Face",
     description = "Moves one box face along its normal and outputs a new box geometry",
-    category = "spatial.generators"
+    category = "spatial.modeling"
 )
 public class PushPullBoxFaceNode extends BaseNode {
 

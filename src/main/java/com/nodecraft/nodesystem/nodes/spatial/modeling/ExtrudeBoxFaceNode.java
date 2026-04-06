@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.generators;
+package com.nodecraft.nodesystem.nodes.spatial.modeling;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.generators.extrude_box_face",
     displayName = "Extrude Box Face",
     description = "Extrudes a box face into a new box segment and returns a composite geometry",
-    category = "spatial.generators"
+    category = "spatial.modeling"
 )
 public class ExtrudeBoxFaceNode extends BaseNode {
 
