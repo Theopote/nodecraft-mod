@@ -110,6 +110,11 @@ public class ImGuiNodeRenderer {
         UUID nodeId = node.getId();
         NodePosition pos = nodePositions.computeIfAbsent(nodeId, id -> new NodePosition(100, 100));
 
+        if (isCompactRerouteNode(node)) {
+            pos.setSize(NodeRenderConstants.REROUTE_NODE_WIDTH_UNSCALED, NodeRenderConstants.REROUTE_NODE_HEIGHT_UNSCALED);
+            return;
+        }
+
         String nodeDisplayName = node.getDisplayName();
         float unscaledTitleTextWidth = cache.getCachedTextWidth(nodeDisplayName);
 
@@ -206,6 +211,7 @@ public class ImGuiNodeRenderer {
         float nodeScreenY = canvasPos.y + (pos.y * canvasZoom + canvasOffsetY);
         float finalNodeWidthScaled = unscaledNodeWidth * canvasZoom;
         float finalNodeHeightScaled = unscaledNodeHeight * canvasZoom;
+        boolean compactRerouteNode = isCompactRerouteNode(node);
 
         if (!portScreenPositions.containsKey(nodeId)) {
             portScreenPositions.put(nodeId, new HashMap<>());
@@ -258,7 +264,9 @@ public class ImGuiNodeRenderer {
         float nodeBorderThicknessScaled = NodeRenderConstants.NODE_BORDER_THICKNESS_UNSCALED * canvasZoom;
 
         drawList.addRectFilled(nodeScreenX, nodeScreenY, nodeScreenX + finalNodeWidthScaled, nodeScreenY + finalNodeHeightScaled, nodeBgColor, nodeCornerRadiusScaled);
-        drawList.addRectFilled(nodeScreenX, nodeScreenY, nodeScreenX + finalNodeWidthScaled, nodeScreenY + (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom, baseNodeColor, nodeCornerRadiusScaled, ImDrawFlags.RoundCornersTop);
+        if (!compactRerouteNode) {
+            drawList.addRectFilled(nodeScreenX, nodeScreenY, nodeScreenX + finalNodeWidthScaled, nodeScreenY + (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom, baseNodeColor, nodeCornerRadiusScaled, ImDrawFlags.RoundCornersTop);
+        }
         drawList.addRect(nodeScreenX, nodeScreenY, nodeScreenX + finalNodeWidthScaled, nodeScreenY + finalNodeHeightScaled, borderColor, nodeCornerRadiusScaled, 0, nodeBorderThicknessScaled);
 
         // 为禁用节点添加虚线边框覆盖
@@ -281,10 +289,12 @@ public class ImGuiNodeRenderer {
                                stripeColor, stripeSpacing, canvasZoom);
         }
 
-        float titleTextWidthUnscaled = cache.getCachedTextWidth(node.getDisplayName());
-        float titleX = nodeScreenX + (finalNodeWidthScaled - titleTextWidthUnscaled * canvasZoom) / 2;
-        float titleY = nodeScreenY + ((baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom - scaledTextLineHeight) / 2;
-        drawList.addText(font, baseFontSize * canvasZoom, titleX, titleY, textColor, node.getDisplayName());
+        if (!compactRerouteNode) {
+            float titleTextWidthUnscaled = cache.getCachedTextWidth(node.getDisplayName());
+            float titleX = nodeScreenX + (finalNodeWidthScaled - titleTextWidthUnscaled * canvasZoom) / 2;
+            float titleY = nodeScreenY + ((baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom - scaledTextLineHeight) / 2;
+            drawList.addText(font, baseFontSize * canvasZoom, titleX, titleY, textColor, node.getDisplayName());
+        }
 
         List<IPort> visibleInputPorts = getVisibleInputPorts(node);
         List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
@@ -293,19 +303,28 @@ public class ImGuiNodeRenderer {
         boolean hasAnyPorts = hasInputPorts || hasOutputPorts;
 
         float nodeHeaderHeightScaled = (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
-        float portYOffset = nodeScreenY + nodeHeaderHeightScaled + scaledNodeVerticalPadding / 2;
+        float portYOffset;
+        if (compactRerouteNode) {
+            portYOffset = nodeScreenY + (finalNodeHeightScaled - scaledTextLineHeight) / 2.0f;
+        } else {
+            portYOffset = nodeScreenY + nodeHeaderHeightScaled + scaledNodeVerticalPadding / 2;
+        }
 
         if (hasAnyPorts) {
-            renderNodePorts(drawList, node, visibleInputPorts, visibleOutputPorts, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset,
-                    portRadiusScaled, scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
+                float currentPortRadiusScaled = compactRerouteNode
+                    ? NodeRenderConstants.REROUTE_PORT_RADIUS_UNSCALED * canvasZoom
+                    : portRadiusScaled;
+                renderNodePorts(drawList, node, visibleInputPorts, visibleOutputPorts, nodeId, nodeScreenX, finalNodeWidthScaled, portYOffset,
+                    currentPortRadiusScaled, scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight, 
-                    highlightSinValue, highlightCosValue, portScreenPositions);
+                    highlightSinValue, highlightCosValue, portScreenPositions,
+                    !compactRerouteNode);
         }
 
         // 处理自定义UI
         boolean nodeHasCustomUI = customUIRenderer.hasCustomUI(node);
-        if (nodeHasCustomUI) {
+        if (nodeHasCustomUI && !compactRerouteNode) {
             // 在渲染自定义UI前重置交互状态
             customUIRenderer.resetCustomUIInteractionState();
             renderCustomUI(node, nodeId, nodeScreenX, nodeScreenY, finalNodeWidthScaled, 
@@ -334,7 +353,8 @@ public class ImGuiNodeRenderer {
                                  float scaledPortCircleToTextPadding, imgui.ImFont font, float baseFontSize, float canvasZoom,
                                  int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId, 
                                  boolean isHoveredPortOutput, boolean shouldHighlight, float highlightSinValue, 
-                                 float highlightCosValue, Map<UUID, Map<String, ImVec2>> portScreenPositions) {
+                                 float highlightCosValue, Map<UUID, Map<String, ImVec2>> portScreenPositions,
+                                 boolean showPortLabels) {
 
         boolean hasInputPorts = !visibleInputPorts.isEmpty();
         boolean hasOutputPorts = !visibleOutputPorts.isEmpty();
@@ -394,7 +414,7 @@ public class ImGuiNodeRenderer {
                     scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight,
-                    highlightSinValue, highlightCosValue, unscaledAvailableWidthForInputText, portScreenPositions);
+                    highlightSinValue, highlightCosValue, unscaledAvailableWidthForInputText, portScreenPositions, showPortLabels);
         }
 
         // 渲染输出端口
@@ -403,7 +423,7 @@ public class ImGuiNodeRenderer {
                     portRadiusScaled, scaledTextLineHeight, scaledPortVerticalSpacing, scaledPortCircleToTextPadding,
                     font, baseFontSize, canvasZoom, textColor, navHighlightColor,
                     hoveredNodeId, hoveredPortId, isHoveredPortOutput, shouldHighlight,
-                    highlightSinValue, highlightCosValue, unscaledAvailableWidthForOutputText, portScreenPositions);
+                    highlightSinValue, highlightCosValue, unscaledAvailableWidthForOutputText, portScreenPositions, showPortLabels);
         }
     }
 
@@ -413,7 +433,8 @@ public class ImGuiNodeRenderer {
                                   int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId,
                                   boolean isHoveredPortOutput, boolean shouldHighlight, float highlightSinValue,
                                   float highlightCosValue, float unscaledAvailableWidthForInputText, 
-                                  Map<UUID, Map<String, ImVec2>> portScreenPositions) {
+                                  Map<UUID, Map<String, ImVec2>> portScreenPositions,
+                                  boolean showPortLabels) {
 
         int numInputPorts = visibleInputPorts.size();
         for (int i = 0; i < numInputPorts; i++) {
@@ -438,8 +459,10 @@ public class ImGuiNodeRenderer {
             drawList.addCircleFilled(nodeScreenX, currentPortY, portRadiusScaled, portColor);
             drawList.addCircle(nodeScreenX, currentPortY, portRadiusScaled, portBorderColor, 12, NodeRenderConstants.PORT_BORDER_THICKNESS_UNSCALED * canvasZoom);
 
-            String displayText = cache.truncateTextWithEllipsisOptimized(port.getDisplayName(), unscaledAvailableWidthForInputText);
-            drawList.addText(font, baseFontSize * canvasZoom, nodeScreenX + portRadiusScaled + scaledPortCircleToTextPadding, currentPortY - scaledTextLineHeight / 2, textColor, displayText);
+            if (showPortLabels) {
+                String displayText = cache.truncateTextWithEllipsisOptimized(port.getDisplayName(), unscaledAvailableWidthForInputText);
+                drawList.addText(font, baseFontSize * canvasZoom, nodeScreenX + portRadiusScaled + scaledPortCircleToTextPadding, currentPortY - scaledTextLineHeight / 2, textColor, displayText);
+            }
             
             // 保存端口位置
             portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(nodeScreenX, currentPortY));
@@ -452,7 +475,8 @@ public class ImGuiNodeRenderer {
                                    int textColor, int navHighlightColor, UUID hoveredNodeId, String hoveredPortId,
                                    boolean isHoveredPortOutput, boolean shouldHighlight, float highlightSinValue,
                                    float highlightCosValue, float unscaledAvailableWidthForOutputText,
-                                   Map<UUID, Map<String, ImVec2>> portScreenPositions) {
+                                   Map<UUID, Map<String, ImVec2>> portScreenPositions,
+                                   boolean showPortLabels) {
 
         float outputPortCircleX = nodeScreenX + finalNodeWidthScaled;
         int numOutputPorts = visibleOutputPorts.size();
@@ -482,7 +506,9 @@ public class ImGuiNodeRenderer {
             drawList.addCircleFilled(outputPortCircleX, currentPortY, portRadiusScaled, portColor);
             drawList.addCircle(outputPortCircleX, currentPortY, portRadiusScaled, portBorderColor, 12, NodeRenderConstants.PORT_BORDER_THICKNESS_UNSCALED * canvasZoom);
 
-            drawList.addText(font, baseFontSize * canvasZoom, outputTextX, currentPortY - scaledTextLineHeight / 2, textColor, displayText);
+            if (showPortLabels) {
+                drawList.addText(font, baseFontSize * canvasZoom, outputTextX, currentPortY - scaledTextLineHeight / 2, textColor, displayText);
+            }
             
             // 保存端口位置
             portScreenPositions.get(nodeId).put(port.getId(), new ImVec2(outputPortCircleX, currentPortY));
@@ -554,6 +580,10 @@ public class ImGuiNodeRenderer {
 
     private static List<IPort> getVisibleInputPorts(INode node) {
         return filterViewerPorts(node.getInputPorts(), node);
+    }
+
+    private static boolean isCompactRerouteNode(INode node) {
+        return node != null && NodeRenderConstants.REROUTE_NODE_TYPE_ID.equalsIgnoreCase(node.getTypeId());
     }
 
     private static List<IPort> getVisibleOutputPorts(INode node) {

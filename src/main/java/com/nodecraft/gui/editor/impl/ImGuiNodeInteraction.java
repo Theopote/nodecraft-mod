@@ -75,6 +75,7 @@ public class ImGuiNodeInteraction {
 
     // 常量：用于碰撞检测和布局计算的因子
     private static final float PORT_DETECTION_RADIUS_FACTOR = 4.0f; // 端口检测半径的放大因子（增大以便更容易拖出连接线）
+    private static final float REROUTE_PORT_DETECTION_RADIUS_FACTOR = 1.8f; // 中继节点使用更小命中半径，避免抢占节点选择
     private static final float NODE_CENTER_PRIORITY_FACTOR = 0.7f; // 节点中心区域优先级因子
     private static final float CONNECTION_DETECTION_DISTANCE = 5.0f; // 连接线检测的最大距离
 
@@ -638,11 +639,10 @@ public class ImGuiNodeInteraction {
      * @return 鼠标下的端口信息（节点ID和端口ID），如果没有则返回null。
      */
     public Map.Entry<UUID, String> getClickedPort(ImVec2 mousePos, Map<UUID, Map<String, ImVec2>> portScreenPositions) {
-        float detectionRadius = 4.0f * editor.getCanvasZoom() * PORT_DETECTION_RADIUS_FACTOR;
-
         for (Map.Entry<UUID, Map<String, ImVec2>> nodeEntry : portScreenPositions.entrySet()) {
             UUID nodeId = nodeEntry.getKey();
             Map<String, ImVec2> ports = nodeEntry.getValue();
+            float detectionRadius = getPortDetectionRadiusForNode(nodeId, null);
 
             for (Map.Entry<String, ImVec2> portEntry : ports.entrySet()) {
                 float dx = mousePos.x - portEntry.getValue().x;
@@ -665,7 +665,7 @@ public class ImGuiNodeInteraction {
     public boolean isMouseOverAnyPortOfNode(UUID nodeId, ImVec2 mousePos, Map<UUID, Map<String, ImVec2>> portScreenPositions) {
         if (!portScreenPositions.containsKey(nodeId)) return false;
 
-        float detectionRadius = 4.0f * editor.getCanvasZoom() * PORT_DETECTION_RADIUS_FACTOR;
+        float detectionRadius = getPortDetectionRadiusForNode(nodeId, null);
 
         Map<String, ImVec2> ports = portScreenPositions.get(nodeId);
         for (ImVec2 portPos : ports.values()) {
@@ -690,11 +690,10 @@ public class ImGuiNodeInteraction {
         hoveredPortId = null;
         isHoveredPortOutput = false;
 
-        float detectionRadius = 4.0f * editor.getCanvasZoom() * PORT_DETECTION_RADIUS_FACTOR;
-
         for (Map.Entry<UUID, Map<String, ImVec2>> nodeEntry : portScreenPositions.entrySet()) {
             UUID nodeId = nodeEntry.getKey();
             Map<String, ImVec2> ports = nodeEntry.getValue();
+            float detectionRadius = getPortDetectionRadiusForNode(nodeId, graph);
 
             for (Map.Entry<String, ImVec2> portEntry : ports.entrySet()) {
                 float dx = mousePos.x - portEntry.getValue().x;
@@ -717,6 +716,22 @@ public class ImGuiNodeInteraction {
             }
         }
         return false;
+    }
+
+    /**
+     * 根据节点类型返回端口命中半径。
+     * 中继节点使用更小半径，以避免小节点难以选中/拖动。
+     */
+    private float getPortDetectionRadiusForNode(UUID nodeId, NodeGraph graph) {
+        float factor = PORT_DETECTION_RADIUS_FACTOR;
+        NodeGraph resolvedGraph = graph != null ? graph : editor.getCurrentGraph();
+        if (resolvedGraph != null) {
+            INode node = resolvedGraph.getNode(nodeId);
+            if (node != null && NodeRenderConstants.REROUTE_NODE_TYPE_ID.equalsIgnoreCase(node.getTypeId())) {
+                factor = REROUTE_PORT_DETECTION_RADIUS_FACTOR;
+            }
+        }
+        return 4.0f * editor.getCanvasZoom() * factor;
     }
 
     /**

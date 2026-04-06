@@ -73,7 +73,13 @@ public class PortPositionCalculator {
             float scaledPortVerticalSpacing = baseItemSpacingY * canvasZoom * 0.8f;
 
             float nodeHeaderHeightScaled = (baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom;
-            float portYOffset = nodeScreenY + nodeHeaderHeightScaled + (NodeRenderConstants.NODE_VERTICAL_PADDING / 2) * canvasZoom;
+            boolean compactRerouteNode = isCompactRerouteNode(node);
+            float portYOffset;
+            if (compactRerouteNode) {
+                portYOffset = nodeScreenY + (pos.height * canvasZoom - scaledTextLineHeight) / 2.0f;
+            } else {
+                portYOffset = nodeScreenY + nodeHeaderHeightScaled + (NodeRenderConstants.NODE_VERTICAL_PADDING / 2) * canvasZoom;
+            }
 
             List<IPort> visibleInputPorts = getVisibleInputPorts(node);
             List<IPort> visibleOutputPorts = getVisibleOutputPorts(node);
@@ -152,6 +158,11 @@ public class PortPositionCalculator {
                                                 float baseTextLineHeight, float baseItemSpacingY) {
         UUID nodeId = node.getId();
         NodePosition pos = nodePositions.computeIfAbsent(nodeId, id -> new NodePosition(100, 100));
+
+        if (isCompactRerouteNode(node)) {
+            pos.setSize(NodeRenderConstants.REROUTE_NODE_WIDTH_UNSCALED, NodeRenderConstants.REROUTE_NODE_HEIGHT_UNSCALED);
+            return;
+        }
 
         String nodeDisplayName = node.getDisplayName();
         float unscaledTitleTextWidth = getCachedTextWidth(nodeDisplayName);
@@ -264,6 +275,10 @@ public class PortPositionCalculator {
     private float getCachedTextWidth(String text) {
         if (text == null || text.isEmpty()) return 0f;
         return ImGui.calcTextSize(text).x;
+    }
+
+    private static boolean isCompactRerouteNode(INode node) {
+        return node != null && NodeRenderConstants.REROUTE_NODE_TYPE_ID.equalsIgnoreCase(node.getTypeId());
     }
 
     /**
