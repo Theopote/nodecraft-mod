@@ -68,7 +68,7 @@ public class VectorInputNode extends BaseCustomUINode {
         float height = getMediumPadding();
         height += ImGui.getFrameHeight() * 3;
         height += getSmallPadding() * 2;
-        height += getMediumPadding();
+        height += getSmallPadding();
         return height;
     }
 
@@ -93,7 +93,7 @@ public class VectorInputNode extends BaseCustomUINode {
             l.addVerticalSpacing(getSmallPadding());
             changed |= renderComponentInput("Z", availableWidth, l, z, this::setZ, baseCursorX, edgeMargin);
 
-            l.addVerticalSpacing(getMediumPadding());
+            l.addVerticalSpacing(getSmallPadding());
             return changed;
         });
     }

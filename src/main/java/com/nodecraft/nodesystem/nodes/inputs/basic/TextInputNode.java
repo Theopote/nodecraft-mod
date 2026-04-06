@@ -76,7 +76,7 @@ public class TextInputNode extends BaseCustomUINode {
     protected float calculateUIHeight() {
         float height = getMediumPadding();
         if (multiline) {
-            height += ImGui.getFrameHeight() * 4;
+            height += ImGui.getFrameHeight() * getVisibleLineCount();
         } else {
             height += ImGui.getFrameHeight();
         }
@@ -84,7 +84,7 @@ public class TextInputNode extends BaseCustomUINode {
             height += getSmallPadding();
             height += ImGui.getTextLineHeight();
         }
-        height += getMediumPadding();
+        height += getSmallPadding();
         return height;
     }
 
@@ -105,7 +105,7 @@ public class TextInputNode extends BaseCustomUINode {
             l.addVerticalSpacing(getMediumPadding());
 
             if (multiline) {
-                float inputHeight = ImGui.getFrameHeight() * 4;
+                float inputHeight = ImGui.getFrameHeight() * getVisibleLineCount();
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 l.pushFramePadding(4.0f, 3.0f);
                 if (ImGui.inputTextMultiline("##text_input", inputBuffer, availableWidth, inputHeight, ImGuiInputTextFlags.AllowTabInput)) {
@@ -140,9 +140,26 @@ public class TextInputNode extends BaseCustomUINode {
                 ImGui.popStyleColor();
             }
 
-            l.addVerticalSpacing(getMediumPadding());
+            l.addVerticalSpacing(getSmallPadding());
             return changed;
         });
+    }
+
+    private int getVisibleLineCount() {
+        String current = "";
+        if (inputBuffer != null) {
+            current = inputBuffer.get();
+        }
+        if (current == null || current.isEmpty()) {
+            current = text != null ? text : "";
+        }
+        int lineCount = 1;
+        for (int i = 0; i < current.length(); i++) {
+            if (current.charAt(i) == '\n') {
+                lineCount++;
+            }
+        }
+        return Math.max(1, Math.min(6, lineCount));
     }
 
     private void ensureBuffer() {

@@ -72,7 +72,7 @@ public class IntegerInputNode extends BaseCustomUINode {
     protected float calculateUIHeight() {
         float height = getMediumPadding();
         height += ImGui.getFrameHeight();
-        height += getMediumPadding();
+        height += getSmallPadding();
         return height;
     }
 
@@ -103,7 +103,7 @@ public class IntegerInputNode extends BaseCustomUINode {
 
             l.popItemWidth();
             l.popStyleVar();
-            l.addVerticalSpacing(getMediumPadding());
+            l.addVerticalSpacing(getSmallPadding());
             return changed;
         });
     }
