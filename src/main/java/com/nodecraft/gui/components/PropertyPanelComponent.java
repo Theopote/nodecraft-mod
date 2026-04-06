@@ -934,9 +934,8 @@ public class PropertyPanelComponent implements EditorComponent {
             return "";
         }
         return switch (trimmed) {
-            case "精度" -> "数值";
+            case "精度", "数值", "鏁板€?" -> "数值";
             case "UI设置", "UI璁剧疆" -> "UI设置";
-            case "数值", "鏁板€?" -> "数值";
             case "范围", "鑼冨洿" -> "范围";
             default -> trimmed;
         };
@@ -955,7 +954,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private void renderPropertyGroup(List<PropertyDescriptor> props, String categoryInternalName) {
         if (ImGui.beginTable("propertiesTable_" + categoryInternalName, 2,
                 ImGuiTableFlags.Resizable | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersOuter)) {
-            ImGui.tableSetupColumn("Property", ImGuiTableColumnFlags.WidthFixed, ImGui.getContentRegionAvailX() * 0.4f);
+            ImGui.tableSetupColumn("Property", ImGuiTableColumnFlags.WidthFixed, ImGui.getContentRegionAvailX() * 0.32f);
             ImGui.tableSetupColumn("Value", ImGuiTableColumnFlags.WidthStretch);
             ImGui.tableHeadersRow();
 
@@ -992,7 +991,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 ImGui.tableSetColumnIndex(1);
                 String uniqueId = selectedNode.getId().toString() + "_" + prop.name;
                 ImGui.pushID(uniqueId);
+                ImGui.pushItemWidth(-1.0f);
                 prop.renderer.render(this, selectedNode, prop, isDisabled);
+                ImGui.popItemWidth();
                 ImGui.popID();
             }
             ImGui.endTable();
@@ -1461,16 +1462,12 @@ public class PropertyPanelComponent implements EditorComponent {
             return "(empty)";
         }
 
-        String preview;
-        if (value instanceof Collection<?> collection) {
-            preview = "Collection (" + collection.size() + ")";
-        } else if (value instanceof Map<?, ?> map) {
-            preview = "Map (" + map.size() + ")";
-        } else if (value instanceof Vec3 vec) {
-            preview = String.format("Vec3(%.2f, %.2f, %.2f)", vec.getX(), vec.getY(), vec.getZ());
-        } else {
-            preview = value.toString();
-        }
+        String preview = switch (value) {
+            case Collection<?> collection -> "Collection (" + collection.size() + ")";
+            case Map<?, ?> map -> "Map (" + map.size() + ")";
+            case Vec3 vec -> String.format("Vec3(%.2f, %.2f, %.2f)", vec.getX(), vec.getY(), vec.getZ());
+            default -> value.toString();
+        };
 
         return preview.length() > 96 ? preview.substring(0, 93) + "..." : preview;
     }
@@ -1786,52 +1783,6 @@ public class PropertyPanelComponent implements EditorComponent {
     private void highlightRegion(Object region) {
         if (selectedNode == null) return;
         NodeCraft.LOGGER.info("Preview region: {}", region);
-    }
-
-    // 新增：渲染调试工具
-    private void renderDebugTools() {
-        ImGui.text("Node Debug Tools");
-        ImGui.separator();
-
-        if (ImGui.button("Preview This Node", -1, 0)) {
-            previewCurrentNode();
-            ImGui.openPopup("Preview Actions");
-        }
-
-        if (ImGui.button("Clear Node Preview", -1, 0)) {
-            clearNodePreview();
-        }
-
-        if (ImGui.button("Recalculate Node", -1, 0)) {
-            recalculateNode();
-        }
-
-        if (ImGui.button("Log Node Info", -1, 0)) {
-            logNodeInfo();
-        }
-
-        ImGui.separator();
-        ImGui.text("Performance");
-        renderPerformanceStats();
-
-        if (ImGui.beginPopup("Preview Actions", ImGuiWindowFlags.NoMove)) {
-            ImGui.text("Preview Options");
-            ImGui.separator();
-
-            if (ImGui.menuItem("Highlight")) {
-                previewNodeWithMode(PreviewMode.HIGHLIGHT);
-            }
-
-            if (ImGui.menuItem("Wireframe")) {
-                previewNodeWithMode(PreviewMode.WIREFRAME);
-            }
-
-            if (ImGui.menuItem("Solid")) {
-                previewNodeWithMode(PreviewMode.SOLID);
-            }
-
-            ImGui.endPopup();
-        }
     }
 
     // 实现单独预览当前节点功能
