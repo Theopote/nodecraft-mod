@@ -1,0 +1,109 @@
+package com.nodecraft.nodesystem.nodes.spatial.modeling;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.datatypes.PolygonProfileData;
+import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@NodeInfo(
+    id = "spatial.modeling.extrude_profile",
+    displayName = "Extrude Profile",
+    description = "Extrudes a polygon profile by a direction vector into a top profile and side surface strip",
+    category = "spatial.modeling"
+)
+public class ExtrudeProfileNode extends BaseNode {
+
+    private static final String INPUT_PROFILE_ID = "input_profile";
+    private static final String INPUT_DIRECTION_ID = "input_direction";
+
+    private static final String OUTPUT_BASE_PROFILE_ID = "output_base_profile";
+    private static final String OUTPUT_TOP_PROFILE_ID = "output_top_profile";
+    private static final String OUTPUT_BASE_POINTS_ID = "output_base_points";
+    private static final String OUTPUT_TOP_POINTS_ID = "output_top_points";
+    private static final String OUTPUT_SIDE_SURFACE_ID = "output_side_surface";
+    private static final String OUTPUT_HEIGHT_ID = "output_height";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+
+    public ExtrudeProfileNode() {
+        super(UUID.randomUUID(), "spatial.modeling.extrude_profile");
+
+        addInputPort(new BasePort(INPUT_PROFILE_ID, "Profile", "Polygon profile to extrude", NodeDataType.POLYGON_PROFILE, this));
+        addInputPort(new BasePort(INPUT_DIRECTION_ID, "Direction", "Extrusion direction vector", NodeDataType.VECTOR, this));
+
+        addOutputPort(new BasePort(OUTPUT_BASE_PROFILE_ID, "Base Profile", "Original polygon profile", NodeDataType.POLYGON_PROFILE, this));
+        addOutputPort(new BasePort(OUTPUT_TOP_PROFILE_ID, "Top Profile", "Extruded polygon profile", NodeDataType.POLYGON_PROFILE, this));
+        addOutputPort(new BasePort(OUTPUT_BASE_POINTS_ID, "Base Points", "Closed base polygon points", NodeDataType.VECTOR_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_TOP_POINTS_ID, "Top Points", "Closed extruded polygon points", NodeDataType.VECTOR_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_SIDE_SURFACE_ID, "Side Surface", "Side strip surface between the base and top profiles", NodeDataType.SURFACE_STRIP, this));
+        addOutputPort(new BasePort(OUTPUT_HEIGHT_ID, "Height", "Extrusion vector length", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when a valid profile and direction were provided", NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "Extrudes a polygon profile by a direction vector into a top profile and side surface strip";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object profileObj = inputValues.get(INPUT_PROFILE_ID);
+        Object directionObj = inputValues.get(INPUT_DIRECTION_ID);
+
+        if (!(profileObj instanceof PolygonProfileData baseProfile) || !(directionObj instanceof Vector3d direction)) {
+            writeEmptyOutputs();
+            return;
+        }
+
+        double height = direction.length();
+        if (height <= 1.0e-9d) {
+            writeEmptyOutputs();
+            return;
+        }
+
+        List<Vector3d> baseClosedPoints = baseProfile.getClosedPoints();
+        List<Vector3d> topClosedPoints = new ArrayList<>(baseClosedPoints.size());
+        for (Vector3d point : baseClosedPoints) {
+            topClosedPoints.add(new Vector3d(point).add(direction));
+        }
+
+        PlaneData basePlane = baseProfile.getPlane();
+        PlaneData topPlane = new PlaneData(
+            new Vector3d(basePlane.getPoint()).add(direction),
+            basePlane.getNormal()
+        );
+        PolygonProfileData topProfile = new PolygonProfileData(topClosedPoints, topPlane);
+
+        SurfaceStripData sideSurface = new SurfaceStripData(
+            List.of(baseProfile.getUniquePoints(), topProfile.getUniquePoints()),
+            List.of(true, true)
+        );
+
+        outputValues.put(OUTPUT_BASE_PROFILE_ID, baseProfile);
+        outputValues.put(OUTPUT_TOP_PROFILE_ID, topProfile);
+        outputValues.put(OUTPUT_BASE_POINTS_ID, List.copyOf(baseClosedPoints));
+        outputValues.put(OUTPUT_TOP_POINTS_ID, List.copyOf(topClosedPoints));
+        outputValues.put(OUTPUT_SIDE_SURFACE_ID, sideSurface);
+        outputValues.put(OUTPUT_HEIGHT_ID, height);
+        outputValues.put(OUTPUT_VALID_ID, true);
+    }
+
+    private void writeEmptyOutputs() {
+        outputValues.put(OUTPUT_BASE_PROFILE_ID, null);
+        outputValues.put(OUTPUT_TOP_PROFILE_ID, null);
+        outputValues.put(OUTPUT_BASE_POINTS_ID, List.of());
+        outputValues.put(OUTPUT_TOP_POINTS_ID, List.of());
+        outputValues.put(OUTPUT_SIDE_SURFACE_ID, null);
+        outputValues.put(OUTPUT_HEIGHT_ID, 0.0d);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+}
