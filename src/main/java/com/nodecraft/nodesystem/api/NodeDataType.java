@@ -210,15 +210,8 @@ public enum NodeDataType {
         if (outputType == ANY) return true;
         if (outputType == inputType) return true;
 
-        // 同底层 Java 类型互通（但排除 Object.class）。
-        // 例如 COORDINATE <-> BLOCK_POS、VECTOR <-> POSITION。
-        Class<?> outputClass = outputType.getJavaClass();
-        Class<?> inputClass = inputType.getJavaClass();
-        if (outputClass != null
-                && inputClass != null
-                && outputClass != Object.class
-                && inputClass != Object.class
-                && outputClass == inputClass) {
+        // 仅允许已知语义别名互通，避免按 Java 类放开后出现 String 家族误连。
+        if (isSemanticAliasCompatible(outputType, inputType)) {
             return true;
         }
 
@@ -252,6 +245,20 @@ public enum NodeDataType {
 
     private static boolean isNumericType(NodeDataType type) {
         return type == INTEGER || type == FLOAT || type == DOUBLE;
+    }
+
+    private static boolean isSemanticAliasCompatible(NodeDataType outputType, NodeDataType inputType) {
+        boolean coordinateAlias = isCoordinateAlias(outputType) && isCoordinateAlias(inputType);
+        boolean vectorAlias = isVectorAlias(outputType) && isVectorAlias(inputType);
+        return coordinateAlias || vectorAlias;
+    }
+
+    private static boolean isCoordinateAlias(NodeDataType type) {
+        return type == COORDINATE || type == BLOCK_POS;
+    }
+
+    private static boolean isVectorAlias(NodeDataType type) {
+        return type == VECTOR || type == POSITION;
     }
 
     /**
