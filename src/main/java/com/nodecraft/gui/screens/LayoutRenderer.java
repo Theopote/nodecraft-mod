@@ -428,8 +428,21 @@ public class LayoutRenderer {
                     // 判断是否是属性面板，决定是否有边框
                     boolean hasBorder = component instanceof PropertyPanelComponent;
 
+                    boolean isPropertyPanel = component instanceof PropertyPanelComponent;
+                    if (isPropertyPanel) {
+                        float baseScrollbarSize = ImGui.getStyle().getScrollbarSize();
+                        ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ScrollbarSize, baseScrollbarSize * 0.5f);
+                    }
+
                     // 非画布组件可以有滚动条，根据类型决定是否有边框
-                    boolean childBegun = ImGui.beginChild(childId, dims.width(), dims.height(), hasBorder);
+                    boolean childBegun;
+                    try {
+                        childBegun = ImGui.beginChild(childId, dims.width(), dims.height(), hasBorder);
+                    } finally {
+                        if (isPropertyPanel) {
+                            ImGui.popStyleVar();
+                        }
+                    }
 
                     try {
                         if (!childBegun) {
