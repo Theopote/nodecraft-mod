@@ -16,7 +16,6 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
-import com.nodecraft.gui.components.CanvasComponent; // Needed for CanvasComponent.isNodeDragDropActive()
 
 import imgui.ImDrawList;
 import imgui.ImGui;
@@ -231,9 +230,6 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             interaction.updatePortHighlightAnimation(deltaTime);
 
             ImDrawList drawList = ImGui.getWindowDrawList();
-
-            // 1. 背景与网格由 CanvasComponent 统一绘制与控透明度，
-            //    这里不再重复绘制，避免出现“画布透明度为0但仍有底色/网格”的叠层现象。
 
             // 清除端口屏幕位置缓存，每帧重新计算
             portScreenPositions.clear();
