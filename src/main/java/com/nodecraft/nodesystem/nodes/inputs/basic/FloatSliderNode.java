@@ -109,25 +109,18 @@ protected float calculateUIHeight() {
 
             if (showValueInput) {
                 String labelText = "当前值: " + String.format(formatString, currentValue);
-                float labelWidth = ImGui.calcTextSize(labelText).x;
-                setCenterX(availableWidth, labelWidth);
-                ImGui.pushStyleColor(ImGuiCol.Text, 0.78f, 0.78f, 0.78f, 1.0f);
-                ImGui.text(labelText);
-                ImGui.popStyleColor();
-                l.addVerticalSpacing(getSmallPadding());
-
-                float inputWidth = Math.min(l.toPixels(140.0f), availableWidth - l.toPixels(8.0f));
-                setCenterX(availableWidth, inputWidth);
-                l.setItemWidth(inputWidth / Math.max(zoom, 0.001f));
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
+                l.setItemWidth(Math.max(availableWidth / Math.max(zoom, 0.001f), 1.0f));
                 float[] inputValue = {(float) currentValue};
                 if (ImGui.dragFloat("##float_value", inputValue, getDragSpeed(), (float) minValue, (float) maxValue, formatString)) {
                     setCurrentValue(inputValue[0]);
                     changed = true;
                 }
                 l.popItemWidth();
-                l.addVerticalSpacing(getMediumPadding());
+                l.addVerticalSpacing(getSmallPadding());
             }
 
+            ImGui.setCursorPosX(baseCursorX + edgeMargin);
             l.setItemWidth(Math.max(availableWidth / Math.max(zoom, 0.001f), 1.0f));
             float[] sliderValue = {(float) currentValue};
             if (ImGui.sliderFloat("##float_slider", sliderValue, (float) minValue, (float) maxValue, formatString)) {
@@ -135,7 +128,7 @@ protected float calculateUIHeight() {
                 changed = true;
             }
             l.popItemWidth();
-            l.addVerticalSpacing(getMediumPadding());
+            l.addVerticalSpacing(getSmallPadding());
 
             if (false && showMinMaxLabels) {
                 String rangeText = String.format("范围: " + formatString + " ~ " + formatString, minValue, maxValue);
@@ -175,9 +168,9 @@ protected float calculateUIHeight() {
                     changed = true;
                 }
                 l.popItemWidth();
-                l.addVerticalSpacing(getMediumPadding());
+                l.addVerticalSpacing(getSmallPadding());
             } else {
-                l.addVerticalSpacing(getMediumPadding());
+                l.addVerticalSpacing(getSmallPadding());
             }
 
             return changed;
