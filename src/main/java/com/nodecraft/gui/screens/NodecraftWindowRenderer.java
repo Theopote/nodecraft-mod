@@ -146,7 +146,7 @@ public class NodecraftWindowRenderer {
     }
     
     private int createWindowFlags(boolean viewportsEnabled, boolean lockWindowMove) {
-        int windowFlags = ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoCollapse;
+        int windowFlags = ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoTitleBar;
 
         if (lockWindowMove) {
             windowFlags |= ImGuiWindowFlags.NoMove;
