@@ -1,6 +1,7 @@
 package com.nodecraft.gui.editor.impl;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -52,36 +53,51 @@ public class ImGuiNodeMenus {
                 if (rightClickedNodeId != null && editor.getCurrentGraph() != null) {
                     INode node = editor.getCurrentGraph().getNode(rightClickedNodeId);
                     if (node != null) {
+                        Set<UUID> contextTargets = getContextTargetNodeIds(rightClickedNodeId);
+                        boolean isBatchOperation = contextTargets.size() > 1;
+
                         // 显示节点标题
-                        ImGui.text(node.getDisplayName());
+                        if (isBatchOperation) {
+                            ImGui.text(node.getDisplayName() + " (" + contextTargets.size() + " selected)");
+                        } else {
+                            ImGui.text(node.getDisplayName());
+                        }
                         ImGui.separator();
                         
                         // 节点可见性控制
-                        boolean isVisible = editor.isNodeVisible(rightClickedNodeId);
-                        String visibilityText = isVisible ? "Hide in Game" : "Show in Game";
-                        String visibilityShortcut = isVisible ? "Ctrl+H" : "Ctrl+Shift+H";
+                        boolean allVisible = areAllNodesVisible(contextTargets);
+                        String visibilityText = isBatchOperation
+                                ? (allVisible ? "Hide Selected in Game" : "Show Selected in Game")
+                                : (allVisible ? "Hide in Game" : "Show in Game");
+                        String visibilityShortcut = allVisible ? "Ctrl+H" : "Ctrl+Shift+H";
                         if (ImGui.menuItem(visibilityText, visibilityShortcut)) {
-                            toggleNodeVisibility(rightClickedNodeId);
+                            setNodesVisibility(contextTargets, !allVisible);
                         }
                         
                         // 节点启用/禁用控制
-                        boolean isDisabled = editor.isNodeDisabled(rightClickedNodeId);
-                        String disableText = isDisabled ? "Enable Node" : "Disable Node";
-                        String disableShortcut = isDisabled ? "Ctrl+E" : "Ctrl+Shift+D";
+                        boolean allDisabled = areAllNodesDisabled(contextTargets);
+                        String disableText = isBatchOperation
+                                ? (allDisabled ? "Enable Selected" : "Disable Selected")
+                                : (allDisabled ? "Enable Node" : "Disable Node");
+                        String disableShortcut = allDisabled ? "Ctrl+E" : "Ctrl+Shift+D";
                         if (ImGui.menuItem(disableText, disableShortcut)) {
-                            toggleNodeDisabled(rightClickedNodeId);
+                            setNodesDisabled(contextTargets, !allDisabled);
                         }
                         
                         ImGui.separator();
+
+                        if (ImGui.menuItem(isBatchOperation ? "Copy Selected" : "Copy", "Ctrl+C")) {
+                            copyNodes(contextTargets, rightClickedNodeId);
+                        }
                         
                         // 复制节点
-                        if (ImGui.menuItem("Duplicate Node", "Ctrl+D")) {
-                            duplicateNode(rightClickedNodeId);
+                        if (ImGui.menuItem(isBatchOperation ? "Duplicate Selected" : "Duplicate Node", "Ctrl+D")) {
+                            duplicateNodes(contextTargets, rightClickedNodeId);
                         }
                         
                         // 断开所有连接
-                        if (ImGui.menuItem("Disconnect All")) {
-                            disconnectAllPorts(rightClickedNodeId);
+                        if (ImGui.menuItem(isBatchOperation ? "Disconnect Selected" : "Disconnect All")) {
+                            disconnectAllPorts(contextTargets);
                         }
                         
                         // 设置节点颜色
@@ -109,7 +125,7 @@ public class ImGuiNodeMenus {
                                 
                                 for (int i = 0; i < colorNames.length; i++) {
                                     if (ImGui.menuItem(colorNames[i])) {
-                                        setNodeColor(rightClickedNodeId, colorValues[i]);
+                                        setNodesColor(contextTargets, colorValues[i]);
                                     }
                                 }
                                 
@@ -117,7 +133,7 @@ public class ImGuiNodeMenus {
                                 
                                 // 重置颜色选项
                                 if (ImGui.menuItem("Reset Color")) {
-                                    resetNodeColor(rightClickedNodeId);
+                                    resetNodesColor(contextTargets);
                                 }
                             } finally {
                                 ImGui.endMenu();
@@ -128,7 +144,7 @@ public class ImGuiNodeMenus {
                         
                         // 删除节点
                         if (ImGui.menuItem("Delete", "Del")) {
-                            deleteNode(rightClickedNodeId);
+                            deleteNodes(contextTargets, rightClickedNodeId);
                         }
                     }
                 }
@@ -320,6 +336,39 @@ public class ImGuiNodeMenus {
         }
     }
 
+    private void deleteNodes(Set<UUID> nodeIds, UUID contextNodeId) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        if (nodeIds.size() == 1) {
+            deleteNode(contextNodeId != null ? contextNodeId : nodeIds.iterator().next());
+            return;
+        }
+
+        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
+        UUID backupPrimary = editor.getSelectedNodeId();
+
+        try {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(nodeIds);
+            if (contextNodeId != null && nodeIds.contains(contextNodeId)) {
+                editor.setSelectedNodeId(contextNodeId);
+            } else {
+                editor.setSelectedNodeId(nodeIds.iterator().next());
+            }
+
+            int count = nodeIds.size();
+            if (editor.deleteSelectedNodes()) {
+                NodeCraft.LOGGER.info("已通过右键菜单批量删除 {} 个节点", count);
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("批量删除节点失败: {}", e.getMessage(), e);
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(backupSelection);
+            editor.setSelectedNodeId(backupPrimary);
+        }
+    }
+
     /**
      * 设置节点颜色
      * @param nodeId 节点ID
@@ -343,6 +392,15 @@ public class ImGuiNodeMenus {
         NodeCraft.LOGGER.info("已设置节点 {} ({}) 的颜色为 {}", 
             node.getDisplayName(), nodeId, String.format("0x%08X", color));
     }
+
+    private void setNodesColor(Set<UUID> nodeIds, int color) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        for (UUID nodeId : nodeIds) {
+            setNodeColor(nodeId, color);
+        }
+    }
     
     /**
      * 重置节点颜色为默认
@@ -365,6 +423,15 @@ public class ImGuiNodeMenus {
         
         NodeCraft.LOGGER.info("已重置节点 {} ({}) 的颜色为默认", 
             node.getDisplayName(), nodeId);
+    }
+
+    private void resetNodesColor(Set<UUID> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        for (UUID nodeId : nodeIds) {
+            resetNodeColor(nodeId);
+        }
     }
     
     /**
@@ -441,6 +508,74 @@ public class ImGuiNodeMenus {
             NodeCraft.LOGGER.error("尝试复制节点时出错: {}", e.getMessage());
         }
     }
+
+    private void duplicateNodes(Set<UUID> nodeIds, UUID contextNodeId) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        if (nodeIds.size() == 1) {
+            duplicateNode(contextNodeId != null ? contextNodeId : nodeIds.iterator().next());
+            return;
+        }
+
+        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
+        UUID backupPrimary = editor.getSelectedNodeId();
+
+        try {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(nodeIds);
+
+            UUID anchorNodeId = contextNodeId != null && nodeIds.contains(contextNodeId)
+                    ? contextNodeId
+                    : nodeIds.iterator().next();
+            editor.setSelectedNodeId(anchorNodeId);
+
+            boolean copied = editor.copySelectedNodes();
+            if (!copied) {
+                NodeCraft.LOGGER.warn("批量复制节点失败：无法复制选中集合");
+                return;
+            }
+
+            NodePosition anchorPos = editor.getNodePosition(anchorNodeId);
+            if (anchorPos != null) {
+                editor.pasteNodesAtPosition(anchorPos.x + 30.0f, anchorPos.y);
+            } else {
+                editor.pasteNodesAtPosition(30.0f, 0.0f);
+            }
+            NodeCraft.LOGGER.info("已通过右键菜单批量复制 {} 个节点", nodeIds.size());
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("批量复制节点失败: {}", e.getMessage(), e);
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(backupSelection);
+            editor.setSelectedNodeId(backupPrimary);
+        }
+    }
+
+    private void copyNodes(Set<UUID> nodeIds, UUID contextNodeId) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
+        UUID backupPrimary = editor.getSelectedNodeId();
+
+        try {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(nodeIds);
+            if (contextNodeId != null && nodeIds.contains(contextNodeId)) {
+                editor.setSelectedNodeId(contextNodeId);
+            } else {
+                editor.setSelectedNodeId(nodeIds.iterator().next());
+            }
+
+            if (editor.copySelectedNodes()) {
+                NodeCraft.LOGGER.info("已通过右键菜单复制 {} 个节点", nodeIds.size());
+            }
+        } finally {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(backupSelection);
+            editor.setSelectedNodeId(backupPrimary);
+        }
+    }
     
     /**
      * 断开节点的所有连接
@@ -481,6 +616,15 @@ public class ImGuiNodeMenus {
         }
     }
 
+    private void disconnectAllPorts(Set<UUID> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        for (UUID nodeId : nodeIds) {
+            disconnectAllPorts(nodeId);
+        }
+    }
+
     /**
      * 切换节点可见性
      * @param nodeId 节点ID
@@ -496,6 +640,16 @@ public class ImGuiNodeMenus {
         }
     }
 
+    private void setNodesVisibility(Set<UUID> nodeIds, boolean visible) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        for (UUID nodeId : nodeIds) {
+            editor.setNodeVisible(nodeId, visible);
+        }
+        NodeCraft.LOGGER.info("已批量设置 {} 个节点可见性为 {}", nodeIds.size(), visible);
+    }
+
     /**
      * 切换节点启用/禁用状态
      * @param nodeId 节点ID
@@ -509,5 +663,52 @@ public class ImGuiNodeMenus {
             editor.setNodeDisabled(nodeId, !isDisabled);
             NodeCraft.LOGGER.info("已切换节点 {} 的启用/禁用状态为 {}", node.getDisplayName(), !isDisabled);
         }
+    }
+
+    private void setNodesDisabled(Set<UUID> nodeIds, boolean disabled) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return;
+        }
+        for (UUID nodeId : nodeIds) {
+            editor.setNodeDisabled(nodeId, disabled);
+        }
+        NodeCraft.LOGGER.info("已批量设置 {} 个节点禁用状态为 {}", nodeIds.size(), disabled);
+    }
+
+    private boolean areAllNodesVisible(Set<UUID> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return false;
+        }
+        for (UUID nodeId : nodeIds) {
+            if (!editor.isNodeVisible(nodeId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean areAllNodesDisabled(Set<UUID> nodeIds) {
+        if (nodeIds == null || nodeIds.isEmpty()) {
+            return false;
+        }
+        for (UUID nodeId : nodeIds) {
+            if (!editor.isNodeDisabled(nodeId)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private Set<UUID> getContextTargetNodeIds(UUID clickedNodeId) {
+        Set<UUID> selected = editor.getSelectedNodeIds();
+        if (selected != null && selected.size() > 1 && clickedNodeId != null && selected.contains(clickedNodeId)) {
+            return new HashSet<>(selected);
+        }
+
+        Set<UUID> single = new HashSet<>();
+        if (clickedNodeId != null) {
+            single.add(clickedNodeId);
+        }
+        return single;
     }
 } 
