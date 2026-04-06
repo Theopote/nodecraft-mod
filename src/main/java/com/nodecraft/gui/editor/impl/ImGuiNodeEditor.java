@@ -249,6 +249,9 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             // 2.0 在绘制前先处理节点拖动位移，确保本帧节点背景与自定义UI同步移动
             applyNodeDragMovementBeforeRender();
 
+            // 2.05 清理动态端口变化后产生的悬挂连线（端口已不存在）
+            cleanupDanglingConnections();
+
             // 2. 先计算所有节点的尺寸和端口位置
             // 这一步会更新 NodePosition 中的 width/height 字段，并填充 portScreenPositions
             renderer.calculatePortPositions(canvasPos, currentGraph, nodePositions, portScreenPositions);
@@ -447,6 +450,45 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         if (moved) {
             io.markDirty();
         }
+    }
+
+    private void cleanupDanglingConnections() {
+        if (currentGraph == null) {
+            return;
+        }
+
+        int removedCount = 0;
+        for (NodeGraph.Connection connection : currentGraph.getConnections()) {
+            INode sourceNode = connection.sourceNode;
+            INode targetNode = connection.targetNode;
+            if (sourceNode == null || targetNode == null) {
+                currentGraph.removeConnection(connection);
+                removedCount++;
+                continue;
+            }
+
+            if (!hasPort(sourceNode.getOutputPorts(), connection.sourcePort.getId())
+                    || !hasPort(targetNode.getInputPorts(), connection.targetPort.getId())) {
+                currentGraph.removeConnection(connection);
+                removedCount++;
+            }
+        }
+
+        if (removedCount > 0) {
+            NodeCraft.LOGGER.info("已清理 {} 条悬挂连线（端口已被动态移除）", removedCount);
+        }
+    }
+
+    private static boolean hasPort(List<IPort> ports, String portId) {
+        if (ports == null || portId == null) {
+            return false;
+        }
+        for (IPort port : ports) {
+            if (port != null && portId.equals(port.getId())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

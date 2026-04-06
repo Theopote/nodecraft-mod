@@ -2,9 +2,11 @@ package com.nodecraft.nodesystem.nodes.utilities.assist;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import imgui.ImGui;
+import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -20,7 +22,7 @@ import java.util.UUID;
     description = "将两路输入按优先级汇聚为一路输出",
     category = "utilities.assist"
 )
-public class SignalMergeNode extends BaseNode {
+public class SignalMergeNode extends BaseCustomUINode {
 
     private static final int MIN_INPUT_BRANCHES = 2;
     private static final int DEFAULT_INPUT_BRANCHES = 2;
@@ -64,6 +66,69 @@ public class SignalMergeNode extends BaseNode {
             NodeDataType.STRING,
             this
         ));
+    }
+
+    @Override
+    protected float calculateUIHeight() {
+        float height = getMediumPadding();
+        height += ImGui.getFrameHeight();
+        height += getMediumPadding();
+        return height;
+    }
+
+    @Override
+    protected float calculateMinUIWidth() {
+        return 132f + getContentMargin();
+    }
+
+    @Override
+    protected boolean renderCustomUIScaled(float width, float height, float zoom) {
+        return layout(zoom, l -> {
+            boolean changed = false;
+            float buttonWidth = 40f * zoom;
+            float availableWidth = l.getAvailableContentWidth(width);
+
+            l.addVerticalSpacing(getMediumPadding());
+
+            boolean canRemove = canDecreaseInputBranch();
+            if (!canRemove) {
+                ImGui.pushStyleColor(ImGuiCol.Button, 0.3f, 0.3f, 0.3f, 0.5f);
+                ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 0.5f);
+            }
+            if (ImGui.button(" - ##merge_remove", buttonWidth, 0) && canRemove) {
+                removeLastInputBranch();
+                changed = true;
+            }
+            if (!canRemove) {
+                ImGui.popStyleColor(2);
+            }
+
+            ImGui.sameLine();
+
+            boolean canAdd = canIncreaseInputBranch();
+            if (!canAdd) {
+                ImGui.pushStyleColor(ImGuiCol.Button, 0.3f, 0.3f, 0.3f, 0.5f);
+                ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 0.5f);
+            }
+            if (ImGui.button(" + ##merge_add", buttonWidth, 0) && canAdd) {
+                addInputBranch();
+                changed = true;
+            }
+            if (!canAdd) {
+                ImGui.popStyleColor(2);
+            }
+
+            ImGui.sameLine();
+            ImGui.textDisabled("Inputs: " + inputBranchCount);
+
+            if (availableWidth > 150f * zoom) {
+                ImGui.sameLine();
+                ImGui.textDisabled("(2-8)");
+            }
+
+            l.addVerticalSpacing(getMediumPadding());
+            return changed;
+        });
     }
 
     private static String getInputBranchPortId(int index) {
