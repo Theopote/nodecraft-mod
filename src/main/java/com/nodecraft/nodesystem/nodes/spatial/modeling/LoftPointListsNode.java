@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -45,6 +46,7 @@ public class LoftPointListsNode extends BaseNode {
     private static final String OUTPUT_SOURCE_PATH_ID = "output_source_path";
     private static final String OUTPUT_TARGET_PATH_ID = "output_target_path";
     private static final String OUTPUT_RAIL_SEGMENTS_ID = "output_rail_segments";
+    private static final String OUTPUT_SURFACE_STRIP_ID = "output_surface_strip";
     private static final String OUTPUT_COUNT_ID = "output_count";
     private static final String OUTPUT_VALID_ID = "output_valid";
 
@@ -59,6 +61,7 @@ public class LoftPointListsNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SOURCE_PATH_ID, "Source Path", "Polyline describing the source contour", NodeDataType.POLYLINE, this));
         addOutputPort(new BasePort(OUTPUT_TARGET_PATH_ID, "Target Path", "Polyline describing the target contour", NodeDataType.POLYLINE, this));
         addOutputPort(new BasePort(OUTPUT_RAIL_SEGMENTS_ID, "Rail Segments", "List of line segments connecting source and target pairs", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_SURFACE_STRIP_ID, "Surface Strip", "Reusable strip surface connecting the loft sections", NodeDataType.SURFACE_STRIP, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of loft rail segments", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when both point lists were resolved", NodeDataType.BOOLEAN, this));
     }
@@ -94,10 +97,14 @@ public class LoftPointListsNode extends BaseNode {
             return;
         }
 
+        List<Vector3d> pairedSourcePoints = new ArrayList<>(pairCount);
+        List<Vector3d> pairedTargetPoints = new ArrayList<>(pairCount);
         List<LineData> railSegments = new ArrayList<>(pairCount);
         for (int i = 0; i < pairCount; i++) {
-            Vector3d sourcePoint = sourcePoints.get(wrapPairs ? i % sourcePoints.size() : i);
-            Vector3d targetPoint = targetPoints.get(wrapPairs ? i % targetPoints.size() : i);
+            Vector3d sourcePoint = new Vector3d(sourcePoints.get(wrapPairs ? i % sourcePoints.size() : i));
+            Vector3d targetPoint = new Vector3d(targetPoints.get(wrapPairs ? i % targetPoints.size() : i));
+            pairedSourcePoints.add(sourcePoint);
+            pairedTargetPoints.add(targetPoint);
             railSegments.add(new LineData(
                 new Vec3d(sourcePoint.x, sourcePoint.y, sourcePoint.z),
                 new Vec3d(targetPoint.x, targetPoint.y, targetPoint.z)
@@ -106,12 +113,17 @@ public class LoftPointListsNode extends BaseNode {
 
         PolylineData sourcePath = createPolyline(sourcePoints, closeSource);
         PolylineData targetPath = createPolyline(targetPoints, closeTarget);
+        SurfaceStripData surfaceStrip = new SurfaceStripData(
+            List.of(List.copyOf(pairedSourcePoints), List.copyOf(pairedTargetPoints)),
+            List.of(closeSource, closeTarget)
+        );
 
         outputValues.put(OUTPUT_SOURCE_POINTS_ID, List.copyOf(sourcePoints));
         outputValues.put(OUTPUT_TARGET_POINTS_ID, List.copyOf(targetPoints));
         outputValues.put(OUTPUT_SOURCE_PATH_ID, sourcePath);
         outputValues.put(OUTPUT_TARGET_PATH_ID, targetPath);
         outputValues.put(OUTPUT_RAIL_SEGMENTS_ID, List.copyOf(railSegments));
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, surfaceStrip);
         outputValues.put(OUTPUT_COUNT_ID, railSegments.size());
         outputValues.put(OUTPUT_VALID_ID, sourcePath != null && targetPath != null);
     }
@@ -174,6 +186,7 @@ public class LoftPointListsNode extends BaseNode {
         outputValues.put(OUTPUT_SOURCE_PATH_ID, null);
         outputValues.put(OUTPUT_TARGET_PATH_ID, null);
         outputValues.put(OUTPUT_RAIL_SEGMENTS_ID, List.of());
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, null);
         outputValues.put(OUTPUT_COUNT_ID, 0);
         outputValues.put(OUTPUT_VALID_ID, false);
     }

@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -39,6 +40,7 @@ public class ExtrudePointListNode extends BaseNode {
     private static final String OUTPUT_SOURCE_PATH_ID = "output_source_path";
     private static final String OUTPUT_EXTRUDED_PATH_ID = "output_extruded_path";
     private static final String OUTPUT_SIDE_SEGMENTS_ID = "output_side_segments";
+    private static final String OUTPUT_SURFACE_STRIP_ID = "output_surface_strip";
     private static final String OUTPUT_COUNT_ID = "output_count";
     private static final String OUTPUT_VALID_ID = "output_valid";
 
@@ -53,6 +55,7 @@ public class ExtrudePointListNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SOURCE_PATH_ID, "Source Path", "Polyline describing the source contour", NodeDataType.POLYLINE, this));
         addOutputPort(new BasePort(OUTPUT_EXTRUDED_PATH_ID, "Extruded Path", "Polyline describing the extruded contour", NodeDataType.POLYLINE, this));
         addOutputPort(new BasePort(OUTPUT_SIDE_SEGMENTS_ID, "Side Segments", "List of line segments connecting source and extruded points", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_SURFACE_STRIP_ID, "Surface Strip", "Reusable strip surface connecting source and extruded sections", NodeDataType.SURFACE_STRIP, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of source points used for the extrusion", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when a valid point list and direction were resolved", NodeDataType.BOOLEAN, this));
     }
@@ -104,12 +107,17 @@ public class ExtrudePointListNode extends BaseNode {
 
         PolylineData sourcePath = createPolyline(sourcePoints, closePath);
         PolylineData extrudedPath = createPolyline(extrudedPoints, closePath);
+        SurfaceStripData surfaceStrip = new SurfaceStripData(
+            List.of(List.copyOf(sourcePoints), List.copyOf(extrudedPoints)),
+            List.of(closePath, closePath)
+        );
 
         outputValues.put(OUTPUT_SOURCE_POINTS_ID, List.copyOf(sourcePoints));
         outputValues.put(OUTPUT_EXTRUDED_POINTS_ID, List.copyOf(extrudedPoints));
         outputValues.put(OUTPUT_SOURCE_PATH_ID, sourcePath);
         outputValues.put(OUTPUT_EXTRUDED_PATH_ID, extrudedPath);
         outputValues.put(OUTPUT_SIDE_SEGMENTS_ID, List.copyOf(sideSegments));
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, surfaceStrip);
         outputValues.put(OUTPUT_COUNT_ID, sourcePoints.size());
         outputValues.put(OUTPUT_VALID_ID, true);
     }
@@ -143,6 +151,7 @@ public class ExtrudePointListNode extends BaseNode {
         outputValues.put(OUTPUT_SOURCE_PATH_ID, null);
         outputValues.put(OUTPUT_EXTRUDED_PATH_ID, null);
         outputValues.put(OUTPUT_SIDE_SEGMENTS_ID, List.of());
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, null);
         outputValues.put(OUTPUT_COUNT_ID, 0);
         outputValues.put(OUTPUT_VALID_ID, false);
     }

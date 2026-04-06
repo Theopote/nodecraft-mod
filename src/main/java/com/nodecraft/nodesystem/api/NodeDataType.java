@@ -34,6 +34,7 @@ public enum NodeDataType {
     CYLINDER_GEOMETRY("cylinder_geometry", "Cylinder Geometry", CylinderGeometryData.class),
     TORUS_GEOMETRY("torus_geometry", "Torus Geometry", TorusGeometryData.class),
     SPHERE("sphere", "球体", SphereData.class),
+    SURFACE_STRIP("surface_strip", "Surface Strip", SurfaceStripData.class),
     LINE("line", "线段", LineData.class),
     POLYLINE("polyline", "多段线", PolylineData.class),
     CURVE("curve", "曲线", Curve.class),

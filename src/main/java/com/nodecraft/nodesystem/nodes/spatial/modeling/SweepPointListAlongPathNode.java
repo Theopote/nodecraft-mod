@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
 import net.minecraft.util.math.BlockPos;
@@ -47,6 +48,7 @@ public class SweepPointListAlongPathNode extends BaseNode {
     private static final String OUTPUT_SECTION_PATHS_ID = "output_section_paths";
     private static final String OUTPUT_ALL_POINTS_ID = "output_all_points";
     private static final String OUTPUT_RAIL_SEGMENTS_ID = "output_rail_segments";
+    private static final String OUTPUT_SURFACE_STRIP_ID = "output_surface_strip";
     private static final String OUTPUT_SECTION_COUNT_ID = "output_section_count";
     private static final String OUTPUT_VALID_ID = "output_valid";
 
@@ -63,6 +65,7 @@ public class SweepPointListAlongPathNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SECTION_PATHS_ID, "Section Paths", "List of swept section polylines", NodeDataType.LIST, this));
         addOutputPort(new BasePort(OUTPUT_ALL_POINTS_ID, "All Points", "Flattened list of all swept section points", NodeDataType.VECTOR_LIST, this));
         addOutputPort(new BasePort(OUTPUT_RAIL_SEGMENTS_ID, "Rail Segments", "Line segments connecting corresponding section points", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_SURFACE_STRIP_ID, "Surface Strip", "Reusable strip surface made of swept sections", NodeDataType.SURFACE_STRIP, this));
         addOutputPort(new BasePort(OUTPUT_SECTION_COUNT_ID, "Section Count", "Number of swept sections along the spine", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when a profile and spine were resolved", NodeDataType.BOOLEAN, this));
     }
@@ -119,10 +122,17 @@ public class SweepPointListAlongPathNode extends BaseNode {
             }
         }
 
+        List<Boolean> sectionClosedFlags = new ArrayList<>(sections.size());
+        for (int i = 0; i < sections.size(); i++) {
+            sectionClosedFlags.add(closeProfile);
+        }
+        SurfaceStripData surfaceStrip = new SurfaceStripData(sections, sectionClosedFlags);
+
         outputValues.put(OUTPUT_SPINE_POINTS_ID, List.copyOf(spinePoints));
         outputValues.put(OUTPUT_SECTION_PATHS_ID, List.copyOf(sectionPaths));
         outputValues.put(OUTPUT_ALL_POINTS_ID, List.copyOf(allPoints));
         outputValues.put(OUTPUT_RAIL_SEGMENTS_ID, List.copyOf(railSegments));
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, surfaceStrip);
         outputValues.put(OUTPUT_SECTION_COUNT_ID, sections.size());
         outputValues.put(OUTPUT_VALID_ID, true);
     }
@@ -171,6 +181,7 @@ public class SweepPointListAlongPathNode extends BaseNode {
         outputValues.put(OUTPUT_SECTION_PATHS_ID, List.of());
         outputValues.put(OUTPUT_ALL_POINTS_ID, List.of());
         outputValues.put(OUTPUT_RAIL_SEGMENTS_ID, List.of());
+        outputValues.put(OUTPUT_SURFACE_STRIP_ID, null);
         outputValues.put(OUTPUT_SECTION_COUNT_ID, 0);
         outputValues.put(OUTPUT_VALID_ID, false);
     }
