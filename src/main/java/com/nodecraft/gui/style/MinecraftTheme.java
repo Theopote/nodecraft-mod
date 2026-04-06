@@ -49,6 +49,12 @@ public class MinecraftTheme {
     private void applyColors(ImGuiStyleScope scope) {
         // 窗口和背景颜色
         scope.pushStyleColor(ImGuiCol.WindowBg, 0.16f, 0.16f, 0.20f, panelAlpha);
+
+        // 子面板背景颜色（节点库、属性面板等）与主面板统一透明度
+        scope.pushStyleColor(ImGuiCol.ChildBg, 0.16f, 0.16f, 0.20f, panelAlpha);
+
+        // 菜单栏背景颜色与主面板统一透明度
+        scope.pushStyleColor(ImGuiCol.MenuBarBg, 0.16f, 0.16f, 0.20f, panelAlpha);
         
         // 边框颜色
         scope.pushStyleColor(ImGuiCol.Border, 0.40f, 0.40f, 0.50f, 0.7f);

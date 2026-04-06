@@ -13,6 +13,7 @@ import java.util.Comparator;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import com.nodecraft.gui.node.NodeInfo;
+import com.nodecraft.gui.style.MinecraftTheme;
 import com.nodecraft.nodesystem.registry.NodeRegistry.NodeCategory;
 import com.nodecraft.gui.utils.NodeIconManager;
 import com.nodecraft.gui.components.search.NodeSearchManager;
@@ -196,7 +197,6 @@ public class NodeLibraryComponent implements EditorComponent {
     private static class NodeLibraryConstants {
         static final float CHILD_WINDOW_MIN_WIDTH = 50;
         static final float CHILD_WINDOW_MIN_HEIGHT = 50;
-        static final int CHILD_BG_COLOR = ImGui.colorConvertFloat4ToU32(0.15f, 0.15f, 0.2f, 1.0f);
         static final float CATEGORY_INDENT = 10f;
         static final float CATEGORY_SPACING_EXPANDED = 3f; // 减小展开类别下方的间距
         static final float CATEGORY_SPACING_COLLAPSED = 2f;
@@ -539,12 +539,13 @@ public class NodeLibraryComponent implements EditorComponent {
                 // 设置节点库背景颜色，提高可见性
                 ImDrawList drawList = ImGui.getWindowDrawList();
                 ImVec2 windowPos = ImGui.getWindowPos();
+                int nodeLibraryBgColor = ImGui.colorConvertFloat4ToU32(0.15f, 0.15f, 0.2f, MinecraftTheme.getPanelAlpha());
                 drawList.addRectFilled(
                     windowPos.x, 
                     windowPos.y, 
                     windowPos.x + nodePanelWidth, 
                     windowPos.y + contentHeight, 
-                    NodeLibraryConstants.CHILD_BG_COLOR
+                    nodeLibraryBgColor
                 );
                 
                 // 搜索栏

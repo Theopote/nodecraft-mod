@@ -548,6 +548,10 @@ public class CanvasComponent implements EditorComponent {
      */
     private void drawGrid(ImVec2 canvasScreenPos, ImVec2 canvasSize, float worldGridSize, float offsetX, float offsetY) {
         if (worldGridSize <= 0 || canvasZoom <= 0) return;
+
+        // 网格与画布背景共享透明度，避免背景设为0时仍残留网格层。
+        float gridAlphaScale = Math.max(0.0f, Math.min(1.0f, this.canvasBackgroundColor[3]));
+        if (gridAlphaScale <= 0.001f) return;
         
         ImDrawList drawList = ImGui.getWindowDrawList();
         // 使用 CanvasConstants 中的常量
@@ -576,7 +580,8 @@ public class CanvasComponent implements EditorComponent {
             
             // 判断是主要线还是次要线
             boolean isMajorLine = Math.abs(Math.round(worldX / worldGridSize) % CanvasConstants.MAJOR_LINE_INTERVAL) == 0;
-            int alpha = isMajorLine ? CanvasConstants.GRID_MAJOR_ALPHA : CanvasConstants.GRID_MINOR_ALPHA;
+            int baseAlpha = isMajorLine ? CanvasConstants.GRID_MAJOR_ALPHA : CanvasConstants.GRID_MINOR_ALPHA;
+            int alpha = Math.max(0, Math.min(255, (int)(baseAlpha * gridAlphaScale)));
             int finalColor = (alpha << 24) | (CanvasConstants.GRID_COLOR & 0x00FFFFFF); // 应用透明度
             
             drawList.addLine(screenX, canvasScreenPos.y, screenX, canvasScreenPos.y + canvasSize.y, finalColor, CanvasConstants.GRID_THICKNESS);
@@ -595,7 +600,8 @@ public class CanvasComponent implements EditorComponent {
             
             // 判断是主要线还是次要线
             boolean isMajorLine = Math.abs(Math.round(worldY / worldGridSize) % CanvasConstants.MAJOR_LINE_INTERVAL) == 0;
-            int alpha = isMajorLine ? CanvasConstants.GRID_MAJOR_ALPHA : CanvasConstants.GRID_MINOR_ALPHA;
+            int baseAlpha = isMajorLine ? CanvasConstants.GRID_MAJOR_ALPHA : CanvasConstants.GRID_MINOR_ALPHA;
+            int alpha = Math.max(0, Math.min(255, (int)(baseAlpha * gridAlphaScale)));
             int finalColor = (alpha << 24) | (CanvasConstants.GRID_COLOR & 0x00FFFFFF); // 应用透明度
             
             drawList.addLine(canvasScreenPos.x, screenY, canvasScreenPos.x + canvasSize.x, screenY, finalColor, CanvasConstants.GRID_THICKNESS);
