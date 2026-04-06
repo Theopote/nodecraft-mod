@@ -1,0 +1,227 @@
+package com.nodecraft.nodesystem.nodes.spatial.modeling;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.PointData;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import net.minecraft.util.math.BlockPos;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@NodeInfo(
+    id = "spatial.modeling.twist_point_list",
+    displayName = "Twist Point List",
+    description = "Twists a point list around an axis by distributing rotation along a specified axial length",
+    category = "spatial.modeling"
+)
+public class TwistPointListNode extends BaseNode {
+
+    private static final double EPSILON = 1.0e-9d;
+
+    public enum ClampMode {
+        CLAMP,
+        REPEAT,
+        UNBOUNDED
+    }
+
+    @NodeProperty(displayName = "Angle Degrees", category = "Twist", order = 1)
+    private double angleDegrees = 180.0d;
+
+    @NodeProperty(displayName = "Twist Length", category = "Twist", order = 2)
+    private double twistLength = 10.0d;
+
+    @NodeProperty(displayName = "Clamp Mode", category = "Twist", order = 3)
+    private ClampMode clampMode = ClampMode.CLAMP;
+
+    private static final String INPUT_POINTS_ID = "input_points";
+    private static final String INPUT_AXIS_ORIGIN_ID = "input_axis_origin";
+    private static final String INPUT_AXIS_DIRECTION_ID = "input_axis_direction";
+    private static final String INPUT_ANGLE_DEGREES_ID = "input_angle_degrees";
+    private static final String INPUT_TWIST_LENGTH_ID = "input_twist_length";
+
+    private static final String OUTPUT_POINTS_ID = "output_points";
+    private static final String OUTPUT_COUNT_ID = "output_count";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+
+    public TwistPointListNode() {
+        super(UUID.randomUUID(), "spatial.modeling.twist_point_list");
+
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to twist", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_AXIS_ORIGIN_ID, "Axis Origin", "Origin point of the twist axis", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_AXIS_DIRECTION_ID, "Axis Direction", "Direction vector of the twist axis", NodeDataType.VECTOR, this));
+        addInputPort(new BasePort(INPUT_ANGLE_DEGREES_ID, "Angle Degrees", "Optional total twist angle override in degrees", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_TWIST_LENGTH_ID, "Twist Length", "Optional axial length over which the twist angle is distributed", NodeDataType.DOUBLE, this));
+
+        addOutputPort(new BasePort(OUTPUT_POINTS_ID, "Points", "Twisted point list", NodeDataType.VECTOR_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of points in the twisted output", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when the inputs were resolved", NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "Twists a point list around an axis by distributing rotation along a specified axial length";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object pointsObj = inputValues.get(INPUT_POINTS_ID);
+        Vector3d axisOrigin = resolvePoint(inputValues.get(INPUT_AXIS_ORIGIN_ID));
+        Object axisDirectionObj = inputValues.get(INPUT_AXIS_DIRECTION_ID);
+
+        if (!(pointsObj instanceof List<?> pointsInput) || axisOrigin == null || !(axisDirectionObj instanceof Vector3d axisDirection)) {
+            writeEmptyOutputs();
+            return;
+        }
+
+        Vector3d axis = new Vector3d(axisDirection);
+        if (axis.lengthSquared() <= EPSILON) {
+            writeEmptyOutputs();
+            return;
+        }
+        axis.normalize();
+
+        double resolvedAngleDegrees = resolveDouble(inputValues.get(INPUT_ANGLE_DEGREES_ID), angleDegrees);
+        double resolvedTwistLength = Math.max(EPSILON, resolveDouble(inputValues.get(INPUT_TWIST_LENGTH_ID), twistLength));
+        double totalAngleRadians = Math.toRadians(resolvedAngleDegrees);
+
+        List<Vector3d> twistedPoints = new ArrayList<>(pointsInput.size());
+        for (Object entry : pointsInput) {
+            Vector3d point = resolvePoint(entry);
+            if (point == null) {
+                continue;
+            }
+
+            Vector3d offset = new Vector3d(point).sub(axisOrigin);
+            double axialDistance = offset.dot(axis);
+            double normalizedDistance = axialDistance / resolvedTwistLength;
+            double twistFactor = applyClampMode(normalizedDistance);
+            double angle = totalAngleRadians * twistFactor;
+
+            Vector3d axialComponent = new Vector3d(axis).mul(axialDistance);
+            Vector3d radialComponent = new Vector3d(offset).sub(axialComponent);
+            Vector3d rotatedRadial = rotateAroundAxis(radialComponent, axis, angle);
+            twistedPoints.add(new Vector3d(axisOrigin).add(axialComponent).add(rotatedRadial));
+        }
+
+        outputValues.put(OUTPUT_POINTS_ID, List.copyOf(twistedPoints));
+        outputValues.put(OUTPUT_COUNT_ID, twistedPoints.size());
+        outputValues.put(OUTPUT_VALID_ID, true);
+    }
+
+    @Override
+    public Object getNodeState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("angleDegrees", angleDegrees);
+        state.put("twistLength", twistLength);
+        state.put("clampMode", clampMode.name());
+        return state;
+    }
+
+    @Override
+    public void setNodeState(Object state) {
+        if (!(state instanceof Map<?, ?> map)) {
+            return;
+        }
+        if (map.get("angleDegrees") instanceof Number value) {
+            setAngleDegrees(value.doubleValue());
+        }
+        if (map.get("twistLength") instanceof Number value) {
+            setTwistLength(value.doubleValue());
+        }
+        if (map.get("clampMode") instanceof String value) {
+            setClampModeString(value);
+        }
+    }
+
+    public double getAngleDegrees() {
+        return angleDegrees;
+    }
+
+    public void setAngleDegrees(double angleDegrees) {
+        this.angleDegrees = angleDegrees;
+        markDirty();
+    }
+
+    public double getTwistLength() {
+        return twistLength;
+    }
+
+    public void setTwistLength(double twistLength) {
+        this.twistLength = Math.max(EPSILON, twistLength);
+        markDirty();
+    }
+
+    public ClampMode getClampMode() {
+        return clampMode;
+    }
+
+    public void setClampMode(ClampMode clampMode) {
+        this.clampMode = clampMode == null ? ClampMode.CLAMP : clampMode;
+        markDirty();
+    }
+
+    public void setClampModeString(String mode) {
+        if (mode == null || mode.isBlank()) {
+            setClampMode(ClampMode.CLAMP);
+            return;
+        }
+        try {
+            setClampMode(ClampMode.valueOf(mode.trim().toUpperCase()));
+        } catch (IllegalArgumentException ignored) {
+            setClampMode(ClampMode.CLAMP);
+        }
+    }
+
+    private void writeEmptyOutputs() {
+        outputValues.put(OUTPUT_POINTS_ID, List.of());
+        outputValues.put(OUTPUT_COUNT_ID, 0);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    private double resolveDouble(Object value, double fallback) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+        return fallback;
+    }
+
+    private Vector3d resolvePoint(Object value) {
+        if (value instanceof PointData pointData) {
+            return pointData.getPosition();
+        }
+        if (value instanceof Vector3d vector) {
+            return new Vector3d(vector);
+        }
+        if (value instanceof BlockPos blockPos) {
+            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        }
+        return null;
+    }
+
+    private double applyClampMode(double normalizedDistance) {
+        return switch (clampMode) {
+            case CLAMP -> Math.max(0.0d, Math.min(1.0d, normalizedDistance));
+            case REPEAT -> normalizedDistance - Math.floor(normalizedDistance);
+            case UNBOUNDED -> normalizedDistance;
+        };
+    }
+
+    private Vector3d rotateAroundAxis(Vector3d vector, Vector3d axis, double angle) {
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+
+        Vector3d term1 = new Vector3d(vector).mul(cos);
+        Vector3d term2 = new Vector3d(axis).cross(vector, new Vector3d()).mul(sin);
+        Vector3d term3 = new Vector3d(axis).mul(axis.dot(vector) * (1.0d - cos));
+        return term1.add(term2).add(term3);
+    }
+}
