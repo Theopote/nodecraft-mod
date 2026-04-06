@@ -1,10 +1,8 @@
 package com.nodecraft.nodesystem.nodes.inputs.sources;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
-import com.nodecraft.gui.editor.impl.ZoomHelper;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.api.NodeDataType;
-import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -93,7 +91,7 @@ public class TextPanelNode extends BaseCustomUINode {
     
     @Override
     protected float calculateUIHeight() {
-        float height = getMediumPadding();
+        float height = getSmallPadding();
         if (isMultiline) {
             height += ImGui.getTextLineHeightWithSpacing() * 6; // 6行高度的文本区
         } else {
@@ -101,13 +99,13 @@ public class TextPanelNode extends BaseCustomUINode {
         }
         height += getSmallPadding();
         height += ImGui.getTextLineHeight(); // 信息行
-        height += getMediumPadding();
+        height += getSmallPadding();
         return height;
     }
 
     @Override
     protected float calculateMinUIWidth() {
-        return 200f + getContentMargin();
+        return 188f + getContentMargin();
     }
 
     @Override
@@ -115,8 +113,10 @@ public class TextPanelNode extends BaseCustomUINode {
         return layout(zoom, l -> {
             boolean changed = false;
             try {
-                float availableWidth = l.getAvailableContentWidth(width);
-                l.addVerticalSpacing(getMediumPadding());
+                float edgeMargin = l.toPixels(getSmallPadding());
+                float availableWidth = Math.max(96.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
+                float baseCursorX = ImGui.getCursorPosX();
+                l.addVerticalSpacing(getSmallPadding());
                 
                 ensureBuffer();
                 
@@ -126,6 +126,7 @@ public class TextPanelNode extends BaseCustomUINode {
                 if (isMultiline) {
                     // === 多行文本区 ===
                     float textAreaHeight = ImGui.getTextLineHeightWithSpacing() * 6;
+                    ImGui.setCursorPosX(baseCursorX + edgeMargin);
                     if (ImGui.inputTextMultiline("##text_panel", textBuffer, 
                             availableWidth, textAreaHeight, flags)) {
                         String newText = textBuffer.get();
@@ -138,7 +139,8 @@ public class TextPanelNode extends BaseCustomUINode {
                 } else {
                     // === 单行输入 ===
                     l.pushFramePadding(4.0f, 3.0f);
-                    l.setItemWidth(availableWidth / zoom);
+                    ImGui.setCursorPosX(baseCursorX + edgeMargin);
+                    l.setItemWidth(availableWidth / Math.max(zoom, 0.001f));
                     if (ImGui.inputTextWithHint("##text_panel", "输入文本...", textBuffer, flags)) {
                         String newText = textBuffer.get();
                         if (!newText.equals(text)) {
@@ -156,11 +158,12 @@ public class TextPanelNode extends BaseCustomUINode {
                 // === 信息行 ===
                 int charCount = text.length();
                 int lineCount = text.isEmpty() ? 0 : text.split(delimiter, -1).length;
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 1.0f);
                 ImGui.text(lineCount + " 行 | " + charCount + " 字符");
                 ImGui.popStyleColor();
                 
-                l.addVerticalSpacing(getMediumPadding());
+                l.addVerticalSpacing(getSmallPadding());
             } catch (Exception e) {
                 System.err.println("TextPanelNode UI渲染失败: " + e.getMessage());
             }
