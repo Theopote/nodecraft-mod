@@ -24,14 +24,11 @@ import java.util.UUID;
 )
 public class SurfaceStripToBlocksNode extends BaseNode {
 
-    @NodeProperty(displayName = "Longitudinal Steps", category = "Sampling", order = 1)
+    @NodeProperty(displayName = "Mode", category = "Sampling", order = 1)
+    private SurfaceStripBridge.BridgeMode mode = SurfaceStripBridge.BridgeMode.LATTICE;
+
+    @NodeProperty(displayName = "Longitudinal Steps", category = "Sampling", order = 2)
     private int longitudinalSteps = 4;
-
-    @NodeProperty(displayName = "Include Section Edges", category = "Sampling", order = 2)
-    private boolean includeSectionEdges = true;
-
-    @NodeProperty(displayName = "Include Rails", category = "Sampling", order = 3)
-    private boolean includeRails = true;
 
     private static final String INPUT_SURFACE_STRIP_ID = "input_surface_strip";
 
@@ -64,7 +61,7 @@ public class SurfaceStripToBlocksNode extends BaseNode {
         boolean valid = false;
 
         if (surfaceStripObj instanceof SurfaceStripData surfaceStrip) {
-            blocks = SurfaceStripBridge.voxelize(surfaceStrip, longitudinalSteps, includeSectionEdges, includeRails);
+            blocks = SurfaceStripBridge.voxelize(surfaceStrip, longitudinalSteps, mode);
             region = SurfaceStripBridge.createBoundingRegion(surfaceStrip);
             valid = true;
         }
@@ -73,6 +70,30 @@ public class SurfaceStripToBlocksNode extends BaseNode {
         outputValues.put(OUTPUT_REGION_ID, region);
         outputValues.put(OUTPUT_COUNT_ID, blocks.size());
         outputValues.put(OUTPUT_VALID_ID, valid);
+    }
+
+    public SurfaceStripBridge.BridgeMode getMode() {
+        return mode;
+    }
+
+    public void setMode(SurfaceStripBridge.BridgeMode mode) {
+        SurfaceStripBridge.BridgeMode resolved = mode == null ? SurfaceStripBridge.BridgeMode.LATTICE : mode;
+        if (this.mode != resolved) {
+            this.mode = resolved;
+            markDirty();
+        }
+    }
+
+    public void setModeString(String mode) {
+        if (mode == null || mode.isBlank()) {
+            setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+            return;
+        }
+        try {
+            setMode(SurfaceStripBridge.BridgeMode.valueOf(mode.trim().toUpperCase()));
+        } catch (IllegalArgumentException ignored) {
+            setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+        }
     }
 
     public int getLongitudinalSteps() {
@@ -87,34 +108,11 @@ public class SurfaceStripToBlocksNode extends BaseNode {
         }
     }
 
-    public boolean isIncludeSectionEdges() {
-        return includeSectionEdges;
-    }
-
-    public void setIncludeSectionEdges(boolean includeSectionEdges) {
-        if (this.includeSectionEdges != includeSectionEdges) {
-            this.includeSectionEdges = includeSectionEdges;
-            markDirty();
-        }
-    }
-
-    public boolean isIncludeRails() {
-        return includeRails;
-    }
-
-    public void setIncludeRails(boolean includeRails) {
-        if (this.includeRails != includeRails) {
-            this.includeRails = includeRails;
-            markDirty();
-        }
-    }
-
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
+        state.put("mode", mode.name());
         state.put("longitudinalSteps", longitudinalSteps);
-        state.put("includeSectionEdges", includeSectionEdges);
-        state.put("includeRails", includeRails);
         return state;
     }
 
@@ -123,14 +121,21 @@ public class SurfaceStripToBlocksNode extends BaseNode {
         if (!(state instanceof Map<?, ?> map)) {
             return;
         }
+        if (map.get("mode") instanceof String value) {
+            setModeString(value);
+        } else {
+            boolean hasSections = !(map.get("includeSectionEdges") instanceof Boolean value) || value;
+            boolean hasRails = !(map.get("includeRails") instanceof Boolean value) || value;
+            if (hasSections && hasRails) {
+                setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+            } else if (hasSections) {
+                setMode(SurfaceStripBridge.BridgeMode.SECTIONS_ONLY);
+            } else if (hasRails) {
+                setMode(SurfaceStripBridge.BridgeMode.RAILS_ONLY);
+            }
+        }
         if (map.get("longitudinalSteps") instanceof Number value) {
             setLongitudinalSteps(value.intValue());
-        }
-        if (map.get("includeSectionEdges") instanceof Boolean value) {
-            setIncludeSectionEdges(value);
-        }
-        if (map.get("includeRails") instanceof Boolean value) {
-            setIncludeRails(value);
         }
     }
 }

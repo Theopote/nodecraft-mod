@@ -28,14 +28,11 @@ public class SurfaceStripToGeometryNode extends BaseNode {
     @NodeProperty(displayName = "Radius", category = "Geometry", order = 1)
     private double radius = 0.35d;
 
-    @NodeProperty(displayName = "Longitudinal Steps", category = "Sampling", order = 2)
+    @NodeProperty(displayName = "Mode", category = "Sampling", order = 2)
+    private SurfaceStripBridge.BridgeMode mode = SurfaceStripBridge.BridgeMode.LATTICE;
+
+    @NodeProperty(displayName = "Longitudinal Steps", category = "Sampling", order = 3)
     private int longitudinalSteps = 4;
-
-    @NodeProperty(displayName = "Include Section Edges", category = "Sampling", order = 3)
-    private boolean includeSectionEdges = true;
-
-    @NodeProperty(displayName = "Include Rails", category = "Sampling", order = 4)
-    private boolean includeRails = true;
 
     private static final String INPUT_SURFACE_STRIP_ID = "input_surface_strip";
 
@@ -68,8 +65,8 @@ public class SurfaceStripToGeometryNode extends BaseNode {
         int count = 0;
 
         if (surfaceStripObj instanceof SurfaceStripData surfaceStrip) {
-            geometry = SurfaceStripBridge.toGeometry(surfaceStrip, longitudinalSteps, includeSectionEdges, includeRails, radius);
-            count = SurfaceStripBridge.estimateGeometrySegmentCount(surfaceStrip, longitudinalSteps, includeSectionEdges, includeRails);
+            geometry = SurfaceStripBridge.toGeometry(surfaceStrip, longitudinalSteps, mode, radius);
+            count = SurfaceStripBridge.estimateGeometrySegmentCount(surfaceStrip, longitudinalSteps, mode);
             if (geometry != null) {
                 region = GeometryVoxelizer.createBoundingRegion(geometry);
             }
@@ -79,6 +76,30 @@ public class SurfaceStripToGeometryNode extends BaseNode {
         outputValues.put(OUTPUT_REGION_ID, region);
         outputValues.put(OUTPUT_COUNT_ID, count);
         outputValues.put(OUTPUT_VALID_ID, geometry != null);
+    }
+
+    public SurfaceStripBridge.BridgeMode getMode() {
+        return mode;
+    }
+
+    public void setMode(SurfaceStripBridge.BridgeMode mode) {
+        SurfaceStripBridge.BridgeMode resolved = mode == null ? SurfaceStripBridge.BridgeMode.LATTICE : mode;
+        if (this.mode != resolved) {
+            this.mode = resolved;
+            markDirty();
+        }
+    }
+
+    public void setModeString(String mode) {
+        if (mode == null || mode.isBlank()) {
+            setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+            return;
+        }
+        try {
+            setMode(SurfaceStripBridge.BridgeMode.valueOf(mode.trim().toUpperCase()));
+        } catch (IllegalArgumentException ignored) {
+            setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+        }
     }
 
     public double getRadius() {
@@ -105,35 +126,12 @@ public class SurfaceStripToGeometryNode extends BaseNode {
         }
     }
 
-    public boolean isIncludeSectionEdges() {
-        return includeSectionEdges;
-    }
-
-    public void setIncludeSectionEdges(boolean includeSectionEdges) {
-        if (this.includeSectionEdges != includeSectionEdges) {
-            this.includeSectionEdges = includeSectionEdges;
-            markDirty();
-        }
-    }
-
-    public boolean isIncludeRails() {
-        return includeRails;
-    }
-
-    public void setIncludeRails(boolean includeRails) {
-        if (this.includeRails != includeRails) {
-            this.includeRails = includeRails;
-            markDirty();
-        }
-    }
-
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
         state.put("radius", radius);
+        state.put("mode", mode.name());
         state.put("longitudinalSteps", longitudinalSteps);
-        state.put("includeSectionEdges", includeSectionEdges);
-        state.put("includeRails", includeRails);
         return state;
     }
 
@@ -145,14 +143,21 @@ public class SurfaceStripToGeometryNode extends BaseNode {
         if (map.get("radius") instanceof Number value) {
             setRadius(value.doubleValue());
         }
+        if (map.get("mode") instanceof String value) {
+            setModeString(value);
+        } else {
+            boolean hasSections = !(map.get("includeSectionEdges") instanceof Boolean value) || value;
+            boolean hasRails = !(map.get("includeRails") instanceof Boolean value) || value;
+            if (hasSections && hasRails) {
+                setMode(SurfaceStripBridge.BridgeMode.LATTICE);
+            } else if (hasSections) {
+                setMode(SurfaceStripBridge.BridgeMode.SECTIONS_ONLY);
+            } else if (hasRails) {
+                setMode(SurfaceStripBridge.BridgeMode.RAILS_ONLY);
+            }
+        }
         if (map.get("longitudinalSteps") instanceof Number value) {
             setLongitudinalSteps(value.intValue());
-        }
-        if (map.get("includeSectionEdges") instanceof Boolean value) {
-            setIncludeSectionEdges(value);
-        }
-        if (map.get("includeRails") instanceof Boolean value) {
-            setIncludeRails(value);
         }
     }
 }
