@@ -97,6 +97,15 @@ public class BasePort implements IPort {
     }
 
     public boolean isOutput() {
+        if (node != null && node.getOutputPorts() != null) {
+            for (IPort outputPort : node.getOutputPorts()) {
+                if (outputPort == this) {
+                    return true;
+                }
+            }
+        }
+
+        // 兼容旧逻辑：在节点列表不可用时仍回退到命名前缀判断。
         return id.startsWith("output_");
     }
 
@@ -130,10 +139,15 @@ public class BasePort implements IPort {
     @Override
     public boolean connectTo(IPort targetPort) {
         if (targetPort == null || targetPort == this) {
+            com.nodecraft.core.NodeCraft.LOGGER.debug("Port connect rejected: target is null or self (sourcePort={}, sourceNode={})",
+                    getId(), node != null ? node.getId() : "null");
             return false;
         }
 
         if (isInput() == targetPort.isInput()) {
+            com.nodecraft.core.NodeCraft.LOGGER.debug(
+                    "Port connect rejected: same direction (sourcePort={}, sourceIsInput={}, targetPort={}, targetIsInput={})",
+                    getId(), isInput(), targetPort.getId(), targetPort.isInput());
             return false;
         }
 
@@ -141,10 +155,22 @@ public class BasePort implements IPort {
         IPort inputPort = isOutput() ? targetPort : this;
 
         if (!NodeDataType.isConnectableTo(outputPort.getDataType(), inputPort.getDataType())) {
+            String reason = NodeDataType.getConnectabilityRejectionReason(outputPort.getDataType(), inputPort.getDataType());
+            com.nodecraft.core.NodeCraft.LOGGER.debug(
+                    "Port connect rejected: {} (outputNode={}, outputPort={}, inputNode={}, inputPort={})",
+                    reason,
+                    outputPort.getNode() != null ? outputPort.getNode().getId() : "null",
+                    outputPort.getId(),
+                    inputPort.getNode() != null ? inputPort.getNode().getId() : "null",
+                    inputPort.getId());
             return false;
         }
 
         if (inputPort.isConnected() && !inputPort.allowsMultipleIncomingConnections()) {
+            com.nodecraft.core.NodeCraft.LOGGER.debug(
+                    "Port connect rejected: input already connected and does not allow multiple incoming (inputNode={}, inputPort={})",
+                    inputPort.getNode() != null ? inputPort.getNode().getId() : "null",
+                    inputPort.getId());
             return false;
         }
 
@@ -154,6 +180,8 @@ public class BasePort implements IPort {
             return true;
         }
 
+    com.nodecraft.core.NodeCraft.LOGGER.debug("Port connect rejected: unsupported port implementation (output={}, input={})",
+        outputPort.getClass().getName(), inputPort.getClass().getName());
         return false;
     }
 

@@ -243,6 +243,22 @@ public enum NodeDataType {
         return false;
     }
 
+    /**
+     * 返回类型拒连原因。若可连接则返回 null。
+     */
+    public static String getConnectabilityRejectionReason(NodeDataType outputType, NodeDataType inputType) {
+        NodeDataType normalizedOutput = outputType == null ? ANY : outputType;
+        NodeDataType normalizedInput = inputType == null ? ANY : inputType;
+
+        if (isConnectableTo(normalizedOutput, normalizedInput)) {
+            return null;
+        }
+
+        return "incompatible data types: "
+                + normalizedOutput.getId() + " (" + normalizedOutput.getDisplayName() + ") -> "
+                + normalizedInput.getId() + " (" + normalizedInput.getDisplayName() + ")";
+    }
+
     private static boolean isNumericType(NodeDataType type) {
         return type == INTEGER || type == FLOAT || type == DOUBLE;
     }
