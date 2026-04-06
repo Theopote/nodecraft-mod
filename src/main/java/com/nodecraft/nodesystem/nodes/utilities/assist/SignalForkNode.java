@@ -7,6 +7,8 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -21,8 +23,11 @@ import java.util.UUID;
 public class SignalForkNode extends BaseNode {
 
     private static final String INPUT_SIGNAL_ID = "input_signal";
-    private static final String OUTPUT_A_ID = "output_a";
-    private static final String OUTPUT_B_ID = "output_b";
+    private static final int MIN_OUTPUT_BRANCHES = 1;
+    private static final int DEFAULT_OUTPUT_BRANCHES = 2;
+    private static final int MAX_OUTPUT_BRANCHES = 8;
+
+    private int outputBranchCount = DEFAULT_OUTPUT_BRANCHES;
 
     public SignalForkNode() {
         super(UUID.randomUUID(), "utilities.assist.signal_fork");
@@ -35,21 +40,85 @@ public class SignalForkNode extends BaseNode {
             this
         ));
 
-        addOutputPort(new BasePort(
-            OUTPUT_A_ID,
-            "输出 A",
-            "分流输出 A",
-            NodeDataType.ANY,
-            this
-        ));
+        rebuildOutputPorts();
+    }
 
-        addOutputPort(new BasePort(
-            OUTPUT_B_ID,
-            "输出 B",
-            "分流输出 B",
-            NodeDataType.ANY,
-            this
-        ));
+    private static String getOutputPortId(int index) {
+        return switch (index) {
+            case 1 -> "output_a";
+            case 2 -> "output_b";
+            default -> "output_" + index;
+        };
+    }
+
+    private static String getOutputDisplayName(int index) {
+        if (index <= 0) {
+            return "输出";
+        }
+        char suffix = (char) ('A' + (index - 1));
+        return "输出 " + suffix;
+    }
+
+    private static String getOutputDescription(int index) {
+        if (index <= 0) {
+            return "分流输出";
+        }
+        char suffix = (char) ('A' + (index - 1));
+        return "分流输出 " + suffix;
+    }
+
+    private void rebuildOutputPorts() {
+        outputPorts.clear();
+        for (int i = 1; i <= outputBranchCount; i++) {
+            addOutputPort(new BasePort(
+                getOutputPortId(i),
+                getOutputDisplayName(i),
+                getOutputDescription(i),
+                NodeDataType.ANY,
+                this
+            ));
+        }
+        markDirty();
+    }
+
+    public int getOutputBranchCount() {
+        return outputBranchCount;
+    }
+
+    public boolean canIncreaseOutputBranch() {
+        return outputBranchCount < MAX_OUTPUT_BRANCHES;
+    }
+
+    public boolean canDecreaseOutputBranch() {
+        return outputBranchCount > MIN_OUTPUT_BRANCHES;
+    }
+
+    public boolean addOutputBranch() {
+        if (!canIncreaseOutputBranch()) {
+            return false;
+        }
+        outputBranchCount++;
+        rebuildOutputPorts();
+        return true;
+    }
+
+    public @Nullable String removeLastOutputBranch() {
+        if (!canDecreaseOutputBranch()) {
+            return null;
+        }
+
+        String removedPortId = getOutputPortId(outputBranchCount);
+        outputBranchCount--;
+        rebuildOutputPorts();
+        return removedPortId;
+    }
+
+    public void setOutputBranchCount(int count) {
+        int clamped = Math.max(MIN_OUTPUT_BRANCHES, Math.min(MAX_OUTPUT_BRANCHES, count));
+        if (outputBranchCount != clamped) {
+            outputBranchCount = clamped;
+            rebuildOutputPorts();
+        }
     }
 
     @Override
@@ -60,7 +129,31 @@ public class SignalForkNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object value = inputValues.get(INPUT_SIGNAL_ID);
-        outputValues.put(OUTPUT_A_ID, value);
-        outputValues.put(OUTPUT_B_ID, value);
+        outputValues.clear();
+        for (int i = 1; i <= outputBranchCount; i++) {
+            outputValues.put(getOutputPortId(i), value);
+        }
+    }
+
+    @Override
+    public @Nullable Object getNodeState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("outputBranchCount", outputBranchCount);
+        return state;
+    }
+
+    @Override
+    public void setNodeState(@Nullable Object state) {
+        if (state instanceof Number number) {
+            setOutputBranchCount(number.intValue());
+            return;
+        }
+
+        if (state instanceof Map<?, ?> map) {
+            Object count = map.get("outputBranchCount");
+            if (count instanceof Number number) {
+                setOutputBranchCount(number.intValue());
+            }
+        }
     }
 }

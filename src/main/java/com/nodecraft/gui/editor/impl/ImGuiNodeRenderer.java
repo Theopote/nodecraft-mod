@@ -10,6 +10,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.nodes.utilities.assist.TagRelayNode;
 import com.nodecraft.nodesystem.nodes.visualization.execute.ApplyChangesNode;
 import com.nodecraft.nodesystem.nodes.visualization.preview.GeometryViewerNode;
 
@@ -223,6 +224,13 @@ public class ImGuiNodeRenderer {
         int nodeBgColor = colorCache.nodeBgColor;
         int borderColor = colorCache.borderColor;
 
+        if (node instanceof TagRelayNode tagRelayNode) {
+            int mappedColor = parseHexColorToU32(tagRelayNode.getResolvedColorHex(), baseNodeColor);
+            baseNodeColor = mappedColor;
+            nodeBgColor = cache.adjustBrightnessCached(mappedColor, 0.35f);
+            borderColor = cache.adjustBrightnessCached(mappedColor, 1.35f);
+        }
+
         // 检查是否有自定义颜色
         Integer customColor = editor.getNodeCustomColor(nodeId);
         if (customColor != null) {
@@ -294,6 +302,11 @@ public class ImGuiNodeRenderer {
             float titleX = nodeScreenX + (finalNodeWidthScaled - titleTextWidthUnscaled * canvasZoom) / 2;
             float titleY = nodeScreenY + ((baseTextLineHeight + 2 * NodeRenderConstants.NODE_VERTICAL_PADDING) * canvasZoom - scaledTextLineHeight) / 2;
             drawList.addText(font, baseFontSize * canvasZoom, titleX, titleY, textColor, node.getDisplayName());
+
+            if (node instanceof TagRelayNode tagRelayNode) {
+                renderTagRelayBadge(drawList, tagRelayNode, nodeScreenX, nodeScreenY, finalNodeWidthScaled,
+                        baseTextLineHeight, baseFontSize, canvasZoom, textColor, font);
+            }
         }
 
         List<IPort> visibleInputPorts = getVisibleInputPorts(node);
@@ -584,6 +597,90 @@ public class ImGuiNodeRenderer {
 
     private static boolean isCompactRerouteNode(INode node) {
         return node != null && NodeRenderConstants.REROUTE_NODE_TYPE_ID.equalsIgnoreCase(node.getTypeId());
+    }
+
+    private void renderTagRelayBadge(ImDrawList drawList, TagRelayNode node, float nodeScreenX, float nodeScreenY,
+                                     float finalNodeWidthScaled, float baseTextLineHeight, float baseFontSize,
+                                     float canvasZoom, int defaultTextColor, imgui.ImFont font) {
+        String shortLabel = node.getShortTagLabel();
+        if (shortLabel == null || shortLabel.isBlank()) {
+            return;
+        }
+
+        float badgePadX = 5.0f * canvasZoom;
+        float badgePadY = 2.0f * canvasZoom;
+        float badgeMarginX = 6.0f * canvasZoom;
+        float badgeMarginY = 3.0f * canvasZoom;
+
+        float maxLabelWidthUnscaled = Math.max(16.0f, (finalNodeWidthScaled * 0.45f) / Math.max(canvasZoom, 0.001f));
+        String displayLabel = cache.truncateTextWithEllipsisOptimized(shortLabel, maxLabelWidthUnscaled);
+        float labelWidthScaled = cache.getCachedTextWidth(displayLabel) * canvasZoom;
+        float badgeHeight = baseTextLineHeight * canvasZoom + badgePadY * 2;
+        float badgeWidth = labelWidthScaled + badgePadX * 2;
+
+        float badgeX2 = nodeScreenX + finalNodeWidthScaled - badgeMarginX;
+        float badgeX1 = Math.max(nodeScreenX + badgeMarginX, badgeX2 - badgeWidth);
+        float badgeY1 = nodeScreenY + badgeMarginY;
+        float badgeY2 = badgeY1 + badgeHeight;
+
+        int badgeColor = parseHexColorToU32(node.getResolvedColorHex(), NodeRenderConstants.DEFAULT_CATEGORY_COLOR);
+        int badgeBgColor = cache.adjustAlphaCached(badgeColor, 0.92f);
+        int badgeBorderColor = cache.adjustBrightnessCached(badgeColor, 0.78f);
+
+        drawList.addRectFilled(badgeX1, badgeY1, badgeX2, badgeY2, badgeBgColor, 4.0f * canvasZoom);
+        drawList.addRect(badgeX1, badgeY1, badgeX2, badgeY2, badgeBorderColor, 4.0f * canvasZoom, 0,
+                NodeRenderConstants.NODE_BORDER_THICKNESS_UNSCALED * 0.8f * canvasZoom);
+
+        int badgeTextColor = chooseContrastingTextColor(badgeColor, defaultTextColor);
+        drawList.addText(font, baseFontSize * canvasZoom, badgeX1 + badgePadX, badgeY1 + badgePadY,
+                badgeTextColor, displayLabel);
+    }
+
+    private static int parseHexColorToU32(String colorHex, int fallback) {
+        if (colorHex == null) {
+            return fallback;
+        }
+
+        String normalized = colorHex.trim();
+        if (!normalized.startsWith("#")) {
+            return fallback;
+        }
+
+        try {
+            if (normalized.length() == 7) {
+                int r = Integer.parseInt(normalized.substring(1, 3), 16);
+                int g = Integer.parseInt(normalized.substring(3, 5), 16);
+                int b = Integer.parseInt(normalized.substring(5, 7), 16);
+                return ImGui.colorConvertFloat4ToU32(r / 255.0f, g / 255.0f, b / 255.0f, 1.0f);
+            }
+
+            if (normalized.length() == 9) {
+                int a = Integer.parseInt(normalized.substring(1, 3), 16);
+                int r = Integer.parseInt(normalized.substring(3, 5), 16);
+                int g = Integer.parseInt(normalized.substring(5, 7), 16);
+                int b = Integer.parseInt(normalized.substring(7, 9), 16);
+                return ImGui.colorConvertFloat4ToU32(r / 255.0f, g / 255.0f, b / 255.0f, a / 255.0f);
+            }
+        } catch (NumberFormatException ignored) {
+            return fallback;
+        }
+
+        return fallback;
+    }
+
+    private static int chooseContrastingTextColor(int backgroundColor, int fallbackTextColor) {
+        int r = backgroundColor & 0xFF;
+        int g = (backgroundColor >> 8) & 0xFF;
+        int b = (backgroundColor >> 16) & 0xFF;
+
+        float luminance = 0.2126f * (r / 255.0f) + 0.7152f * (g / 255.0f) + 0.0722f * (b / 255.0f);
+        if (luminance > 0.55f) {
+            return ImGui.colorConvertFloat4ToU32(0.12f, 0.12f, 0.12f, 1.0f);
+        }
+        if (luminance <= 0.45f) {
+            return ImGui.colorConvertFloat4ToU32(0.95f, 0.95f, 0.95f, 1.0f);
+        }
+        return fallbackTextColor;
     }
 
     private static List<IPort> getVisibleOutputPorts(INode node) {

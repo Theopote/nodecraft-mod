@@ -7,6 +7,8 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -20,6 +22,10 @@ import java.util.UUID;
 )
 public class SignalMergeNode extends BaseNode {
 
+    private static final int MIN_INPUT_BRANCHES = 2;
+    private static final int DEFAULT_INPUT_BRANCHES = 2;
+    private static final int MAX_INPUT_BRANCHES = 8;
+
     private static final String INPUT_PRIMARY_ID = "input_primary";
     private static final String INPUT_SECONDARY_ID = "input_secondary";
     private static final String INPUT_PREFER_PRIMARY_ID = "input_prefer_primary";
@@ -27,26 +33,13 @@ public class SignalMergeNode extends BaseNode {
     private static final String OUTPUT_SIGNAL_ID = "output_signal";
     private static final String OUTPUT_SOURCE_ID = "output_source";
 
+    private int inputBranchCount = DEFAULT_INPUT_BRANCHES;
     private boolean preferPrimary = true;
 
     public SignalMergeNode() {
         super(UUID.randomUUID(), "utilities.assist.signal_merge");
 
-        addInputPort(new BasePort(
-            INPUT_PRIMARY_ID,
-            "主输入",
-            "主优先级输入",
-            NodeDataType.ANY,
-            this
-        ));
-
-        addInputPort(new BasePort(
-            INPUT_SECONDARY_ID,
-            "次输入",
-            "次优先级输入",
-            NodeDataType.ANY,
-            this
-        ));
+        rebuildInputPorts();
 
         addInputPort(new BasePort(
             INPUT_PREFER_PRIMARY_ID,
@@ -67,10 +60,99 @@ public class SignalMergeNode extends BaseNode {
         addOutputPort(new BasePort(
             OUTPUT_SOURCE_ID,
             "来源",
-            "输出来源：primary / secondary / none",
+            "输出来源：primary / secondary / branch_n / none",
             NodeDataType.STRING,
             this
         ));
+    }
+
+    private static String getInputBranchPortId(int index) {
+        return switch (index) {
+            case 1 -> INPUT_PRIMARY_ID;
+            case 2 -> INPUT_SECONDARY_ID;
+            default -> "input_branch_" + index;
+        };
+    }
+
+    private static String getInputBranchDisplayName(int index) {
+        return switch (index) {
+            case 1 -> "主输入";
+            case 2 -> "次输入";
+            default -> "输入 " + index;
+        };
+    }
+
+    private static String getInputBranchDescription(int index) {
+        return switch (index) {
+            case 1 -> "主优先级输入";
+            case 2 -> "次优先级输入";
+            default -> "可参与汇聚的输入分支 " + index;
+        };
+    }
+
+    private static String getSourceNameForBranch(int index) {
+        return switch (index) {
+            case 1 -> "primary";
+            case 2 -> "secondary";
+            default -> "branch_" + index;
+        };
+    }
+
+    private void rebuildInputPorts() {
+        inputPorts.clear();
+        for (int i = 1; i <= inputBranchCount; i++) {
+            addInputPort(new BasePort(
+                getInputBranchPortId(i),
+                getInputBranchDisplayName(i),
+                getInputBranchDescription(i),
+                NodeDataType.ANY,
+                this
+            ));
+        }
+    }
+
+    public int getInputBranchCount() {
+        return inputBranchCount;
+    }
+
+    public boolean canIncreaseInputBranch() {
+        return inputBranchCount < MAX_INPUT_BRANCHES;
+    }
+
+    public boolean canDecreaseInputBranch() {
+        return inputBranchCount > MIN_INPUT_BRANCHES;
+    }
+
+    public boolean addInputBranch() {
+        if (!canIncreaseInputBranch()) {
+            return false;
+        }
+
+        inputBranchCount++;
+        rebuildInputPorts();
+        markDirty();
+        return true;
+    }
+
+    public @Nullable String removeLastInputBranch() {
+        if (!canDecreaseInputBranch()) {
+            return null;
+        }
+
+        String removedPortId = getInputBranchPortId(inputBranchCount);
+        inputBranchCount--;
+        rebuildInputPorts();
+        markDirty();
+        return removedPortId;
+    }
+
+    public void setInputBranchCount(int count) {
+        int clamped = Math.max(MIN_INPUT_BRANCHES, Math.min(MAX_INPUT_BRANCHES, count));
+        if (inputBranchCount != clamped) {
+            inputBranchCount = clamped;
+            rebuildInputPorts();
+            markDirty();
+        }
     }
 
     @Override
@@ -80,39 +162,32 @@ public class SignalMergeNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Object primary = inputValues.get(INPUT_PRIMARY_ID);
-        Object secondary = inputValues.get(INPUT_SECONDARY_ID);
-
         boolean usePrimaryFirst = preferPrimary;
         Object preferPrimaryInput = inputValues.get(INPUT_PREFER_PRIMARY_ID);
         if (preferPrimaryInput instanceof Boolean value) {
             usePrimaryFirst = value;
         }
 
-        Object result;
-        String source;
+        Object result = null;
+        String source = "none";
 
         if (usePrimaryFirst) {
-            if (primary != null) {
-                result = primary;
-                source = "primary";
-            } else if (secondary != null) {
-                result = secondary;
-                source = "secondary";
-            } else {
-                result = null;
-                source = "none";
+            for (int i = 1; i <= inputBranchCount; i++) {
+                Object value = inputValues.get(getInputBranchPortId(i));
+                if (value != null) {
+                    result = value;
+                    source = getSourceNameForBranch(i);
+                    break;
+                }
             }
         } else {
-            if (secondary != null) {
-                result = secondary;
-                source = "secondary";
-            } else if (primary != null) {
-                result = primary;
-                source = "primary";
-            } else {
-                result = null;
-                source = "none";
+            for (int i = inputBranchCount; i >= 1; i--) {
+                Object value = inputValues.get(getInputBranchPortId(i));
+                if (value != null) {
+                    result = value;
+                    source = getSourceNameForBranch(i);
+                    break;
+                }
             }
         }
 
@@ -133,13 +208,29 @@ public class SignalMergeNode extends BaseNode {
 
     @Override
     public @Nullable Object getNodeState() {
-        return preferPrimary;
+        Map<String, Object> state = new HashMap<>();
+        state.put("preferPrimary", preferPrimary);
+        state.put("inputBranchCount", inputBranchCount);
+        return state;
     }
 
     @Override
     public void setNodeState(@Nullable Object state) {
         if (state instanceof Boolean value) {
             this.preferPrimary = value;
+            return;
+        }
+
+        if (state instanceof Map<?, ?> map) {
+            Object prefer = map.get("preferPrimary");
+            if (prefer instanceof Boolean value) {
+                this.preferPrimary = value;
+            }
+
+            Object count = map.get("inputBranchCount");
+            if (count instanceof Number number) {
+                setInputBranchCount(number.intValue());
+            }
         }
     }
 }
