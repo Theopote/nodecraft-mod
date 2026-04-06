@@ -54,6 +54,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
         try {
             // 获取当前节点图
             NodeGraph graph = editor.getCurrentGraph();
+            NodeRegistry registry = NodeRegistry.getInstance();
             if (graph == null) {
                 NodeCraft.LOGGER.error("复制失败：当前没有节点图");
                 return false;
@@ -83,7 +84,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                 // 创建节点数据
                 NodeData nodeData = new NodeData();
                 nodeData.id = nodeId.toString();
-                nodeData.typeId = node.getTypeId();
+                nodeData.typeId = registry.resolveCanonicalNodeId(node.getTypeId());
                 nodeData.x = pos.x;
                 nodeData.y = pos.y;
                 
@@ -92,7 +93,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                 nodeIndexMap.put(nodeId, index);
                 
                 NodeCraft.LOGGER.debug("收集节点 #{}: {} (类型: {}, 位置: ({}, {}))", 
-                                     index, node.getDisplayName(), node.getTypeId(), pos.x, pos.y);
+                                     index, node.getDisplayName(), nodeData.typeId, pos.x, pos.y);
                 index++;
             }
             
@@ -556,7 +557,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
             if (sourcePos == null) return null;
             
             // 获取节点类型
-            String typeId = sourceNode.getTypeId();
+            String typeId = NodeRegistry.getInstance().resolveCanonicalNodeId(sourceNode.getTypeId());
             
             // 检查节点类型是否有效
             if (typeId == null || typeId.isEmpty()) {

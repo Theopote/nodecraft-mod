@@ -88,13 +88,14 @@ public class ImGuiNodeIO {
         savedGraph.nodes = new ArrayList<>();
         savedGraph.connections = new ArrayList<>();
         savedGraph.nodePositions = new HashMap<>();
+        NodeRegistry registry = NodeRegistry.getInstance();
 
         // Save nodes and their states
         for (INode node : currentGraph.getNodes()) {
             if (node instanceof BaseNode baseNode) {
                 SavedNode savedNode = new SavedNode();
                 savedNode.nodeId = baseNode.getId().toString();
-                savedNode.typeId = baseNode.getTypeId();
+                savedNode.typeId = registry.resolveCanonicalNodeId(baseNode.getTypeId());
                 savedNode.state = baseNode.getNodeState();
                 savedGraph.nodes.add(savedNode);
             } else {

@@ -394,7 +394,7 @@ public class ImGuiNodeMenus {
                     NodePosition pos = editor.getNodePosition(nodeId);
                     if (pos != null) {
                         // 创建新节点，位置稍微偏移
-                        String typeId = sourceNode.getTypeId();
+                        String typeId = NodeRegistry.getInstance().resolveCanonicalNodeId(sourceNode.getTypeId());
                         float newX = pos.x + 30; // 水平偏移30单位
                         float newY = pos.y;      // 垂直位置保持不变
                         

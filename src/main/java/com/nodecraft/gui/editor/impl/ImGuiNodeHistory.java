@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
 
 /**
  * 节点图历史记录管理类，用于实现撤销和重做功能
@@ -198,9 +199,15 @@ public class ImGuiNodeHistory {
         }
         
         NodeCraft.LOGGER.info("记录节点添加操作 - ID: {}, 类型: {}, 位置: ({}, {}), 当前撤销栈大小: {}",
-            node.getId(), node.getTypeId(), x, y, undoStack.size());
+            node.getId(), NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId()), x, y, undoStack.size());
         
-        AddNodeAction action = new AddNodeAction(node.getId(), node.getTypeId(), x, y, nodeState);
+        AddNodeAction action = new AddNodeAction(
+            node.getId(),
+            NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId()),
+            x,
+            y,
+            nodeState
+        );
         addAction(action);
         
         NodeCraft.LOGGER.info("添加节点操作已记录，撤销栈大小: {}, 重做栈大小: {}", undoStack.size(), redoStack.size());
@@ -239,10 +246,15 @@ public class ImGuiNodeHistory {
         }
         
         NodeCraft.LOGGER.debug("记录节点删除操作 - ID: {}, 类型: {}, 位置: ({}, {}), 连接数: {}",
-            node.getId(), node.getTypeId(), x, y, connectionInfos.size());
+            node.getId(), NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId()), x, y, connectionInfos.size());
         
         RemoveNodeAction action = new RemoveNodeAction(
-            node.getId(), node.getTypeId(), x, y, connectionInfos, nodeState
+            node.getId(),
+            NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId()),
+            x,
+            y,
+            connectionInfos,
+            nodeState
         );
         addAction(action);
     }
@@ -272,7 +284,14 @@ public class ImGuiNodeHistory {
             NodeCraft.LOGGER.debug("获取节点状态失败：{}", e.getMessage());
         }
 
-        return new RemovedNodeSnapshot(node.getId(), node.getTypeId(), x, y, connectionInfos, nodeState);
+        return new RemovedNodeSnapshot(
+            node.getId(),
+            NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId()),
+            x,
+            y,
+            connectionInfos,
+            nodeState
+        );
     }
 
     public void recordRemoveNodes(List<RemovedNodeSnapshot> snapshots) {

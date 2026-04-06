@@ -48,13 +48,14 @@ public class GraphSerializer {
         savedGraph.nodes = new ArrayList<>();
         savedGraph.connections = new ArrayList<>();
         savedGraph.nodePositions = new HashMap<>();
+        NodeRegistry registry = NodeRegistry.getInstance();
         
         // 保存节点
         for (INode node : graph.getNodes()) {
             if (node instanceof BaseNode baseNode) {
                 SavedNode savedNode = new SavedNode();
                 savedNode.nodeId = baseNode.getId().toString();
-                savedNode.typeId = baseNode.getTypeId();
+                savedNode.typeId = registry.resolveCanonicalNodeId(baseNode.getTypeId());
                 savedNode.state = baseNode.getNodeState();
                 savedGraph.nodes.add(savedNode);
             } else {
