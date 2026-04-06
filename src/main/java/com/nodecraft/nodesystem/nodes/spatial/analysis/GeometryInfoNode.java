@@ -6,9 +6,11 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoundingBoxData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.ConeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CompositeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
+import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
@@ -36,7 +38,9 @@ public class GeometryInfoNode extends BaseNode {
     private static final String OUTPUT_TYPE_ID = "output_type";
     private static final String OUTPUT_HAS_GEOMETRY_ID = "output_has_geometry";
     private static final String OUTPUT_IS_BOX_ID = "output_is_box";
+    private static final String OUTPUT_IS_CONE_ID = "output_is_cone";
     private static final String OUTPUT_IS_CYLINDER_ID = "output_is_cylinder";
+    private static final String OUTPUT_IS_PRISM_ID = "output_is_prism";
     private static final String OUTPUT_IS_SPHERE_ID = "output_is_sphere";
     private static final String OUTPUT_IS_TORUS_ID = "output_is_torus";
     private static final String OUTPUT_IS_COMPOSITE_ID = "output_is_composite";
@@ -53,7 +57,9 @@ public class GeometryInfoNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_TYPE_ID, "Type", "Resolved geometry type", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_HAS_GEOMETRY_ID, "Has Geometry", "Whether geometry input is present", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_BOX_ID, "Is Box", "Whether the geometry is a box", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_IS_CONE_ID, "Is Cone", "Whether the geometry is a cone", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_CYLINDER_ID, "Is Cylinder", "Whether the geometry is a cylinder", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_IS_PRISM_ID, "Is Prism", "Whether the geometry is a prism", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_SPHERE_ID, "Is Sphere", "Whether the geometry is a sphere", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_TORUS_ID, "Is Torus", "Whether the geometry is a torus", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_COMPOSITE_ID, "Is Composite", "Whether the geometry is a composite", NodeDataType.BOOLEAN, this));
@@ -79,14 +85,18 @@ public class GeometryInfoNode extends BaseNode {
         BlockPos center = null;
 
         boolean isBox = geometryObj instanceof BoxGeometryData;
+        boolean isCone = geometryObj instanceof ConeGeometryData;
         boolean isCylinder = geometryObj instanceof CylinderGeometryData;
+        boolean isPrism = geometryObj instanceof PrismGeometryData;
         boolean isSphere = geometryObj instanceof SphereData;
         boolean isTorus = geometryObj instanceof TorusGeometryData;
         boolean isComposite = geometryObj instanceof CompositeGeometryData;
         int childCount = geometryObj instanceof CompositeGeometryData composite ? composite.size() : (hasGeometry ? 1 : 0);
 
         if (isBox) geometryType = "box";
+        else if (isCone) geometryType = "cone";
         else if (isCylinder) geometryType = "cylinder";
+        else if (isPrism) geometryType = "prism";
         else if (isSphere) geometryType = "sphere";
         else if (isTorus) geometryType = "torus";
         else if (isComposite) geometryType = "composite";
@@ -113,7 +123,9 @@ public class GeometryInfoNode extends BaseNode {
         outputValues.put(OUTPUT_TYPE_ID, geometryType);
         outputValues.put(OUTPUT_HAS_GEOMETRY_ID, hasGeometry);
         outputValues.put(OUTPUT_IS_BOX_ID, isBox);
+        outputValues.put(OUTPUT_IS_CONE_ID, isCone);
         outputValues.put(OUTPUT_IS_CYLINDER_ID, isCylinder);
+        outputValues.put(OUTPUT_IS_PRISM_ID, isPrism);
         outputValues.put(OUTPUT_IS_SPHERE_ID, isSphere);
         outputValues.put(OUTPUT_IS_TORUS_ID, isTorus);
         outputValues.put(OUTPUT_IS_COMPOSITE_ID, isComposite);
