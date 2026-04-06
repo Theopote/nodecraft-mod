@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-abstract class AbstractBoxGeneratorNode extends BaseNode {
+public abstract class AbstractBoxGeneratorNode extends BaseNode {
 
     @NodeProperty(displayName = "Fill Box", category = "Shape", order = 1,
         description = "When disabled, only the outer shell is generated")
