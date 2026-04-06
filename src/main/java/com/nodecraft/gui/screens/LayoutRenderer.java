@@ -12,6 +12,7 @@ import java.util.Map;
 
 import imgui.ImGui;
 import imgui.ImGuiIO;
+import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
 import imgui.flag.ImGuiWindowFlags;
@@ -477,6 +478,10 @@ public class LayoutRenderer {
                     ImGuiWindowFlags.NoScrollWithMouse |
                     ImGuiWindowFlags.NoCollapse;
 
+            // 应用画布背景颜色（含透明度）
+            float[] canvasBg = canvasComponent.getBackgroundColor();
+            ImGui.pushStyleColor(ImGuiCol.ChildBg, canvasBg[0], canvasBg[1], canvasBg[2], canvasBg[3]);
+
             // 将画布边框设为 true
             boolean childBegun = ImGui.beginChild(childId, dims.width(), dims.height(), true, canvasFlags);
 
@@ -491,6 +496,7 @@ public class LayoutRenderer {
                         ImGui.getContentRegionAvailY(), 0, 0);
             } finally {
                 ImGui.endChild();
+                ImGui.popStyleColor(); // 恢复 ChildBg
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染画布组件时出错: {}", e.getMessage(), e);

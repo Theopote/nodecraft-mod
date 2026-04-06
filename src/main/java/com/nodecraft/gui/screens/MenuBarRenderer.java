@@ -11,6 +11,7 @@ import com.nodecraft.gui.dialogs.MessageDialog;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
 import com.nodecraft.gui.editor.impl.ImGuiNodeIO;
+import com.nodecraft.gui.style.MinecraftTheme;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -282,7 +283,24 @@ public class MenuBarRenderer {
 
                     ImGui.endMenu();
                 }
-                
+
+                ImGui.separator();
+
+                // 面板背景透明度滑动条
+                float[] panelAlpha = new float[] { MinecraftTheme.getPanelAlpha() };
+                if (ImGui.sliderFloat("面板背景透明度##panel_alpha", panelAlpha, 0.0f, 1.0f, "%.2f")) {
+                    MinecraftTheme.setPanelAlpha(panelAlpha[0]);
+                }
+
+                // 画布透明度滑动条
+                CanvasComponent alphaCanvas = componentManager != null ? componentManager.getCanvasComponent() : null;
+                if (alphaCanvas != null) {
+                    float[] canvasAlpha = new float[] { alphaCanvas.getBackgroundAlpha() };
+                    if (ImGui.sliderFloat("画布透明度##canvas_alpha", canvasAlpha, 0.0f, 1.0f, "%.2f")) {
+                        alphaCanvas.setBackgroundAlpha(canvasAlpha[0]);
+                    }
+                }
+
                 ImGui.endMenu();
             }
             // === 执行菜单 ===

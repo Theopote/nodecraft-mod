@@ -180,6 +180,18 @@ public class CanvasComponent implements EditorComponent {
         this.canvasBackgroundColor[2] = b;
         this.canvasBackgroundColor[3] = a;
     }
+
+    public float[] getBackgroundColor() {
+        return this.canvasBackgroundColor;
+    }
+
+    public float getBackgroundAlpha() {
+        return this.canvasBackgroundColor[3];
+    }
+
+    public void setBackgroundAlpha(float alpha) {
+        this.canvasBackgroundColor[3] = Math.max(0.0f, Math.min(1.0f, alpha));
+    }
     
     /**
      * 画布组件渲染完成后的安全清理 (简化版)

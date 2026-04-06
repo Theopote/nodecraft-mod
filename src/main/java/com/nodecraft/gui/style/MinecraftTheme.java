@@ -8,7 +8,18 @@ import imgui.flag.ImGuiStyleVar;
  * 将样式配置集中管理，与业务逻辑解耦
  */
 public class MinecraftTheme {
-    
+
+    // 面板背景透明度（0.0 = 完全透明, 1.0 = 完全不透明）
+    private static float panelAlpha = 0.94f;
+
+    public static float getPanelAlpha() {
+        return panelAlpha;
+    }
+
+    public static void setPanelAlpha(float alpha) {
+        panelAlpha = Math.max(0.0f, Math.min(1.0f, alpha));
+    }
+
     /**
      * 应用Minecraft风格的ImGui主题
      * @param scope ImGui样式作用域
@@ -37,7 +48,7 @@ public class MinecraftTheme {
      */
     private void applyColors(ImGuiStyleScope scope) {
         // 窗口和背景颜色
-        scope.pushStyleColor(ImGuiCol.WindowBg, 0.16f, 0.16f, 0.20f, 0.94f);
+        scope.pushStyleColor(ImGuiCol.WindowBg, 0.16f, 0.16f, 0.20f, panelAlpha);
         
         // 边框颜色
         scope.pushStyleColor(ImGuiCol.Border, 0.40f, 0.40f, 0.50f, 0.7f);
