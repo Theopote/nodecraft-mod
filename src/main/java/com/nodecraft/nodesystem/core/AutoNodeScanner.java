@@ -204,7 +204,6 @@ public class AutoNodeScanner {
             }
             
             // 注册分类（如果需要）
-            ensureCategoryExists(registry, category);
             
             // 注册节点
             @SuppressWarnings("unchecked")
@@ -247,7 +246,6 @@ public class AutoNodeScanner {
             String displayName = formatClassName(className);
             
             // 注册分类（如果需要）
-            ensureCategoryExists(registry, category);
             
             // 注册节点
             @SuppressWarnings("unchecked")
