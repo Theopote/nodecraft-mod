@@ -90,13 +90,13 @@ public class FloatInputNode extends BaseCustomUINode {
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, l -> {
             boolean changed = false;
-            float edgeMargin = l.toPixels(getMediumPadding());
+            float edgeMargin = l.toPixels(getSmallPadding());
             float availableWidth = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
             float baseCursorX = ImGui.getCursorPosX();
 
             l.addVerticalSpacing(getMediumPadding());
-            float inputWidthPx = Math.min(l.toPixels(160.0f), availableWidth);
-            ImGui.setCursorPosX(baseCursorX + edgeMargin + Math.max(0.0f, (availableWidth - inputWidthPx) * 0.5f));
+            float inputWidthPx = availableWidth;
+            ImGui.setCursorPosX(baseCursorX + edgeMargin);
             l.pushFramePadding(4.0f, 3.0f);
             l.setItemWidth(inputWidthPx / Math.max(zoom, 0.001f));
 

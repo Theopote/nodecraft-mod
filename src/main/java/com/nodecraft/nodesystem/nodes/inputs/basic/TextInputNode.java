@@ -76,8 +76,6 @@ public class TextInputNode extends BaseCustomUINode {
     protected float calculateUIHeight() {
         float height = getMediumPadding();
         if (multiline) {
-            height += ImGui.getTextLineHeight();
-            height += getSmallPadding();
             height += ImGui.getFrameHeight() * 4;
         } else {
             height += ImGui.getFrameHeight();
@@ -99,24 +97,23 @@ public class TextInputNode extends BaseCustomUINode {
     protected boolean renderCustomUIScaled(float width, float height, float zoom) {
         return layout(zoom, l -> {
             boolean changed = false;
-            float availableWidth = getAvailableContentWidth(width, zoom);
+            float edgeMargin = l.toPixels(getSmallPadding());
+            float availableWidth = Math.max(0.0f, l.toPixelsExact(width) - edgeMargin * 2.0f);
+            float baseCursorX = ImGui.getCursorPosX();
 
             ensureBuffer();
             l.addVerticalSpacing(getMediumPadding());
 
             if (multiline) {
-                ImGui.pushStyleColor(ImGuiCol.Text, 0.7f, 0.7f, 0.7f, 1.0f);
-                ImGui.text("文本:");
-                ImGui.popStyleColor();
-                l.addVerticalSpacing(getSmallPadding());
-
                 float inputHeight = ImGui.getFrameHeight() * 4;
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 l.pushFramePadding(4.0f, 3.0f);
                 if (ImGui.inputTextMultiline("##text_input", inputBuffer, availableWidth, inputHeight, ImGuiInputTextFlags.AllowTabInput)) {
                     changed = applyBufferText(inputBuffer.get());
                 }
                 l.popStyleVar();
             } else {
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 l.pushFramePadding(4.0f, 3.0f);
                 l.setItemWidth(availableWidth / Math.max(zoom, 0.001f));
                 if (ImGui.inputTextWithHint("##text_input", placeholder, inputBuffer)) {
@@ -131,9 +128,7 @@ public class TextInputNode extends BaseCustomUINode {
                 String countText = text.length() + " / " + maxLength + " 字符";
                 float countWidth = ImGui.calcTextSize(countText).x;
                 float offsetX = availableWidth - countWidth;
-                if (offsetX > 0) {
-                    ImGui.setCursorPosX(ImGui.getCursorPosX() + offsetX);
-                }
+                ImGui.setCursorPosX(baseCursorX + edgeMargin + Math.max(0.0f, offsetX));
 
                 float ratio = maxLength <= 0 ? 0.0f : (float) text.length() / maxLength;
                 if (ratio > 0.9f) {
