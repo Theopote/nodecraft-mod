@@ -57,6 +57,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private volatile boolean pickingActive = false;
     private volatile boolean pendingRepick = false;
     private volatile long lastPathPreviewFailureNoticeAt = 0L;
+    private volatile String blockPreviewId = null;
+    private volatile String pathPreviewId = null;
 
     @NodeProperty(displayName = "Pick Distance", category = "Picking", order = 1,
             description = "Maximum distance used for each block pick request.")
@@ -252,23 +254,34 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     }
 
     private void updatePathPreview() {
-        PreviewManager.hideNodePreviews(getId().toString());
-
         List<Coordinate> snapshot = snapshotPickedBlocks();
 
+        PreviewOptions blockOptions = new PreviewOptions()
+            .setColor(1.0f, 0.92f, 0.35f)
+            .setTintColor(1.0f, 0.92f, 0.35f)
+            .setOpacity(0.50f)
+            .setShowFill(false)
+            .setShowOutline(true)
+            .setLineWidth(2.4f)
+            .setDuration(2);
+
         if (!snapshot.isEmpty()) {
-            PreviewOptions blockOptions = new PreviewOptions()
-                .setColor(1.0f, 0.92f, 0.35f)
-                .setTintColor(1.0f, 0.92f, 0.35f)
-                .setOpacity(0.50f)
-                .setShowFill(false)
-                .setShowOutline(true)
-                .setLineWidth(2.4f)
-                .setDuration(2);
-            PreviewManager.highlightBlocks(getId().toString(), snapshot, blockOptions);
+            if (blockPreviewId == null) {
+                blockPreviewId = PreviewManager.highlightBlocks(getId().toString(), snapshot, blockOptions);
+            } else {
+                PreviewManager.updatePreview(blockPreviewId, snapshot);
+                PreviewManager.updatePreviewOptions(blockPreviewId, blockOptions);
+            }
+        } else if (blockPreviewId != null) {
+            PreviewManager.hidePreview(blockPreviewId);
+            blockPreviewId = null;
         }
 
         if (!autoPreviewPath || snapshot.size() < 2) {
+            if (pathPreviewId != null) {
+                PreviewManager.hidePreview(pathPreviewId);
+                pathPreviewId = null;
+            }
             return;
         }
 
@@ -303,8 +316,15 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         options.arrowSize = 0.24f;
         options.renderPriority = 30;
 
-        String previewId = PreviewManager.showPaths(getId().toString(), new PolylineData(points), options);
-        if (previewId == null) {
+        PolylineData polylineData = new PolylineData(points);
+        if (pathPreviewId == null) {
+            pathPreviewId = PreviewManager.showPaths(getId().toString(), polylineData, options);
+        } else {
+            PreviewManager.updatePreview(pathPreviewId, polylineData);
+            PreviewManager.updatePreviewOptions(pathPreviewId, options);
+        }
+
+        if (pathPreviewId == null) {
             long now = System.currentTimeMillis();
             if (now - lastPathPreviewFailureNoticeAt > 2000L) {
                 lastPathPreviewFailureNoticeAt = now;
@@ -463,6 +483,10 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             return;
         }
 
+        PreviewManager.hideNodePreviews(getId().toString());
+        blockPreviewId = null;
+        pathPreviewId = null;
+
         synchronized (pickedBlocks) {
             pickedBlocks.clear();
         }
@@ -513,5 +537,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             NodeEditorInteractionManager.getInstance().cancelBlockPick();
         }
         PreviewManager.hideNodePreviews(getId().toString());
+        blockPreviewId = null;
+        pathPreviewId = null;
     }
 }
