@@ -7,6 +7,8 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,6 +24,8 @@ import java.util.UUID;
     category = "flora.materials"
 )
 public class ApplyPlantNBTNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ApplyPlantNBTNode.class);
     
     // --- 节点属性 ---
     private String customName = "";                   // 自定义名称
@@ -156,8 +160,7 @@ public class ApplyPlantNBTNode extends BaseNode {
                     persistentValue, blocksAffected);
                 
             } catch (Exception e) {
-                System.err.println("Error in Apply Plant NBT: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Apply Plant NBT", e);
                 nbtPlant = inputPlant; // 返回原始植物
                 nbtInfo = "Error during NBT application";
             }
@@ -215,7 +218,7 @@ public class ApplyPlantNBTNode extends BaseNode {
                 Map<String, Object> customData = parseCustomNBT(customNBT);
                 nbtData.putAll(customData);
             } catch (Exception e) {
-                System.err.println("Warning: Failed to parse custom NBT: " + e.getMessage());
+                LOGGER.warn("Warning: Failed to parse custom NBT", e);
             }
         }
         

@@ -7,6 +7,8 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -20,6 +22,8 @@ import java.util.UUID;
     category = "flora.materials"
 )
 public class AssignPlantMaterialsNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AssignPlantMaterialsNode.class);
     
     // --- 节点属性 ---
     private String trunkMaterial = "minecraft:oak_log";
@@ -118,8 +122,7 @@ public class AssignPlantMaterialsNode extends BaseNode {
                     flowerMaterialValue, rootMaterialValue, materializedPlant.getTotalBlockCount());
                 
             } catch (Exception e) {
-                System.err.println("Error in Assign Plant Materials: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Assign Plant Materials", e);
                 materializedPlant = inputPlant; // 返回原始植物
                 materialInfo = "Error during material assignment";
             }

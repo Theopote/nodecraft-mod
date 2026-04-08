@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class MergePlantsNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MergePlantsNode.class);
     
     /**
      * 合并策略枚举
@@ -149,8 +153,7 @@ public class MergePlantsNode extends BaseNode {
             }
             
         } catch (Exception e) {
-            System.err.println("Error in Merge Plants: " + e.getMessage());
-            e.printStackTrace();
+            LOGGER.error("Error in Merge Plants", e);
             mergeStats = "Error during merge: " + e.getMessage();
         }
         

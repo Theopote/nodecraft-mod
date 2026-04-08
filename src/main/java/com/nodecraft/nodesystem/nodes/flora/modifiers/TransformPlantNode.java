@@ -10,6 +10,8 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.UUID;
@@ -24,6 +26,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class TransformPlantNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TransformPlantNode.class);
     
     /**
      * 变换类型枚举
@@ -238,8 +242,7 @@ public class TransformPlantNode extends BaseNode {
                     transformedPlant.getTotalBlockCount());
                 
             } catch (Exception e) {
-                System.err.println("Error in Transform Plant: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Transform Plant", e);
                 transformedPlant = inputPlant; // 返回原始植物
                 transformInfo = "Error during transformation";
             }

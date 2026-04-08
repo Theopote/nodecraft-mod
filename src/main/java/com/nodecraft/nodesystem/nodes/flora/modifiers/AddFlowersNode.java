@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Random;
 import java.util.UUID;
@@ -22,6 +24,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class AddFlowersNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(AddFlowersNode.class);
     
     /**
      * 花朵分布模式枚举
@@ -169,8 +173,7 @@ public class AddFlowersNode extends BaseNode {
                     bloomChanceValue * 100, flowersAdded);
                 
             } catch (Exception e) {
-                System.err.println("Error in Add Flowers: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Add Flowers", e);
                 plantWithFlowers = inputPlant; // 返回原始植物
                 flowerInfo = "Error during flower addition";
             }

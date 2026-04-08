@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class BendPlantNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(BendPlantNode.class);
     
     /**
      * 弯曲类型枚举
@@ -160,8 +164,7 @@ public class BendPlantNode extends BaseNode {
                 }
                 
             } catch (Exception e) {
-                System.err.println("Error in Bend Plant: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Bend Plant", e);
                 bentPlant = inputPlant; // 返回原始植物
                 bendInfo = "Error during bending";
             }

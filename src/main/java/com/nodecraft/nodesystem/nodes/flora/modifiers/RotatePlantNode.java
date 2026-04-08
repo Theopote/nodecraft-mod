@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class RotatePlantNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(RotatePlantNode.class);
     
     // --- 节点属性 ---
     private float rotationX = 0.0f;       // X轴旋转角度（度）
@@ -118,8 +122,7 @@ public class RotatePlantNode extends BaseNode {
                 }
                 
             } catch (Exception e) {
-                System.err.println("Error in Rotate Plant: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Rotate Plant", e);
                 rotatedPlant = inputPlant; // 返回原始植物
                 rotationInfo = "Error during rotation";
             }
