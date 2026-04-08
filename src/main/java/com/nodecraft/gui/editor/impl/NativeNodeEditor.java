@@ -17,13 +17,12 @@ import java.util.*;
 public class NativeNodeEditor implements INodeEditor {
 
     // --- 单例模式实现 ---
-    private static NativeNodeEditor INSTANCE;
+    private static class SingletonHolder {
+        private static final NativeNodeEditor INSTANCE = new NativeNodeEditor();
+    }
 
     public static NativeNodeEditor getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new NativeNodeEditor();
-        }
-        return INSTANCE;
+        return SingletonHolder.INSTANCE;
     }
 
     // 定义上下文键，用于保存/恢复状态
