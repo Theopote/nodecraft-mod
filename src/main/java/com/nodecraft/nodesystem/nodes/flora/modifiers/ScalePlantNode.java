@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -21,6 +23,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class ScalePlantNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScalePlantNode.class);
     
     // --- 节点属性 ---
     private float scaleX = 1.0f;          // X轴缩放比例
@@ -124,8 +128,7 @@ public class ScalePlantNode extends BaseNode {
                     inputPlant.getTotalBlockCount(), scaledPlant.getTotalBlockCount());
                 
             } catch (Exception e) {
-                System.err.println("Error in Scale Plant: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Scale Plant", e);
                 scaledPlant = inputPlant; // 返回原始植物
                 scaleInfo = "Error during scaling";
             }

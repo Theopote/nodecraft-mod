@@ -8,6 +8,8 @@ import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +26,8 @@ import java.util.UUID;
     category = "flora.modifiers"
 )
 public class PrunePlantNode extends BaseNode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PrunePlantNode.class);
     
     // --- 节点属性 ---
     private float prunePercentage = 0.3f;     // 修剪比例（0-1）
@@ -132,8 +136,7 @@ public class PrunePlantNode extends BaseNode {
                 }
                 
             } catch (Exception e) {
-                System.err.println("Error in Prune Plant: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.error("Error in Prune Plant", e);
                 prunedPlant = inputPlant; // 返回原始植物
                 pruneInfo = "Error during pruning";
             }
