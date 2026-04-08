@@ -1563,15 +1563,15 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             return;
         }
         
-                 try {
-            this.pickedBlockStateData = new BlockStateData();
+            	 try {
+                BlockStateData restoredStateData = new BlockStateData();
             int validEntries = 0;
             int totalEntries = stateDataMap.size();
             
             for (Object entryObj : stateDataMap.entrySet()) {
                 if (entryObj instanceof Map.Entry<?, ?> entry) {
                     if (entry.getKey() instanceof String key && entry.getValue() instanceof String value) {
-                        this.pickedBlockStateData.put(key, value);
+                            restoredStateData.put(key, value);
                         validEntries++;
                     } else {
                         NodeCraft.LOGGER.debug("节点 {} 跳过无效的状态数据条目: {} -> {}", 
@@ -1579,6 +1579,8 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
                     }
                 }
             }
+
+                this.pickedBlockStateData = restoredStateData;
             
             NodeCraft.LOGGER.debug("节点 {} 恢复方块状态数据: {}/{} 个有效条目", 
                 getId(), validEntries, totalEntries);
