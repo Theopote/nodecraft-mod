@@ -20,7 +20,7 @@ import java.util.List;
 
 public class TextLabelsElement extends AbstractPreviewElement {
 
-    private final List<TextLabelPreviewData> labels = new ArrayList<>();
+    private volatile List<TextLabelPreviewData> labels = new ArrayList<>();
     private float fontSize = 0.025f;
     private boolean showBackground = true;
     private Vector3f color = new Vector3f(1.0f, 1.0f, 1.0f);
@@ -42,22 +42,25 @@ public class TextLabelsElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
-        labels.clear();
+        List<TextLabelPreviewData> nextLabels = new ArrayList<>();
 
         if (data instanceof TextLabelPreviewData label) {
-            labels.add(label);
+            nextLabels.add(label);
         } else if (data instanceof List<?> list) {
             for (Object item : list) {
                 if (item instanceof TextLabelPreviewData label) {
-                    labels.add(label);
+                    nextLabels.add(label);
                 }
             }
         }
+
+        labels = nextLabels;
     }
 
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (labels.isEmpty()) {
+        List<TextLabelPreviewData> labelsSnapshot = labels;
+        if (labelsSnapshot.isEmpty()) {
             return;
         }
 
@@ -68,7 +71,7 @@ public class TextLabelsElement extends AbstractPreviewElement {
         int textColor = packColor(globalOpacity);
         int background = showBackground ? ((int) (Math.max(0.0f, Math.min(1.0f, opacity * globalOpacity)) * 255.0f) << 24) : 0;
 
-        for (TextLabelPreviewData label : labels) {
+        for (TextLabelPreviewData label : labelsSnapshot) {
             Vec3d pos = label.getPosition().subtract(cameraPos);
             matrices.push();
             matrices.translate(pos.x, pos.y, pos.z);
@@ -105,12 +108,13 @@ public class TextLabelsElement extends AbstractPreviewElement {
 
     @Override
     public boolean shouldRender(Camera camera) {
-        if (labels.isEmpty() || isExpired()) {
+        List<TextLabelPreviewData> labelsSnapshot = labels;
+        if (labelsSnapshot.isEmpty() || isExpired()) {
             return false;
         }
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
         Vec3d cameraPos = camera.getCameraPos();
-        for (TextLabelPreviewData label : labels) {
+        for (TextLabelPreviewData label : labelsSnapshot) {
             if (cameraPos.distanceTo(label.getPosition()) <= maxDistance) {
                 return true;
             }
@@ -120,6 +124,6 @@ public class TextLabelsElement extends AbstractPreviewElement {
 
     @Override
     public void cleanup() {
-        labels.clear();
+        labels = new ArrayList<>();
     }
 }

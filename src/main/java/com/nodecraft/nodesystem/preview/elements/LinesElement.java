@@ -21,7 +21,7 @@ import java.util.List;
 
 public class LinesElement extends AbstractPreviewElement {
 
-    private final List<Vec3d> points = new ArrayList<>();
+    private volatile List<Vec3d> points = new ArrayList<>();
     private Vector3f color = new Vector3f(1.0f, 0.85f, 0.2f);
     private boolean smoothCurves = false;
     private float lineWidth = 1.5f;
@@ -51,27 +51,30 @@ public class LinesElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
-        points.clear();
+        List<Vec3d> nextPoints = new ArrayList<>();
 
         if (data instanceof LineData line) {
-            points.add(line.getStart());
-            points.add(line.getEnd());
+            nextPoints.add(line.getStart());
+            nextPoints.add(line.getEnd());
         } else if (data instanceof PolylineData polyline) {
-            points.addAll(polyline.getPoints());
+            nextPoints.addAll(polyline.getPoints());
         } else if (data instanceof Curve curve) {
-            points.addAll(curve.getSamplePoints());
+            nextPoints.addAll(curve.getSamplePoints());
         } else if (data instanceof List<?> list) {
             for (Object item : list) {
                 if (item instanceof Vec3d vec) {
-                    points.add(vec);
+                    nextPoints.add(vec);
                 }
             }
         }
+
+        points = nextPoints;
     }
 
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (points.size() < 2) {
+        List<Vec3d> pointsSnapshot = points;
+        if (pointsSnapshot.size() < 2) {
             return;
         }
 
@@ -86,15 +89,15 @@ public class LinesElement extends AbstractPreviewElement {
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
-        for (int i = 0; i < points.size() - 1; i++) {
-            Vec3d start = points.get(i).subtract(cameraPos);
-            Vec3d end = points.get(i + 1).subtract(cameraPos);
+        for (int i = 0; i < pointsSnapshot.size() - 1; i++) {
+            Vec3d start = pointsSnapshot.get(i).subtract(cameraPos);
+            Vec3d end = pointsSnapshot.get(i + 1).subtract(cameraPos);
             drawLine(vertexConsumer, matrix, start, end, finalOpacity);
         }
 
-        if (showDirection && points.size() >= 2) {
-            Vec3d start = points.get(points.size() - 2).subtract(cameraPos);
-            Vec3d end = points.get(points.size() - 1).subtract(cameraPos);
+        if (showDirection && pointsSnapshot.size() >= 2) {
+            Vec3d start = pointsSnapshot.get(pointsSnapshot.size() - 2).subtract(cameraPos);
+            Vec3d end = pointsSnapshot.get(pointsSnapshot.size() - 1).subtract(cameraPos);
             drawArrowHead(vertexConsumer, matrix, start, end, finalOpacity);
         }
 
@@ -136,12 +139,13 @@ public class LinesElement extends AbstractPreviewElement {
 
     @Override
     public boolean shouldRender(Camera camera) {
-        if (points.size() < 2 || isExpired()) {
+        List<Vec3d> pointsSnapshot = points;
+        if (pointsSnapshot.size() < 2 || isExpired()) {
             return false;
         }
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
         Vec3d cameraPos = camera.getCameraPos();
-        for (Vec3d point : points) {
+        for (Vec3d point : pointsSnapshot) {
             if (cameraPos.distanceTo(point) <= maxDistance) {
                 return true;
             }
@@ -151,6 +155,6 @@ public class LinesElement extends AbstractPreviewElement {
 
     @Override
     public void cleanup() {
-        points.clear();
+        points = new ArrayList<>();
     }
 }

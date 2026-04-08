@@ -25,7 +25,7 @@ import java.util.List;
 public class BlockHighlightElement extends AbstractPreviewElement {
     private boolean renderingDisabled = false;
 
-    private List<Coordinate> blockPositions = new ArrayList<>(); // 存储方块的整数坐标
+    private volatile List<Coordinate> blockPositions = new ArrayList<>(); // 存储方块的整数坐标
     private Vector3f color = new Vector3f(1.0f, 0.8f, 0.0f); // 默认橙黄色 (RGBA)
     private Vector3f fillColor = new Vector3f(1.0f, 0.8f, 0.0f); // 填充颜色（可独立配置）
     private float lineWidth = 4.0f; // 线宽 (增加线宽确保可见)
@@ -96,22 +96,20 @@ public class BlockHighlightElement extends AbstractPreviewElement {
      */
     @Override
     protected void processData(Object data) {
-        // 确保 blockPositions 已初始化，防止在父类构造函数中调用时出现 NPE
-        if (blockPositions == null) {
-            blockPositions = new ArrayList<>();
-        }
-        blockPositions.clear();
+        List<Coordinate> nextBlockPositions = new ArrayList<>();
 
         if (data instanceof Coordinate) {
-            blockPositions.add((Coordinate) data);
+            nextBlockPositions.add((Coordinate) data);
         } else if (data instanceof List<?> list) {
             for (Object item : list) {
                 if (item instanceof Coordinate) {
-                    blockPositions.add((Coordinate) item);
+                    nextBlockPositions.add((Coordinate) item);
                 }
             }
         }
         // 不处理 Vec3d 或其他类型，此元素仅用于方块高亮
+
+        blockPositions = nextBlockPositions;
     }
 
     /**
@@ -123,7 +121,8 @@ public class BlockHighlightElement extends AbstractPreviewElement {
      */
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (renderingDisabled || blockPositions.isEmpty()) {
+        List<Coordinate> blockPositionsSnapshot = blockPositions;
+        if (renderingDisabled || blockPositionsSnapshot.isEmpty()) {
             return;
         }
 
@@ -168,7 +167,7 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         VertexConsumer fillVertexConsumer = showFill ? vertexConsumerProvider.getBuffer(RenderLayers.debugFilledBox()) : null;
 
         // 遍历所有要高亮的方块位置
-        for (Coordinate pos : blockPositions) {
+        for (Coordinate pos : blockPositionsSnapshot) {
             // 检查是否在渲染距离内
             double distance = cameraPos.distanceTo(new Vec3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
             float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;

@@ -20,7 +20,7 @@ import java.util.List;
 
 public class PointsElement extends AbstractPreviewElement {
 
-    private final List<Vec3d> points = new ArrayList<>();
+    private volatile List<Vec3d> points = new ArrayList<>();
     private Vector3f color = new Vector3f(1.0f, 0.2f, 0.2f);
     private float pointSize = 0.2f;
 
@@ -38,31 +38,34 @@ public class PointsElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
-        points.clear();
+        List<Vec3d> nextPoints = new ArrayList<>();
 
         if (data instanceof List<?> list) {
             for (Object item : list) {
-                addPoint(item);
+                addPoint(nextPoints, item);
             }
+            points = nextPoints;
             return;
         }
 
-        addPoint(data);
+        addPoint(nextPoints, data);
+        points = nextPoints;
     }
 
-    private void addPoint(Object data) {
+    private void addPoint(List<Vec3d> target, Object data) {
         if (data instanceof Coordinate coordinate) {
-            points.add(new Vec3d(coordinate.getX() + 0.5d, coordinate.getY() + 0.5d, coordinate.getZ() + 0.5d));
+            target.add(new Vec3d(coordinate.getX() + 0.5d, coordinate.getY() + 0.5d, coordinate.getZ() + 0.5d));
         } else if (data instanceof BlockPos pos) {
-            points.add(pos.toCenterPos());
+            target.add(pos.toCenterPos());
         } else if (data instanceof Vec3d vec) {
-            points.add(vec);
+            target.add(vec);
         }
     }
 
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (points.isEmpty()) {
+        List<Vec3d> pointsSnapshot = points;
+        if (pointsSnapshot.isEmpty()) {
             return;
         }
 
@@ -77,7 +80,7 @@ public class PointsElement extends AbstractPreviewElement {
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
-        for (Vec3d point : points) {
+        for (Vec3d point : pointsSnapshot) {
             drawCross(vertexConsumer, matrix, point.subtract(cameraPos), pointSize, finalOpacity);
         }
 
@@ -109,12 +112,13 @@ public class PointsElement extends AbstractPreviewElement {
 
     @Override
     public boolean shouldRender(Camera camera) {
-        if (points.isEmpty() || isExpired()) {
+        List<Vec3d> pointsSnapshot = points;
+        if (pointsSnapshot.isEmpty() || isExpired()) {
             return false;
         }
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
         Vec3d cameraPos = camera.getCameraPos();
-        for (Vec3d point : points) {
+        for (Vec3d point : pointsSnapshot) {
             if (cameraPos.distanceTo(point) <= maxDistance) {
                 return true;
             }
@@ -124,6 +128,6 @@ public class PointsElement extends AbstractPreviewElement {
 
     @Override
     public void cleanup() {
-        points.clear();
+        points = new ArrayList<>();
     }
 }

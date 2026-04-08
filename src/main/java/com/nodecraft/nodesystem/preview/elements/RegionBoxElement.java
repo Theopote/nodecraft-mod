@@ -20,7 +20,7 @@ import java.util.List;
 
 public class RegionBoxElement extends AbstractPreviewElement {
 
-    private final List<BoundingBox> regions = new ArrayList<>();
+    private volatile List<BoundingBox> regions = new ArrayList<>();
     private Vector3f color = new Vector3f(0.2f, 0.7f, 1.0f);
     private boolean enablePulse = false;
 
@@ -38,26 +38,28 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
-        regions.clear();
+        List<BoundingBox> nextRegions = new ArrayList<>();
 
         if (data instanceof List<?> list) {
             for (Object item : list) {
-                processItem(item);
+                processItem(nextRegions, item);
             }
+            regions = nextRegions;
             return;
         }
 
-        processItem(data);
+        processItem(nextRegions, data);
+        regions = nextRegions;
     }
 
-    private void processItem(Object item) {
+    private void processItem(List<BoundingBox> target, Object item) {
         if (item instanceof BoundingBox box) {
-            regions.add(box);
+            target.add(box);
         } else if (item instanceof RegionData region && region.isComplete()) {
             BlockPos min = region.getMinCorner();
             BlockPos max = region.getMaxCorner();
             if (min != null && max != null) {
-                regions.add(new BoundingBox(
+                target.add(new BoundingBox(
                     new Vec3d(min.getX(), min.getY(), min.getZ()),
                     new Vec3d(max.getX() + 1.0d, max.getY() + 1.0d, max.getZ() + 1.0d)
                 ));
@@ -66,7 +68,7 @@ public class RegionBoxElement extends AbstractPreviewElement {
             Vec3d min = extractPosition(array[0]);
             Vec3d max = extractPosition(array[1]);
             if (min != null && max != null) {
-                regions.add(new BoundingBox(min, max));
+                target.add(new BoundingBox(min, max));
             }
         }
     }
@@ -83,7 +85,8 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (regions.isEmpty()) {
+        List<BoundingBox> regionsSnapshot = regions;
+        if (regionsSnapshot.isEmpty()) {
             return;
         }
 
@@ -101,7 +104,7 @@ public class RegionBoxElement extends AbstractPreviewElement {
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
-        for (BoundingBox region : regions) {
+        for (BoundingBox region : regionsSnapshot) {
             drawBox(vertexConsumer, matrix, region, cameraPos, finalOpacity);
         }
 
@@ -152,12 +155,13 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     @Override
     public boolean shouldRender(Camera camera) {
-        if (regions.isEmpty() || isExpired()) {
+        List<BoundingBox> regionsSnapshot = regions;
+        if (regionsSnapshot.isEmpty() || isExpired()) {
             return false;
         }
         Vec3d cameraPos = camera.getCameraPos();
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
-        for (BoundingBox region : regions) {
+        for (BoundingBox region : regionsSnapshot) {
             if (cameraPos.distanceTo(region.getCenter()) <= maxDistance + region.getSize()) {
                 return true;
             }
@@ -167,7 +171,7 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     @Override
     public void cleanup() {
-        regions.clear();
+        regions = new ArrayList<>();
     }
 
     public static class BoundingBox {

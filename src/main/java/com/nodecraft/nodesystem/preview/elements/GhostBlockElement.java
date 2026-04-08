@@ -51,7 +51,7 @@ import java.util.Map;
  */
 public class GhostBlockElement extends AbstractPreviewElement {
     
-    private List<BlockData> blocks = new ArrayList<>();
+    private volatile List<BlockData> blocks = new ArrayList<>();
     private Vector3f tintColor = new Vector3f(0.2f, 0.7f, 1.0f); // 默认天蓝色
     private String textureMode = "original"; // "original", "solid_color", "wireframe"
     private boolean useOriginalTexture = true;
@@ -83,57 +83,55 @@ public class GhostBlockElement extends AbstractPreviewElement {
      */
     @Override
     protected void processData(Object data) {
-        // 确保 blocks 列表已初始化
-        if (blocks == null) {
-            blocks = new ArrayList<>();
-        }
-        
-        blocks.clear();
+        List<BlockData> nextBlocks = new ArrayList<>();
         
         if (data instanceof List<?> list) {
             // 处理列表数据
             for (Object item : list) {
-                processDataItem(item);
+                processDataItem(nextBlocks, item);
             }
         } else {
             // 处理单个数据项
-            processDataItem(data);
+            processDataItem(nextBlocks, data);
         }
+
+        blocks = nextBlocks;
     }
     
     /**
      * 处理单个数据项，使用模式匹配简化类型检查
      */
-    private void processDataItem(Object item) {
+    private void processDataItem(List<BlockData> target, Object item) {
         if (item instanceof Coordinate coord) {
             Vec3d pos = new Vec3d(coord.getX(), coord.getY(), coord.getZ());
-            blocks.add(new BlockData(pos, "minecraft:stone")); // 默认石头
+            target.add(new BlockData(pos, "minecraft:stone")); // 默认石头
         } else if (item instanceof BlockData blockData) {
-            blocks.add(blockData);
+            target.add(blockData);
         } else if (item instanceof BlockPlacement placement) {
-            blocks.add(new BlockData(placement.position, placement.blockId));
+            target.add(new BlockData(placement.position, placement.blockId));
         } else if (item instanceof Map<?, ?> map) {
             // 处理来自 SelectedBlockNode 的数据格式
-            processMapData(map);
+            processMapData(target, map);
         }
     }
     
     /**
      * 处理 Map 类型的数据，提取位置和方块ID信息
      */
-    private void processMapData(Map<?, ?> map) {
+    private void processMapData(List<BlockData> target, Map<?, ?> map) {
         Object positionObj = map.get("position");
         Object blockIdObj = map.get("blockId");
         
         if (positionObj instanceof Coordinate coord && blockIdObj instanceof String blockId) {
             Vec3d pos = new Vec3d(coord.getX(), coord.getY(), coord.getZ());
-            blocks.add(new BlockData(pos, blockId));
+            target.add(new BlockData(pos, blockId));
         }
     }
     
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (blocks.isEmpty()) {
+        List<BlockData> blocksSnapshot = blocks;
+        if (blocksSnapshot.isEmpty()) {
             return;
         }
         
@@ -155,14 +153,14 @@ public class GhostBlockElement extends AbstractPreviewElement {
         // 根据纹理模式选择渲染方法
         switch (textureMode) {
             case "solid_color":
-                renderSolidColor(matrices, camera, finalOpacity);
+                renderSolidColor(matrices, camera, finalOpacity, blocksSnapshot);
                 break;
             case "wireframe":
-                renderWireframe(matrices, camera, finalOpacity);
+                renderWireframe(matrices, camera, finalOpacity, blocksSnapshot);
                 break;
             case "original":
             default:
-                renderOriginalTexture(matrices, camera, world, finalOpacity);
+                renderOriginalTexture(matrices, camera, world, finalOpacity, blocksSnapshot);
                 break;
         }
     }
@@ -180,7 +178,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法不需要设置任何特有状态，直接使用通用状态即可
      */
-    private void renderOriginalTexture(MatrixStack matrices, Camera camera, World world, float opacity) {
+    private void renderOriginalTexture(MatrixStack matrices, Camera camera, World world, float opacity, List<BlockData> blocksSnapshot) {
         MinecraftClient client = MinecraftClient.getInstance();
         BlockRenderManager blockRenderManager = client.getBlockRenderManager();
         Vec3d cameraPos = camera.getBlockPos().toCenterPos();
@@ -193,7 +191,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.debugFilledBox());
         
-        for (BlockData blockData : blocks) {
+        for (BlockData blockData : blocksSnapshot) {
             // 检查渲染距离
             double distance = cameraPos.distanceTo(blockData.position);
             if (distance > maxRenderDistance) {
@@ -257,7 +255,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法特有状态：disableCull（禁用面剔除以确保所有面都可见）
      */
-    private void renderSolidColor(MatrixStack matrices, Camera camera, float opacity) {
+    private void renderSolidColor(MatrixStack matrices, Camera camera, float opacity, List<BlockData> blocksSnapshot) {
         Vec3d cameraPos = camera.getBlockPos().toCenterPos();
         
         // 在循环外获取一次最大渲染距离，避免重复调用
@@ -274,7 +272,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         float g = tintColor.y();
         float b = tintColor.z();
 
-        for (BlockData blockData : blocks) {
+        for (BlockData blockData : blocksSnapshot) {
             // 检查渲染距离
             double distance = cameraPos.distanceTo(blockData.position);
             if (distance > maxRenderDistance) {
@@ -306,7 +304,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
      * - 假设通用状态（blend, depthTest, depthMask）已由 PreviewRenderer 设置
      * - 此方法特有状态：lineWidth（线宽）和 disableCull（禁用面剔除）
      */
-    private void renderWireframe(MatrixStack matrices, Camera camera, float opacity) {
+    private void renderWireframe(MatrixStack matrices, Camera camera, float opacity, List<BlockData> blocksSnapshot) {
         Vec3d cameraPos = camera.getBlockPos().toCenterPos();
         
         // 在循环外获取一次最大渲染距离，避免重复调用
@@ -336,7 +334,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             {0, 4}, {1, 5}, {2, 6}, {3, 7}  // 垂直边
         };
         
-        for (BlockData blockData : blocks) {
+        for (BlockData blockData : blocksSnapshot) {
             // 检查渲染距离
             double distance = cameraPos.distanceTo(blockData.position);
             if (distance > maxRenderDistance) {

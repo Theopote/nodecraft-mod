@@ -18,8 +18,8 @@ import java.util.List;
 
 public class VectorsElement extends AbstractPreviewElement {
 
-    private final List<Vec3d> vectors = new ArrayList<>();
-    private final List<Vec3d> startPoints = new ArrayList<>();
+    private volatile List<Vec3d> vectors = new ArrayList<>();
+    private volatile List<Vec3d> startPoints = new ArrayList<>();
     private Vector3f color = new Vector3f(0.2f, 1.0f, 0.2f);
     private float arrowSize = 0.2f;
     private float lengthScale = 1.0f;
@@ -45,8 +45,8 @@ public class VectorsElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
-        vectors.clear();
-        startPoints.clear();
+        List<Vec3d> nextVectors = new ArrayList<>();
+        List<Vec3d> nextStartPoints = new ArrayList<>();
 
         if (data instanceof Object[] array && array.length >= 2
             && array[0] instanceof List<?> vectorList
@@ -56,11 +56,14 @@ public class VectorsElement extends AbstractPreviewElement {
                 Vec3d vector = toVec3d(vectorList.get(i));
                 Vec3d start = toVec3d(startList.get(i));
                 if (vector != null && start != null) {
-                    vectors.add(vector);
-                    startPoints.add(start);
+                    nextVectors.add(vector);
+                    nextStartPoints.add(start);
                 }
             }
         }
+
+        vectors = nextVectors;
+        startPoints = nextStartPoints;
     }
 
     private Vec3d toVec3d(Object value) {
@@ -78,7 +81,9 @@ public class VectorsElement extends AbstractPreviewElement {
 
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        if (vectors.isEmpty()) {
+        List<Vec3d> vectorsSnapshot = vectors;
+        List<Vec3d> startPointsSnapshot = startPoints;
+        if (vectorsSnapshot.isEmpty()) {
             return;
         }
 
@@ -93,9 +98,9 @@ public class VectorsElement extends AbstractPreviewElement {
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
-        for (int i = 0; i < vectors.size(); i++) {
-            Vec3d start = startPoints.get(i).subtract(cameraPos);
-            Vec3d direction = vectors.get(i).multiply(lengthScale);
+        for (int i = 0; i < vectorsSnapshot.size(); i++) {
+            Vec3d start = startPointsSnapshot.get(i).subtract(cameraPos);
+            Vec3d direction = vectorsSnapshot.get(i).multiply(lengthScale);
             Vec3d end = start.add(direction);
             drawLine(vertexConsumer, matrix, start, end, finalOpacity);
 
@@ -141,12 +146,14 @@ public class VectorsElement extends AbstractPreviewElement {
 
     @Override
     public boolean shouldRender(Camera camera) {
-        if (vectors.isEmpty() || isExpired()) {
+        List<Vec3d> vectorsSnapshot = vectors;
+        List<Vec3d> startPointsSnapshot = startPoints;
+        if (vectorsSnapshot.isEmpty() || isExpired()) {
             return false;
         }
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
         Vec3d cameraPos = camera.getCameraPos();
-        for (Vec3d start : startPoints) {
+        for (Vec3d start : startPointsSnapshot) {
             if (cameraPos.distanceTo(start) <= maxDistance) {
                 return true;
             }
@@ -156,7 +163,7 @@ public class VectorsElement extends AbstractPreviewElement {
 
     @Override
     public void cleanup() {
-        vectors.clear();
-        startPoints.clear();
+        vectors = new ArrayList<>();
+        startPoints = new ArrayList<>();
     }
 }
