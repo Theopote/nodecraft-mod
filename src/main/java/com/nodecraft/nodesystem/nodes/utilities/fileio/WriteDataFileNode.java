@@ -13,7 +13,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,8 +29,6 @@ import java.util.UUID;
     category = "utilities.fileio"
 )
 public class WriteDataFileNode extends BaseNode {
-
-    private static final Path ALLOWED_BASE_DIRECTORY = Paths.get("").toAbsolutePath().normalize();
 
     // --- 节点属性 ---
     private String filePath = ""; // 文件路径
@@ -183,7 +180,7 @@ public class WriteDataFileNode extends BaseNode {
         }
         
         try {
-            Path path = resolveSafeOutputPath(filePathToWrite);
+            Path path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToWrite);
             Path parent = path.getParent();
             
             // 如果需要，创建父目录
@@ -375,19 +372,6 @@ public class WriteDataFileNode extends BaseNode {
         return sb.toString();
     }
 
-    private Path resolveSafeOutputPath(String rawPath) {
-        Path candidate = Paths.get(rawPath);
-        Path normalized = candidate.isAbsolute()
-                ? candidate.toAbsolutePath().normalize()
-                : ALLOWED_BASE_DIRECTORY.resolve(candidate).normalize();
-
-        if (!normalized.startsWith(ALLOWED_BASE_DIRECTORY)) {
-            throw new IllegalArgumentException("文件路径超出允许目录: " + rawPath);
-        }
-
-        return normalized;
-    }
-    
     /**
      * 转义CSV字段
      */

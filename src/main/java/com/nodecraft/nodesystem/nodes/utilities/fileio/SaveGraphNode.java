@@ -10,7 +10,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 /**
@@ -126,7 +125,15 @@ public class SaveGraphNode extends BaseNode {
         }
         
         // 检查文件是否已存在
-        Path path = Paths.get(filePathToSave);
+        Path path;
+        try {
+            path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToSave);
+        } catch (IllegalArgumentException e) {
+            outputValues.put(OUTPUT_SUCCESS_ID, false);
+            outputValues.put(OUTPUT_FILE_PATH_ID, "");
+            outputValues.put(OUTPUT_ERROR_ID, "保存图形时出错: " + e.getMessage());
+            return;
+        }
         if (Files.exists(path) && !shouldOverwrite) {
             errorMessage = "文件已存在且未设置覆盖: " + filePathToSave;
         } else {
@@ -148,8 +155,8 @@ public class SaveGraphNode extends BaseNode {
                     
                     // 模拟文件写入成功
                     success = true;
-                    savedPath = filePathToSave;
-                    lastSavedFile = filePathToSave;
+                    savedPath = path.toString();
+                    lastSavedFile = path.toString();
                 } else {
                     errorMessage = "无法访问执行上下文";
                 }
@@ -164,7 +171,7 @@ public class SaveGraphNode extends BaseNode {
         outputValues.put(OUTPUT_FILE_PATH_ID, savedPath);
         outputValues.put(OUTPUT_ERROR_ID, errorMessage);
     }
-    
+
     /**
      * 浏览选择保存位置
      * 实际实现中此方法应该由UI层调用，打开文件保存对话框

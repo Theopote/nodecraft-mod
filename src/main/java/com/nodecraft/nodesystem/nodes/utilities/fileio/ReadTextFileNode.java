@@ -12,7 +12,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -147,7 +146,7 @@ public class ReadTextFileNode extends BaseNode {
         
         // 读取文件
         try {
-            Path path = Paths.get(filePathToRead);
+            Path path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToRead);
             if (!Files.exists(path)) {
                 errorMessage = "文件不存在: " + filePathToRead;
             } else if (!Files.isReadable(path)) {
@@ -215,7 +214,7 @@ public class ReadTextFileNode extends BaseNode {
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_ERROR_ID, errorMessage);
     }
-    
+
     /**
      * 浏览选择文件
      * 实际实现中此方法应该由UI层调用，打开文件选择对话框

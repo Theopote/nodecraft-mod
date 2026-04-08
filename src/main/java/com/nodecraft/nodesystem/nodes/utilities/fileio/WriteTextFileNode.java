@@ -12,7 +12,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
@@ -158,7 +157,7 @@ public class WriteTextFileNode extends BaseNode {
         
         // 写入文件
         try {
-            Path path = Paths.get(filePathToWrite);
+            Path path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToWrite);
             Path parent = path.getParent();
             
             // 如果需要，创建父目录
@@ -186,7 +185,7 @@ public class WriteTextFileNode extends BaseNode {
             }
             
             success = true;
-            savedPath = filePathToWrite;
+            savedPath = path.toString();
         } catch (Exception e) {
             success = false;
             errorMessage = "写入文件时出错: " + e.getMessage();
@@ -198,7 +197,7 @@ public class WriteTextFileNode extends BaseNode {
         outputValues.put(OUTPUT_FILE_PATH_ID, savedPath);
         outputValues.put(OUTPUT_ERROR_ID, errorMessage);
     }
-    
+
     /**
      * 浏览选择保存位置
      * 实际实现中此方法应该由UI层调用，打开文件保存对话框

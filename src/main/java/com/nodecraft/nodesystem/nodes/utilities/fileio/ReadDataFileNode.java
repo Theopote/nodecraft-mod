@@ -16,7 +16,6 @@ import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -194,7 +193,7 @@ public class ReadDataFileNode extends BaseNode {
         
         // 读取文件
         try {
-            Path path = Paths.get(filePathToRead);
+            Path path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToRead);
             if (!Files.exists(path)) {
                 errorMessage = "文件不存在: " + filePathToRead;
             } else if (!Files.isReadable(path)) {
@@ -325,7 +324,7 @@ public class ReadDataFileNode extends BaseNode {
         outputValues.put(OUTPUT_ERROR_ID, errorMessage);
         outputValues.put(OUTPUT_RAW_TEXT_ID, rawText);
     }
-    
+
     /**
      * 解析CSV文本
      */

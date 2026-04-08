@@ -10,7 +10,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.UUID;
 
 /**
@@ -103,7 +102,15 @@ public class LoadGraphNode extends BaseNode {
         }
         
         // 检查文件是否存在
-        Path path = Paths.get(filePathToLoad);
+        Path path;
+        try {
+            path = SafeFilePathResolver.resolveInAllowedDirectory(filePathToLoad);
+        } catch (IllegalArgumentException e) {
+            outputValues.put(OUTPUT_SUCCESS_ID, false);
+            outputValues.put(OUTPUT_GRAPH_NAME_ID, "");
+            outputValues.put(OUTPUT_ERROR_ID, "加载图形时出错: " + e.getMessage());
+            return;
+        }
         if (!Files.exists(path)) {
             errorMessage = "文件不存在: " + filePathToLoad;
         } else if (!Files.isRegularFile(path)) {
@@ -117,9 +124,9 @@ public class LoadGraphNode extends BaseNode {
                     // 这需要通过其他机制实现，比如使用专用的GraphManager服务
                     
                     // 模拟加载过程
-                    graphName = extractGraphName(filePathToLoad);
+                    graphName = extractGraphName(path);
                     success = true;
-                    lastLoadedFile = filePathToLoad;
+                    lastLoadedFile = path.toString();
                     
                     // 这一步在实际实现中应该能够从加载的图形中获取
                     if (graphName.isEmpty()) {
@@ -139,13 +146,12 @@ public class LoadGraphNode extends BaseNode {
         outputValues.put(OUTPUT_GRAPH_NAME_ID, graphName);
         outputValues.put(OUTPUT_ERROR_ID, errorMessage);
     }
-    
+
     /**
      * 从文件名中提取图形名称
      * 实际实现中应该从图形文件内容中获取
      */
-    private String extractGraphName(String filePath) {
-        Path path = Paths.get(filePath);
+    private String extractGraphName(Path path) {
         String fileName = path.getFileName().toString();
         
         // 移除扩展名
