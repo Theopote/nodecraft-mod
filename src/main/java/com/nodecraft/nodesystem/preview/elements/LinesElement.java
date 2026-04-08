@@ -132,12 +132,7 @@ public class LinesElement extends AbstractPreviewElement {
     }
 
     private void drawLine(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d start, Vec3d end, float alpha) {
-        Vector3f normal = new Vector3f((float) (end.x - start.x), (float) (end.y - start.y), (float) (end.z - start.z));
-        if (normal.lengthSquared() < 1.0e-12f) {
-            normal.set(0.0f, 1.0f, 0.0f);
-        } else {
-            normal.normalize();
-        }
+        Vector3f normal = new Vector3f(0.0f, 1.0f, 0.0f);
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(color.x(), color.y(), color.z(), alpha)

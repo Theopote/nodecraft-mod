@@ -24,8 +24,8 @@ public class PreviewRenderHandler {
             return;
         }
         
-        // 注册世界渲染事件 - 使用 BEFORE_DEBUG_RENDER 以确保方块轮廓正确显示
-        WorldRenderEvents.BEFORE_DEBUG_RENDER.register((context) -> {
+        // 注册世界渲染事件 - END_MAIN 在 1.21.x 下对线段路径预览更稳定
+        WorldRenderEvents.END_MAIN.register((context) -> {
             try {
                 MinecraftClient client = MinecraftClient.getInstance();
                 if (client.world == null || client.player == null) {

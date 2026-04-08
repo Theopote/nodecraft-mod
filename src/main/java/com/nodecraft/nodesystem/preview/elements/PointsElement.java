@@ -75,8 +75,16 @@ public class PointsElement extends AbstractPreviewElement {
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer vertexConsumer = immediate.getBuffer(RenderLayers.lines());
+        VertexConsumerProvider provider = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        VertexConsumerProvider.Immediate immediate = null;
+        boolean flushImmediately = false;
+        if (provider == null) {
+            immediate = client.getBufferBuilders().getEntityVertexConsumers();
+            provider = immediate;
+            flushImmediately = true;
+        }
+
+        VertexConsumer vertexConsumer = provider.getBuffer(RenderLayers.lines());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
@@ -84,7 +92,9 @@ public class PointsElement extends AbstractPreviewElement {
             drawCross(vertexConsumer, matrix, point.subtract(cameraPos), pointSize, finalOpacity);
         }
 
-        immediate.draw();
+        if (flushImmediately && immediate != null) {
+            immediate.draw();
+        }
     }
 
     private void drawCross(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d center, float size, float alpha) {

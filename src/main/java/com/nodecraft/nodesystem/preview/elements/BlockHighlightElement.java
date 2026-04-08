@@ -159,9 +159,14 @@ public class BlockHighlightElement extends AbstractPreviewElement {
             return;
         }
 
-        VertexConsumerProvider.Immediate immediateConsumers = client.getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumerProvider vertexConsumerProvider = immediateConsumers;
-        boolean shouldFlushImmediately = true;
+        VertexConsumerProvider vertexConsumerProvider = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        VertexConsumerProvider.Immediate immediateConsumers = null;
+        boolean shouldFlushImmediately = false;
+        if (vertexConsumerProvider == null) {
+            immediateConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+            vertexConsumerProvider = immediateConsumers;
+            shouldFlushImmediately = true;
+        }
 
         VertexConsumer lineVertexConsumer = vertexConsumerProvider.getBuffer(RenderLayers.lines());
         VertexConsumer fillVertexConsumer = showFill ? vertexConsumerProvider.getBuffer(RenderLayers.debugFilledBox()) : null;

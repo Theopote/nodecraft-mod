@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.nodes.inputs.minecraft;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
@@ -55,6 +56,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
     private volatile boolean pickingActive = false;
     private volatile boolean pendingRepick = false;
+    private volatile long lastPathPreviewFailureNoticeAt = 0L;
 
     @NodeProperty(displayName = "Pick Distance", category = "Picking", order = 1,
             description = "Maximum distance used for each block pick request.")
@@ -271,7 +273,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         }
 
         // Draw preview paths slightly above block tops to avoid depth occlusion inside solids.
-        final double previewYOffset = 1.02d;
+        final double previewYOffset = 1.08d;
         List<Vec3d> points = new ArrayList<>();
         for (Coordinate coordinate : snapshot) {
             points.add(new Vec3d(
@@ -301,7 +303,15 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         options.arrowSize = 0.24f;
         options.renderPriority = 30;
 
-        PreviewManager.showPaths(getId().toString(), new PolylineData(points), options);
+        String previewId = PreviewManager.showPaths(getId().toString(), new PolylineData(points), options);
+        if (previewId == null) {
+            long now = System.currentTimeMillis();
+            if (now - lastPathPreviewFailureNoticeAt > 2000L) {
+                lastPathPreviewFailureNoticeAt = now;
+                NodeCraft.LOGGER.warn("SelectedBlockSequenceNode path preview creation failed: nodeId={}, points={}", getId(), points.size());
+                MinecraftClientController.getInstance().showHudMessage("路径预览创建失败，请查看日志");
+            }
+        }
     }
 
     private void appendOutputs(Coordinate coordinate, BlockPosList blocks, List<PointData> pointList, List<Vec3d> polylinePoints, List<Vector3d> centers) {
