@@ -372,17 +372,26 @@ public class SelectionVisualFeedback {
      * 创建方块选择的预览选项
      */
     private PreviewOptions createBlockSelectionOptions(SelectionState state) {
+        float fillR = blockHighlightFillR;
+        float fillG = blockHighlightFillG;
+        float fillB = blockHighlightFillB;
+        float opacityScale = blockHighlightOpacityScale;
+        float lineWidth = blockHighlightLineWidth;
+        boolean showFill = blockHighlightShowFill;
+        boolean showOutline = blockHighlightShowOutline;
+        boolean enablePulse = blockHighlightEnablePulse;
+
         PreviewOptions options = new PreviewOptions()
             .setColor(state.r, state.g, state.b)
-            .setTintColor(blockHighlightFillR, blockHighlightFillG, blockHighlightFillB)
-            .setOpacity(state.opacity * blockHighlightOpacityScale)
-            .setLineWidth(blockHighlightLineWidth)
+            .setTintColor(fillR, fillG, fillB)
+            .setOpacity(state.opacity * opacityScale)
+            .setLineWidth(lineWidth)
             .wireframeMode();
 
-        options.setShowFill(blockHighlightShowFill);
-        options.setShowOutline(blockHighlightShowOutline);
+        options.setShowFill(showFill);
+        options.setShowOutline(showOutline);
         
-        if (state.pulse && blockHighlightEnablePulse) {
+        if (state.pulse && enablePulse) {
             options.enablePulse();
         }
         
