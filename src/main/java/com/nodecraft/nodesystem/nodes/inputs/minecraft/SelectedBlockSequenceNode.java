@@ -260,8 +260,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             PreviewOptions blockOptions = new PreviewOptions()
                 .setColor(1.0f, 0.92f, 0.35f)
                 .setTintColor(1.0f, 0.92f, 0.35f)
-                .setOpacity(0.30f)
-                .setShowFill(true)
+                .setOpacity(0.50f)
+                .setShowFill(false)
                 .setShowOutline(true)
                 .setLineWidth(2.4f)
                 .setDuration(2);

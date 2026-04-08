@@ -24,6 +24,7 @@ import java.util.List;
  */
 public class BlockHighlightElement extends AbstractPreviewElement {
     private boolean renderingDisabled = false;
+    private boolean fillRenderingDisabled = false;
 
     private volatile List<Coordinate> blockPositions = new ArrayList<>(); // 存储方块的整数坐标
     private Vector3f color = new Vector3f(1.0f, 0.8f, 0.0f); // 默认橙黄色 (RGBA)
@@ -190,8 +191,17 @@ public class BlockHighlightElement extends AbstractPreviewElement {
 
             // 使用简化的方块边框渲染
             try {
-                if (showFill && fillVertexConsumer != null) {
-                    renderSimpleBlockFill(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, fillVertexConsumer);
+                if (showFill && !fillRenderingDisabled && fillVertexConsumer != null) {
+                    try {
+                        renderSimpleBlockFill(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, fillVertexConsumer);
+                    } catch (IllegalStateException fillException) {
+                        if (fillException.getMessage() != null && fillException.getMessage().contains("Not building")) {
+                            fillRenderingDisabled = true;
+                            NodeCraft.LOGGER.warn("Disabling block highlight fill for preview {} after render pipeline error: {}", getId(), fillException.getMessage());
+                        } else {
+                            throw fillException;
+                        }
+                    }
                 }
                 if (showOutline) {
                     renderSimpleBlockOutline(matrices, cameraPos, blockPos, finalOpacity, pulseFactor, lineVertexConsumer);
