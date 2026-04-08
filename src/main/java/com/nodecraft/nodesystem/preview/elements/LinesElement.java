@@ -84,8 +84,16 @@ public class LinesElement extends AbstractPreviewElement {
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer vertexConsumer = immediate.getBuffer(RenderLayers.lines());
+        VertexConsumerProvider provider = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        VertexConsumerProvider.Immediate immediate = null;
+        boolean flushImmediately = false;
+        if (provider == null) {
+            immediate = client.getBufferBuilders().getEntityVertexConsumers();
+            provider = immediate;
+            flushImmediately = true;
+        }
+
+        VertexConsumer vertexConsumer = provider.getBuffer(RenderLayers.lines());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
@@ -101,7 +109,9 @@ public class LinesElement extends AbstractPreviewElement {
             drawArrowHead(vertexConsumer, matrix, start, end, finalOpacity);
         }
 
-        immediate.draw();
+        if (flushImmediately && immediate != null) {
+            immediate.draw();
+        }
     }
 
     private void drawArrowHead(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d start, Vec3d end, float alpha) {
@@ -131,10 +141,12 @@ public class LinesElement extends AbstractPreviewElement {
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
         vertexConsumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
     }
 
     @Override

@@ -295,10 +295,11 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         Color color = Color.fromHex(previewPathColor);
         PreviewOptions options = new PreviewOptions()
             .setColor(color.getRed(), color.getGreen(), color.getBlue())
-            .setLineWidth(2.0f)
+            .setLineWidth(3.0f)
             .setDuration(30);
         options.showArrows = true;
         options.arrowSize = 0.24f;
+        options.renderPriority = 30;
 
         PreviewManager.showPaths(getId().toString(), new PolylineData(points), options);
     }

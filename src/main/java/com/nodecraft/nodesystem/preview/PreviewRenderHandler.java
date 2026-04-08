@@ -37,7 +37,7 @@ public class PreviewRenderHandler {
                 float tickDelta = client.getRenderTickCounter().getTickProgress(true);
                 
                 // 调用预览渲染器
-                PreviewRenderer.getInstance().setActiveVertexConsumers(null);
+                PreviewRenderer.getInstance().setActiveVertexConsumers(context.consumers());
                 PreviewRenderer.getInstance().renderAll(matrices, camera, tickDelta);
                 PreviewRenderer.getInstance().setActiveVertexConsumers(null);
                 
