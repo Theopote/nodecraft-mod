@@ -12,6 +12,8 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiStyleVar;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +28,8 @@ import java.util.UUID;
     category = "visualization.debugging"
 )
 public class PanelNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(PanelNode.class);
 
     @NodeProperty(displayName = "格式化", category = "显示", order = 1)
     private boolean useFormatting = true;
@@ -149,7 +153,7 @@ public class PanelNode extends BaseCustomUINode {
                 ImGui.popStyleVar(3);
                 ImGui.popStyleColor();
             } catch (Exception e) {
-                System.err.println("PanelNode UI渲染失败: " + e.getMessage());
+                LOGGER.error("PanelNode UI渲染失败", e);
             }
             return changed;
         });

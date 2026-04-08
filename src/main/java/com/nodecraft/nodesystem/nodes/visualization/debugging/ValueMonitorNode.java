@@ -13,6 +13,8 @@ import imgui.flag.ImGuiWindowFlags;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -26,6 +28,8 @@ import java.util.UUID;
     category = "visualization.debugging"
 )
 public class ValueMonitorNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ValueMonitorNode.class);
 
     private static final String INPUT_VALUE_ID = "input_value";
     private static final String OUTPUT_VALUE_ID = "output_value";
@@ -115,7 +119,7 @@ public class ValueMonitorNode extends BaseCustomUINode {
                 ImGui.popStyleVar(3);
                 ImGui.popStyleColor();
             } catch (Exception e) {
-                System.err.println("ValueMonitorNode UI 渲染失败: " + e.getMessage());
+                LOGGER.error("ValueMonitorNode UI 渲染失败", e);
             }
             return false;
         });

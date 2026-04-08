@@ -11,6 +11,8 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
 import imgui.type.ImString;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -27,6 +29,8 @@ import java.util.UUID;
     category = "inputs.sources"
 )
 public class FilePathNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(FilePathNode.class);
     
     @NodeProperty(displayName = "文件路径", category = "路径", order = 1,
                   description = "文件或目录的路径")
@@ -184,7 +188,7 @@ public class FilePathNode extends BaseCustomUINode {
 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
-                System.err.println("FilePathNode UI渲染失败: " + e.getMessage());
+                LOGGER.error("FilePathNode UI渲染失败", e);
             }
             return changed;
         });

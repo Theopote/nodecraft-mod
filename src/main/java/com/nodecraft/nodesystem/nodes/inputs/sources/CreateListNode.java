@@ -11,6 +11,8 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.UUID;
     category = "inputs.sources"
 )
 public class CreateListNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CreateListNode.class);
     
     @NodeProperty(displayName = "输入数量", category = "设置", order = 1,
                   description = "列表输入端口数量")
@@ -119,7 +123,7 @@ public class CreateListNode extends BaseCustomUINode {
                 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
-                System.err.println("CreateListNode UI渲染失败: " + e.getMessage());
+                LOGGER.error("CreateListNode UI渲染失败", e);
             }
             return changed;
         });

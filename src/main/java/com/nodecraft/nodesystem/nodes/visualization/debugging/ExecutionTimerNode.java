@@ -11,6 +11,8 @@ import imgui.ImGui;
 import imgui.type.ImBoolean;
 import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import java.util.UUID;
 
 /**
@@ -24,6 +26,8 @@ import java.util.UUID;
     category = "visualization.debugging"
 )
 public class ExecutionTimerNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionTimerNode.class);
 
     @NodeProperty(displayName = "自动重置", category = "计时", order = 1)
     private boolean autoReset = true;
@@ -91,8 +95,9 @@ public class ExecutionTimerNode extends BaseCustomUINode {
             totalExecutionTime += lastExecutionTime;
             executionCount++;
             if (printToConsole) {
-                System.out.println("执行时间: " + formatDuration(lastExecutionTime) +
-                    " (" + formatDuration(executionCount > 0 ? totalExecutionTime / executionCount : 0) + " avg)");
+                LOGGER.info("执行时间: {} ({} avg)",
+                    formatDuration(lastExecutionTime),
+                    formatDuration(executionCount > 0 ? totalExecutionTime / executionCount : 0));
             }
             startTime = 0;
         }
@@ -141,7 +146,7 @@ public class ExecutionTimerNode extends BaseCustomUINode {
                 ImGui.popStyleColor();
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
-                System.err.println("ExecutionTimerNode UI渲染失败: " + e.getMessage());
+                LOGGER.error("ExecutionTimerNode UI渲染失败", e);
             }
             return changed;
         });

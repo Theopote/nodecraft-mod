@@ -11,6 +11,8 @@ import imgui.type.ImString;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiInputTextFlags;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,6 +29,8 @@ import java.util.UUID;
     category = "inputs.sources"
 )
 public class TextPanelNode extends BaseCustomUINode {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TextPanelNode.class);
     
     @NodeProperty(displayName = "文本内容", category = "文本", order = 1,
                   description = "文本内容")
@@ -165,7 +169,7 @@ public class TextPanelNode extends BaseCustomUINode {
                 
                 l.addVerticalSpacing(getSmallPadding());
             } catch (Exception e) {
-                System.err.println("TextPanelNode UI渲染失败: " + e.getMessage());
+                LOGGER.error("TextPanelNode UI渲染失败", e);
             }
             return changed;
         });
