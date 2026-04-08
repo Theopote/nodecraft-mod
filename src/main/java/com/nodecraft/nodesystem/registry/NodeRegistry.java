@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.ServiceLoader;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 统一的节点注册表。
@@ -25,9 +26,9 @@ public class NodeRegistry {
     private static final Map<String, String> NODE_ID_ALIASES = createNodeIdAliases();
     private static final Map<String, String> NODE_CATEGORY_OVERRIDES = createNodeCategoryOverrides();
 
-    private final Map<String, NodeInfo> nodeInfoMap = new HashMap<>();
-    private final Map<String, NodeCategory> categoryMap = new HashMap<>();
-    private boolean initialized = false;
+    private final Map<String, NodeInfo> nodeInfoMap = new ConcurrentHashMap<>();
+    private final Map<String, NodeCategory> categoryMap = new ConcurrentHashMap<>();
+    private volatile boolean initialized = false;
 
     private NodeRegistry() {
         // 私有构造函数，确保单例
@@ -408,7 +409,7 @@ public class NodeRegistry {
      * 清空注册表并重置初始化状态。
      * 在重新加载配置或插件时可能有用。
      */
-    public void clear() {
+    public synchronized void clear() {
         clearInternal();
         initialized = false;
         NodeCraft.LOGGER.info("NodeRegistry 已清空并重置。");
