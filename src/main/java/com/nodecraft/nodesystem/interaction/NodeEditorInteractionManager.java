@@ -152,6 +152,11 @@ public class NodeEditorInteractionManager {
          * 取消交互模式时调用
          */
         void onCancel();
+
+        /**
+         * 交互成功完成时调用（不应触发取消回调）
+         */
+        void onComplete();
         
         /**
          * 获取交互模式的显示名称
@@ -170,6 +175,11 @@ public class NodeEditorInteractionManager {
     private class BlockPickingHandler implements InteractionModeHandler {
         private String currentNodeId;
         private IBlockPickerCallback currentCallback;
+
+        private void clearInternalState() {
+            currentCallback = null;
+            currentNodeId = null;
+        }
         
         @Override
         public void onEnter(String nodeId, IInteractionCallback callback) {
@@ -190,6 +200,13 @@ public class NodeEditorInteractionManager {
             // 调试信息：记录方块拾取处理器的更新（临时使用INFO级别）
             NodeCraft.LOGGER.info("BlockPickingHandler.onUpdate() - 悬停方块:{} 左键:{} 右键:{}", 
                 hoveredBlock, isLeftMouseClicked, isRightMouseClicked);
+
+            if (isRightMouseClicked) {
+                NodeCraft.LOGGER.info("方块拾取通过右键结束");
+                interactionState.clear();
+                MinecraftClientController.getInstance().clearHudMessage();
+                return;
+            }
             
             if (isLeftMouseClicked && hoveredBlock != null && hitResult != null) {
                 try {
@@ -217,9 +234,8 @@ public class NodeEditorInteractionManager {
                     // 通知回调
                     currentCallback.onBlockPicked(hoveredBlock, blockId, stateData);
                     
-                    // 清除状态
-                    interactionState.clear();
-                    MinecraftClientController.getInstance().clearHudMessage();
+                    // 成功完成交互，不触发取消回调
+                    interactionState.complete();
                     
                     NodeCraft.LOGGER.info("方块拾取完成: {} at {}", blockId, hoveredBlock);
                     
@@ -237,10 +253,13 @@ public class NodeEditorInteractionManager {
             }
             MinecraftClientController.getInstance().clearHudMessage();
             NodeCraft.LOGGER.info("方块拾取已取消");
-            
-            // 清除处理器内部状态
-            currentCallback = null;
-            currentNodeId = null;
+            clearInternalState();
+        }
+
+        @Override
+        public void onComplete() {
+            MinecraftClientController.getInstance().clearHudMessage();
+            clearInternalState();
         }
         
         @Override
@@ -297,10 +316,8 @@ public class NodeEditorInteractionManager {
                     // 通知回调
                     currentCallback.onAreaSelected(firstPoint, hoveredBlock);
                     
-                    // 清除预览和状态
-                    clearPreviews();
-                    interactionState.clear();
-                    MinecraftClientController.getInstance().clearHudMessage();
+                    // 成功完成交互，不触发取消回调
+                    interactionState.complete();
                     
                     NodeCraft.LOGGER.info("区域选择完成: {} 到 {}", firstPoint, hoveredBlock);
                 }
@@ -330,6 +347,16 @@ public class NodeEditorInteractionManager {
             }
             MinecraftClientController.getInstance().clearHudMessage();
             NodeCraft.LOGGER.info("区域选择已取消");
+            currentCallback = null;
+            firstPoint = null;
+        }
+
+        @Override
+        public void onComplete() {
+            clearPreviews();
+            MinecraftClientController.getInstance().clearHudMessage();
+            currentCallback = null;
+            firstPoint = null;
         }
         
         @Override
@@ -433,9 +460,8 @@ public class NodeEditorInteractionManager {
                     
                     currentCallback.onEntityPicked(entityId, entityType, entityPos);
                     
-                    // 清除状态
-                    interactionState.clear();
-                    MinecraftClientController.getInstance().clearHudMessage();
+                    // 成功完成交互，不触发取消回调
+                    interactionState.complete();
                     
                     NodeCraft.LOGGER.info("实体拾取完成: {} ({})", entityType, entityId);
                     
@@ -453,6 +479,13 @@ public class NodeEditorInteractionManager {
             }
             MinecraftClientController.getInstance().clearHudMessage();
             NodeCraft.LOGGER.info("实体拾取已取消");
+            currentCallback = null;
+        }
+
+        @Override
+        public void onComplete() {
+            MinecraftClientController.getInstance().clearHudMessage();
+            currentCallback = null;
         }
         
         @Override
@@ -506,6 +539,22 @@ public class NodeEditorInteractionManager {
                 }
             }
             
+            mode = EditorInteractionMode.NONE;
+            callback = null;
+            nodeId = null;
+        }
+
+        /**
+         * 成功完成当前交互，不触发取消回调。
+         */
+        void complete() {
+            if (mode != EditorInteractionMode.NONE) {
+                InteractionModeHandler handler = modeHandlers.get(mode);
+                if (handler != null) {
+                    handler.onComplete();
+                }
+            }
+
             mode = EditorInteractionMode.NONE;
             callback = null;
             nodeId = null;
@@ -1128,13 +1177,13 @@ public class NodeEditorInteractionManager {
      * @param isLeftMouseClicked 左键是否刚点击
      * @param isMouseOverImGui 鼠标是否在ImGui界面上
      */
-    public void update(float mouseX, float mouseY, boolean isMiddleMouseDown, boolean isLeftMouseClicked, boolean isMouseOverImGui) {
+    public void update(float mouseX, float mouseY, boolean isMiddleMouseDown, boolean isLeftMouseClicked, boolean isRightMouseClicked, boolean isMouseOverImGui) {
         if (!isInEditorMode) {
             return;
         }
         
         // 调试信息：只在实际点击或状态变化时记录
-        if (isLeftMouseClicked) {
+        if (isLeftMouseClicked || isRightMouseClicked) {
             NodeCraft.LOGGER.debug("NodeEditorInteractionManager.update() - 鼠标点击({}, {}) 左键:{} 中键:{} ImGui:{} 交互模式:{}", 
                 mouseX, mouseY, true, isMiddleMouseDown, isMouseOverImGui, interactionState.getMode());
         }
@@ -1164,7 +1213,7 @@ public class NodeEditorInteractionManager {
                 updateHoveredBlockHighlight(newHoveredBlock);
                 
                 // 处理鼠标点击事件
-                handleMouseClickEvents(newHoveredBlock, hitResult, isLeftMouseClicked);
+                handleMouseClickEvents(newHoveredBlock, hitResult, isLeftMouseClicked, isRightMouseClicked);
             } else {
                 // 鼠标在ImGui界面上时，停止中键视角控制
                 if (middleMousePressed) {
@@ -1307,7 +1356,7 @@ public class NodeEditorInteractionManager {
     /**
      * 处理鼠标点击事件
      */
-    private void handleMouseClickEvents(Coordinate hoveredBlock, BlockHitResult hitResult, boolean isLeftMouseClicked) {
+    private void handleMouseClickEvents(Coordinate hoveredBlock, BlockHitResult hitResult, boolean isLeftMouseClicked, boolean isRightMouseClicked) {
         try {
             // 如果中键正在被按下（用于视角控制），跳过其他鼠标事件处理
             if (middleMousePressed) {
@@ -1317,12 +1366,12 @@ public class NodeEditorInteractionManager {
             // 检查是否点击在ImGui窗口上
 
             // 使用处理器系统处理交互
-            if ((isLeftMouseClicked) && interactionState.isInInteractionMode()) {
+            if ((isLeftMouseClicked || isRightMouseClicked) && interactionState.isInInteractionMode()) {
                 EditorInteractionMode currentMode = interactionState.getMode();
                 InteractionModeHandler handler = modeHandlers.get(currentMode);
                 
                 if (handler != null) {
-                    handler.onUpdate(hoveredBlock, hitResult, true, false);
+                    handler.onUpdate(hoveredBlock, hitResult, isLeftMouseClicked, isRightMouseClicked);
                 } else {
                     // 备用处理：如果没有找到处理器，使用旧的方块拾取逻辑
                     if (interactionState.isPendingBlockPick() && hoveredBlock != null && hitResult != null) {
@@ -1539,11 +1588,8 @@ public class NodeEditorInteractionManager {
                 callback.onBlockPicked(coordinate, blockId, blockStateData);
             }
             
-            // 清除等待状态
-            interactionState.clear();
-            
-            // 清除HUD消息
-            MinecraftClientController.getInstance().clearHudMessage();
+            // 成功完成交互，不触发取消回调
+            interactionState.complete();
             
             return true; // 事件已被处理
             

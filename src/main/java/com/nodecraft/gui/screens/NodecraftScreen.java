@@ -201,13 +201,14 @@ private void updateInteractionManager() {
             float imGuiMouseY = ImGui.getIO().getMousePosY();
             boolean isMiddleMouseDown = ImGui.isMouseDown(2); // 2 = 中键
             boolean isLeftMouseClicked = ImGui.isMouseClicked(0); // 0 = 左键
+            boolean isRightMouseClicked = ImGui.isMouseClicked(1); // 1 = 右键
             
             // 检查鼠标是否在ImGui界面上，但在交互模式下需要特殊处理
             boolean isMouseOverImGui = isMouseOverImGuiForInteraction(interactionManager);
 
             // 添加调试日志（仅在点击时或交互模式下）
             boolean isInInteractionMode = interactionManager.isInInteractionMode();
-            if (isLeftMouseClicked || isInInteractionMode) {
+                if (isLeftMouseClicked || isRightMouseClicked || isInInteractionMode) {
                 NodeCraft.LOGGER.info("交互管理器更新 - 编辑模式:{} 交互模式:{} 鼠标位置:({},{}) 左键点击:{} 鼠标在UI上:{}", 
                     interactionManager.isInEditorMode(), isInInteractionMode, 
                     imGuiMouseX, imGuiMouseY, isLeftMouseClicked, isMouseOverImGui);
@@ -216,7 +217,7 @@ private void updateInteractionManager() {
             // 调用更新方法
             interactionManager.update(
                 imGuiMouseX, imGuiMouseY, 
-                isMiddleMouseDown, isLeftMouseClicked, 
+                isMiddleMouseDown, isLeftMouseClicked, isRightMouseClicked,
                 isMouseOverImGui
             );
         }

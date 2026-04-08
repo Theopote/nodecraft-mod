@@ -11,6 +11,7 @@ import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.interaction.IBlockPickerCallback;
 import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
+import com.nodecraft.minecraft.client.MinecraftClientController;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.util.Color;
@@ -110,6 +111,13 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
+        if (pickingActive) {
+            int pickedCount = snapshotPickedBlocks().size();
+            MinecraftClientController.getInstance().showHudMessage(
+                "正在选择方块: 左键添加, 右键完成 (已选择 " + pickedCount + " 个)"
+            );
+        }
+
         if (pickingActive && pendingRepick) {
             NodeEditorInteractionManager interactionManager = NodeEditorInteractionManager.getInstance();
             if (!interactionManager.isPendingBlockPick(getId().toString())) {
@@ -147,6 +155,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     public void onPickingCancelled() {
         pickingActive = false;
         pendingRepick = false;
+        MinecraftClientController.getInstance().showHudMessage("方块序列选择完成");
         updatePathPreview();
         markDirty();
     }
@@ -184,6 +193,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = true;
         pendingRepick = false;
         requestNextPick();
+        MinecraftClientController.getInstance().showHudMessage("正在选择方块: 左键添加, 右键完成");
         updatePathPreview();
         markDirty();
     }
@@ -192,6 +202,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = false;
         pendingRepick = false;
         NodeEditorInteractionManager.getInstance().cancelBlockPick();
+        MinecraftClientController.getInstance().showHudMessage("方块序列选择完成");
         updatePathPreview();
         markDirty();
     }
@@ -243,13 +254,25 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
         List<Coordinate> snapshot = snapshotPickedBlocks();
 
+        if (!snapshot.isEmpty()) {
+            PreviewOptions blockOptions = new PreviewOptions()
+                .setColor(1.0f, 0.92f, 0.35f)
+                .setTintColor(1.0f, 0.92f, 0.35f)
+                .setOpacity(0.30f)
+                .setShowFill(true)
+                .setShowOutline(true)
+                .setLineWidth(2.4f)
+                .setDuration(2);
+            PreviewManager.highlightBlocks(getId().toString(), snapshot, blockOptions);
+        }
+
         if (!autoPreviewPath || snapshot.size() < 2) {
             return;
         }
 
-        List<PointData> pointList = new ArrayList<>();
+        List<Vec3d> points = new ArrayList<>();
         for (Coordinate coordinate : snapshot) {
-            pointList.add(new PointData(
+            points.add(new Vec3d(
                 coordinate.getX() + 0.5d,
                 coordinate.getY() + 0.5d,
                 coordinate.getZ() + 0.5d
@@ -259,7 +282,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             Coordinate first = snapshot.getFirst();
             Coordinate last = snapshot.getLast();
             if (!first.equals(last)) {
-                pointList.add(new PointData(
+                points.add(new Vec3d(
                     first.getX() + 0.5d,
                     first.getY() + 0.5d,
                     first.getZ() + 0.5d
@@ -270,12 +293,12 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         Color color = Color.fromHex(previewPathColor);
         PreviewOptions options = new PreviewOptions()
             .setColor(color.getRed(), color.getGreen(), color.getBlue())
-            .setLineWidth(1.5f)
+            .setLineWidth(2.0f)
             .setDuration(30);
         options.showArrows = true;
-        options.arrowSize = 0.2f;
+        options.arrowSize = 0.24f;
 
-        PreviewManager.showPaths(getId().toString(), pointList, options);
+        PreviewManager.showPaths(getId().toString(), new PolylineData(points), options);
     }
 
     private void appendOutputs(Coordinate coordinate, BlockPosList blocks, List<PointData> pointList, List<Vec3d> polylinePoints, List<Vector3d> centers) {
@@ -307,11 +330,13 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     @Override
     protected float calculateUIHeight() {
         float frame = ImGui.getFrameHeight();
+        float text = ImGui.getTextLineHeightWithSpacing();
         float buttonGap = 0.5f;
         float topMargin = getSmallPadding();
         float bottomMargin = getSmallPadding();
 
         float height = topMargin;
+        height += text;
         height += frame * 3.0f; // Start/Stop + Remove Last + Clear Sequence
         height += buttonGap * 2.0f;
         height += bottomMargin;
@@ -337,6 +362,14 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
             layout.addVerticalSpacing(getSmallPadding());
             float baseCursorX = ImGui.getCursorPosX();
+
+            int count = snapshotPickedBlocks().size();
+            String statusText = pickingActive
+                ? "Selecting... LMB add / RMB finish (" + count + ")"
+                : "Idle (selected " + count + ")";
+            ImGui.setCursorPosX(baseCursorX + edgeMargin);
+            ImGui.text(statusText);
+            layout.addVerticalSpacing(0.35f);
 
             if (!pickingActive) {
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
