@@ -270,11 +270,13 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             return;
         }
 
+        // Draw preview paths slightly above block tops to avoid depth occlusion inside solids.
+        final double previewYOffset = 1.02d;
         List<Vec3d> points = new ArrayList<>();
         for (Coordinate coordinate : snapshot) {
             points.add(new Vec3d(
                 coordinate.getX() + 0.5d,
-                coordinate.getY() + 0.5d,
+                coordinate.getY() + previewYOffset,
                 coordinate.getZ() + 0.5d
             ));
         }
@@ -284,7 +286,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             if (!first.equals(last)) {
                 points.add(new Vec3d(
                     first.getX() + 0.5d,
-                    first.getY() + 0.5d,
+                    first.getY() + previewYOffset,
                     first.getZ() + 0.5d
                 ));
             }
