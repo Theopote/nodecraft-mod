@@ -16,7 +16,10 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -283,13 +286,156 @@ public final class GeometryVoxelizer {
     }
 
     public static BlockPosList voxelizePrism(PrismGeometryData geometry, boolean fillSolid) {
-        // First-pass bridge: prism side walls and section loops are approximated as a surface lattice.
-        // This keeps the new primitive in the voxel workflow until a dedicated solid prism rasterizer is added.
-        return SurfaceStripBridge.voxelize(
-            geometry.getSideSurfaceStrip(),
-            Math.max(1, (int) Math.ceil(Math.max(1.0d, geometry.getHeight()))),
-            SurfaceStripBridge.BridgeMode.LATTICE
-        );
+        final double eps = 1.0e-9;
+        Vector3d extrusion = geometry.getExtrusionVector();
+        double extrusionLengthSquared = extrusion.lengthSquared();
+        if (extrusionLengthSquared <= eps) {
+            return new BlockPosList();
+        }
+
+        RegionData region = createPrismBoundingRegion(geometry);
+        if (!region.isComplete()) {
+            return new BlockPosList();
+        }
+
+        BlockPos minCorner = region.getMinCorner();
+        BlockPos maxCorner = region.getMaxCorner();
+        if (minCorner == null || maxCorner == null) {
+            return new BlockPosList();
+        }
+
+        List<Vector3d> baseVertices = geometry.getBaseVertices();
+        Vector3d baseOrigin = new Vector3d(baseVertices.get(0));
+        Vector3d axis = new Vector3d(extrusion).normalize();
+
+        Vector3d u = buildPrismPlaneU(baseVertices, baseOrigin, axis, eps);
+        Vector3d v = new Vector3d(axis).cross(u).normalize();
+
+        List<Double> polygonX = new ArrayList<>(baseVertices.size());
+        List<Double> polygonY = new ArrayList<>(baseVertices.size());
+        for (Vector3d vertex : baseVertices) {
+            Vector3d rel = new Vector3d(vertex).sub(baseOrigin);
+            polygonX.add(rel.dot(u));
+            polygonY.add(rel.dot(v));
+        }
+
+        Set<BlockPos> solidBlocks = new LinkedHashSet<>();
+        Vector3d sample = new Vector3d();
+        for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
+            for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
+                for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
+                    sample.set(x + 0.5d, y + 0.5d, z + 0.5d);
+
+                    Vector3d fromBase = new Vector3d(sample).sub(baseOrigin);
+                    double t = fromBase.dot(extrusion) / extrusionLengthSquared;
+                    if (t < -eps || t > 1.0d + eps) {
+                        continue;
+                    }
+
+                    Vector3d projected = new Vector3d(sample).sub(new Vector3d(extrusion).mul(t));
+                    Vector3d inBasePlane = projected.sub(baseOrigin);
+                    double px = inBasePlane.dot(u);
+                    double py = inBasePlane.dot(v);
+
+                    if (isPointInsideOrOnPolygon2D(px, py, polygonX, polygonY, eps)) {
+                        solidBlocks.add(new BlockPos(x, y, z));
+                    }
+                }
+            }
+        }
+
+        if (fillSolid) {
+            return new BlockPosList(solidBlocks);
+        }
+
+        Set<BlockPos> shellBlocks = new LinkedHashSet<>();
+        for (BlockPos pos : solidBlocks) {
+            if (isBoundaryBlock(pos, solidBlocks)) {
+                shellBlocks.add(pos.toImmutable());
+            }
+        }
+        return new BlockPosList(shellBlocks);
+    }
+
+    private static Vector3d buildPrismPlaneU(List<Vector3d> baseVertices,
+                                             Vector3d baseOrigin,
+                                             Vector3d axis,
+                                             double eps) {
+        for (int i = 1; i < baseVertices.size(); i++) {
+            Vector3d edge = new Vector3d(baseVertices.get(i)).sub(baseOrigin);
+            Vector3d projectedEdge = new Vector3d(axis).mul(edge.dot(axis));
+            edge.sub(projectedEdge);
+            if (edge.lengthSquared() > eps) {
+                return edge.normalize();
+            }
+        }
+
+        Vector3d fallback = Math.abs(axis.x) < 0.9d
+            ? new Vector3d(1.0d, 0.0d, 0.0d)
+            : new Vector3d(0.0d, 1.0d, 0.0d);
+        return fallback.sub(new Vector3d(axis).mul(fallback.dot(axis))).normalize();
+    }
+
+    private static boolean isBoundaryBlock(BlockPos pos, Set<BlockPos> solidBlocks) {
+        return !solidBlocks.contains(pos.add(1, 0, 0))
+            || !solidBlocks.contains(pos.add(-1, 0, 0))
+            || !solidBlocks.contains(pos.add(0, 1, 0))
+            || !solidBlocks.contains(pos.add(0, -1, 0))
+            || !solidBlocks.contains(pos.add(0, 0, 1))
+            || !solidBlocks.contains(pos.add(0, 0, -1));
+    }
+
+    private static boolean isPointInsideOrOnPolygon2D(double px,
+                                                      double py,
+                                                      List<Double> polygonX,
+                                                      List<Double> polygonY,
+                                                      double eps) {
+        int size = polygonX.size();
+        if (size < 3) {
+            return false;
+        }
+
+        for (int i = 0, j = size - 1; i < size; j = i++) {
+            if (isPointOnSegment2D(
+                px, py,
+                polygonX.get(j), polygonY.get(j),
+                polygonX.get(i), polygonY.get(i),
+                eps
+            )) {
+                return true;
+            }
+        }
+
+        boolean inside = false;
+        for (int i = 0, j = size - 1; i < size; j = i++) {
+            double xi = polygonX.get(i);
+            double yi = polygonY.get(i);
+            double xj = polygonX.get(j);
+            double yj = polygonY.get(j);
+
+            boolean intersects = ((yi > py) != (yj > py))
+                && (px < (xj - xi) * (py - yi) / ((yj - yi) + eps) + xi);
+            if (intersects) {
+                inside = !inside;
+            }
+        }
+        return inside;
+    }
+
+    private static boolean isPointOnSegment2D(double px,
+                                              double py,
+                                              double x1,
+                                              double y1,
+                                              double x2,
+                                              double y2,
+                                              double eps) {
+        double cross = (px - x1) * (y2 - y1) - (py - y1) * (x2 - x1);
+        if (Math.abs(cross) > eps) {
+            return false;
+        }
+
+        double dot = (px - x1) * (px - x2) + (py - y1) * (py - y2);
+        return dot <= eps;
     }
 
     public static BlockPosList voxelizeOctahedron(OctahedronGeometryData geometry, boolean fillSolid) {

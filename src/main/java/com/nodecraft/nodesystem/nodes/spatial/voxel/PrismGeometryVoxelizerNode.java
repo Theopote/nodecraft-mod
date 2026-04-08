@@ -19,7 +19,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "spatial.voxel.prism_geometry_voxelizer",
     displayName = "Prism Geometry To Blocks",
-    description = "Approximates PrismGeometryData into Minecraft block coordinates using a side lattice bridge",
+    description = "Voxelizes PrismGeometryData into Minecraft block coordinates (supports solid and shell modes)",
     category = "spatial.voxel"
 )
 public class PrismGeometryVoxelizerNode extends BaseNode {
@@ -43,7 +43,7 @@ public class PrismGeometryVoxelizerNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Approximates PrismGeometryData into Minecraft block coordinates using a side lattice bridge";
+        return "Voxelizes PrismGeometryData into Minecraft block coordinates (supports solid and shell modes)";
     }
 
     @Override
