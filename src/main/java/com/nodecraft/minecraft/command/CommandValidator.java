@@ -18,6 +18,7 @@ public class CommandValidator {
     
     private final Map<String, CommandDefinition> commands = new HashMap<>();
     private final Pattern validCommandPattern = Pattern.compile("^/[a-zA-Z][a-zA-Z0-9_\\-]*($| .*)");
+    private volatile boolean allowUnknownCommands = true;
     
     // 单例模式
     private CommandValidator() {
@@ -63,8 +64,8 @@ public class CommandValidator {
         // 查找命令定义
         CommandDefinition definition = commands.get(commandName);
         if (definition == null) {
-            // 未知命令
-            return false;
+            // 未知命令：允许时只做基础格式校验，禁用时拒绝。
+            return allowUnknownCommands;
         }
         
         // 如果没有参数，检查命令是否允许无参数
@@ -100,7 +101,7 @@ public class CommandValidator {
         
         CommandDefinition definition = commands.get(commandName);
         if (definition == null) {
-            return "未知命令: " + commandName;
+            return allowUnknownCommands ? null : "未知命令: " + commandName;
         }
         
         if (args.isEmpty() && !definition.allowsNoParams) {
@@ -146,6 +147,22 @@ public class CommandValidator {
      */
     public List<String> getCommandNames() {
         return new ArrayList<>(commands.keySet());
+    }
+
+    /**
+     * 是否允许白名单外命令。
+     * 允许时，未知命令只执行基础格式校验；禁用时按白名单严格校验。
+     */
+    public boolean isAllowUnknownCommands() {
+        return allowUnknownCommands;
+    }
+
+    /**
+     * 设置是否允许白名单外命令。
+     * @param allowUnknownCommands true=允许未知命令，false=仅允许白名单内命令
+     */
+    public void setAllowUnknownCommands(boolean allowUnknownCommands) {
+        this.allowUnknownCommands = allowUnknownCommands;
     }
     
     /**
