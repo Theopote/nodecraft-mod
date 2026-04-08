@@ -52,8 +52,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
     private final List<Coordinate> pickedBlocks = new ArrayList<>();
 
-    private boolean pickingActive = false;
-    private boolean pendingRepick = false;
+    private volatile boolean pickingActive = false;
+    private volatile boolean pendingRepick = false;
 
     @NodeProperty(displayName = "Pick Distance", category = "Picking", order = 1,
             description = "Maximum distance used for each block pick request.")
@@ -127,8 +127,10 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             return;
         }
 
-        if (allowDuplicates || !pickedBlocks.contains(position)) {
-            pickedBlocks.add(position);
+        synchronized (pickedBlocks) {
+            if (allowDuplicates || !pickedBlocks.contains(position)) {
+                pickedBlocks.add(position);
+            }
         }
 
         updateOutputs();
@@ -158,17 +160,21 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     }
 
     public void clearSequence() {
-        pickedBlocks.clear();
+        synchronized (pickedBlocks) {
+            pickedBlocks.clear();
+        }
         updateOutputs();
         updatePathPreview();
         markDirty();
     }
 
     public void removeLast() {
-        if (pickedBlocks.isEmpty()) {
-            return;
+        synchronized (pickedBlocks) {
+            if (pickedBlocks.isEmpty()) {
+                return;
+            }
+            pickedBlocks.remove(pickedBlocks.size() - 1);
         }
-        pickedBlocks.removeLast();
         updateOutputs();
         updatePathPreview();
         markDirty();
@@ -195,19 +201,20 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     }
 
     private void updateOutputs() {
-        List<Coordinate> coordinates = new ArrayList<>(pickedBlocks);
+        List<Coordinate> snapshot = snapshotPickedBlocks();
+        List<Coordinate> coordinates = new ArrayList<>(snapshot);
         BlockPosList blocks = new BlockPosList();
         List<PointData> pointList = new ArrayList<>();
         List<Vec3d> polylinePoints = new ArrayList<>();
         List<Vector3d> centers = new ArrayList<>();
 
-        for (Coordinate coordinate : pickedBlocks) {
+        for (Coordinate coordinate : snapshot) {
             appendOutputs(coordinate, blocks, pointList, polylinePoints, centers);
         }
 
-        if (closePath && pickedBlocks.size() >= 2) {
-            Coordinate first = pickedBlocks.getFirst();
-            Coordinate last = pickedBlocks.getLast();
+        if (closePath && snapshot.size() >= 2) {
+            Coordinate first = snapshot.getFirst();
+            Coordinate last = snapshot.getLast();
             if (!first.equals(last)) {
                 coordinates.add(first);
                 appendOutputs(first, blocks, pointList, polylinePoints, centers);
@@ -223,23 +230,25 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         outputValues.put(OUTPUT_LINE_ID, line);
         outputValues.put(OUTPUT_POLYLINE_ID, polyline);
         outputValues.put(OUTPUT_CENTERS_ID, centers);
-        outputValues.put(OUTPUT_FIRST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.getFirst());
-        outputValues.put(OUTPUT_LAST_ID, pickedBlocks.isEmpty() ? null : pickedBlocks.getLast());
-        outputValues.put(OUTPUT_COUNT_ID, pickedBlocks.size());
+        outputValues.put(OUTPUT_FIRST_ID, snapshot.isEmpty() ? null : snapshot.getFirst());
+        outputValues.put(OUTPUT_LAST_ID, snapshot.isEmpty() ? null : snapshot.getLast());
+        outputValues.put(OUTPUT_COUNT_ID, snapshot.size());
         outputValues.put(OUTPUT_SEGMENT_COUNT_ID, Math.max(0, coordinates.size() - 1));
-        outputValues.put(OUTPUT_IS_CLOSED_ID, closePath && pickedBlocks.size() >= 2);
-        outputValues.put(OUTPUT_VALID_ID, !pickedBlocks.isEmpty());
+        outputValues.put(OUTPUT_IS_CLOSED_ID, closePath && snapshot.size() >= 2);
+        outputValues.put(OUTPUT_VALID_ID, !snapshot.isEmpty());
     }
 
     private void updatePathPreview() {
         PreviewManager.hideNodePreviews(getId().toString());
 
-        if (!autoPreviewPath || pickedBlocks.size() < 2) {
+        List<Coordinate> snapshot = snapshotPickedBlocks();
+
+        if (!autoPreviewPath || snapshot.size() < 2) {
             return;
         }
 
         List<PointData> pointList = new ArrayList<>();
-        for (Coordinate coordinate : pickedBlocks) {
+        for (Coordinate coordinate : snapshot) {
             pointList.add(new PointData(
                 coordinate.getX() + 0.5d,
                 coordinate.getY() + 0.5d,
@@ -247,8 +256,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             ));
         }
         if (closePath) {
-            Coordinate first = pickedBlocks.getFirst();
-            Coordinate last = pickedBlocks.getLast();
+            Coordinate first = snapshot.getFirst();
+            Coordinate last = snapshot.getLast();
             if (!first.equals(last)) {
                 pointList.add(new PointData(
                     first.getX() + 0.5d,
@@ -287,6 +296,12 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             centerPos.y,
             centerPos.z
         ));
+    }
+
+    private List<Coordinate> snapshotPickedBlocks() {
+        synchronized (pickedBlocks) {
+            return new ArrayList<>(pickedBlocks);
+        }
     }
 
     @Override
@@ -343,7 +358,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
 
             layout.addVerticalSpacing(0.5f);
 
-            boolean hasBlocks = !pickedBlocks.isEmpty();
+            boolean hasBlocks = !snapshotPickedBlocks().isEmpty();
             if (hasBlocks) {
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 if (ImGui.button("Remove Last##removeLast", buttonWidth, 0)) {
@@ -383,8 +398,9 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         state.put("closePath", closePath);
         state.put("previewPathColor", previewPathColor);
 
-        List<Map<String, Integer>> blocks = new ArrayList<>(pickedBlocks.size());
-        for (Coordinate coordinate : pickedBlocks) {
+        List<Coordinate> snapshot = snapshotPickedBlocks();
+        List<Map<String, Integer>> blocks = new ArrayList<>(snapshot.size());
+        for (Coordinate coordinate : snapshot) {
             Map<String, Integer> item = new HashMap<>();
             item.put("x", coordinate.getX());
             item.put("y", coordinate.getY());
@@ -401,7 +417,9 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             return;
         }
 
-        pickedBlocks.clear();
+        synchronized (pickedBlocks) {
+            pickedBlocks.clear();
+        }
 
         if (map.get("maxDistance") instanceof Number number) {
             maxDistance = Math.max(1.0f, Math.min(300.0f, number.floatValue()));
@@ -422,15 +440,19 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             previewPathColor = value;
         }
         if (map.get("pickedBlocks") instanceof List<?> list) {
+            List<Coordinate> restored = new ArrayList<>();
             for (Object item : list) {
                 if (item instanceof Map<?, ?> blockMap) {
                     Object x = blockMap.get("x");
                     Object y = blockMap.get("y");
                     Object z = blockMap.get("z");
                     if (x instanceof Number xNum && y instanceof Number yNum && z instanceof Number zNum) {
-                        pickedBlocks.add(new Coordinate(xNum.intValue(), yNum.intValue(), zNum.intValue()));
+                        restored.add(new Coordinate(xNum.intValue(), yNum.intValue(), zNum.intValue()));
                     }
                 }
+            }
+            synchronized (pickedBlocks) {
+                pickedBlocks.addAll(restored);
             }
         }
 

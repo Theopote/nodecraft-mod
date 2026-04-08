@@ -50,11 +50,11 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
     private static final String OUTPUT_ENTITY_Z = "output_entity_z";
     private static final String OUTPUT_HAS_ENTITY = "output_has_entity";
 
-    private String pickedEntityId;
-    private String pickedEntityType = "minecraft:pig";
-    private Coordinate pickedEntityPosition;
-    private Vec3d pickedEntityExactPosition;
-    private boolean hasPickedEntity = false;
+    private volatile String pickedEntityId;
+    private volatile String pickedEntityType = "minecraft:pig";
+    private volatile Coordinate pickedEntityPosition;
+    private volatile Vec3d pickedEntityExactPosition;
+    private volatile boolean hasPickedEntity = false;
 
     public SelectedEntityNode() {
         super(UUID.randomUUID(), "inputs.minecraft.selected_entity");
