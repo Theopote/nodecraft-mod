@@ -9,6 +9,7 @@ import net.minecraft.util.math.Vec3d;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.ArrayList;
 
 /**
  * 选择视觉反馈管理器 (重构版)
@@ -27,6 +28,7 @@ public class SelectionVisualFeedback {
     // 预览ID管理 - 跟踪每个节点的预览
     private final ConcurrentMap<String, String> nodePreviewMap = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Coordinate> blockSelectionMap = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, List<Coordinate>> multiBlockSelectionMap = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, SelectionState> blockSelectionStateMap = new ConcurrentHashMap<>();
 
     // 拾取高亮样式设置（可由菜单实时调整）
@@ -223,6 +225,7 @@ public class SelectionVisualFeedback {
                 // 记录预览ID
                 nodePreviewMap.put(nodeId, previewId);
                 blockSelectionMap.put(nodeId, position);
+                multiBlockSelectionMap.remove(nodeId);
                 blockSelectionStateMap.put(nodeId, state);
                 NodeCraft.LOGGER.debug("方块选择反馈显示成功: 节点={}, 位置={}, 状态={}, 预览ID={}",
                     nodeId, position, state, previewId);
@@ -279,6 +282,15 @@ public class SelectionVisualFeedback {
      */
     public void showMultiBlockSelection(String nodeId, List<Coordinate> positions, SelectionState state) {
         try {
+            if (nodeId == null || nodeId.isBlank() || positions == null || positions.isEmpty() || state == null) {
+                if (nodeId != null && !nodeId.isBlank()) {
+                    clearFeedback(nodeId);
+                }
+                NodeCraft.LOGGER.debug("Skipping multi block selection feedback: nodeId={}, positions={}, state={}",
+                    nodeId, positions != null ? positions.size() : 0, state);
+                return;
+            }
+
             // 清除之前的预览
             clearFeedback(nodeId);
             
@@ -288,8 +300,13 @@ public class SelectionVisualFeedback {
             // 使用 PreviewManager 显示多方块高亮
             String previewId = PreviewManager.highlightBlocks(nodeId, positions, options);
             
-            // 记录预览ID
-            nodePreviewMap.put(nodeId, previewId);
+            if (previewId != null) {
+                // 记录预览ID
+                nodePreviewMap.put(nodeId, previewId);
+                multiBlockSelectionMap.put(nodeId, new ArrayList<>(positions));
+                blockSelectionMap.remove(nodeId);
+                blockSelectionStateMap.put(nodeId, state);
+            }
             
             NodeCraft.LOGGER.debug("显示多方块选择反馈: 节点={}, 方块数量={}, 状态={}, 预览ID={}", 
                 nodeId, positions.size(), state, previewId);
@@ -314,6 +331,7 @@ public class SelectionVisualFeedback {
             }
 
             blockSelectionMap.remove(nodeId);
+            multiBlockSelectionMap.remove(nodeId);
             blockSelectionStateMap.remove(nodeId);
             
             // 同时清除可能的临时高亮
@@ -399,25 +417,34 @@ public class SelectionVisualFeedback {
     }
 
     private void refreshActiveBlockSelections() {
-        if (blockSelectionMap.isEmpty()) {
+        if (blockSelectionStateMap.isEmpty()) {
             return;
         }
 
-        for (String nodeId : blockSelectionMap.keySet()) {
+        for (String nodeId : blockSelectionStateMap.keySet()) {
             Coordinate position = blockSelectionMap.get(nodeId);
+            List<Coordinate> positions = multiBlockSelectionMap.get(nodeId);
             SelectionState state = blockSelectionStateMap.get(nodeId);
-            if (position == null || state == null) {
+            if ((position == null && (positions == null || positions.isEmpty())) || state == null) {
                 continue;
             }
 
             try {
-                clearFeedback(nodeId);
+                String currentPreviewId = nodePreviewMap.remove(nodeId);
+                if (currentPreviewId != null) {
+                    PreviewManager.hidePreview(currentPreviewId);
+                }
+
                 PreviewOptions options = createBlockSelectionOptions(state);
-                String previewId = PreviewManager.highlightBlock(nodeId, position, options);
+                String previewId;
+                if (positions != null && !positions.isEmpty()) {
+                    previewId = PreviewManager.highlightBlocks(nodeId, positions, options);
+                } else {
+                    previewId = PreviewManager.highlightBlock(nodeId, position, options);
+                }
+
                 if (previewId != null) {
                     nodePreviewMap.put(nodeId, previewId);
-                    blockSelectionMap.put(nodeId, position);
-                    blockSelectionStateMap.put(nodeId, state);
                 }
             } catch (Exception e) {
                 NodeCraft.LOGGER.warn("刷新方块高亮样式失败: 节点={}, 错误={}", nodeId, e.getMessage());

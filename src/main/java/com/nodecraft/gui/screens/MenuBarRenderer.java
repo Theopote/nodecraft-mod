@@ -16,6 +16,7 @@ import com.nodecraft.gui.style.MinecraftTheme;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
 import com.nodecraft.nodesystem.visual.SelectionVisualFeedback;
 
 import net.minecraft.client.MinecraftClient;
@@ -274,7 +275,7 @@ public class MenuBarRenderer {
                     }
                 }
 
-                if (ImGui.beginMenu("拾取高亮样式")) {
+                if (ImGui.beginMenu("方块选中样式（单块/序列）")) {
                     SelectionVisualFeedback visualFeedback = SelectionVisualFeedback.getInstance();
 
                     boolean showFill = visualFeedback.isBlockHighlightShowFill();
@@ -309,6 +310,59 @@ public class MenuBarRenderer {
 
                     if (ImGui.menuItem("恢复默认样式")) {
                         visualFeedback.resetBlockHighlightStyle();
+                    }
+
+                    ImGui.endMenu();
+                }
+
+                if (ImGui.beginMenu("区域选择样式")) {
+                    NodeEditorInteractionManager interactionManager = NodeEditorInteractionManager.getInstance();
+
+                    boolean areaShowFill = interactionManager.isAreaPreviewShowFill();
+                    if (ImGui.menuItem("显示面填充##area_selection", null, areaShowFill)) {
+                        interactionManager.setAreaPreviewShowFill(!areaShowFill);
+                    }
+
+                    boolean areaShowOutline = interactionManager.isAreaPreviewShowOutline();
+                    if (ImGui.menuItem("显示高亮边框##area_selection", null, areaShowOutline)) {
+                        interactionManager.setAreaPreviewShowOutline(!areaShowOutline);
+                    }
+
+                    boolean areaPulse = interactionManager.isAreaPreviewEnablePulse();
+                    if (ImGui.menuItem("脉冲动画##area_selection", null, areaPulse)) {
+                        interactionManager.setAreaPreviewEnablePulse(!areaPulse);
+                    }
+
+                    float[] areaLineWidth = new float[] { interactionManager.getAreaPreviewLineWidth() };
+                    if (ImGui.sliderFloat("边框线宽##area_selection", areaLineWidth, 0.5f, 8.0f, "%.1f")) {
+                        interactionManager.setAreaPreviewLineWidth(areaLineWidth[0]);
+                    }
+
+                    float[] areaOpacity = new float[] { interactionManager.getAreaPreviewOpacity() };
+                    if (ImGui.sliderFloat("高亮透明度##area_selection", areaOpacity, 0.05f, 1.0f, "%.2f")) {
+                        interactionManager.setAreaPreviewOpacity(areaOpacity[0]);
+                    }
+
+                    float[] areaOutlineColor = interactionManager.getAreaPreviewOutlineColor();
+                    if (ImGui.colorEdit3("边框颜色##area_selection", areaOutlineColor)) {
+                        interactionManager.setAreaPreviewOutlineColor(
+                            areaOutlineColor[0],
+                            areaOutlineColor[1],
+                            areaOutlineColor[2]
+                        );
+                    }
+
+                    float[] areaFillColor = interactionManager.getAreaPreviewFillColor();
+                    if (ImGui.colorEdit3("填充颜色##area_selection", areaFillColor)) {
+                        interactionManager.setAreaPreviewFillColor(
+                            areaFillColor[0],
+                            areaFillColor[1],
+                            areaFillColor[2]
+                        );
+                    }
+
+                    if (ImGui.menuItem("恢复默认样式##area_selection")) {
+                        interactionManager.resetAreaPreviewStyle();
                     }
 
                     ImGui.endMenu();

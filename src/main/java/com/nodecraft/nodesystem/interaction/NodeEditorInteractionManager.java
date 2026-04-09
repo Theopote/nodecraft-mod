@@ -68,6 +68,19 @@ public class NodeEditorInteractionManager {
     
     // ================= 常量定义 =================
     private static final String OWNER_ID = "editor_interaction_manager"; // 本类作为预览拥有者的标识符
+
+    // ================= 区域选择样式设置（由“视图”菜单驱动）=================
+    private volatile boolean areaPreviewShowFill = true;
+    private volatile boolean areaPreviewShowOutline = true;
+    private volatile boolean areaPreviewEnablePulse = false;
+    private volatile float areaPreviewLineWidth = 2.0f;
+    private volatile float areaPreviewOpacity = 0.25f;
+    private volatile float areaPreviewOutlineR = 1.0f;
+    private volatile float areaPreviewOutlineG = 1.0f;
+    private volatile float areaPreviewOutlineB = 0.0f;
+    private volatile float areaPreviewFillR = 1.0f;
+    private volatile float areaPreviewFillG = 0.8f;
+    private volatile float areaPreviewFillB = 0.1f;
     
     /**
      * 编辑器交互模式枚举
@@ -394,16 +407,26 @@ public class NodeEditorInteractionManager {
             int maxY = Math.max(start.getY(), end.getY());
             int maxZ = Math.max(start.getZ(), end.getZ());
             
-            // 显示区域边界预览
             PreviewOptions options = new PreviewOptions()
-                .setColor(1.0f, 1.0f, 0.0f) // 黄色
-                .setOpacity(0.3f)
-                .wireframeMode()
-                .setLineWidth(2.0f);
-            
-            // 这里需要PreviewRenderer支持区域预览，暂时用单个方块预览代替
+                .setColor(areaPreviewOutlineR, areaPreviewOutlineG, areaPreviewOutlineB)
+                .setTintColor(areaPreviewFillR, areaPreviewFillG, areaPreviewFillB)
+                .setOpacity(areaPreviewOpacity)
+                .setLineWidth(areaPreviewLineWidth)
+                .setShowFill(areaPreviewShowFill)
+                .setShowOutline(areaPreviewShowOutline)
+                .setDuration(1);
+
+            if (areaPreviewEnablePulse) {
+                options.enablePulse();
+            }
+
+            Vec3d min = new Vec3d(minX, minY, minZ);
+            Vec3d max = new Vec3d(maxX + 1.0d, maxY + 1.0d, maxZ + 1.0d);
             areaPreviewId = PreviewRenderer.getInstance().showPreview(
-                OWNER_ID, "area_preview", end, options
+                OWNER_ID,
+                "region_box",
+                new Object[] { min, max },
+                options
             );
         }
         
@@ -727,6 +750,80 @@ public class NodeEditorInteractionManager {
      */
     public boolean isInInteractionMode() {
         return interactionState.isInInteractionMode();
+    }
+
+    public boolean isAreaPreviewShowFill() {
+        return areaPreviewShowFill;
+    }
+
+    public void setAreaPreviewShowFill(boolean showFill) {
+        this.areaPreviewShowFill = showFill;
+    }
+
+    public boolean isAreaPreviewShowOutline() {
+        return areaPreviewShowOutline;
+    }
+
+    public void setAreaPreviewShowOutline(boolean showOutline) {
+        this.areaPreviewShowOutline = showOutline;
+    }
+
+    public boolean isAreaPreviewEnablePulse() {
+        return areaPreviewEnablePulse;
+    }
+
+    public void setAreaPreviewEnablePulse(boolean enablePulse) {
+        this.areaPreviewEnablePulse = enablePulse;
+    }
+
+    public float getAreaPreviewLineWidth() {
+        return areaPreviewLineWidth;
+    }
+
+    public void setAreaPreviewLineWidth(float lineWidth) {
+        this.areaPreviewLineWidth = Math.max(0.5f, Math.min(8.0f, lineWidth));
+    }
+
+    public float getAreaPreviewOpacity() {
+        return areaPreviewOpacity;
+    }
+
+    public void setAreaPreviewOpacity(float opacity) {
+        this.areaPreviewOpacity = Math.max(0.05f, Math.min(1.0f, opacity));
+    }
+
+    public float[] getAreaPreviewOutlineColor() {
+        return new float[] { areaPreviewOutlineR, areaPreviewOutlineG, areaPreviewOutlineB };
+    }
+
+    public void setAreaPreviewOutlineColor(float r, float g, float b) {
+        this.areaPreviewOutlineR = Math.max(0.0f, Math.min(1.0f, r));
+        this.areaPreviewOutlineG = Math.max(0.0f, Math.min(1.0f, g));
+        this.areaPreviewOutlineB = Math.max(0.0f, Math.min(1.0f, b));
+    }
+
+    public float[] getAreaPreviewFillColor() {
+        return new float[] { areaPreviewFillR, areaPreviewFillG, areaPreviewFillB };
+    }
+
+    public void setAreaPreviewFillColor(float r, float g, float b) {
+        this.areaPreviewFillR = Math.max(0.0f, Math.min(1.0f, r));
+        this.areaPreviewFillG = Math.max(0.0f, Math.min(1.0f, g));
+        this.areaPreviewFillB = Math.max(0.0f, Math.min(1.0f, b));
+    }
+
+    public void resetAreaPreviewStyle() {
+        this.areaPreviewShowFill = true;
+        this.areaPreviewShowOutline = true;
+        this.areaPreviewEnablePulse = false;
+        this.areaPreviewLineWidth = 2.0f;
+        this.areaPreviewOpacity = 0.25f;
+        this.areaPreviewOutlineR = 1.0f;
+        this.areaPreviewOutlineG = 1.0f;
+        this.areaPreviewOutlineB = 0.0f;
+        this.areaPreviewFillR = 1.0f;
+        this.areaPreviewFillG = 0.8f;
+        this.areaPreviewFillB = 0.1f;
     }
     
     // ================= 新增：鼠标射线投射 =================

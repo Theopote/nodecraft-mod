@@ -15,6 +15,7 @@ import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
 import com.nodecraft.minecraft.client.MinecraftClientController;
 import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.visual.SelectionVisualFeedback;
 import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
@@ -57,7 +58,6 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private volatile boolean pickingActive = false;
     private volatile boolean pendingRepick = false;
     private volatile long lastPathPreviewFailureNoticeAt = 0L;
-    private volatile String blockPreviewId = null;
     private volatile String pathPreviewId = null;
 
     @NodeProperty(displayName = "Pick Distance", category = "Picking", order = 1,
@@ -256,26 +256,14 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private void updatePathPreview() {
         List<Coordinate> snapshot = snapshotPickedBlocks();
 
-        PreviewOptions blockOptions = new PreviewOptions()
-            .setColor(1.0f, 0.92f, 0.35f)
-            .setTintColor(1.0f, 0.92f, 0.35f)
-            .setOpacity(0.45f)
-            .setShowFill(true)
-            .setShowOutline(true)
-            .setLineWidth(2.4f)
-            .enablePulse()
-            .setDuration(2);
-
         if (!snapshot.isEmpty()) {
-            if (blockPreviewId == null) {
-                blockPreviewId = PreviewManager.highlightBlocks(getId().toString(), snapshot, blockOptions);
-            } else {
-                PreviewManager.updatePreview(blockPreviewId, snapshot);
-                PreviewManager.updatePreviewOptions(blockPreviewId, blockOptions);
-            }
-        } else if (blockPreviewId != null) {
-            PreviewManager.hidePreview(blockPreviewId);
-            blockPreviewId = null;
+            SelectionVisualFeedback.getInstance().showMultiBlockSelection(
+                getId().toString(),
+                snapshot,
+                SelectionVisualFeedback.SelectionState.SELECTED
+            );
+        } else {
+            SelectionVisualFeedback.getInstance().clearFeedback(getId().toString());
         }
 
         if (!autoPreviewPath || snapshot.size() < 2) {
@@ -485,7 +473,6 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         }
 
         PreviewManager.hideNodePreviews(getId().toString());
-        blockPreviewId = null;
         pathPreviewId = null;
 
         synchronized (pickedBlocks) {
@@ -538,7 +525,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             NodeEditorInteractionManager.getInstance().cancelBlockPick();
         }
         PreviewManager.hideNodePreviews(getId().toString());
-        blockPreviewId = null;
         pathPreviewId = null;
+        SelectionVisualFeedback.getInstance().clearFeedback(getId().toString());
     }
 }

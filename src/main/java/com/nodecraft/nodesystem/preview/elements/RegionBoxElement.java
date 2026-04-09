@@ -22,7 +22,11 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     private volatile List<BoundingBox> regions = new ArrayList<>();
     private Vector3f color = new Vector3f(0.2f, 0.7f, 1.0f);
+    private Vector3f fillColor = new Vector3f(0.2f, 0.7f, 1.0f);
     private boolean enablePulse = false;
+    private boolean showFill = false;
+    private boolean showOutline = true;
+    private float lineWidth = 2.0f;
 
     public RegionBoxElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
@@ -31,8 +35,20 @@ public class RegionBoxElement extends AbstractPreviewElement {
         if (options.color != null) {
             this.color = new Vector3f(options.color);
         }
+        if (options.tintColor != null) {
+            this.fillColor = new Vector3f(options.tintColor);
+        }
         if (options.pulseAnimation != null) {
             this.enablePulse = options.pulseAnimation;
+        }
+        if (options.showFill != null) {
+            this.showFill = options.showFill;
+        }
+        if (options.showOutline != null) {
+            this.showOutline = options.showOutline;
+        }
+        if (options.lineWidth != null) {
+            this.lineWidth = Math.max(0.25f, options.lineWidth);
         }
     }
 
@@ -99,16 +115,32 @@ public class RegionBoxElement extends AbstractPreviewElement {
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
-        VertexConsumer vertexConsumer = immediate.getBuffer(RenderLayers.lines());
+        VertexConsumerProvider provider = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        VertexConsumerProvider.Immediate immediate = null;
+        boolean flushImmediately = false;
+        if (provider == null) {
+            immediate = client.getBufferBuilders().getEntityVertexConsumers();
+            provider = immediate;
+            flushImmediately = true;
+        }
+
+        VertexConsumer lineVertexConsumer = showOutline ? provider.getBuffer(RenderLayers.lines()) : null;
+        VertexConsumer fillVertexConsumer = showFill ? provider.getBuffer(RenderLayers.debugFilledBox()) : null;
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
         for (BoundingBox region : regionsSnapshot) {
-            drawBox(vertexConsumer, matrix, region, cameraPos, finalOpacity);
+            if (showFill && fillVertexConsumer != null) {
+                drawFilledBox(fillVertexConsumer, matrix, region, cameraPos, finalOpacity * 0.6f);
+            }
+            if (showOutline && lineVertexConsumer != null) {
+                drawBox(lineVertexConsumer, matrix, region, cameraPos, finalOpacity);
+            }
         }
 
-        immediate.draw();
+        if (flushImmediately && immediate != null) {
+            immediate.draw();
+        }
     }
 
     private void drawBox(VertexConsumer vertexConsumer, Matrix4f matrix, BoundingBox box, Vec3d cameraPos, float alpha) {
@@ -147,10 +179,50 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
         vertexConsumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
+    }
+
+    private void drawFilledBox(VertexConsumer vertexConsumer, Matrix4f matrix, BoundingBox box, Vec3d cameraPos, float alpha) {
+        float minX = (float) (box.min.x - cameraPos.x);
+        float minY = (float) (box.min.y - cameraPos.y);
+        float minZ = (float) (box.min.z - cameraPos.z);
+        float maxX = (float) (box.max.x - cameraPos.x);
+        float maxY = (float) (box.max.y - cameraPos.y);
+        float maxZ = (float) (box.max.z - cameraPos.z);
+
+        // Bottom
+        quad(vertexConsumer, matrix, minX, minY, minZ, maxX, minY, minZ, maxX, minY, maxZ, minX, minY, maxZ, alpha);
+        // Top
+        quad(vertexConsumer, matrix, minX, maxY, minZ, maxX, maxY, minZ, maxX, maxY, maxZ, minX, maxY, maxZ, alpha);
+        // North
+        quad(vertexConsumer, matrix, minX, minY, minZ, maxX, minY, minZ, maxX, maxY, minZ, minX, maxY, minZ, alpha);
+        // South
+        quad(vertexConsumer, matrix, minX, minY, maxZ, maxX, minY, maxZ, maxX, maxY, maxZ, minX, maxY, maxZ, alpha);
+        // West
+        quad(vertexConsumer, matrix, minX, minY, minZ, minX, minY, maxZ, minX, maxY, maxZ, minX, maxY, minZ, alpha);
+        // East
+        quad(vertexConsumer, matrix, maxX, minY, minZ, maxX, minY, maxZ, maxX, maxY, maxZ, maxX, maxY, minZ, alpha);
+    }
+
+    private void quad(
+        VertexConsumer vertexConsumer,
+        Matrix4f matrix,
+        float x1, float y1, float z1,
+        float x2, float y2, float z2,
+        float x3, float y3, float z3,
+        float x4, float y4, float z4,
+        float alpha
+    ) {
+        Vector3f normal = new Vector3f(0.0f, 1.0f, 0.0f);
+        vertexConsumer.vertex(matrix, x1, y1, z1).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
+        vertexConsumer.vertex(matrix, x2, y2, z2).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
+        vertexConsumer.vertex(matrix, x3, y3, z3).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
+        vertexConsumer.vertex(matrix, x4, y4, z4).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
     }
 
     @Override
