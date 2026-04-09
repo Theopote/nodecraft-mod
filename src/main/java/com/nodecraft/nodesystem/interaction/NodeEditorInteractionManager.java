@@ -1556,6 +1556,15 @@ public class NodeEditorInteractionManager {
     public void requestEntityPicking(String nodeId, IEntityPickerCallback callback) {
         requestInteraction(EditorInteractionMode.ENTITY_PICKING, nodeId, callback);
     }
+
+    /**
+     * 请求区域选择（两点框选）
+     * @param nodeId 请求选择的节点ID
+     * @param callback 区域选择回调
+     */
+    public void requestAreaSelection(String nodeId, IAreaSelectionCallback callback) {
+        requestInteraction(EditorInteractionMode.AREA_SELECTION, nodeId, callback);
+    }
     
     // ================= 拾取请求管理（向后兼容） =================
     
@@ -1596,10 +1605,27 @@ public class NodeEditorInteractionManager {
     }
 
     /**
+     * 取消区域选择（仅当当前处于区域选择模式时生效）
+     */
+    public void cancelAreaSelection() {
+        if (interactionState.getMode() == EditorInteractionMode.AREA_SELECTION) {
+            cancelCurrentInteraction();
+        }
+    }
+
+    /**
      * 检查指定节点是否在等待拾取
      */
     public boolean isPendingBlockPick(String nodeId) {
         return interactionState.isPendingBlockPick(nodeId);
+    }
+
+    /**
+     * 检查指定节点是否正在等待区域选择
+     */
+    public boolean isPendingAreaSelection(String nodeId) {
+        return interactionState.getMode() == EditorInteractionMode.AREA_SELECTION
+            && interactionState.isCurrentInteractionNode(nodeId);
     }
 
     /**

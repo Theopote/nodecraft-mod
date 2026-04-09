@@ -1,12 +1,13 @@
 package com.nodecraft.nodesystem.nodes.inputs.minecraft;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
+import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import com.nodecraft.nodesystem.minecraft.PlayerAccessor;
+import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.Vector3;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
@@ -50,6 +51,49 @@ public class SelectedRegionNode extends BaseCustomUINode {
 
     private volatile Vector3 pos1;
     private volatile Vector3 pos2;
+    private volatile boolean selecting = false;
+    private volatile boolean waitingSecondPoint = false;
+    private volatile String selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
+
+    private final AreaSelectionCallback areaSelectionCallback = new AreaSelectionCallback();
+
+    private class AreaSelectionCallback implements NodeEditorInteractionManager.IAreaSelectionCallback {
+        @Override
+        public void onAreaSelected(Coordinate startPos, Coordinate endPos) {
+            pos1 = new Vector3(startPos.getX(), startPos.getY(), startPos.getZ());
+            pos2 = new Vector3(endPos.getX(), endPos.getY(), endPos.getZ());
+            selecting = false;
+            waitingSecondPoint = false;
+            selectionHint = "框选完成";
+            updateOutputsFromPositions();
+            invalidateCache();
+            markDirty();
+        }
+
+        @Override
+        public void onFirstPointSelected(Coordinate position) {
+            pos1 = new Vector3(position.getX(), position.getY(), position.getZ());
+            pos2 = null;
+            selecting = true;
+            waitingSecondPoint = true;
+            selectionHint = "已选第一个点，请选择第二个点";
+            outputValues.put(OUTPUT_POS1_ID, pos1);
+            outputValues.put(OUTPUT_POS1_X_ID, (int) pos1.getX());
+            outputValues.put(OUTPUT_POS1_Y_ID, (int) pos1.getY());
+            outputValues.put(OUTPUT_POS1_Z_ID, (int) pos1.getZ());
+            outputValues.put(OUTPUT_HAS_SELECTION_ID, false);
+            invalidateCache();
+            markDirty();
+        }
+
+        @Override
+        public void onInteractionCancelled() {
+            selecting = false;
+            waitingSecondPoint = false;
+            selectionHint = "框选已取消";
+            markDirty();
+        }
+    }
 
     public SelectedRegionNode() {
         super(UUID.randomUUID(), "inputs.minecraft.selected_region");
@@ -80,24 +124,21 @@ public class SelectedRegionNode extends BaseCustomUINode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        if (context == null) {
-            if (pos1 == null || pos2 == null) {
-                resetOutputs();
-            } else {
-                updateOutputsFromPositions();
+        boolean pending = NodeEditorInteractionManager.getInstance().isPendingAreaSelection(getId().toString());
+        if (selecting != pending) {
+            selecting = pending;
+            if (!pending && waitingSecondPoint) {
+                waitingSecondPoint = false;
             }
-            return;
+            markDirty();
         }
 
-        if (autoUpdate) {
-            PlayerAccessor playerAccessor = context.getPlayerAccessor();
-            if (playerAccessor == null) {
-                if (pos1 == null || pos2 == null) {
-                    resetOutputs();
-                }
-                return;
+        if (pos1 == null || pos2 == null) {
+            // 保留 pos1 临时状态，完整输出由 updateOutputsFromPositions 产生
+            if (pos1 == null) {
+                resetOutputs();
             }
-            fetchSelectionFromPlayer(playerAccessor);
+            return;
         }
 
         updateOutputsFromPositions();
@@ -106,7 +147,10 @@ public class SelectedRegionNode extends BaseCustomUINode {
     @Override
     protected float calculateUIHeight() {
         float height = getSmallPadding();
-        height += ImGui.getFrameHeight();
+        height += ImGui.getTextLineHeightWithSpacing();
+        height += ImGui.getFrameHeight() * 3.0f;
+        height += getSmallPadding();
+        height += ImGui.getTextLineHeightWithSpacing() * 2.0f;
         height += getSmallPadding();
         return height;
     }
@@ -114,7 +158,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     @Override
     protected float calculateMinUIWidth() {
         float buttonPadding = 20.0f;
-        float labelWidth = ImGui.calcTextSize("Clear Selection").x;
+        float labelWidth = ImGui.calcTextSize("开始框选区域").x;
         return Math.max(144.0f, labelWidth + buttonPadding);
     }
 
@@ -126,6 +170,34 @@ public class SelectedRegionNode extends BaseCustomUINode {
             float edgeMargin = layout.toPixels(getSmallPadding());
             float buttonWidth = Math.max(0.0f, layout.toPixelsExact(width) - edgeMargin * 2.0f);
             float baseCursorX = ImGui.getCursorPosX();
+
+            layout.addVerticalSpacing(getSmallPadding());
+
+            ImGui.textWrapped(selectionHint);
+
+            layout.addVerticalSpacing(getSmallPadding());
+
+            if (!selecting) {
+                ImGui.pushStyleColor(ImGuiCol.Button, 0xFF2E7D32);
+                ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF388E3C);
+                ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF1B5E20);
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
+                if (ImGui.button("开始框选区域##start_area_pick", buttonWidth, 0)) {
+                    startAreaSelection();
+                    changed = true;
+                }
+                ImGui.popStyleColor(3);
+            } else {
+                ImGui.pushStyleColor(ImGuiCol.Button, 0xFF8A6D1A);
+                ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF9C7C1F);
+                ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF6E560D);
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
+                if (ImGui.button("取消框选##cancel_area_pick", buttonWidth, 0)) {
+                    cancelAreaSelection();
+                    changed = true;
+                }
+                ImGui.popStyleColor(3);
+            }
 
             layout.addVerticalSpacing(getSmallPadding());
 
@@ -150,14 +222,38 @@ public class SelectedRegionNode extends BaseCustomUINode {
             }
 
             layout.addVerticalSpacing(getSmallPadding());
+
+            if (pos1 != null) {
+                ImGui.text("Pos1: (" + (int) pos1.getX() + ", " + (int) pos1.getY() + ", " + (int) pos1.getZ() + ")");
+            } else {
+                ImGui.textDisabled("Pos1: 未设置");
+            }
+            if (pos2 != null) {
+                ImGui.text("Pos2: (" + (int) pos2.getX() + ", " + (int) pos2.getY() + ", " + (int) pos2.getZ() + ")");
+            } else if (waitingSecondPoint) {
+                ImGui.textDisabled("Pos2: 等待第二个点...");
+            } else {
+                ImGui.textDisabled("Pos2: 未设置");
+            }
+
             return changed;
         });
     }
 
-    private void fetchSelectionFromPlayer(PlayerAccessor playerAccessor) {
-        Vector3 playerPos = playerAccessor.getPlayerPosition();
-        pos1 = new Vector3(playerPos.getX() - 2, playerPos.getY() - 2, playerPos.getZ() - 2);
-        pos2 = new Vector3(playerPos.getX() + 2, playerPos.getY() + 2, playerPos.getZ() + 2);
+    private void startAreaSelection() {
+        selecting = true;
+        waitingSecondPoint = false;
+        selectionHint = "请选择第一个点";
+        NodeEditorInteractionManager.getInstance().requestAreaSelection(getId().toString(), areaSelectionCallback);
+        markDirty();
+    }
+
+    private void cancelAreaSelection() {
+        NodeEditorInteractionManager.getInstance().cancelAreaSelection();
+        selecting = false;
+        waitingSecondPoint = false;
+        selectionHint = "框选已取消";
+        markDirty();
     }
 
     public void setPos1(int x, int y, int z) {
@@ -191,8 +287,14 @@ public class SelectedRegionNode extends BaseCustomUINode {
     }
 
     public void clearSelection() {
+        if (NodeEditorInteractionManager.getInstance().isPendingAreaSelection(getId().toString())) {
+            NodeEditorInteractionManager.getInstance().cancelAreaSelection();
+        }
         pos1 = null;
         pos2 = null;
+        selecting = false;
+        waitingSecondPoint = false;
+        selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
         resetOutputs();
         invalidateCache();
         markDirty();
@@ -264,6 +366,12 @@ public class SelectedRegionNode extends BaseCustomUINode {
         }
     }
 
+    public void onNodeRemoved() {
+        if (NodeEditorInteractionManager.getInstance().isPendingAreaSelection(getId().toString())) {
+            NodeEditorInteractionManager.getInstance().cancelAreaSelection();
+        }
+    }
+
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
@@ -322,6 +430,10 @@ public class SelectedRegionNode extends BaseCustomUINode {
             } else {
                 resetOutputs();
             }
+
+            selecting = false;
+            waitingSecondPoint = false;
+            selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
         }
     }
 }
