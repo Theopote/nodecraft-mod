@@ -211,9 +211,11 @@ public class NodeEditorInteractionManager {
         @Override
         public void onUpdate(Coordinate hoveredBlock, BlockHitResult hitResult, 
                            boolean isLeftMouseClicked, boolean isRightMouseClicked) {
-            // 调试信息：记录方块拾取处理器的更新（临时使用INFO级别）
-            NodeCraft.LOGGER.info("BlockPickingHandler.onUpdate() - 悬停方块:{} 左键:{} 右键:{}", 
-                hoveredBlock, isLeftMouseClicked, isRightMouseClicked);
+            // 在交互模式下会每帧调用，这里只保留 debug 级别以避免日志刷屏。
+            if (NodeCraft.LOGGER.isDebugEnabled() && (isLeftMouseClicked || isRightMouseClicked)) {
+                NodeCraft.LOGGER.debug("BlockPickingHandler.onUpdate() - 悬停方块:{} 左键:{} 右键:{}", 
+                    hoveredBlock, isLeftMouseClicked, isRightMouseClicked);
+            }
 
             if (isRightMouseClicked) {
                 NodeCraft.LOGGER.info("方块拾取通过右键结束");
@@ -1473,7 +1475,7 @@ public class NodeEditorInteractionManager {
             // 检查是否点击在ImGui窗口上
 
             // 使用处理器系统处理交互
-            if ((isLeftMouseClicked || isRightMouseClicked) && interactionState.isInInteractionMode()) {
+            if (interactionState.isInInteractionMode()) {
                 EditorInteractionMode currentMode = interactionState.getMode();
                 InteractionModeHandler handler = modeHandlers.get(currentMode);
                 

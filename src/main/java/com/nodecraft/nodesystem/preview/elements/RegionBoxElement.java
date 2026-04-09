@@ -6,6 +6,8 @@ import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.LightmapTextureManager;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
@@ -27,6 +29,7 @@ public class RegionBoxElement extends AbstractPreviewElement {
     private boolean showFill = false;
     private boolean showOutline = true;
     private float lineWidth = 2.0f;
+    private static final float OUTLINE_EXPAND = 0.003f;
 
     public RegionBoxElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
@@ -144,8 +147,8 @@ public class RegionBoxElement extends AbstractPreviewElement {
     }
 
     private void drawBox(VertexConsumer vertexConsumer, Matrix4f matrix, BoundingBox box, Vec3d cameraPos, float alpha) {
-        Vec3d min = box.min.subtract(cameraPos);
-        Vec3d max = box.max.subtract(cameraPos);
+        Vec3d min = box.min.subtract(cameraPos).subtract(OUTLINE_EXPAND, OUTLINE_EXPAND, OUTLINE_EXPAND);
+        Vec3d max = box.max.subtract(cameraPos).add(OUTLINE_EXPAND, OUTLINE_EXPAND, OUTLINE_EXPAND);
 
         Vec3d[] vertices = new Vec3d[] {
             new Vec3d(min.x, min.y, min.z),
@@ -218,11 +221,38 @@ public class RegionBoxElement extends AbstractPreviewElement {
         float x4, float y4, float z4,
         float alpha
     ) {
-        Vector3f normal = new Vector3f(0.0f, 1.0f, 0.0f);
-        vertexConsumer.vertex(matrix, x1, y1, z1).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
-        vertexConsumer.vertex(matrix, x2, y2, z2).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
-        vertexConsumer.vertex(matrix, x3, y3, z3).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
-        vertexConsumer.vertex(matrix, x4, y4, z4).color(fillColor.x(), fillColor.y(), fillColor.z(), alpha).normal(normal.x, normal.y, normal.z);
+        Vector3f normal = new Vector3f(
+            ((y2 - y1) * (z3 - z1)) - ((z2 - z1) * (y3 - y1)),
+            ((z2 - z1) * (x3 - x1)) - ((x2 - x1) * (z3 - z1)),
+            ((x2 - x1) * (y3 - y1)) - ((y2 - y1) * (x3 - x1))
+        );
+        if (normal.lengthSquared() < 1.0e-8f) {
+            normal.set(0.0f, 1.0f, 0.0f);
+        } else {
+            normal.normalize();
+        }
+
+        fullBrightVertex(vertexConsumer, matrix, x1, y1, z1, alpha, normal);
+        fullBrightVertex(vertexConsumer, matrix, x2, y2, z2, alpha, normal);
+        fullBrightVertex(vertexConsumer, matrix, x3, y3, z3, alpha, normal);
+        fullBrightVertex(vertexConsumer, matrix, x4, y4, z4, alpha, normal);
+    }
+
+    private void fullBrightVertex(
+        VertexConsumer vertexConsumer,
+        Matrix4f matrix,
+        float x,
+        float y,
+        float z,
+        float alpha,
+        Vector3f normal
+    ) {
+        vertexConsumer.vertex(matrix, x, y, z)
+            .color(fillColor.x(), fillColor.y(), fillColor.z(), alpha)
+            .texture(0.5f, 0.5f)
+            .overlay(OverlayTexture.DEFAULT_UV)
+            .light(LightmapTextureManager.MAX_LIGHT_COORDINATE)
+            .normal(normal.x, normal.y, normal.z);
     }
 
     @Override

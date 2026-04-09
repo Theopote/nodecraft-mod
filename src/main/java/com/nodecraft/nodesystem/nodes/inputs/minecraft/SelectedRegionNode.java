@@ -16,7 +16,9 @@ import imgui.flag.ImGuiCol;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -58,6 +60,8 @@ public class SelectedRegionNode extends BaseCustomUINode {
     private volatile boolean waitingSecondPoint = false;
     private volatile String selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
     private volatile String completedRegionPreviewId;
+    private volatile String completedBlocksPreviewId;
+    private static final int MAX_BLOCK_PREVIEW_COUNT = 8192;
 
     private final AreaSelectionCallback areaSelectionCallback = new AreaSelectionCallback();
 
@@ -83,6 +87,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             waitingSecondPoint = true;
             selectionHint = "已选第一个点，请选择第二个点";
             clearCompletedRegionPreview();
+            clearCompletedBlocksPreview();
             outputValues.put(OUTPUT_POS1_ID, pos1);
             outputValues.put(OUTPUT_POS1_X_ID, (int) pos1.getX());
             outputValues.put(OUTPUT_POS1_Y_ID, (int) pos1.getY());
@@ -299,6 +304,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             NodeEditorInteractionManager.getInstance().cancelAreaSelection();
         }
         clearCompletedRegionPreview();
+        clearCompletedBlocksPreview();
         pos1 = null;
         pos2 = null;
         selecting = false;
@@ -380,6 +386,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             NodeEditorInteractionManager.getInstance().cancelAreaSelection();
         }
         clearCompletedRegionPreview();
+        clearCompletedBlocksPreview();
     }
 
     @Override
@@ -452,6 +459,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     private void syncCompletedRegionPreview() {
         if (pos1 == null || pos2 == null) {
             clearCompletedRegionPreview();
+            clearCompletedBlocksPreview();
             return;
         }
 
@@ -475,6 +483,8 @@ public class SelectedRegionNode extends BaseCustomUINode {
             PreviewManager.updatePreview(completedRegionPreviewId, regionData);
             PreviewManager.updatePreviewOptions(completedRegionPreviewId, options);
         }
+
+        syncCompletedBlocksPreview();
     }
 
     private PreviewOptions createCompletedRegionPreviewOptions() {
@@ -508,6 +518,59 @@ public class SelectedRegionNode extends BaseCustomUINode {
         if (completedRegionPreviewId != null) {
             PreviewManager.hidePreview(completedRegionPreviewId);
             completedRegionPreviewId = null;
+        }
+    }
+
+    private void syncCompletedBlocksPreview() {
+        if (pos1 == null || pos2 == null) {
+            clearCompletedBlocksPreview();
+            return;
+        }
+
+        int minX = (int) Math.min(pos1.getX(), pos2.getX());
+        int minY = (int) Math.min(pos1.getY(), pos2.getY());
+        int minZ = (int) Math.min(pos1.getZ(), pos2.getZ());
+        int maxX = (int) Math.max(pos1.getX(), pos2.getX());
+        int maxY = (int) Math.max(pos1.getY(), pos2.getY());
+        int maxZ = (int) Math.max(pos1.getZ(), pos2.getZ());
+
+        int sizeX = maxX - minX + 1;
+        int sizeY = maxY - minY + 1;
+        int sizeZ = maxZ - minZ + 1;
+        long total = (long) sizeX * sizeY * sizeZ;
+
+        if (total <= 0 || total > MAX_BLOCK_PREVIEW_COUNT) {
+            clearCompletedBlocksPreview();
+            return;
+        }
+
+        List<Coordinate> blocks = new ArrayList<>((int) total);
+        for (int x = minX; x <= maxX; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = minZ; z <= maxZ; z++) {
+                    blocks.add(new Coordinate(x, y, z));
+                }
+            }
+        }
+
+        PreviewOptions options = createCompletedRegionPreviewOptions()
+            .setShowFill(true)
+            .setShowOutline(true)
+            .setLineWidth(Math.max(1.8f, NodeEditorInteractionManager.getInstance().getAreaPreviewLineWidth()))
+            .setOpacity(Math.max(0.2f, NodeEditorInteractionManager.getInstance().getAreaPreviewOpacity()));
+
+        if (completedBlocksPreviewId == null) {
+            completedBlocksPreviewId = PreviewManager.highlightBlocks(getId().toString(), blocks, options);
+        } else {
+            PreviewManager.updatePreview(completedBlocksPreviewId, blocks);
+            PreviewManager.updatePreviewOptions(completedBlocksPreviewId, options);
+        }
+    }
+
+    private void clearCompletedBlocksPreview() {
+        if (completedBlocksPreviewId != null) {
+            PreviewManager.hidePreview(completedBlocksPreviewId);
+            completedBlocksPreviewId = null;
         }
     }
 }
