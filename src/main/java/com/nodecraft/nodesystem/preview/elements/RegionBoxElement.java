@@ -127,17 +127,17 @@ public class RegionBoxElement extends AbstractPreviewElement {
             flushImmediately = true;
         }
 
-        VertexConsumer lineVertexConsumer = showOutline ? provider.getBuffer(RenderLayers.lines()) : null;
+        VertexConsumer lineVertexConsumer = showOutline ? provider.getBuffer(RenderLayers.LINES) : null;
         VertexConsumer fillVertexConsumer = showFill ? provider.getBuffer(RenderLayers.debugFilledBox()) : null;
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
 
         for (BoundingBox region : regionsSnapshot) {
             if (showFill && fillVertexConsumer != null) {
-                drawFilledBox(fillVertexConsumer, matrix, region, cameraPos, finalOpacity * 0.6f);
+                drawFilledBox(fillVertexConsumer, matrix, region, cameraPos, Math.max(0.16f, finalOpacity * 0.58f));
             }
             if (showOutline && lineVertexConsumer != null) {
-                drawBox(lineVertexConsumer, matrix, region, cameraPos, finalOpacity);
+                drawBox(lineVertexConsumer, matrix, region, cameraPos, Math.max(0.9f, finalOpacity));
             }
         }
 
@@ -236,6 +236,13 @@ public class RegionBoxElement extends AbstractPreviewElement {
         fullBrightVertex(vertexConsumer, matrix, x2, y2, z2, alpha, normal);
         fullBrightVertex(vertexConsumer, matrix, x3, y3, z3, alpha, normal);
         fullBrightVertex(vertexConsumer, matrix, x4, y4, z4, alpha, normal);
+
+        // Draw reversed winding to keep fill visible even if current layer/state culls back faces.
+        Vector3f opposite = new Vector3f(normal).mul(-1.0f);
+        fullBrightVertex(vertexConsumer, matrix, x4, y4, z4, alpha, opposite);
+        fullBrightVertex(vertexConsumer, matrix, x3, y3, z3, alpha, opposite);
+        fullBrightVertex(vertexConsumer, matrix, x2, y2, z2, alpha, opposite);
+        fullBrightVertex(vertexConsumer, matrix, x1, y1, z1, alpha, opposite);
     }
 
     private void fullBrightVertex(

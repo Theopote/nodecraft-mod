@@ -74,14 +74,14 @@ public class NodeEditorInteractionManager {
     private volatile boolean areaPreviewShowFill = true;
     private volatile boolean areaPreviewShowOutline = true;
     private volatile boolean areaPreviewEnablePulse = false;
-    private volatile float areaPreviewLineWidth = 2.0f;
-    private volatile float areaPreviewOpacity = 0.25f;
+    private volatile float areaPreviewLineWidth = 2.6f;
+    private volatile float areaPreviewOpacity = 0.38f;
     private volatile float areaPreviewOutlineR = 1.0f;
-    private volatile float areaPreviewOutlineG = 1.0f;
-    private volatile float areaPreviewOutlineB = 0.0f;
+    private volatile float areaPreviewOutlineG = 0.82f;
+    private volatile float areaPreviewOutlineB = 0.27f;
     private volatile float areaPreviewFillR = 1.0f;
-    private volatile float areaPreviewFillG = 0.8f;
-    private volatile float areaPreviewFillB = 0.1f;
+    private volatile float areaPreviewFillG = 0.72f;
+    private volatile float areaPreviewFillB = 0.22f;
     
     /**
      * 编辑器交互模式枚举
@@ -295,6 +295,7 @@ public class NodeEditorInteractionManager {
     private class AreaSelectionHandler implements InteractionModeHandler {
         private IAreaSelectionCallback currentCallback;
         private Coordinate firstPoint = null;
+        private Coordinate lastHoverPoint = null;
         private String firstPointPreviewId = null;
         private String areaPreviewId = null;
         
@@ -306,6 +307,7 @@ public class NodeEditorInteractionManager {
 
             this.currentCallback = (IAreaSelectionCallback) callback;
             this.firstPoint = null;
+            this.lastHoverPoint = null;
             
             MinecraftClientController.getInstance().showHudMessage(getHintMessage());
             NodeCraft.LOGGER.info("节点 {} 进入区域选择模式", nodeId);
@@ -314,6 +316,10 @@ public class NodeEditorInteractionManager {
         @Override
         public void onUpdate(Coordinate hoveredBlock, BlockHitResult hitResult, 
                            boolean isLeftMouseClicked, boolean isRightMouseClicked) {
+            if (hoveredBlock != null) {
+                lastHoverPoint = hoveredBlock;
+            }
+
             if (isLeftMouseClicked && hoveredBlock != null) {
                 if (firstPoint == null) {
                     // 选择第一个点
@@ -352,8 +358,11 @@ public class NodeEditorInteractionManager {
             }
             
             // 更新区域预览
-            if (firstPoint != null && hoveredBlock != null) {
-                updateAreaPreview(firstPoint, hoveredBlock);
+            if (firstPoint != null) {
+                Coordinate previewEnd = hoveredBlock != null ? hoveredBlock : lastHoverPoint;
+                if (previewEnd != null) {
+                    updateAreaPreview(firstPoint, previewEnd);
+                }
             } else {
                 clearAreaPreview();
             }
@@ -369,6 +378,7 @@ public class NodeEditorInteractionManager {
             NodeCraft.LOGGER.info("区域选择已取消");
             currentCallback = null;
             firstPoint = null;
+            lastHoverPoint = null;
         }
 
         @Override
@@ -377,6 +387,7 @@ public class NodeEditorInteractionManager {
             MinecraftClientController.getInstance().clearHudMessage();
             currentCallback = null;
             firstPoint = null;
+            lastHoverPoint = null;
         }
         
         @Override
@@ -417,9 +428,8 @@ public class NodeEditorInteractionManager {
                 .setTintColor(areaPreviewFillR, areaPreviewFillG, areaPreviewFillB)
                 .setOpacity(areaPreviewOpacity)
                 .setLineWidth(areaPreviewLineWidth)
-                .setShowFill(areaPreviewShowFill)
-                .setShowOutline(areaPreviewShowOutline || !areaPreviewShowFill)
-                .setDuration(1);
+                .setShowFill(true)
+                .setShowOutline(true);
 
             if (areaPreviewEnablePulse) {
                 options.enablePulse();
@@ -828,14 +838,14 @@ public class NodeEditorInteractionManager {
         this.areaPreviewShowFill = true;
         this.areaPreviewShowOutline = true;
         this.areaPreviewEnablePulse = false;
-        this.areaPreviewLineWidth = 2.0f;
-        this.areaPreviewOpacity = 0.25f;
+        this.areaPreviewLineWidth = 2.6f;
+        this.areaPreviewOpacity = 0.38f;
         this.areaPreviewOutlineR = 1.0f;
-        this.areaPreviewOutlineG = 1.0f;
-        this.areaPreviewOutlineB = 0.0f;
+        this.areaPreviewOutlineG = 0.82f;
+        this.areaPreviewOutlineB = 0.27f;
         this.areaPreviewFillR = 1.0f;
-        this.areaPreviewFillG = 0.8f;
-        this.areaPreviewFillB = 0.1f;
+        this.areaPreviewFillG = 0.72f;
+        this.areaPreviewFillB = 0.22f;
     }
     
     // ================= 新增：鼠标射线投射 =================
