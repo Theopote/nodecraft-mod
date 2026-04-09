@@ -1,6 +1,5 @@
 package com.nodecraft.nodesystem.preview;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.preview.elements.*;
 import net.minecraft.client.MinecraftClient;
@@ -253,11 +252,6 @@ public class PreviewRenderer {
         return activeElements.size();
     }
 
-    public boolean isAnyPreviewActive(String ownerNodeId) {
-        List<String> previews = nodeToPreviewsMap.get(ownerNodeId);
-        return previews != null && !previews.isEmpty();
-    }
-    
     /**
      * 在 Minecraft 的世界渲染事件中被调用，绘制所有注册的预览
      */
@@ -432,8 +426,7 @@ public class PreviewRenderer {
      */
     public AbstractPreviewElement pickElement(Vec3d rayStart, Vec3d rayDirection, double maxDistance) {
         for (AbstractPreviewElement element : activeElements.values()) {
-            if (element instanceof InteractivePreviewElement) {
-                InteractivePreviewElement interactive = (InteractivePreviewElement) element;
+            if (element instanceof InteractivePreviewElement interactive) {
                 if (interactive.intersectsRay(rayStart, rayDirection, maxDistance)) {
                     return element;
                 }
@@ -441,18 +434,7 @@ public class PreviewRenderer {
         }
         return null;
     }
-    
-    /**
-     * 处理鼠标点击事件
-     */
-    public boolean handleMouseClick(Vec3d rayStart, Vec3d rayDirection, double maxDistance, int button) {
-        AbstractPreviewElement picked = pickElement(rayStart, rayDirection, maxDistance);
-        if (picked instanceof InteractivePreviewElement) {
-            return ((InteractivePreviewElement) picked).onMouseClick(rayStart, rayDirection, button);
-        }
-        return false;
-    }
-    
+
     /**
      * 处理鼠标拖拽事件
      */
@@ -480,11 +462,7 @@ public class PreviewRenderer {
         }
         return counts;
     }
-    
-    public List<String> getActiveNodeIds() {
-        return new CopyOnWriteArrayList<>(nodeToPreviewsMap.keySet());
-    }
-    
+
     // ================= SelectedBlockNode 兼容方法 =================
     
     /**

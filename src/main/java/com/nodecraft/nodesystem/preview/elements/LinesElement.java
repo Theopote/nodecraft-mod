@@ -26,7 +26,6 @@ public class LinesElement extends AbstractPreviewElement {
     private volatile List<Vec3d> points = new ArrayList<>();
     private static final AtomicLong lastDebugLog = new AtomicLong(0);
     private Vector3f color = new Vector3f(1.0f, 0.85f, 0.2f);
-    private boolean smoothCurves = false;
     private float lineWidth = 1.5f;
     private boolean showDirection = false;
     private float arrowSize = 0.25f;
@@ -39,7 +38,7 @@ public class LinesElement extends AbstractPreviewElement {
             this.color = new Vector3f(options.color);
         }
         if (options.smoothCurves != null) {
-            this.smoothCurves = options.smoothCurves;
+            boolean smoothCurves = options.smoothCurves;
         }
         if (options.lineWidth != null) {
             this.lineWidth = Math.max(0.25f, options.lineWidth);
@@ -122,7 +121,7 @@ public class LinesElement extends AbstractPreviewElement {
 
         if (showDirection && pointsSnapshot.size() >= 2) {
             Vec3d start = pointsSnapshot.get(pointsSnapshot.size() - 2).subtract(cameraPos);
-            Vec3d end = pointsSnapshot.get(pointsSnapshot.size() - 1).subtract(cameraPos);
+            Vec3d end = pointsSnapshot.getLast().subtract(cameraPos);
             VertexConsumer arrowConsumer = provider.getBuffer(RenderLayers.LINES);
             drawArrowHead(arrowConsumer, matrix, start, end, finalOpacity);
         }
