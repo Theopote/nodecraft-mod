@@ -379,6 +379,15 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             
             // 更新幽灵方块预览
             updateGhostBlockPreview();
+
+            // 输入坐标驱动的选中也显示方块高亮（与交互拾取保持一致）。
+            if (isNodeVisibleInGame()) {
+                SelectionVisualFeedback.getInstance().showBlockSelection(
+                    getId().toString(),
+                    position,
+                    SelectionVisualFeedback.SelectionState.SELECTED
+                );
+            }
             updateOutputsWithPickedBlock();
             
             NodeCraft.LOGGER.debug("节点 {} 从输入坐标获取方块: {} at {}", getId(), blockId, position);
@@ -401,6 +410,9 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
             
             // 隐藏幽灵方块预览
             hideGhostBlockPreview();
+
+            // 同步清理输入坐标驱动的方块高亮。
+            SelectionVisualFeedback.getInstance().clearFeedback(getId().toString());
             
             NodeCraft.LOGGER.debug("节点 {} 清除输入方块数据", getId());
         }
