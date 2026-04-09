@@ -274,8 +274,8 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             return;
         }
 
-        // Draw preview paths slightly above block tops to avoid depth occlusion inside solids.
-        final double previewYOffset = 1.08d;
+        // Use geometric centers so preview path semantics match output polyline data.
+        final double previewYOffset = 0.5d;
         List<Vec3d> points = new ArrayList<>();
         for (Coordinate coordinate : snapshot) {
             points.add(new Vec3d(
