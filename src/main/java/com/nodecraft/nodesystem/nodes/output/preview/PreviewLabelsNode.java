@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_labels",
+    id = "output.preview.preview_labels",
     displayName = "Preview Labels",
     description = "Displays a text label at a reference position",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewLabelsNode extends BaseNode {
 
@@ -46,7 +46,7 @@ public class PreviewLabelsNode extends BaseNode {
     private int duration = 30;
 
     public PreviewLabelsNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_labels");
+        super(UUID.randomUUID(), "output.preview.preview_labels");
         addInputPort(new BasePort(INPUT_POSITION_ID, "Position", "Label position", NodeDataType.BLOCK_POS, this));
         addInputPort(new BasePort(INPUT_TEXT_ID, "Text", "Label text", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether the preview was shown", NodeDataType.BOOLEAN, this));

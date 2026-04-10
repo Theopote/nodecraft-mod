@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -11,10 +11,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.clear_all_previews",
-    displayName = "Clear All Previews",
+    id = "output.execute.clear_preview",
+    displayName = "Clear Preview",
     description = "Clears all active previews in the current world",
-    category = "visualization.preview"
+    category = "output.execute"
 )
 public class ClearAllPreviewsNode extends BaseCustomUINode {
 
@@ -25,7 +25,7 @@ public class ClearAllPreviewsNode extends BaseCustomUINode {
     private int lastClearedCount = 0;
 
     public ClearAllPreviewsNode() {
-        super(UUID.randomUUID(), "visualization.preview.clear_all_previews");
+        super(UUID.randomUUID(), "output.execute.clear_preview");
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "Any non-null value triggers preview cleanup", NodeDataType.ANY, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether previews were cleared", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_CLEARED_COUNT_ID, "Cleared Count", "Number of previews removed", NodeDataType.INTEGER, this));

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.execute;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -35,10 +35,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Applies voxelized geometry or explicit placements to the world.
  */
 @NodeInfo(
-    id = "visualization.execute.apply_changes",
+    id = "output.execute.apply_changes",
     displayName = "Apply Changes",
     description = "Applies explicit placements or voxelized geometry to the world.",
-    category = "visualization.execute"
+    category = "output.execute"
 )
 public class ApplyChangesNode extends BaseCustomUINode {
 
@@ -89,7 +89,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
     private static final String OUTPUT_STATUS_ID = "output_status";
 
     public ApplyChangesNode() {
-        super(UUID.randomUUID(), "visualization.execute.apply_changes");
+        super(UUID.randomUUID(), "output.execute.apply_changes");
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "Execution trigger", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block coordinates to place", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified abstract geometry input", NodeDataType.GEOMETRY, this));

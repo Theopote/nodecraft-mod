@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_points",
+    id = "output.preview.preview_points",
     displayName = "Preview Points",
     description = "Previews one or more reference points before voxelization",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewPointsNode extends BaseNode {
 
@@ -42,7 +42,7 @@ public class PreviewPointsNode extends BaseNode {
     private int duration = 30;
 
     public PreviewPointsNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_points");
+        super(UUID.randomUUID(), "output.preview.preview_points");
         addInputPort(new BasePort(INPUT_POINT_ID, "Point", "Single reference point", NodeDataType.BLOCK_POS, this));
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "List of reference points", NodeDataType.LIST, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether the preview was shown", NodeDataType.BOOLEAN, this));

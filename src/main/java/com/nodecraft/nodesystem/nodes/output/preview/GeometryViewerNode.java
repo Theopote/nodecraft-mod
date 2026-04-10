@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
@@ -30,10 +30,10 @@ import java.util.Objects;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.geometry_viewer",
+    id = "output.preview.geometry_viewer",
     displayName = "Geometry Viewer",
     description = "Previews geometry visually and can commit the current result into the world.",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class GeometryViewerNode extends BaseCustomUINode {
 
@@ -102,7 +102,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private transient boolean blockTypeNeedsSync = true;
 
     public GeometryViewerNode() {
-        super(UUID.randomUUID(), "visualization.preview.geometry_viewer");
+        super(UUID.randomUUID(), "output.preview.geometry_viewer");
 
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Geometry", "Geometry block list", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry Input", "Unified abstract geometry input", NodeDataType.GEOMETRY, this));

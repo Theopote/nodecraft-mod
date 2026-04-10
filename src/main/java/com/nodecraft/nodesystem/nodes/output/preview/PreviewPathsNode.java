@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,10 +20,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_paths",
-    displayName = "Preview Paths",
+    id = "output.preview.preview_curves",
+    displayName = "Preview Curves",
     description = "Previews lines, polylines and curves as reference paths",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewPathsNode extends BaseNode {
 
@@ -56,7 +56,7 @@ public class PreviewPathsNode extends BaseNode {
     private int duration = 30;
 
     public PreviewPathsNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_paths");
+        super(UUID.randomUUID(), "output.preview.preview_curves");
         addInputPort(new BasePort(INPUT_LINE_ID, "Line", "Single straight segment to preview", NodeDataType.LINE, this));
         addInputPort(new BasePort(INPUT_POLYLINE_ID, "Polyline", "Multi-segment path to preview", NodeDataType.POLYLINE, this));
         addInputPort(new BasePort(INPUT_CURVE_ID, "Curve", "Sampled curve path to preview", NodeDataType.CURVE, this));

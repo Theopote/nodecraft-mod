@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_regions",
+    id = "output.preview.preview_regions",
     displayName = "Preview Region",
     description = "Previews a region boundary as a reference box",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewRegionsNode extends BaseNode {
 
@@ -39,7 +39,7 @@ public class PreviewRegionsNode extends BaseNode {
     private int duration = 30;
 
     public PreviewRegionsNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_regions");
+        super(UUID.randomUUID(), "output.preview.preview_regions");
         addInputPort(new BasePort(INPUT_REGION_ID, "Region", "Region to preview", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether the preview was shown", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_PREVIEW_ID_ID, "Preview ID", "Active preview identifier", NodeDataType.STRING, this));

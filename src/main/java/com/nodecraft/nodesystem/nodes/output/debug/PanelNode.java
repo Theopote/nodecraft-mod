@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.debugging;
+package com.nodecraft.nodesystem.nodes.output.debug;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
@@ -22,10 +22,10 @@ import java.util.UUID;
  * 提供格式化、自动刷新、换行控制选项和数据预览区域。
  */
 @NodeInfo(
-    id = "visualization.debugging.panel",
+    id = "output.debug.data_inspector",
     displayName = "面板",
     description = "显示连接到其输入端口的原始数据（文本形式）",
-    category = "visualization.debugging"
+    category = "output.debug"
 )
 public class PanelNode extends BaseCustomUINode {
 
@@ -54,7 +54,7 @@ public class PanelNode extends BaseCustomUINode {
     private static final String OUTPUT_DATA_TYPE_ID = "output_data_type";
 
     public PanelNode() {
-        super(UUID.randomUUID(), "visualization.debugging.panel");
+        super(UUID.randomUUID(), "output.debug.data_inspector");
         addInputPort(new BasePort(INPUT_DATA_ID, "Data", "要显示的数据（任意类型）", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_FORMAT_ID, "Use Formatting", "是否使用格式化显示", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_MAX_LENGTH_ID, "Max Length", "最大显示字符数", NodeDataType.INTEGER, this));

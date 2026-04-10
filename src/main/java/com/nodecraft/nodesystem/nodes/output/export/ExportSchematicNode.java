@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.execute;
+package com.nodecraft.nodesystem.nodes.output.export;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -25,10 +25,10 @@ import java.util.UUID;
  * 格式兼容简单结构数据，便于保存或与结构方块等配合使用。
  */
 @NodeInfo(
-    id = "visualization.execute.export_schematic",
+    id = "output.export.export_schematic",
     displayName = "导出结构",
     description = "将方块列表导出为 NBT 结构文件（.nbt）",
-    category = "visualization.execute"
+    category = "output.export"
 )
 public class ExportSchematicNode extends BaseCustomUINode {
 
@@ -42,7 +42,7 @@ public class ExportSchematicNode extends BaseCustomUINode {
     private static final String OUTPUT_COUNT_ID = "output_count";
 
     public ExportSchematicNode() {
-        super(UUID.randomUUID(), "visualization.execute.export_schematic");
+        super(UUID.randomUUID(), "output.export.export_schematic");
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "触发导出", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "方块坐标列表", NodeDataType.BLOCK_LIST, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "统一方块类型（当无 Placements 时）", NodeDataType.STRING, this));

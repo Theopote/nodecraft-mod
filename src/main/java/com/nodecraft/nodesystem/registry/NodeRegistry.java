@@ -78,6 +78,26 @@ public class NodeRegistry {
         addCompactLegacyAlias(aliases, "spatial.generators.tetrahedron_blocks");
         addCompactLegacyAlias(aliases, "spatial.generators.triangular_pyramid_blocks");
         addCompactLegacyAlias(aliases, "spatial.generators.triangular_prism_blocks");
+
+        addMovedNodeAlias(aliases, "visualization.preview.geometry_viewer", "output.preview.geometry_viewer");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_geometry", "output.preview.preview_geometry");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_blocks", "output.preview.preview_blocks");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_points", "output.preview.preview_points");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_vectors", "output.preview.preview_vectors");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_plane", "output.preview.preview_plane");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_frame", "output.preview.preview_frame");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_paths", "output.preview.preview_curves");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_regions", "output.preview.preview_regions");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_labels", "output.preview.preview_labels");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_surface_strip", "output.preview.preview_surface_strip");
+        addMovedNodeAlias(aliases, "visualization.preview.preview_polygon_profiles", "output.preview.preview_profiles");
+        addMovedNodeAlias(aliases, "visualization.preview.clear_all_previews", "output.execute.clear_preview");
+        addMovedNodeAlias(aliases, "visualization.execute.apply_changes", "output.execute.apply_changes");
+        addMovedNodeAlias(aliases, "visualization.execute.export_schematic", "output.export.export_schematic");
+        addMovedNodeAlias(aliases, "visualization.debugging.value_monitor", "output.debug.value_monitor");
+        addMovedNodeAlias(aliases, "visualization.debugging.print_to_chat", "output.debug.print_to_chat");
+        addMovedNodeAlias(aliases, "visualization.debugging.execution_timer", "output.debug.execution_timer");
+        addMovedNodeAlias(aliases, "visualization.debugging.panel", "output.debug.data_inspector");
         return Collections.unmodifiableMap(aliases);
     }
 

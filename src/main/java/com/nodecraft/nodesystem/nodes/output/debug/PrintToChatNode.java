@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.debugging;
+package com.nodecraft.nodesystem.nodes.output.debug;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
@@ -20,10 +20,10 @@ import java.util.UUID;
  * 提供前缀文本输入、复选框控制输出格式。
  */
 @NodeInfo(
-    id = "visualization.debugging.print_to_chat",
+    id = "output.debug.print_to_chat",
     displayName = "打印到聊天",
     description = "将输入数据显示到游戏聊天框",
-    category = "visualization.debugging"
+    category = "output.debug"
 )
 public class PrintToChatNode extends BaseCustomUINode {
 
@@ -53,7 +53,7 @@ public class PrintToChatNode extends BaseCustomUINode {
     private transient boolean prefixNeedsSync = true;
 
     public PrintToChatNode() {
-        super(UUID.randomUUID(), "visualization.debugging.print_to_chat");
+        super(UUID.randomUUID(), "output.debug.print_to_chat");
         addInputPort(new BasePort(INPUT_DATA_ID, "Data", "要打印的数据", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_PREFIX_ID, "Prefix", "消息前缀", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_COLOR_ID, "Color", "文本颜色", NodeDataType.STRING, this));

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,10 +20,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_frame",
+    id = "output.preview.preview_frame",
     displayName = "Preview Frame",
     description = "Previews a local coordinate frame with X, Y and Z axes",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewFrameNode extends BaseNode {
 
@@ -45,7 +45,7 @@ public class PreviewFrameNode extends BaseNode {
     private int duration = 30;
 
     public PreviewFrameNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_frame");
+        super(UUID.randomUUID(), "output.preview.preview_frame");
         addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin", "Frame origin", NodeDataType.BLOCK_POS, this));
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional plane used to derive a frame", NodeDataType.PLANE, this));
         addInputPort(new BasePort(INPUT_X_AXIS_ID, "X Axis", "Optional X axis vector", NodeDataType.VECTOR, this));

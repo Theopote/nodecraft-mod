@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_polygon_profiles",
-    displayName = "Preview Polygon Profiles",
+    id = "output.preview.preview_profiles",
+    displayName = "Preview Profiles",
     description = "Previews polygon profile boundaries and optional normal indicators",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewPolygonProfilesNode extends BaseNode {
 
@@ -59,7 +59,7 @@ public class PreviewPolygonProfilesNode extends BaseNode {
     private int duration = 30;
 
     public PreviewPolygonProfilesNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_polygon_profiles");
+        super(UUID.randomUUID(), "output.preview.preview_profiles");
 
         addInputPort(new BasePort(INPUT_PROFILE_ID, "Profile", "Single polygon profile to preview", NodeDataType.POLYGON_PROFILE, this));
         addInputPort(new BasePort(INPUT_PROFILES_ID, "Profiles", "Optional polygon profile list to preview", NodeDataType.LIST, this));

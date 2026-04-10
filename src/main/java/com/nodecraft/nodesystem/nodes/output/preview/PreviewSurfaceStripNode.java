@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -24,10 +24,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_surface_strip",
+    id = "output.preview.preview_surface_strip",
     displayName = "Preview Surface Strip",
     description = "Previews a surface strip as section contours, rails, or a lattice overlay",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewSurfaceStripNode extends BaseNode {
 
@@ -59,7 +59,7 @@ public class PreviewSurfaceStripNode extends BaseNode {
     private int duration = 30;
 
     public PreviewSurfaceStripNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_surface_strip");
+        super(UUID.randomUUID(), "output.preview.preview_surface_strip");
         addInputPort(new BasePort(INPUT_SURFACE_STRIP_ID, "Surface Strip", "Surface strip to preview", NodeDataType.SURFACE_STRIP, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether any surface strip preview was shown", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_PREVIEW_IDS_ID, "Preview IDs", "List of active preview identifiers", NodeDataType.LIST, this));

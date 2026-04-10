@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_geometry",
+    id = "output.preview.preview_geometry",
     displayName = "Preview Geometry",
     description = "Previews analytic geometry directly (semi-transparent fill + outline) before voxelization",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewGeometryNode extends BaseNode {
 
@@ -62,7 +62,7 @@ public class PreviewGeometryNode extends BaseNode {
     private int duration = 30;
 
     public PreviewGeometryNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_geometry");
+        super(UUID.randomUUID(), "output.preview.preview_geometry");
 
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified analytic geometry input", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data", NodeDataType.BOX_GEOMETRY, this));

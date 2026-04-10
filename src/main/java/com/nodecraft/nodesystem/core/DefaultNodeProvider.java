@@ -48,10 +48,10 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("flora", "Flora & Nature"));
         registry.registerCategory(new NodeRegistry.NodeCategory("inputs", "Inputs & Parameters"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math", "Math & Logic"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("output", "Output & Execution"));
         registry.registerCategory(new NodeRegistry.NodeCategory("spatial", "Spatial & Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities & Workflow"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist & Reroute"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("visualization", "Visualization & Execution"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world", "World Interaction"));
         
         NodeCraft.LOGGER.debug("注册了9个主分类");

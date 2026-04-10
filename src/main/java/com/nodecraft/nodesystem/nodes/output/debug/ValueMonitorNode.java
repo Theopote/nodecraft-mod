@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.debugging;
+package com.nodecraft.nodesystem.nodes.output.debug;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -22,10 +22,10 @@ import java.util.UUID;
  * 值监视器：面板/“小电视”风格，仅需将任意节点的输出连到输入，即可在面板上查看该输出的数据和类型。
  */
 @NodeInfo(
-    id = "visualization.debugging.value_monitor",
+    id = "output.debug.value_monitor",
     displayName = "数据预览",
     description = "将任意输出连到输入，在面板上查看该输出的数据和类型",
-    category = "visualization.debugging"
+    category = "output.debug"
 )
 public class ValueMonitorNode extends BaseCustomUINode {
 
@@ -39,7 +39,7 @@ public class ValueMonitorNode extends BaseCustomUINode {
     private volatile String typeLabel = "—";
 
     public ValueMonitorNode() {
-        super(UUID.randomUUID(), "visualization.debugging.value_monitor");
+        super(UUID.randomUUID(), "output.debug.value_monitor");
         addInputPort(new BasePort(INPUT_VALUE_ID, "输入", "连接任意节点的输出，在此查看数据", NodeDataType.ANY, this));
         addOutputPort(new BasePort(OUTPUT_VALUE_ID, "输出", "原样传递输入值", NodeDataType.ANY, this));
     }

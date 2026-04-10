@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_plane",
+    id = "output.preview.preview_plane",
     displayName = "Preview Plane",
     description = "Previews a plane as a square grid with axes and normal direction",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewPlaneNode extends BaseNode {
 
@@ -55,7 +55,7 @@ public class PreviewPlaneNode extends BaseNode {
     private int duration = 30;
 
     public PreviewPlaneNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_plane");
+        super(UUID.randomUUID(), "output.preview.preview_plane");
 
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Plane to preview", NodeDataType.PLANE, this));
         addInputPort(new BasePort(INPUT_GRID_SIZE_ID, "Grid Size", "Preview grid size", NodeDataType.DOUBLE, this));

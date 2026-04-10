@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.preview;
+package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -22,10 +22,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "visualization.preview.preview_blocks",
+    id = "output.preview.preview_blocks",
     displayName = "Preview Blocks",
     description = "Previews block coordinates or block lists as temporary ghost blocks.",
-    category = "visualization.preview"
+    category = "output.preview"
 )
 public class PreviewBlocksNode extends BaseCustomUINode {
 
@@ -54,7 +54,7 @@ public class PreviewBlocksNode extends BaseCustomUINode {
 
     private UUID previewId = UUID.randomUUID();
     public PreviewBlocksNode() {
-        super(UUID.randomUUID(), "visualization.preview.preview_blocks");
+        super(UUID.randomUUID(), "output.preview.preview_blocks");
 
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block list or block position list", NodeDataType.LIST, this));
         addInputPort(new BasePort(INPUT_COORDS_ID, "Coordinates", "Fallback coordinate list", NodeDataType.LIST, this));

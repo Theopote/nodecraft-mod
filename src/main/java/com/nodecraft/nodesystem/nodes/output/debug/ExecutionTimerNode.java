@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.visualization.debugging;
+package com.nodecraft.nodesystem.nodes.output.debug;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
@@ -20,10 +20,10 @@ import java.util.UUID;
  * 显示时间统计、精度控制、自动重置选项。
  */
 @NodeInfo(
-    id = "visualization.debugging.execution_timer",
+    id = "output.debug.execution_timer",
     displayName = "执行计时器",
     description = "测量连接到此节点的计算分支所花费的时间",
-    category = "visualization.debugging"
+    category = "output.debug"
 )
 public class ExecutionTimerNode extends BaseCustomUINode {
 
@@ -58,7 +58,7 @@ public class ExecutionTimerNode extends BaseCustomUINode {
     private static final String OUTPUT_FORMATTED_TIME_ID = "output_formatted_time";
 
     public ExecutionTimerNode() {
-        super(UUID.randomUUID(), "visualization.debugging.execution_timer");
+        super(UUID.randomUUID(), "output.debug.execution_timer");
         addInputPort(new BasePort(INPUT_START_ID, "Start", "开始计时", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_STOP_ID, "Stop", "停止计时", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_RESET_ID, "Reset", "重置计时器", NodeDataType.ANY, this));
