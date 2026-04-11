@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import java.util.Collection;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.point_list_center",
+    id = "reference.points.point_list_center",
     displayName = "Point List Center",
     description = "Calculates the average geometric center of a point list",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class PointListCenterNode extends BaseNode {
 
@@ -29,7 +29,7 @@ public class PointListCenterNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public PointListCenterNode() {
-        super(UUID.randomUUID(), "spatial.analysis.point_list_center");
+        super(UUID.randomUUID(), "reference.points.point_list_center");
 
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points",
             "Collection of Point, Vector, Position, or Block Coordinate values to average",

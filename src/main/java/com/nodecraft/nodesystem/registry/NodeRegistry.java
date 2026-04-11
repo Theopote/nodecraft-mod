@@ -148,6 +148,15 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.points.point_between_two_points", "reference.points.mid_point");
         addMovedNodeAlias(aliases, "spatial.points.point_along_vector", "reference.points.point_along_vector");
         addMovedNodeAlias(aliases, "spatial.points.distance_point_to_plane", "reference.planes.distance_point_to_plane");
+        addMovedNodeAlias(aliases, "spatial.analysis.box_face_to_plane", "reference.planes.block_face_plane");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_box_face", "reference.points.deconstruct_face");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_face_edge", "reference.points.deconstruct_edge");
+        addMovedNodeAlias(aliases, "spatial.analysis.closest_point", "reference.points.closest_point");
+        addMovedNodeAlias(aliases, "spatial.analysis.point_list_center", "reference.points.point_list_center");
+        addMovedNodeAlias(aliases, "spatial.analysis.point_list_bounds", "reference.points.point_list_bounds");
+        addMovedNodeAlias(aliases, "spatial.analysis.get_box_corner", "reference.points.get_box_corner");
+        addMovedNodeAlias(aliases, "spatial.analysis.get_box_face", "reference.points.get_box_face");
+        addMovedNodeAlias(aliases, "spatial.analysis.get_face_edge", "reference.points.get_face_edge");
         return Collections.unmodifiableMap(aliases);
     }
 

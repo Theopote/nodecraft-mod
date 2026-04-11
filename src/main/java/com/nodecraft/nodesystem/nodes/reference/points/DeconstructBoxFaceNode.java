@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.List;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_box_face",
+    id = "reference.points.deconstruct_face",
     displayName = "Deconstruct Box Face",
     description = "Extracts corners, edges, plane, center, and normal from a box face",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class DeconstructBoxFaceNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class DeconstructBoxFaceNode extends BaseNode {
     private static final String OUTPUT_EDGE_CORNER_INDEX_PAIRS_ID = "output_edge_corner_index_pairs";
 
     public DeconstructBoxFaceNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_box_face");
+        super(UUID.randomUUID(), "reference.points.deconstruct_face");
 
         addInputPort(new BasePort(INPUT_FACE_ID, "Face", "The box face to deconstruct", NodeDataType.BOX_FACE, this));
 

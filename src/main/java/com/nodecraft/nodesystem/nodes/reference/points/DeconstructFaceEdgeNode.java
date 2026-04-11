@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -13,10 +13,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_face_edge",
+    id = "reference.points.deconstruct_edge",
     displayName = "Deconstruct Face Edge",
     description = "Extracts endpoints, midpoint, direction, vector, and length from a face edge",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class DeconstructFaceEdgeNode extends BaseNode {
 
@@ -34,7 +34,7 @@ public class DeconstructFaceEdgeNode extends BaseNode {
     private static final String OUTPUT_END_CORNER_INDEX_ID = "output_end_corner_index";
 
     public DeconstructFaceEdgeNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_face_edge");
+        super(UUID.randomUUID(), "reference.points.deconstruct_edge");
 
         addInputPort(new BasePort(INPUT_EDGE_ID, "Edge", "The face edge to deconstruct", NodeDataType.LINE, this));
         addInputPort(new BasePort(INPUT_START_CORNER_INDEX_ID, "Start Corner Index", "Optional start corner index from the parent box", NodeDataType.INTEGER, this));

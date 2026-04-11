@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.Collection;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.point_list_bounds",
+    id = "reference.points.point_list_bounds",
     displayName = "Point List Bounds",
     description = "Calculates an axis-aligned bounding box from a list of geometric points",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class PointListBoundsNode extends BaseNode {
 
@@ -37,7 +37,7 @@ public class PointListBoundsNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public PointListBoundsNode() {
-        super(UUID.randomUUID(), "spatial.analysis.point_list_bounds");
+        super(UUID.randomUUID(), "reference.points.point_list_bounds");
 
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points",
             "Collection of Point, Vector, Position, or Block Coordinate values to bound",

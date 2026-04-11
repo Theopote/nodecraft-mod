@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.get_box_corner",
+    id = "reference.points.get_box_corner",
     displayName = "Get Box Corner",
     description = "Gets a single corner from box geometry by index",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class GetBoxCornerNode extends BaseNode {
 
@@ -39,7 +39,7 @@ public class GetBoxCornerNode extends BaseNode {
     private static final String OUTPUT_RESOLVED_INDEX_ID = "output_resolved_index";
 
     public GetBoxCornerNode() {
-        super(UUID.randomUUID(), "spatial.analysis.get_box_corner");
+        super(UUID.randomUUID(), "reference.points.get_box_corner");
 
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry to query", NodeDataType.BOX_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_INDEX_ID, "Corner Index", "Corner index from 0 to 7", NodeDataType.INTEGER, this));

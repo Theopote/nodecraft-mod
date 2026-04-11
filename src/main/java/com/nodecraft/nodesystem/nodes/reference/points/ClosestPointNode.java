@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -15,10 +15,10 @@ import java.util.UUID;
  * Closest Point 节点: 在一个 Coordinate 列表中找到距离另一个点最近的点
  */
 @NodeInfo(
-    id = "spatial.analysis.closest_point",
+    id = "reference.points.closest_point",
     displayName = "最近点",
     description = "在坐标列表中找到距离指定点最近的点",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class ClosestPointNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class ClosestPointNode extends BaseNode {
 
     // --- 构造函数 ---
     public ClosestPointNode() {
-        super(UUID.randomUUID(), "spatial.analysis.closest_point");
+        super(UUID.randomUUID(), "reference.points.closest_point");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_POINT_ID, "Point", 

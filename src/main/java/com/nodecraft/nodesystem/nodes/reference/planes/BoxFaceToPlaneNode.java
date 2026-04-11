@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.planes;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -11,10 +11,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.box_face_to_plane",
+    id = "reference.planes.block_face_plane",
     displayName = "Box Face To Plane",
     description = "Converts a box face into its supporting plane and related face frame data",
-    category = "spatial.analysis"
+    category = "reference.planes"
 )
 public class BoxFaceToPlaneNode extends BaseNode {
 
@@ -28,7 +28,7 @@ public class BoxFaceToPlaneNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public BoxFaceToPlaneNode() {
-        super(UUID.randomUUID(), "spatial.analysis.box_face_to_plane");
+        super(UUID.randomUUID(), "reference.planes.block_face_plane");
 
         addInputPort(new BasePort(INPUT_FACE_ID, "Face", "The box face to convert", NodeDataType.BOX_FACE, this));
 

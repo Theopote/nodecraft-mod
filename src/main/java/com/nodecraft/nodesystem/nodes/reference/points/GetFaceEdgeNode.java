@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.get_face_edge",
+    id = "reference.points.get_face_edge",
     displayName = "Get Face Edge",
     description = "Gets a single edge from a face by index",
-    category = "spatial.analysis"
+    category = "reference.points"
 )
 public class GetFaceEdgeNode extends BaseNode {
 
@@ -45,7 +45,7 @@ public class GetFaceEdgeNode extends BaseNode {
     private static final String OUTPUT_END_CORNER_INDEX_ID = "output_end_corner_index";
 
     public GetFaceEdgeNode() {
-        super(UUID.randomUUID(), "spatial.analysis.get_face_edge");
+        super(UUID.randomUUID(), "reference.points.get_face_edge");
 
         addInputPort(new BasePort(INPUT_FACE_ID, "Face", "The face to query", NodeDataType.BOX_FACE, this));
         addInputPort(new BasePort(INPUT_INDEX_ID, "Edge Index", "Edge index from 0 to 3", NodeDataType.INTEGER, this));

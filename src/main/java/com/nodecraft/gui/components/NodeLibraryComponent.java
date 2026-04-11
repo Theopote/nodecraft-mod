@@ -175,6 +175,14 @@ public class NodeLibraryComponent implements EditorComponent {
         referencePointsOrder.put("reference.points.deconstruct_point", 3);
         referencePointsOrder.put("reference.points.mid_point", 4);
         referencePointsOrder.put("reference.points.distance_between_points", 5);
+        referencePointsOrder.put("reference.points.closest_point", 6);
+        referencePointsOrder.put("reference.points.point_list_center", 7);
+        referencePointsOrder.put("reference.points.point_list_bounds", 8);
+        referencePointsOrder.put("reference.points.get_box_corner", 9);
+        referencePointsOrder.put("reference.points.get_box_face", 10);
+        referencePointsOrder.put("reference.points.get_face_edge", 11);
+        referencePointsOrder.put("reference.points.deconstruct_face", 12);
+        referencePointsOrder.put("reference.points.deconstruct_edge", 13);
         return referencePointsOrder;
     }
 
@@ -199,6 +207,7 @@ public class NodeLibraryComponent implements EditorComponent {
         referencePlanesOrder.put("reference.planes.construct_plane", 1);
         referencePlanesOrder.put("reference.planes.plane_from_points", 2);
         referencePlanesOrder.put("reference.planes.distance_point_to_plane", 3);
+        referencePlanesOrder.put("reference.planes.block_face_plane", 4);
         return referencePlanesOrder;
     }
 
