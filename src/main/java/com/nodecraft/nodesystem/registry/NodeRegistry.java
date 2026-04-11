@@ -257,6 +257,16 @@ public class NodeRegistry {
 
     private static Map<String, String> createNodeCategoryOverrides() {
         Map<String, String> overrides = new HashMap<>();
+        overrides.put("spatial.analysis.geometry_info", "spatial.legacy");
+        overrides.put("spatial.analysis.select_sphere_band_sector", "spatial.legacy");
+        overrides.put("spatial.analysis.sphere_uv", "spatial.legacy");
+        overrides.put("spatial.analysis.sphere_point_info", "spatial.legacy");
+        overrides.put("spatial.analysis.deconstruct_surface_strip", "spatial.legacy");
+        overrides.put("spatial.points.point_between_two_points", "spatial.legacy");
+        overrides.put("spatial.points.randomize_coordinates", "spatial.legacy");
+        overrides.put("spatial.voxel.union_coords", "spatial.legacy");
+        overrides.put("spatial.voxel.intersection_coords", "spatial.legacy");
+        overrides.put("spatial.voxel.difference_coords", "spatial.legacy");
         overrides.put("spatial.instancing.grow_along_normals", "spatial.legacy");
         overrides.put("spatial.instancing.grow_along_sphere_normal", "spatial.legacy");
         return Map.copyOf(overrides);

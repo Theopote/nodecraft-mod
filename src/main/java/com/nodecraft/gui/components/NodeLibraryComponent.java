@@ -137,15 +137,6 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> inputsMinecraftOrder = getInputsMinecraftOrder();
         categoryOrder.put("inputs.minecraft", inputsMinecraftOrder);
 
-        Map<String, Integer> spatialAnalysisOrder = getMap();
-        categoryOrder.put("spatial.analysis", spatialAnalysisOrder);
-
-        Map<String, Integer> spatialPointsOrder = getIntegerMap();
-        categoryOrder.put("spatial.points", spatialPointsOrder);
-
-        Map<String, Integer> spatialVoxelOrder = getSpatialVoxelOrder();
-        categoryOrder.put("spatial.voxel", spatialVoxelOrder);
-
         Map<String, Integer> spatialLegacyOrder = getStringIntegerMap();
         categoryOrder.put("spatial.legacy", spatialLegacyOrder);
 
@@ -346,14 +337,6 @@ public class NodeLibraryComponent implements EditorComponent {
         return transformDeformationsOrder;
     }
 
-    private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
-        Map<String, Integer> spatialVoxelOrder = new HashMap<>();
-        spatialVoxelOrder.put("spatial.voxel.union_coords", 0);
-        spatialVoxelOrder.put("spatial.voxel.intersection_coords", 1);
-        spatialVoxelOrder.put("spatial.voxel.difference_coords", 2);
-        return spatialVoxelOrder;
-    }
-
     private static @NonNull Map<String, Integer> getPreviewOrder() {
         Map<String, Integer> previewOrder = new HashMap<>();
         previewOrder.put("output.preview.geometry_viewer", 0);
@@ -431,16 +414,6 @@ public class NodeLibraryComponent implements EditorComponent {
         return materialBasicAssignmentOrder;
     }
 
-    private static @NonNull Map<String, Integer> getMap() {
-        Map<String, Integer> spatialAnalysisOrder = new HashMap<>();
-        spatialAnalysisOrder.put("spatial.analysis.geometry_info", 0);
-        spatialAnalysisOrder.put("spatial.analysis.select_sphere_band_sector", 1);
-        spatialAnalysisOrder.put("spatial.analysis.sphere_uv", 2);
-        spatialAnalysisOrder.put("spatial.analysis.sphere_point_info", 3);
-        spatialAnalysisOrder.put("spatial.analysis.deconstruct_surface_strip", 4);
-        return spatialAnalysisOrder;
-    }
-
     private static @NonNull Map<String, Integer> getReferenceFramesOrder() {
         Map<String, Integer> referenceFramesOrder = new HashMap<>();
         referenceFramesOrder.put("reference.frames.frame_from_face", 0);
@@ -474,13 +447,6 @@ public class NodeLibraryComponent implements EditorComponent {
         return patternRadialOrder;
     }
 
-    private static @NonNull Map<String, Integer> getIntegerMap() {
-        Map<String, Integer> spatialPointsOrder = new HashMap<>();
-        spatialPointsOrder.put("spatial.points.point_between_two_points", 0);
-        spatialPointsOrder.put("spatial.points.randomize_coordinates", 1);
-        return spatialPointsOrder;
-    }
-
     private static @NonNull Map<String, Integer> getStringIntegerMap() {
         Map<String, Integer> spatialLegacyOrder = new HashMap<>();
         spatialLegacyOrder.put("spatial.generators.line_blocks", 0);
@@ -503,8 +469,18 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialLegacyOrder.put("spatial.generators.triangular_pyramid_blocks", 17);
         spatialLegacyOrder.put("spatial.generators.polyline_blocks", 18);
         spatialLegacyOrder.put("spatial.generators.curve_blocks", 19);
-        spatialLegacyOrder.put("spatial.instancing.grow_along_normals", 20);
-        spatialLegacyOrder.put("spatial.instancing.grow_along_sphere_normal", 21);
+        spatialLegacyOrder.put("spatial.analysis.geometry_info", 20);
+        spatialLegacyOrder.put("spatial.analysis.select_sphere_band_sector", 21);
+        spatialLegacyOrder.put("spatial.analysis.sphere_uv", 22);
+        spatialLegacyOrder.put("spatial.analysis.sphere_point_info", 23);
+        spatialLegacyOrder.put("spatial.analysis.deconstruct_surface_strip", 24);
+        spatialLegacyOrder.put("spatial.points.point_between_two_points", 25);
+        spatialLegacyOrder.put("spatial.points.randomize_coordinates", 26);
+        spatialLegacyOrder.put("spatial.voxel.union_coords", 27);
+        spatialLegacyOrder.put("spatial.voxel.intersection_coords", 28);
+        spatialLegacyOrder.put("spatial.voxel.difference_coords", 29);
+        spatialLegacyOrder.put("spatial.instancing.grow_along_normals", 30);
+        spatialLegacyOrder.put("spatial.instancing.grow_along_sphere_normal", 31);
         return spatialLegacyOrder;
     }
 
