@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.legacy.spatial.generators;
+﻿package com.nodecraft.nodesystem.nodes.utilities.legacy.spatial.generators;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -12,21 +12,20 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Ellipsoid (Blocks) 鑺傜偣: 鐢熸垚妞悆浣撳尯鍩熺殑鍧愭爣鍒楄〃
+ * Ellipsoid generator that supports independent radii on X/Y/Z axes.
  */
 @NodeInfo(
     id = "spatial.generators.ellipsoid_blocks",
-    displayName = "妞悆浣撶敓鎴愬櫒",
-    description = "鐢熸垚妞悆浣撳尯鍩熺殑鍧愭爣鍒楄〃锛屾敮鎸佷笁杞寸嫭绔嬪崐寰?,
-    category = "spatial.generators"
+    displayName = "Ellipsoid Generator",
+    description = "Generates an ellipsoid block volume with independent axis radii.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class EllipsoidBlocksNode extends BaseNode {
 
-    // --- 鑺傜偣灞炴€?---
     private boolean hollow = false;
     private int thickness = 1;
 
-    // --- 杈撳叆绔彛 IDs ---
+    // ---           IDs ---
     private static final String INPUT_CENTER_ID = "input_center";
     private static final String INPUT_RADIUS_X_ID = "input_radius_x";
     private static final String INPUT_RADIUS_Y_ID = "input_radius_y";
@@ -34,27 +33,27 @@ public class EllipsoidBlocksNode extends BaseNode {
     private static final String INPUT_HOLLOW_ID = "input_hollow";
     private static final String INPUT_THICKNESS_ID = "input_thickness";
 
-    // --- 杈撳嚭绔彛 IDs ---
+    // ---           IDs ---
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
     public EllipsoidBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.ellipsoid_blocks");
 
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "妞悆浣撲腑蹇冪偣", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_RADIUS_X_ID, "Radius X", "X杞村崐寰?, NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_RADIUS_Y_ID, "Radius Y", "Y杞村崐寰?, NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_RADIUS_Z_ID, "Radius Z", "Z杞村崐寰?, NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "鏄惁绌哄績", NodeDataType.BOOLEAN, this));
-        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "澹佸帤锛堢┖蹇冩椂鏈夋晥锛?, NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Ellipsoid center point", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_RADIUS_X_ID, "Radius X", "Radius along X axis", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_RADIUS_Y_ID, "Radius Y", "Radius along Y axis", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_RADIUS_Z_ID, "Radius Z", "Radius along Z axis", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "Whether ellipsoid is hollow", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "Shell thickness when hollow", NodeDataType.INTEGER, this));
 
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "缁勬垚妞悆浣撶殑鏂瑰潡鍒楄〃", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "鏂瑰潡鏁伴噺", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Generated ellipsoid blocks", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of generated blocks", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "鐢熸垚妞悆浣撳尯鍩熺殑鍧愭爣鍒楄〃锛屾敮鎸佷笁杞寸嫭绔嬪崐寰?;
+        return "Generates an ellipsoid block volume with independent axis radii.";
     }
 
     @Override
@@ -95,18 +94,17 @@ public class EllipsoidBlocksNode extends BaseNode {
             for (int dx = -maxR; dx <= maxR; dx++) {
                 for (int dy = -maxR; dy <= maxR; dy++) {
                     for (int dz = -maxR; dz <= maxR; dz++) {
-                        // 妞悆鏂圭▼: (x/rx)^2 + (y/ry)^2 + (z/rz)^2 <= 1
+                        //          : (x/rx)^2 + (y/ry)^2 + (z/rz)^2 <= 1
                         double dist = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) + (dz * dz) / (rz * rz);
 
                         if (dist <= 1.0) {
                             if (isHollow) {
-                                // 鍐呮き鐞? 鍗婂緞鍚勫噺 shellThickness
                                 double irx = Math.max(0, rx - shellThickness);
                                 double iry = Math.max(0, ry - shellThickness);
                                 double irz = Math.max(0, rz - shellThickness);
                                 double innerDist = (irx > 0 && iry > 0 && irz > 0)
                                     ? (dx * dx) / (irx * irx) + (dy * dy) / (iry * iry) + (dz * dz) / (irz * irz)
-                                    : 2.0; // 鍐呭緞涓?鏃讹紝鎵€鏈夌偣閮界畻澹?
+                                    : 2.0;
                                 if (innerDist >= 1.0) {
                                     result.add(new BlockPos(cx + dx, cy + dy, cz + dz));
                                 }
