@@ -125,6 +125,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> transformBasicTransformsOrder = getTransformBasicTransformsOrder();
         categoryOrder.put("transform.basic_transforms", transformBasicTransformsOrder);
 
+        Map<String, Integer> transformDeformationsOrder = getTransformDeformationsOrder();
+        categoryOrder.put("transform.deformations", transformDeformationsOrder);
+
         Map<String, Integer> transformOrientationOrder = getTransformOrientationOrder();
         categoryOrder.put("transform.orientation", transformOrientationOrder);
 
@@ -351,6 +354,12 @@ public class NodeLibraryComponent implements EditorComponent {
         transformOrientationOrder.put("transform.orientation.project_to_plane", 0);
         transformOrientationOrder.put("transform.orientation.rotate_vector", 1);
         return transformOrientationOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getTransformDeformationsOrder() {
+        Map<String, Integer> transformDeformationsOrder = new HashMap<>();
+        transformDeformationsOrder.put("transform.deformations.twist", 0);
+        return transformDeformationsOrder;
     }
 
     private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
@@ -678,6 +687,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("geometry.profiles", new float[]{1.0f, 0.94f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("geometry.solids", new float[]{0.98f, 0.86f, 0.3f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.basic_transforms", new float[]{1.0f, 0.62f, 0.32f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("transform.deformations", new float[]{0.98f, 0.58f, 0.28f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.orientation", new float[]{1.0f, 0.68f, 0.38f, 1.0f});
             
             // world子分类
@@ -929,7 +939,7 @@ public class NodeLibraryComponent implements EditorComponent {
             "input.numeric", "input.context", "input.type_selectors", "reference.points", "reference.frames", "world.selection",
             "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids",
             "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
-            "transform.basic_transforms", "transform.orientation",
+            "transform.basic_transforms", "transform.deformations", "transform.orientation",
             "math.basic", "math.list_sequence", "data.lists", "spatial.points", "world.entity", 
             "output.preview", "utilities.organization"
         };

@@ -222,6 +222,7 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.modeling.resample_polygon_profile", "geometry.profiles.resample_profile");
         addMovedNodeAlias(aliases, "spatial.modeling.surface_strip_to_geometry", "geometry.solids.surface_strip_to_geometry");
         addMovedNodeAlias(aliases, "spatial.modeling.push_pull_box_face", "geometry.solids.push_pull_face");
+        addMovedNodeAlias(aliases, "spatial.modeling.twist_point_list", "transform.deformations.twist");
         return Collections.unmodifiableMap(aliases);
     }
 

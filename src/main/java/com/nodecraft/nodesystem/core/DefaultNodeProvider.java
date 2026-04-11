@@ -87,6 +87,7 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("pattern.radial", "Radial"));
         registry.registerCategory(new NodeRegistry.NodeCategory("pattern.surface_volume_distribution", "Surface / Volume Distribution"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.basic_transforms", "Basic Transforms"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("transform.deformations", "Deformations"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.orientation", "Orientation"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world.selection", "Selection"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math.list_sequence", "List / Sequence"));

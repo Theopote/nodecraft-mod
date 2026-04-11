@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.modeling;
+package com.nodecraft.nodesystem.nodes.transform.deformations;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.modeling.twist_point_list",
+    id = "transform.deformations.twist",
     displayName = "Twist Point List",
     description = "Twists a point list around an axis by distributing rotation along a specified axial length",
-    category = "spatial.modeling"
+    category = "transform.deformations"
 )
 public class TwistPointListNode extends BaseNode {
 
@@ -53,7 +53,7 @@ public class TwistPointListNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public TwistPointListNode() {
-        super(UUID.randomUUID(), "spatial.modeling.twist_point_list");
+        super(UUID.randomUUID(), "transform.deformations.twist");
 
         addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to twist", NodeDataType.LIST, this));
         addInputPort(new BasePort(INPUT_AXIS_ORIGIN_ID, "Axis Origin", "Origin point of the twist axis", NodeDataType.ANY, this));
