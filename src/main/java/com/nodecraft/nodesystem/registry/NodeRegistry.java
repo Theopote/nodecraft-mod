@@ -225,6 +225,15 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.modeling.twist_point_list", "transform.deformations.twist");
         addMovedNodeAlias(aliases, "spatial.voxel.geometry_to_blocks", "output.execute.bake_geometry_to_blocks");
         addMovedNodeAlias(aliases, "spatial.voxel.surface_strip_to_blocks", "output.execute.bake_surface_strip_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.box_geometry_voxelizer", "output.execute.bake_box_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.sphere_geometry_voxelizer", "output.execute.bake_sphere_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.cylinder_geometry_voxelizer", "output.execute.bake_cylinder_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.cone_geometry_voxelizer", "output.execute.bake_cone_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.ellipsoid_geometry_voxelizer", "output.execute.bake_ellipsoid_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.prism_geometry_voxelizer", "output.execute.bake_prism_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.octahedron_geometry_voxelizer", "output.execute.bake_octahedron_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.tetrahedron_geometry_voxelizer", "output.execute.bake_tetrahedron_to_blocks");
+        addMovedNodeAlias(aliases, "spatial.voxel.torus_geometry_voxelizer", "output.execute.bake_torus_to_blocks");
         return Collections.unmodifiableMap(aliases);
     }
 

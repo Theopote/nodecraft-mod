@@ -1,12 +1,12 @@
-package com.nodecraft.nodesystem.nodes.spatial.voxel;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
+import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
@@ -17,54 +17,53 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Converts box geometry into block coordinates.
+ * Converts torus geometry into block coordinates.
  */
 @NodeInfo(
-    id = "spatial.voxel.box_geometry_voxelizer",
-    displayName = "Box Geometry To Blocks",
-    description = "Voxelizes BoxGeometryData into Minecraft block coordinates",
-    category = "spatial.voxel"
+    id = "output.execute.bake_torus_to_blocks",
+    displayName = "Torus Geometry To Blocks",
+    description = "Voxelizes TorusGeometryData into Minecraft block coordinates",
+    category = "output.execute"
 )
-public class BoxGeometryVoxelizerNode extends BaseNode {
+public class TorusGeometryVoxelizerNode extends BaseNode {
 
-    @NodeProperty(displayName = "Fill Box", category = "Shape", order = 1,
+    @NodeProperty(displayName = "Fill Torus", category = "Shape", order = 1,
         description = "When disabled, only the outer shell is generated")
-    private boolean fillBox = true;
+    private boolean fillTorus = true;
 
-    private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
-
+    private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_REGION_ID = "output_region";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
-    public BoxGeometryVoxelizerNode() {
-        super(UUID.randomUUID(), "spatial.voxel.box_geometry_voxelizer");
+    public TorusGeometryVoxelizerNode() {
+        super(UUID.randomUUID(), "output.execute.bake_torus_to_blocks");
 
-        addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry to voxelize", NodeDataType.BOX_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry to voxelize", NodeDataType.TORUS_GEOMETRY, this));
 
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Voxelized block coordinates", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the voxelized geometry", NodeDataType.REGION, this));
+        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the torus", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Generated block count", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "Voxelizes BoxGeometryData into Minecraft block coordinates";
+        return "Voxelizes TorusGeometryData into Minecraft block coordinates";
     }
 
     @Override
     public String getDisplayName() {
-        return "Box Geometry To Blocks";
+        return "Torus Geometry To Blocks";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Object geometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
+        Object geometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
         BlockPosList blocks = new BlockPosList();
         RegionData region = null;
 
-        if (geometryObj instanceof BoxGeometryData geometry) {
-            blocks = GeometryVoxelizer.voxelizeBox(geometry, fillBox);
+        if (geometryObj instanceof TorusGeometryData geometry) {
+            blocks = GeometryVoxelizer.voxelizeTorus(geometry, fillTorus);
             region = GeometryVoxelizer.createBoundingRegion(geometry);
         }
 
@@ -73,13 +72,13 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
         outputValues.put(OUTPUT_COUNT_ID, blocks.size());
     }
 
-    public boolean isFillBox() {
-        return fillBox;
+    public boolean isFillTorus() {
+        return fillTorus;
     }
 
-    public void setFillBox(boolean fillBox) {
-        if (this.fillBox != fillBox) {
-            this.fillBox = fillBox;
+    public void setFillTorus(boolean fillTorus) {
+        if (this.fillTorus != fillTorus) {
+            this.fillTorus = fillTorus;
             markDirty();
         }
     }
@@ -87,7 +86,7 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
-        state.put("fillBox", fillBox);
+        state.put("fillTorus", fillTorus);
         return state;
     }
 
@@ -97,8 +96,8 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
             return;
         }
 
-        if (map.get("fillBox") instanceof Boolean fillBoxValue) {
-            setFillBox(fillBoxValue);
+        if (map.get("fillTorus") instanceof Boolean fillTorusValue) {
+            setFillTorus(fillTorusValue);
         }
     }
 }

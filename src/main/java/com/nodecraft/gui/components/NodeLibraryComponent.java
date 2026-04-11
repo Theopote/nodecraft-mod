@@ -358,17 +358,9 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
         Map<String, Integer> spatialVoxelOrder = new HashMap<>();
-        spatialVoxelOrder.put("spatial.voxel.geometry_to_blocks", 0);
-        spatialVoxelOrder.put("spatial.voxel.surface_strip_to_blocks", 1);
-        spatialVoxelOrder.put("spatial.voxel.box_geometry_voxelizer", 2);
-        spatialVoxelOrder.put("spatial.voxel.sphere_geometry_voxelizer", 3);
-        spatialVoxelOrder.put("spatial.voxel.cylinder_geometry_voxelizer", 4);
-        spatialVoxelOrder.put("spatial.voxel.cone_geometry_voxelizer", 5);
-        spatialVoxelOrder.put("spatial.voxel.ellipsoid_geometry_voxelizer", 6);
-        spatialVoxelOrder.put("spatial.voxel.prism_geometry_voxelizer", 7);
-        spatialVoxelOrder.put("spatial.voxel.octahedron_geometry_voxelizer", 8);
-        spatialVoxelOrder.put("spatial.voxel.tetrahedron_geometry_voxelizer", 9);
-        spatialVoxelOrder.put("spatial.voxel.torus_geometry_voxelizer", 10);
+        spatialVoxelOrder.put("spatial.voxel.union_coords", 0);
+        spatialVoxelOrder.put("spatial.voxel.intersection_coords", 1);
+        spatialVoxelOrder.put("spatial.voxel.difference_coords", 2);
         return spatialVoxelOrder;
     }
 
@@ -394,6 +386,15 @@ public class NodeLibraryComponent implements EditorComponent {
         outputExecuteOrder.put("output.execute.clear_preview", 1);
         outputExecuteOrder.put("output.execute.bake_geometry_to_blocks", 2);
         outputExecuteOrder.put("output.execute.bake_surface_strip_to_blocks", 3);
+        outputExecuteOrder.put("output.execute.bake_box_to_blocks", 4);
+        outputExecuteOrder.put("output.execute.bake_sphere_to_blocks", 5);
+        outputExecuteOrder.put("output.execute.bake_cylinder_to_blocks", 6);
+        outputExecuteOrder.put("output.execute.bake_cone_to_blocks", 7);
+        outputExecuteOrder.put("output.execute.bake_ellipsoid_to_blocks", 8);
+        outputExecuteOrder.put("output.execute.bake_prism_to_blocks", 9);
+        outputExecuteOrder.put("output.execute.bake_octahedron_to_blocks", 10);
+        outputExecuteOrder.put("output.execute.bake_tetrahedron_to_blocks", 11);
+        outputExecuteOrder.put("output.execute.bake_torus_to_blocks", 12);
         return outputExecuteOrder;
     }
 

@@ -1,16 +1,16 @@
-package com.nodecraft.nodesystem.nodes.spatial.voxel;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
-import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.EllipsoidBlockGenerator;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
-import com.nodecraft.nodesystem.util.SphereBlockGenerator;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -18,12 +18,12 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.voxel.sphere_geometry_voxelizer",
-    displayName = "Sphere Geometry To Blocks",
-    description = "Voxelizes SphereData into Minecraft block coordinates",
-    category = "spatial.voxel"
+    id = "output.execute.bake_ellipsoid_to_blocks",
+    displayName = "Ellipsoid Geometry To Blocks",
+    description = "Voxelizes EllipsoidGeometryData into Minecraft block coordinates",
+    category = "output.execute"
 )
-public class SphereGeometryVoxelizerNode extends BaseNode {
+public class EllipsoidGeometryVoxelizerNode extends BaseNode {
 
     public enum VoxelMode {
         SOLID,
@@ -36,35 +36,35 @@ public class SphereGeometryVoxelizerNode extends BaseNode {
     @NodeProperty(displayName = "Shell Thickness", category = "Shape", order = 2)
     private double shellThickness = 1.0d;
 
-    private static final String INPUT_SPHERE_GEOMETRY_ID = "input_sphere_geometry";
+    private static final String INPUT_ELLIPSOID_GEOMETRY_ID = "input_ellipsoid_geometry";
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_REGION_ID = "output_region";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
-    public SphereGeometryVoxelizerNode() {
-        super(UUID.randomUUID(), "spatial.voxel.sphere_geometry_voxelizer");
+    public EllipsoidGeometryVoxelizerNode() {
+        super(UUID.randomUUID(), "output.execute.bake_ellipsoid_to_blocks");
 
-        addInputPort(new BasePort(INPUT_SPHERE_GEOMETRY_ID, "Sphere Geometry", "Sphere geometry to voxelize", NodeDataType.SPHERE, this));
+        addInputPort(new BasePort(INPUT_ELLIPSOID_GEOMETRY_ID, "Ellipsoid Geometry", "Ellipsoid geometry to voxelize", NodeDataType.ELLIPSOID_GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Voxelized block coordinates", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the sphere", NodeDataType.REGION, this));
+        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the ellipsoid", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Generated block count", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "Voxelizes SphereData into Minecraft block coordinates";
+        return "Voxelizes EllipsoidGeometryData into Minecraft block coordinates";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Object geometryObj = inputValues.get(INPUT_SPHERE_GEOMETRY_ID);
+        Object geometryObj = inputValues.get(INPUT_ELLIPSOID_GEOMETRY_ID);
         BlockPosList blocks = new BlockPosList();
         RegionData region = null;
 
-        if (geometryObj instanceof SphereData geometry) {
-            blocks = GeometryVoxelizer.voxelizeSphere(
+        if (geometryObj instanceof EllipsoidGeometryData geometry) {
+            blocks = GeometryVoxelizer.voxelizeEllipsoid(
                 geometry,
-                voxelMode == VoxelMode.SHELL ? SphereBlockGenerator.VoxelMode.SHELL : SphereBlockGenerator.VoxelMode.SOLID,
+                voxelMode == VoxelMode.SHELL ? EllipsoidBlockGenerator.VoxelMode.SHELL : EllipsoidBlockGenerator.VoxelMode.SOLID,
                 shellThickness
             );
             region = GeometryVoxelizer.createBoundingRegion(geometry);
@@ -75,14 +75,10 @@ public class SphereGeometryVoxelizerNode extends BaseNode {
         outputValues.put(OUTPUT_COUNT_ID, blocks.size());
     }
 
-    public VoxelMode getVoxelMode() {
-        return voxelMode;
-    }
-
     public void setVoxelMode(VoxelMode voxelMode) {
-        VoxelMode resolvedMode = voxelMode == null ? VoxelMode.SOLID : voxelMode;
-        if (this.voxelMode != resolvedMode) {
-            this.voxelMode = resolvedMode;
+        VoxelMode resolved = voxelMode == null ? VoxelMode.SOLID : voxelMode;
+        if (this.voxelMode != resolved) {
+            this.voxelMode = resolved;
             markDirty();
         }
     }
@@ -99,14 +95,10 @@ public class SphereGeometryVoxelizerNode extends BaseNode {
         }
     }
 
-    public double getShellThickness() {
-        return shellThickness;
-    }
-
     public void setShellThickness(double shellThickness) {
-        double resolvedThickness = Math.max(0.0d, shellThickness);
-        if (Double.compare(this.shellThickness, resolvedThickness) != 0) {
-            this.shellThickness = resolvedThickness;
+        double resolved = Math.max(0.0d, shellThickness);
+        if (Double.compare(this.shellThickness, resolved) != 0) {
+            this.shellThickness = resolved;
             markDirty();
         }
     }
@@ -124,14 +116,17 @@ public class SphereGeometryVoxelizerNode extends BaseNode {
         if (!(state instanceof Map<?, ?> map)) {
             return;
         }
-        if (map.get("fillSphere") instanceof Boolean fillValue) {
-            setVoxelMode(fillValue ? VoxelMode.SOLID : VoxelMode.SHELL);
+        if (map.get("hollow") instanceof Boolean hollowValue) {
+            setVoxelMode(hollowValue ? VoxelMode.SHELL : VoxelMode.SOLID);
         }
-        if (map.get("voxelMode") instanceof String voxelModeValue) {
-            setVoxelModeString(voxelModeValue);
+        if (map.get("voxelMode") instanceof String value) {
+            setVoxelModeString(value);
         }
-        if (map.get("shellThickness") instanceof Number shellThicknessValue) {
-            setShellThickness(shellThicknessValue.doubleValue());
+        if (map.get("shellThickness") instanceof Number value) {
+            setShellThickness(value.doubleValue());
+        }
+        if (map.get("thickness") instanceof Number value) {
+            setShellThickness(value.doubleValue());
         }
     }
 }

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.voxel;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.voxel.tetrahedron_geometry_voxelizer",
+    id = "output.execute.bake_tetrahedron_to_blocks",
     displayName = "Tetrahedron Geometry To Blocks",
     description = "Voxelizes TetrahedronGeometryData into Minecraft block coordinates",
-    category = "spatial.voxel"
+    category = "output.execute"
 )
 public class TetrahedronGeometryVoxelizerNode extends BaseNode {
 
@@ -27,7 +27,7 @@ public class TetrahedronGeometryVoxelizerNode extends BaseNode {
     private static final String OUTPUT_COUNT_ID = "output_count";
 
     public TetrahedronGeometryVoxelizerNode() {
-        super(UUID.randomUUID(), "spatial.voxel.tetrahedron_geometry_voxelizer");
+        super(UUID.randomUUID(), "output.execute.bake_tetrahedron_to_blocks");
 
         addInputPort(new BasePort(INPUT_TETRAHEDRON_GEOMETRY_ID, "Tetrahedron Geometry", "Tetrahedron geometry to voxelize", NodeDataType.TETRAHEDRON_GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Voxelized block coordinates", NodeDataType.BLOCK_LIST, this));

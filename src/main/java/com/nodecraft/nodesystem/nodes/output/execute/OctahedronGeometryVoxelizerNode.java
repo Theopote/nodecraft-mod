@@ -1,11 +1,11 @@
-package com.nodecraft.nodesystem.nodes.spatial.voxel;
+package com.nodecraft.nodesystem.nodes.output.execute;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
+import com.nodecraft.nodesystem.datatypes.OctahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -17,43 +17,43 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.voxel.prism_geometry_voxelizer",
-    displayName = "Prism Geometry To Blocks",
-    description = "Voxelizes PrismGeometryData into Minecraft block coordinates (supports solid and shell modes)",
-    category = "spatial.voxel"
+    id = "output.execute.bake_octahedron_to_blocks",
+    displayName = "Octahedron Geometry To Blocks",
+    description = "Voxelizes OctahedronGeometryData into Minecraft block coordinates",
+    category = "output.execute"
 )
-public class PrismGeometryVoxelizerNode extends BaseNode {
+public class OctahedronGeometryVoxelizerNode extends BaseNode {
 
-    @NodeProperty(displayName = "Fill Prism", category = "Shape", order = 1)
-    private boolean fillPrism = true;
+    @NodeProperty(displayName = "Fill Octahedron", category = "Shape", order = 1)
+    private boolean fillOctahedron = true;
 
-    private static final String INPUT_PRISM_GEOMETRY_ID = "input_prism_geometry";
+    private static final String INPUT_OCTAHEDRON_GEOMETRY_ID = "input_octahedron_geometry";
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_REGION_ID = "output_region";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
-    public PrismGeometryVoxelizerNode() {
-        super(UUID.randomUUID(), "spatial.voxel.prism_geometry_voxelizer");
+    public OctahedronGeometryVoxelizerNode() {
+        super(UUID.randomUUID(), "output.execute.bake_octahedron_to_blocks");
 
-        addInputPort(new BasePort(INPUT_PRISM_GEOMETRY_ID, "Prism Geometry", "Prism geometry to voxelize", NodeDataType.PRISM_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_OCTAHEDRON_GEOMETRY_ID, "Octahedron Geometry", "Octahedron geometry to voxelize", NodeDataType.OCTAHEDRON_GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Voxelized block coordinates", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the prism", NodeDataType.REGION, this));
+        addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding region of the octahedron", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Generated block count", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "Voxelizes PrismGeometryData into Minecraft block coordinates (supports solid and shell modes)";
+        return "Voxelizes OctahedronGeometryData into Minecraft block coordinates";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Object geometryObj = inputValues.get(INPUT_PRISM_GEOMETRY_ID);
+        Object geometryObj = inputValues.get(INPUT_OCTAHEDRON_GEOMETRY_ID);
         BlockPosList blocks = new BlockPosList();
         RegionData region = null;
 
-        if (geometryObj instanceof PrismGeometryData geometry) {
-            blocks = GeometryVoxelizer.voxelizePrism(geometry, fillPrism);
+        if (geometryObj instanceof OctahedronGeometryData geometry) {
+            blocks = GeometryVoxelizer.voxelizeOctahedron(geometry, fillOctahedron);
             region = GeometryVoxelizer.createBoundingRegion(geometry);
         }
 
@@ -65,17 +65,14 @@ public class PrismGeometryVoxelizerNode extends BaseNode {
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
-        state.put("fillPrism", fillPrism);
+        state.put("fillOctahedron", fillOctahedron);
         return state;
     }
 
     @Override
     public void setNodeState(Object state) {
-        if (!(state instanceof Map<?, ?> map)) {
-            return;
-        }
-        if (map.get("fillPrism") instanceof Boolean value) {
-            fillPrism = value;
+        if (state instanceof Map<?, ?> map && map.get("fillOctahedron") instanceof Boolean value) {
+            fillOctahedron = value;
         }
     }
 }
