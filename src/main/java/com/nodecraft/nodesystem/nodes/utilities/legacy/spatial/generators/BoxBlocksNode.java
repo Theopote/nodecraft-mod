@@ -13,7 +13,7 @@ import net.minecraft.util.math.BlockPos;
     id = "spatial.generators.box_blocks",
     displayName = "Box (Legacy Combined)",
     description = "Legacy combined box generator kept for compatibility. Prefer Box by Center + Size, Box by Two Corners, or Box by Corner + Size.",
-    category = "spatial.generators"
+    category = "utilities.legacy.spatial.generators"
 )
 public class BoxBlocksNode extends AbstractBoxGeneratorNode {
 
