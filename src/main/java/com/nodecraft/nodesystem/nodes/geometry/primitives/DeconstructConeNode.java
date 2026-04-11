@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_cone",
+    id = "geometry.primitives.deconstruct_cone",
     displayName = "Deconstruct Cone",
     description = "Extracts axis, height, radius, bounds, and analytical values from cone geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructConeNode extends BaseNode {
 
@@ -39,7 +39,7 @@ public class DeconstructConeNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructConeNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_cone");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_cone");
 
         addInputPort(new BasePort(INPUT_CONE_ID, "Cone", "Cone geometry to deconstruct", NodeDataType.CONE_GEOMETRY, this));
 

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_tetrahedron",
+    id = "geometry.primitives.deconstruct_tetrahedron",
     displayName = "Deconstruct Tetrahedron",
     description = "Extracts center, edge length, vertices, bounds, and analytical values from tetrahedron geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructTetrahedronNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class DeconstructTetrahedronNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructTetrahedronNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_tetrahedron");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_tetrahedron");
 
         addInputPort(new BasePort(INPUT_TETRAHEDRON_ID, "Tetrahedron", "Tetrahedron geometry to deconstruct", NodeDataType.TETRAHEDRON_GEOMETRY, this));
 

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_sphere",
+    id = "geometry.primitives.deconstruct_sphere",
     displayName = "Deconstruct Sphere",
     description = "Extracts center, radius, diameter, bounds, area, and volume from sphere geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructSphereNode extends BaseNode {
 
@@ -35,7 +35,7 @@ public class DeconstructSphereNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructSphereNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_sphere");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_sphere");
 
         addInputPort(new BasePort(INPUT_SPHERE_ID, "Sphere", "Sphere geometry to deconstruct", NodeDataType.SPHERE, this));
 

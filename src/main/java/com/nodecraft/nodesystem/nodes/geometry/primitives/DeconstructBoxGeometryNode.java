@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_box_geometry",
+    id = "geometry.primitives.deconstruct_box",
     displayName = "Deconstruct Box Geometry",
     description = "Extracts center, half extents, orientation, corners, and faces from box geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructBoxGeometryNode extends BaseNode {
 
@@ -37,7 +37,7 @@ public class DeconstructBoxGeometryNode extends BaseNode {
     private static final String OUTPUT_Z_AXIS_ID = "output_z_axis";
 
     public DeconstructBoxGeometryNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_box_geometry");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_box");
 
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "The box geometry to deconstruct", NodeDataType.BOX_GEOMETRY, this));
 

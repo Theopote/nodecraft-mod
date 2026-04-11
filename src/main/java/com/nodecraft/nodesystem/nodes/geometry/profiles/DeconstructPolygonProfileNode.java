@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import java.util.List;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_polygon_profile",
+    id = "geometry.profiles.deconstruct_profile",
     displayName = "Deconstruct Polygon Profile",
     description = "Extracts points, boundary, plane, center, perimeter, and area from a polygon profile",
-    category = "spatial.analysis"
+    category = "geometry.profiles"
 )
 public class DeconstructPolygonProfileNode extends BaseNode {
 
@@ -34,7 +34,7 @@ public class DeconstructPolygonProfileNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructPolygonProfileNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_polygon_profile");
+        super(UUID.randomUUID(), "geometry.profiles.deconstruct_profile");
 
         addInputPort(new BasePort(INPUT_PROFILE_ID, "Profile", "Polygon profile to deconstruct", NodeDataType.POLYGON_PROFILE, this));
 

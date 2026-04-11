@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_prism",
+    id = "geometry.primitives.deconstruct_prism",
     displayName = "Deconstruct Prism",
     description = "Extracts base polygon, top polygon, extrusion, side surface strip, and bounds from prism geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructPrismNode extends BaseNode {
 
@@ -37,7 +37,7 @@ public class DeconstructPrismNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructPrismNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_prism");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_prism");
 
         addInputPort(new BasePort(INPUT_PRISM_ID, "Prism", "Prism geometry to deconstruct", NodeDataType.PRISM_GEOMETRY, this));
 

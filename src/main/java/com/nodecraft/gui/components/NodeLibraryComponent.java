@@ -92,6 +92,15 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> referencePlanesOrder = getReferencePlanesOrder();
         categoryOrder.put("reference.planes", referencePlanesOrder);
 
+        Map<String, Integer> geometryBooleanOrder = getGeometryBooleanOrder();
+        categoryOrder.put("geometry.boolean", geometryBooleanOrder);
+
+        Map<String, Integer> geometryPrimitivesOrder = getGeometryPrimitivesOrder();
+        categoryOrder.put("geometry.primitives", geometryPrimitivesOrder);
+
+        Map<String, Integer> geometryProfilesOrder = getGeometryProfilesOrder();
+        categoryOrder.put("geometry.profiles", geometryProfilesOrder);
+
         Map<String, Integer> transformBasicTransformsOrder = getTransformBasicTransformsOrder();
         categoryOrder.put("transform.basic_transforms", transformBasicTransformsOrder);
 
@@ -236,6 +245,32 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> mathListSequenceOrder = new HashMap<>();
         mathListSequenceOrder.put("math.list_sequence.create_list", 0);
         return mathListSequenceOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
+        Map<String, Integer> geometryBooleanOrder = new HashMap<>();
+        geometryBooleanOrder.put("geometry.boolean.bounding_box", 0);
+        geometryBooleanOrder.put("geometry.boolean.geometry_bounds", 1);
+        return geometryBooleanOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getGeometryPrimitivesOrder() {
+        Map<String, Integer> geometryPrimitivesOrder = new HashMap<>();
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_box", 0);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_sphere", 1);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_cylinder", 2);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_cone", 3);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_ellipsoid", 4);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_octahedron", 5);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_tetrahedron", 6);
+        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_prism", 7);
+        return geometryPrimitivesOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getGeometryProfilesOrder() {
+        Map<String, Integer> geometryProfilesOrder = new HashMap<>();
+        geometryProfilesOrder.put("geometry.profiles.deconstruct_profile", 0);
+        return geometryProfilesOrder;
     }
 
     private static @NonNull Map<String, Integer> getTransformBasicTransformsOrder() {
@@ -484,6 +519,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("geometry", new float[]{0.92f, 0.82f, 0.18f, 1.0f});
             
             // 同时为首字母大写的版本添加相同的颜色（兼容性）
             CATEGORY_COLORS_FLOAT.put("Inputs", new float[]{0.2f, 0.5f, 0.9f, 1.0f});          // 蓝色
@@ -499,6 +535,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("Input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.92f, 0.82f, 0.18f, 1.0f});
             
             // 子分类颜色配置 - 使用略微淡化的主分类颜色
             // inputs子分类
@@ -538,6 +575,9 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("reference.points", new float[]{1.0f, 0.98f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.vectors", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.planes", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("geometry.boolean", new float[]{0.98f, 0.88f, 0.28f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("geometry.primitives", new float[]{0.96f, 0.9f, 0.34f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("geometry.profiles", new float[]{1.0f, 0.94f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.basic_transforms", new float[]{1.0f, 0.62f, 0.32f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.orientation", new float[]{1.0f, 0.68f, 0.38f, 1.0f});
             
@@ -780,8 +820,9 @@ public class NodeLibraryComponent implements EditorComponent {
         
         // 确保主要分类始终展开，即使它们是子分类
         String[] keyCategories = {
-            "input", "inputs", "data", "material", "math", "output", "reference", "spatial", "transform", "world", "utilities",
+            "geometry", "input", "inputs", "data", "material", "math", "output", "reference", "spatial", "transform", "world", "utilities",
             "input.numeric", "input.context", "input.type_selectors", "reference.points", "world.selection",
+            "geometry.boolean", "geometry.primitives", "geometry.profiles",
             "transform.basic_transforms", "transform.orientation",
             "math.basic", "math.list_sequence", "data.lists", "spatial.points", "world.entity", 
             "output.preview", "utilities.organization"

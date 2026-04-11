@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_octahedron",
+    id = "geometry.primitives.deconstruct_octahedron",
     displayName = "Deconstruct Octahedron",
     description = "Extracts center, size, vertices, bounds, and analytical values from octahedron geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructOctahedronNode extends BaseNode {
 
@@ -35,7 +35,7 @@ public class DeconstructOctahedronNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructOctahedronNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_octahedron");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_octahedron");
 
         addInputPort(new BasePort(INPUT_OCTAHEDRON_ID, "Octahedron", "Octahedron geometry to deconstruct", NodeDataType.OCTAHEDRON_GEOMETRY, this));
 

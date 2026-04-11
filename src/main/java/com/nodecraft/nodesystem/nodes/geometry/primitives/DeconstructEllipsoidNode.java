@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_ellipsoid",
+    id = "geometry.primitives.deconstruct_ellipsoid",
     displayName = "Deconstruct Ellipsoid",
     description = "Extracts center, radii, bounds, volume, and approximate surface area from ellipsoid geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructEllipsoidNode extends BaseNode {
 
@@ -35,7 +35,7 @@ public class DeconstructEllipsoidNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructEllipsoidNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_ellipsoid");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_ellipsoid");
 
         addInputPort(new BasePort(INPUT_ELLIPSOID_ID, "Ellipsoid", "Ellipsoid geometry to deconstruct", NodeDataType.ELLIPSOID_GEOMETRY, this));
 

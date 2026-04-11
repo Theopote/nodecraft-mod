@@ -170,6 +170,17 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.points.project_point_to_plane", "transform.orientation.project_to_plane");
         addMovedNodeAlias(aliases, "spatial.analysis.offset_box_face", "transform.basic_transforms.offset_face");
         addMovedNodeAlias(aliases, "spatial.analysis.inset_box_face", "transform.basic_transforms.inset_face");
+        addMovedNodeAlias(aliases, "spatial.analysis.bounding_box", "geometry.boolean.bounding_box");
+        addMovedNodeAlias(aliases, "spatial.analysis.geometry_bounds", "geometry.boolean.geometry_bounds");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_box_geometry", "geometry.primitives.deconstruct_box");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_sphere", "geometry.primitives.deconstruct_sphere");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_cylinder", "geometry.primitives.deconstruct_cylinder");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_cone", "geometry.primitives.deconstruct_cone");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_ellipsoid", "geometry.primitives.deconstruct_ellipsoid");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_octahedron", "geometry.primitives.deconstruct_octahedron");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_tetrahedron", "geometry.primitives.deconstruct_tetrahedron");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_prism", "geometry.primitives.deconstruct_prism");
+        addMovedNodeAlias(aliases, "spatial.analysis.deconstruct_polygon_profile", "geometry.profiles.deconstruct_profile");
         return Collections.unmodifiableMap(aliases);
     }
 
@@ -192,8 +203,7 @@ public class NodeRegistry {
     }
 
     private static Map<String, String> createNodeCategoryOverrides() {
-        Map<String, String> overrides = new HashMap<>();
-        return Collections.unmodifiableMap(overrides);
+        return Map.of();
     }
 
     private String normalizeNodeId(String nodeId) {
@@ -292,12 +302,11 @@ public class NodeRegistry {
      * 如果类别ID已存在，则此操作无效。
      *
      * @param category 要注册的节点类别。
-     * @return 如果成功注册或类别已存在，则返回 true；如果 category 为 null 或 categoryId 为 null，则返回 false。
      */
-    public synchronized boolean registerCategory(NodeCategory category) {
+    public synchronized void registerCategory(NodeCategory category) {
         if (category == null || category.getId() == null) {
             NodeCraft.LOGGER.warn("尝试注册无效的节点类别 (null 或 null ID)。");
-            return false;
+            return;
         }
 
         // 标准化分类ID和显示名称
@@ -323,14 +332,13 @@ public class NodeRegistry {
         // 检查是否已存在
         if (categoryMap.containsKey(normalizedId)) {
             NodeCraft.LOGGER.debug("节点类别 {} 已存在，无需重复注册。", normalizedId);
-            return true;
+            return;
         }
 
         // 创建新的分类对象
         NodeCategory newCategory = new NodeCategory(normalizedId, displayName);
         categoryMap.put(normalizedId, newCategory);
         NodeCraft.LOGGER.debug("注册节点类别: {} (ID: {})", displayName, normalizedId);
-        return true;
     }
 
     /**

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.analysis;
+package com.nodecraft.nodesystem.nodes.geometry.primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "spatial.analysis.deconstruct_cylinder",
+    id = "geometry.primitives.deconstruct_cylinder",
     displayName = "Deconstruct Cylinder",
     description = "Extracts axis, radius, height, bounds, and analytical values from cylinder geometry",
-    category = "spatial.analysis"
+    category = "geometry.primitives"
 )
 public class DeconstructCylinderNode extends BaseNode {
 
@@ -43,7 +43,7 @@ public class DeconstructCylinderNode extends BaseNode {
     private static final String OUTPUT_VALID_ID = "output_valid";
 
     public DeconstructCylinderNode() {
-        super(UUID.randomUUID(), "spatial.analysis.deconstruct_cylinder");
+        super(UUID.randomUUID(), "geometry.primitives.deconstruct_cylinder");
 
         addInputPort(new BasePort(INPUT_CYLINDER_ID, "Cylinder", "Cylinder geometry to deconstruct", NodeDataType.CYLINDER_GEOMETRY, this));
 
