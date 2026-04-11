@@ -149,6 +149,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> deferredMathOrder = getDeferredMathOrder();
         categoryOrder.put("deferred.math", deferredMathOrder);
 
+        Map<String, Integer> deferredOutOfScopeOrder = getDeferredOutOfScopeOrder();
+        categoryOrder.put("deferred.out_of_scope", deferredOutOfScopeOrder);
+
         Map<String, Integer> spatialLegacyOrder = getStringIntegerMap();
         categoryOrder.put("spatial.legacy", spatialLegacyOrder);
 
@@ -311,6 +314,10 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> deferredMathOrder = new HashMap<>();
         deferredMathOrder.put("deferred.math.math_series", 0);
         return deferredMathOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getDeferredOutOfScopeOrder() {
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
@@ -638,6 +645,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.scalar_math", new float[]{0.42f, 0.87f, 0.42f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.random", new float[]{0.52f, 0.95f, 0.52f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("deferred.math", new float[]{0.72f, 0.72f, 0.72f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("deferred.out_of_scope", new float[]{0.68f, 0.68f, 0.68f, 1.0f});
             
             // Spatial and migrated-reference subcategories.
             CATEGORY_COLORS_FLOAT.put("spatial.arrays", new float[]{1.0f, 1.0f, 0.4f, 1.0f});

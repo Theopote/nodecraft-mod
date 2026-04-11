@@ -341,12 +341,17 @@ public class NodeRegistry {
 
     private boolean isOutOfScopeCategory(String normalizedCategoryId) {
         return normalizedCategoryId.startsWith("animation")
+            || normalizedCategoryId.startsWith("inputs")
+            || normalizedCategoryId.startsWith("data")
+            || normalizedCategoryId.startsWith("control.flow")
             || normalizedCategoryId.startsWith("flora")
             || normalizedCategoryId.startsWith("spatial.sdf")
             || normalizedCategoryId.startsWith("world.entity")
             || normalizedCategoryId.startsWith("world.interaction")
             || normalizedCategoryId.startsWith("world.nbt")
             || normalizedCategoryId.startsWith("world.inventory")
+            || normalizedCategoryId.startsWith("utilities.advanced")
+            || normalizedCategoryId.startsWith("utilities.fileio")
             || normalizedCategoryId.startsWith("utilities.experimental")
             || normalizedCategoryId.startsWith("workflow.experimental");
     }
