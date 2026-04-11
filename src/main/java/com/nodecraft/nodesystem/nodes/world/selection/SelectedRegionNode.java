@@ -58,7 +58,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     private volatile Vector3 pos2;
     private volatile boolean selecting = false;
     private volatile boolean waitingSecondPoint = false;
-    private volatile String selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
+    private volatile String selectionHint = "Click Start Area Selection, then left-click two corner points in the world.";
     private volatile String completedRegionPreviewId;
     private volatile String completedBlocksPreviewId;
     private static final int MAX_BLOCK_PREVIEW_COUNT = 8192;
@@ -72,7 +72,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             pos2 = new Vector3(endPos.getX(), endPos.getY(), endPos.getZ());
             selecting = false;
             waitingSecondPoint = false;
-            selectionHint = "框选完成";
+            selectionHint = "Area selection complete.";
             updateOutputsFromPositions();
             syncCompletedRegionPreview();
             invalidateCache();
@@ -85,7 +85,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             pos2 = null;
             selecting = true;
             waitingSecondPoint = true;
-            selectionHint = "已选第一个点，请选择第二个点";
+            selectionHint = "First point selected. Choose the second point.";
             clearCompletedRegionPreview();
             clearCompletedBlocksPreview();
             outputValues.put(OUTPUT_POS1_ID, pos1);
@@ -101,7 +101,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         public void onInteractionCancelled() {
             selecting = false;
             waitingSecondPoint = false;
-            selectionHint = "框选已取消";
+            selectionHint = "Area selection cancelled.";
             markDirty();
         }
     }
@@ -146,7 +146,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
 
         if (pos1 == null || pos2 == null) {
             clearCompletedRegionPreview();
-            // 保留 pos1 临时状态，完整输出由 updateOutputsFromPositions 产生
+            // Keep the temporary first-point state. Full outputs are produced by updateOutputsFromPositions().
             if (pos1 == null) {
                 resetOutputs();
             }
@@ -171,7 +171,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     @Override
     protected float calculateMinUIWidth() {
         float buttonPadding = 20.0f;
-        float labelWidth = ImGui.calcTextSize("开始框选区域").x;
+        float labelWidth = ImGui.calcTextSize("Start Area Selection").x;
         return Math.max(144.0f, labelWidth + buttonPadding);
     }
 
@@ -199,7 +199,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF388E3C);
                 ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF1B5E20);
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
-                if (ImGui.button("开始框选区域##start_area_pick", buttonWidth, 0)) {
+                if (ImGui.button("Start Area Selection##start_area_pick", buttonWidth, 0)) {
                     startAreaSelection();
                     changed = true;
                 }
@@ -209,7 +209,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(ImGuiCol.ButtonHovered, 0xFF9C7C1F);
                 ImGui.pushStyleColor(ImGuiCol.ButtonActive, 0xFF6E560D);
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
-                if (ImGui.button("取消框选##cancel_area_pick", buttonWidth, 0)) {
+                if (ImGui.button("Cancel Area Selection##cancel_area_pick", buttonWidth, 0)) {
                     cancelAreaSelection();
                     changed = true;
                 }
@@ -243,14 +243,14 @@ public class SelectedRegionNode extends BaseCustomUINode {
             if (pos1 != null) {
                 ImGui.text("Pos1: (" + (int) pos1.getX() + ", " + (int) pos1.getY() + ", " + (int) pos1.getZ() + ")");
             } else {
-                ImGui.textDisabled("Pos1: 未设置");
+                ImGui.textDisabled("Pos1: Not set");
             }
             if (pos2 != null) {
                 ImGui.text("Pos2: (" + (int) pos2.getX() + ", " + (int) pos2.getY() + ", " + (int) pos2.getZ() + ")");
             } else if (waitingSecondPoint) {
-                ImGui.textDisabled("Pos2: 等待第二个点...");
+                ImGui.textDisabled("Pos2: Waiting for second point...");
             } else {
-                ImGui.textDisabled("Pos2: 未设置");
+                ImGui.textDisabled("Pos2: Not set");
             }
 
             return changed;
@@ -260,7 +260,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     private void startAreaSelection() {
         selecting = true;
         waitingSecondPoint = false;
-        selectionHint = "请选择第一个点";
+        selectionHint = "Choose the first point.";
         NodeEditorInteractionManager.getInstance().requestAreaSelection(getId().toString(), areaSelectionCallback);
         markDirty();
     }
@@ -269,7 +269,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         NodeEditorInteractionManager.getInstance().cancelAreaSelection();
         selecting = false;
         waitingSecondPoint = false;
-        selectionHint = "框选已取消";
+        selectionHint = "Area selection cancelled.";
         markDirty();
     }
 
@@ -313,7 +313,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         pos2 = null;
         selecting = false;
         waitingSecondPoint = false;
-        selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
+        selectionHint = "Click Start Area Selection, then left-click two corner points in the world.";
         resetOutputs();
         invalidateCache();
         markDirty();
@@ -456,7 +456,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
 
             selecting = false;
             waitingSecondPoint = false;
-            selectionHint = "点击“开始框选”后，在世界里左键选择两个角点";
+            selectionHint = "Click Start Area Selection, then left-click two corner points in the world.";
         }
     }
 
