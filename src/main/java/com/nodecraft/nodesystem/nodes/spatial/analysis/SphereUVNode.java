@@ -13,6 +13,9 @@ import org.joml.Vector3d;
 
 import java.util.UUID;
 
+/**
+ * Legacy compatibility analysis node for sphere parameterization queries.
+ */
 @NodeInfo(
     id = "spatial.analysis.sphere_uv",
     displayName = "Sphere UV",

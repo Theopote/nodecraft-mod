@@ -19,6 +19,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Legacy compatibility analysis node for filtering sampled sphere points by latitude and longitude ranges.
+ */
 @NodeInfo(
     id = "spatial.analysis.select_sphere_band_sector",
     displayName = "Select Sphere Band Sector",

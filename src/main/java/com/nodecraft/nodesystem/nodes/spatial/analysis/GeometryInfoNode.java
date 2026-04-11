@@ -26,7 +26,7 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 /**
- * Emits high-level metadata for any supported geometry object.
+ * Legacy compatibility analysis node that reports metadata for supported geometry objects.
  */
 @NodeInfo(
     id = "spatial.analysis.geometry_info",

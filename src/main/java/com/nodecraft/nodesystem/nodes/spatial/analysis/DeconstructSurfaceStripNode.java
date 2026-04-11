@@ -16,6 +16,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Legacy compatibility analysis node for decomposing surface-strip data into reusable pieces.
+ */
 @NodeInfo(
     id = "spatial.analysis.deconstruct_surface_strip",
     displayName = "Deconstruct Surface Strip",

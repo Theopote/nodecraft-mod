@@ -13,6 +13,9 @@ import org.joml.Vector3d;
 
 import java.util.UUID;
 
+/**
+ * Legacy compatibility analysis node for classifying a point relative to a sphere surface.
+ */
 @NodeInfo(
     id = "spatial.analysis.sphere_point_info",
     displayName = "Sphere Point Info",
