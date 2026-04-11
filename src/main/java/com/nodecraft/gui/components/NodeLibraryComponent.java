@@ -142,17 +142,11 @@ public class NodeLibraryComponent implements EditorComponent {
         spatialGeneratorsOrder.put("spatial.generators.region_box_blocks", 1);
         categoryOrder.put("spatial.generators", spatialGeneratorsOrder);
 
-        Map<String, Integer> spatialConstructOrder = getSpatialConstructOrder();
-        categoryOrder.put("spatial.construct", spatialConstructOrder);
-
         Map<String, Integer> spatialAnalysisOrder = getMap();
         categoryOrder.put("spatial.analysis", spatialAnalysisOrder);
 
         Map<String, Integer> spatialPointsOrder = getIntegerMap();
         categoryOrder.put("spatial.points", spatialPointsOrder);
-
-        Map<String, Integer> spatialModelingOrder = getSpatialModelingOrder();
-        categoryOrder.put("spatial.modeling", spatialModelingOrder);
 
         Map<String, Integer> spatialInstancingOrder = new HashMap<>();
         spatialInstancingOrder.put("spatial.instancing.grow_along_normals", 0);
@@ -378,22 +372,6 @@ public class NodeLibraryComponent implements EditorComponent {
         return spatialVoxelOrder;
     }
 
-    private static @NonNull Map<String, Integer> getSpatialModelingOrder() {
-        Map<String, Integer> spatialModelingOrder = new HashMap<>();
-        spatialModelingOrder.put("spatial.modeling.resample_polygon_profile", 0);
-        spatialModelingOrder.put("spatial.modeling.extrude_profile", 1);
-        spatialModelingOrder.put("spatial.modeling.loft_profiles", 2);
-        spatialModelingOrder.put("spatial.modeling.sweep_profile_along_path", 3);
-        spatialModelingOrder.put("spatial.modeling.twist_point_list", 4);
-        spatialModelingOrder.put("spatial.modeling.extrude_point_list", 5);
-        spatialModelingOrder.put("spatial.modeling.loft_point_lists", 6);
-        spatialModelingOrder.put("spatial.modeling.sweep_point_list_along_path", 7);
-        spatialModelingOrder.put("spatial.modeling.surface_strip_to_geometry", 8);
-        spatialModelingOrder.put("spatial.modeling.push_pull_box_face", 9);
-        spatialModelingOrder.put("spatial.modeling.extrude_box_face", 10);
-        return spatialModelingOrder;
-    }
-
     private static @NonNull Map<String, Integer> getPreviewOrder() {
         Map<String, Integer> previewOrder = new HashMap<>();
         previewOrder.put("output.preview.geometry_viewer", 0);
@@ -460,44 +438,13 @@ public class NodeLibraryComponent implements EditorComponent {
         return materialBasicAssignmentOrder;
     }
 
-    private static @NonNull Map<String, Integer> getSpatialConstructOrder() {
-        Map<String, Integer> spatialConstructOrder = new HashMap<>();
-        spatialConstructOrder.put("spatial.construct.rectangle_on_plane", 0);
-        spatialConstructOrder.put("spatial.construct.regular_polygon_on_plane", 1);
-        spatialConstructOrder.put("spatial.construct.polygon_by_points", 2);
-        spatialConstructOrder.put("spatial.construct.prism_by_profile_vector", 3);
-        spatialConstructOrder.put("spatial.construct.prism_by_base_points_vector", 4);
-        spatialConstructOrder.put("spatial.construct.cylinder_by_axis_radius", 5);
-        spatialConstructOrder.put("spatial.construct.cone_by_base_apex_radius", 6);
-        spatialConstructOrder.put("spatial.construct.ellipsoid_by_center_radii", 7);
-        spatialConstructOrder.put("spatial.construct.octahedron_by_center_size", 8);
-        spatialConstructOrder.put("spatial.construct.tetrahedron_by_center_edge", 9);
-        spatialConstructOrder.put("spatial.construct.box_center_size", 10);
-        spatialConstructOrder.put("spatial.construct.box_corners", 11);
-        spatialConstructOrder.put("spatial.construct.box_corner_size", 12);
-        spatialConstructOrder.put("spatial.construct.sphere_by_center_radius", 13);
-        spatialConstructOrder.put("spatial.construct.sphere_by_diameter", 14);
-        return spatialConstructOrder;
-    }
-
     private static @NonNull Map<String, Integer> getMap() {
         Map<String, Integer> spatialAnalysisOrder = new HashMap<>();
-        spatialAnalysisOrder.put("spatial.analysis.bounding_box", 0);
-        spatialAnalysisOrder.put("spatial.analysis.geometry_bounds", 1);
-        spatialAnalysisOrder.put("spatial.analysis.deconstruct_box_geometry", 2);
-        spatialAnalysisOrder.put("spatial.analysis.get_box_corner", 3);
-        spatialAnalysisOrder.put("spatial.analysis.get_box_face", 4);
-        spatialAnalysisOrder.put("spatial.analysis.deconstruct_box_face", 5);
-        spatialAnalysisOrder.put("spatial.analysis.box_face_to_plane", 6);
-        spatialAnalysisOrder.put("spatial.analysis.face_center_frame", 7);
-        spatialAnalysisOrder.put("spatial.analysis.box_face_boundary_path", 8);
-        spatialAnalysisOrder.put("spatial.analysis.inset_box_face", 9);
-        spatialAnalysisOrder.put("spatial.analysis.offset_box_face", 10);
-        spatialAnalysisOrder.put("spatial.analysis.get_face_edge", 11);
-        spatialAnalysisOrder.put("spatial.analysis.face_edge_to_path", 12);
-        spatialAnalysisOrder.put("spatial.analysis.deconstruct_face_edge", 13);
-        spatialAnalysisOrder.put("spatial.analysis.point_list_bounds", 14);
-        spatialAnalysisOrder.put("spatial.analysis.point_list_center", 15);
+        spatialAnalysisOrder.put("spatial.analysis.geometry_info", 0);
+        spatialAnalysisOrder.put("spatial.analysis.select_sphere_band_sector", 1);
+        spatialAnalysisOrder.put("spatial.analysis.sphere_uv", 2);
+        spatialAnalysisOrder.put("spatial.analysis.sphere_point_info", 3);
+        spatialAnalysisOrder.put("spatial.analysis.deconstruct_surface_strip", 4);
         return spatialAnalysisOrder;
     }
 
@@ -536,23 +483,8 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private static @NonNull Map<String, Integer> getIntegerMap() {
         Map<String, Integer> spatialPointsOrder = new HashMap<>();
-        spatialPointsOrder.put("spatial.points.block_to_point", 0);
-        spatialPointsOrder.put("spatial.points.project_point_to_plane", 1);
-        spatialPointsOrder.put("spatial.points.distance_point_to_plane", 2);
-        spatialPointsOrder.put("spatial.points.point_along_vector", 3);
-        spatialPointsOrder.put("spatial.points.point_between_two_points", 4);
-        spatialPointsOrder.put("spatial.points.points_to_path", 5);
-        spatialPointsOrder.put("spatial.points.path_to_points", 6);
-        spatialPointsOrder.put("spatial.points.is_grid_point", 7);
-        spatialPointsOrder.put("spatial.points.point_to_block_if_grid", 8);
-        spatialPointsOrder.put("spatial.points.snap_point_to_block", 9);
-        spatialPointsOrder.put("spatial.points.filter_grid_points", 10);
-        spatialPointsOrder.put("spatial.points.snap_point_list_to_blocks", 11);
-        spatialPointsOrder.put("spatial.points.offset_coordinates", 12);
-        spatialPointsOrder.put("spatial.points.rotate_coordinates", 13);
-        spatialPointsOrder.put("spatial.points.scale_coordinates", 14);
-        spatialPointsOrder.put("spatial.points.mirror_coordinates", 15);
-        spatialPointsOrder.put("spatial.points.randomize_coordinates", 16);
+        spatialPointsOrder.put("spatial.points.point_between_two_points", 0);
+        spatialPointsOrder.put("spatial.points.randomize_coordinates", 1);
         return spatialPointsOrder;
     }
 
