@@ -14,35 +14,35 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Split Text 鑺傜偣锛屾寜鍒嗛殧绗﹀皢鏂囨湰鎷嗗垎鎴愬垪琛?
+ * Split Text                                                  ?
  */
 @NodeInfo(
-    id = "data.text.split",
-    displayName = "鏂囨湰鎷嗗垎",
-    description = "鎸夊垎闅旂灏嗘枃鏈媶鍒嗘垚鍒楄〃",
-    category = "data.text"
+    id = "utilities.text_processing.split",
+    displayName = "Split Text",
+    description = "Splits text into a list using a delimiter.",
+    category = "utilities.text_processing"
 )
 public class SplitTextNode extends BaseNode {
     
-    // --- 鑺傜偣灞炴€?---
-    private String defaultDelimiter = ","; // 榛樿鍒嗛殧绗?
-    private boolean trimResults = true;    // 鏄惁鍘婚櫎缁撴灉鐨勫墠鍚庣┖鐧?
-    private boolean skipEmptyResults = false; // 鏄惁璺宠繃绌虹粨鏋?
-    private String description = "Splits text into a list using a delimiter"; // 鑺傜偣鎻忚堪
+    // ---              ?---
+    private String defaultDelimiter = ","; //                ?
+    private boolean trimResults = true;    //                                     ?
+    private boolean skipEmptyResults = false; //                       ?
+    private String description = "Splits text into a list using a delimiter"; //              ?
     
-    // --- 杈撳叆/杈撳嚭绔彛ID ---
+    // ---       ?              D ---
     private static final String INPUT_TEXT_ID = "input_text";
     private static final String INPUT_DELIMITER_ID = "input_delimiter";
     private static final String OUTPUT_LIST_ID = "output_list";
     private static final String OUTPUT_COUNT_ID = "output_count";
     
     /**
-     * 鏋勯€犱竴涓柊鐨勬枃鏈媶鍒嗚妭鐐?
+     *                                         ?
      */
     public SplitTextNode() {
-        super(UUID.randomUUID(), "data.text.split");
+        super(UUID.randomUUID(), "utilities.text_processing.split");
         
-        // 鍒涘缓杈撳叆绔彛
+        //                    ?
         IPort textInput = new BasePort(INPUT_TEXT_ID, "Text", 
                 "The input text to split", NodeDataType.STRING, this);
         addInputPort(textInput);
@@ -51,7 +51,7 @@ public class SplitTextNode extends BaseNode {
                 "The delimiter to split by (default: comma)", NodeDataType.STRING, this);
         addInputPort(delimiterInput);
         
-        // 鍒涘缓杈撳嚭绔彛
+        //                    ?
         IPort listOutput = new BasePort(OUTPUT_LIST_ID, "List", 
                 "The resulting list of substrings", NodeDataType.LIST, this);
         addOutputPort(listOutput);
@@ -62,8 +62,8 @@ public class SplitTextNode extends BaseNode {
     }
     
     /**
-     * 瀹炵幇INode鎺ュ彛鐨刧etDescription鏂规硶
-     * @return 鑺傜偣鎻忚堪
+     *         ode            tDescription      ?
+     * @return              ?
      */
     @Override
     public String getDescription() {
@@ -71,16 +71,16 @@ public class SplitTextNode extends BaseNode {
     }
     
     /**
-     * 鑺傜偣鐨勮绠楅€昏緫
-     * @param context 鎵ц涓婁笅鏂?
+     *                         ?
+     * @param context                ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 鑾峰彇杈撳叆
+        //              ?
         Object textObj = inputValues.get(INPUT_TEXT_ID);
         Object delimiterObj = inputValues.get(INPUT_DELIMITER_ID);
         
-        // 榛樿绌哄瓧绗︿覆
+        //                    ?
         String text = "";
         if (textObj instanceof String) {
             text = (String) textObj;
@@ -88,7 +88,7 @@ public class SplitTextNode extends BaseNode {
             text = textObj.toString();
         }
         
-        // 浣跨敤榛樿鍒嗛殧绗︽垨杈撳叆鍒嗛殧绗?
+        //                                          ?
         String delimiter = defaultDelimiter;
         if (delimiterObj instanceof String) {
             delimiter = (String) delimiterObj;
@@ -97,18 +97,18 @@ public class SplitTextNode extends BaseNode {
             }
         }
         
-        // 鎷嗗垎鏂囨湰
+        //              ?
         String[] parts = text.split(java.util.regex.Pattern.quote(delimiter), -1);
         List<String> result = new ArrayList<>();
         
-        // 澶勭悊缁撴灉
+        //              ?
         for (String part : parts) {
-            // 濡傛灉闇€瑕佸幓闄ゅ墠鍚庣┖鐧?
+            //                                   ?
             if (trimResults) {
                 part = part.trim();
             }
             
-            // 濡傛灉璺宠繃绌虹粨鏋滀笖璇ラ儴鍒嗕负绌?
+            //                                             ?
             if (skipEmptyResults && part.isEmpty()) {
                 continue;
             }
@@ -116,7 +116,7 @@ public class SplitTextNode extends BaseNode {
             result.add(part);
         }
         
-        // 璁剧疆杈撳嚭
+        //              ?
         outputValues.put(OUTPUT_LIST_ID, result);
         outputValues.put(OUTPUT_COUNT_ID, result.size());
     }
@@ -150,7 +150,7 @@ public class SplitTextNode extends BaseNode {
         markDirty();
     }
     
-    // --- 鑺傜偣鐘舵€佸簭鍒楀寲 ---
+    // ---                         ?---
     
     @Override
     public Object getNodeState() {

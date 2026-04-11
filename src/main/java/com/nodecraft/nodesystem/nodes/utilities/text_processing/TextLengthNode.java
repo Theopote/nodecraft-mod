@@ -11,44 +11,44 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Text Length 鑺傜偣锛岃幏鍙栧瓧绗︿覆鐨勯暱搴?
+ * Text Length                                     ?
  */
 @NodeInfo(
-    id = "data.text.length",
-    displayName = "鏂囨湰闀垮害",
-    description = "鑾峰彇瀛楃涓茬殑闀垮害锛屽彲閫夋嫨鏄惁蹇界暐绌虹櫧瀛楃",
-    category = "data.text"
+    id = "utilities.text_processing.length",
+    displayName = "Text Length",
+    description = "Gets the length of a text string, optionally ignoring whitespace.",
+    category = "utilities.text_processing"
 )
 public class TextLengthNode extends BaseNode {
     
-    // --- 鑺傜偣灞炴€?---
-    private boolean ignoreWhitespace = false; // 鏄惁蹇界暐绌虹櫧瀛楃
-    private String description = "Gets the length of a string"; // 鑺傜偣鎻忚堪
+    // ---              ?---
+    private boolean ignoreWhitespace = false; //                           ?
+    private String description = "Gets the length of a string"; //              ?
     
-    // --- 杈撳叆/杈撳嚭绔彛ID ---
+    // ---       ?              D ---
     private static final String INPUT_TEXT_ID = "input_text";
     private static final String OUTPUT_LENGTH_ID = "output_length";
     
     /**
-     * 鏋勯€犱竴涓柊鐨勬枃鏈暱搴﹁妭鐐?
+     *                                         ?
      */
     public TextLengthNode() {
-        super(UUID.randomUUID(), "data.text.length");
+        super(UUID.randomUUID(), "utilities.text_processing.length");
         
-        // 鍒涘缓杈撳叆绔彛
+        //                    ?
         IPort textInput = new BasePort(INPUT_TEXT_ID, "Text", 
                 "The input text", NodeDataType.STRING, this);
         addInputPort(textInput);
         
-        // 鍒涘缓杈撳嚭绔彛
+        //                    ?
         IPort lengthOutput = new BasePort(OUTPUT_LENGTH_ID, "Length", 
                 "The length of the text", NodeDataType.INTEGER, this);
         addOutputPort(lengthOutput);
     }
     
     /**
-     * 瀹炵幇INode鎺ュ彛鐨刧etDescription鏂规硶
-     * @return 鑺傜偣鎻忚堪
+     *         ode            tDescription      ?
+     * @return              ?
      */
     @Override
     public String getDescription() {
@@ -56,30 +56,30 @@ public class TextLengthNode extends BaseNode {
     }
     
     /**
-     * 鑺傜偣鐨勮绠楅€昏緫
-     * @param context 鎵ц涓婁笅鏂?
+     *                         ?
+     * @param context                ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 鑾峰彇杈撳叆
+        //              ?
         Object textObj = inputValues.get(INPUT_TEXT_ID);
         
-        // 榛樿闀垮害涓?
+        //                ?
         int length = 0;
         
-        // 璁＄畻瀛楃涓查暱搴?
+        //                       ?
         if (textObj != null) {
             String text = textObj.toString();
             
             if (ignoreWhitespace) {
-                // 绉婚櫎鎵€鏈夌┖鐧藉瓧绗﹀悗璁＄畻闀垮害
+                //                                              ?
                 text = text.replaceAll("\\s", "");
             }
             
             length = text.length();
         }
         
-        // 璁剧疆杈撳嚭
+        //              ?
         outputValues.put(OUTPUT_LENGTH_ID, length);
     }
     
@@ -94,7 +94,7 @@ public class TextLengthNode extends BaseNode {
         markDirty();
     }
     
-    // --- 鑺傜偣鐘舵€佸簭鍒楀寲 ---
+    // ---                         ?---
     
     @Override
     public Object getNodeState() {
