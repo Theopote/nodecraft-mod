@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.data.sequence;
+package com.nodecraft.nodesystem.nodes.math.list_sequence;
 
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -13,24 +13,24 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 等差数列节点，生成具有固定增量的数值序列
+ *                               ?
  */
 @NodeInfo(
-    id = "data.sequence.series",
+    id = "math.list_sequence.series",
     displayName = "Data Series",
     description = "Generates a series of numbers with constant increment",
-    category = "data.sequence"
+    category = "math.list_sequence"
 )
 public class DataSeriesNode extends BaseNode {
     
-    // --- 节点属性 ---
-    private boolean useIntegerType = true; // 是否使用整数类型（否则使用浮点数）
-    private int defaultCount = 10; // 默认生成的元素数量
-    private double defaultStart = 0; // 默认起始值
-    private double defaultStep = 1; // 默认步长
-    private String description = "Generates a series of numbers with constant increment"; // 节点描述
+    // ---       ?---
+    private boolean useIntegerType = true; //                          ?
+    private int defaultCount = 10; //              ?
+    private double defaultStart = 0; //        ?
+    private double defaultStep = 1; //       
+    private String description = "Generates a series of numbers with constant increment"; //       
     
-    // --- 输入/输出端口ID ---
+    // ---    /      ID ---
     private static final String INPUT_START_ID = "input_start";
     private static final String INPUT_STEP_ID = "input_step";
     private static final String INPUT_COUNT_ID = "input_count";
@@ -38,13 +38,13 @@ public class DataSeriesNode extends BaseNode {
     private static final String OUTPUT_SUM_ID = "output_sum";
     
     /**
-     * 构造一个新的等差数列节点
+     *                   ?
      */
     public DataSeriesNode() {
-        // 使用分类命名 - data.sequence.series
-        super(UUID.randomUUID(), "data.sequence.series");
+        //           - data.sequence.series
+        super(UUID.randomUUID(), "math.list_sequence.series");
         
-        // 创建输入端口
+        //          
         IPort startInput = new BasePort(INPUT_START_ID, "Start", 
                 "Starting value of the series", NodeDataType.DOUBLE, this);
         addInputPort(startInput);
@@ -57,7 +57,7 @@ public class DataSeriesNode extends BaseNode {
                 "Number of elements to generate", NodeDataType.INTEGER, this);
         addInputPort(countInput);
         
-        // 创建输出端口
+        //          
         IPort seriesOutput = new BasePort(OUTPUT_SERIES_ID, "Series", 
                 "The generated sequence", NodeDataType.LIST, this);
         addOutputPort(seriesOutput);
@@ -68,8 +68,8 @@ public class DataSeriesNode extends BaseNode {
     }
     
     /**
-     * 实现INode接口的getDescription方法
-     * @return 节点描述
+     *    INode     etDescription   
+     * @return       
      */
     @Override
     public String getDescription() {
@@ -77,17 +77,17 @@ public class DataSeriesNode extends BaseNode {
     }
     
     /**
-     * 节点的计算逻辑
-     * @param context 执行上下文
+     *            
+     * @param context        ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 获取输入
+        //       
         Object startObj = inputValues.get(INPUT_START_ID);
         Object stepObj = inputValues.get(INPUT_STEP_ID);
         Object countObj = inputValues.get(INPUT_COUNT_ID);
         
-        // 设置默认值并处理输入
+        //                
         double start = defaultStart;
         if (startObj instanceof Number) {
             start = ((Number) startObj).doubleValue();
@@ -101,11 +101,11 @@ public class DataSeriesNode extends BaseNode {
         int count = defaultCount;
         if (countObj instanceof Number) {
             count = ((Number) countObj).intValue();
-            // 确保数量为正数
+            //           ?
             count = Math.max(0, count);
         }
         
-        // 生成序列
+        //       
         List<Object> series = new ArrayList<>();
         double sum = 0;
         
@@ -113,7 +113,7 @@ public class DataSeriesNode extends BaseNode {
             double value = start + i * step;
             Object element;
             
-            // 根据类型设置选择使用整数或浮点数
+            //                         
             if (useIntegerType) {
                 element = (int) Math.round(value);
                 sum += (int) Math.round(value);
@@ -125,7 +125,7 @@ public class DataSeriesNode extends BaseNode {
             series.add(element);
         }
         
-        // 设置输出
+        //       
         outputValues.put(OUTPUT_SERIES_ID, series);
         outputValues.put(OUTPUT_SUM_ID, useIntegerType ? (int) Math.round(sum) : sum);
     }
@@ -168,7 +168,7 @@ public class DataSeriesNode extends BaseNode {
         markDirty();
     }
     
-    // --- 节点状态序列化 ---
+    // ---             ---
     
     @Override
     public Object getNodeState() {

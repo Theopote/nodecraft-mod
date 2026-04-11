@@ -16,27 +16,27 @@ import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
 /**
- * Find/Replace Text 鑺傜偣锛屽湪瀛楃涓蹭腑鏌ユ壘鎴栨浛鎹㈡枃鏈?
+ * Find/Replace Text                                                   ?
  */
 @NodeInfo(
-    id = "data.text.find_replace",
+    id = "utilities.text_processing.find_replace",
     displayName = "Find/Replace Text",
     description = "Finds or replaces text within a string",
-    category = "data.text"
+    category = "utilities.text_processing"
 )
 public class FindReplaceTextNode extends BaseNode {
     
-    // --- 鑺傜偣灞炴€?---
+    // ---              ?---
     public enum Mode {
         FIND, REPLACE, FIND_ALL
     }
     
-    private Mode operationMode = Mode.REPLACE; // 鎿嶄綔妯″紡
-    private boolean useRegex = false;          // 鏄惁浣跨敤姝ｅ垯琛ㄨ揪寮?
-    private boolean ignoreCase = true;         // 鏄惁蹇界暐澶у皬鍐?
-    private String description;                // 瀛樺偍鑺傜偣鎻忚堪
+    private Mode operationMode = Mode.REPLACE; //              
+    private boolean useRegex = false;          //                             ?
+    private boolean ignoreCase = true;         //                      ?
+    private String description;                //                    ?
     
-    // --- 杈撳叆/杈撳嚭绔彛ID ---
+    // ---       ?              D ---
     private static final String INPUT_TEXT_ID = "input_text";
     private static final String INPUT_FIND_ID = "input_find";
     private static final String INPUT_REPLACE_ID = "input_replace";
@@ -46,16 +46,16 @@ public class FindReplaceTextNode extends BaseNode {
     private static final String OUTPUT_POSITIONS_ID = "output_positions";
     
     /**
-     * 鏋勯€犱竴涓柊鐨勬煡鎵?鏇挎崲鏂囨湰鑺傜偣
+     *                            ?                    ?
      */
     public FindReplaceTextNode() {
-        // 璋冪敤鐖剁被鏋勯€犲嚱鏁帮紝浣跨敤UUID.randomUUID()鐢熸垚鏂扮殑ID
-        super(UUID.randomUUID(), "data.text.find_replace");
+        //                                        UID.randomUUID()              D
+        super(UUID.randomUUID(), "utilities.text_processing.find_replace");
         
-        // 璁剧疆鑺傜偣鎻忚堪
+        //                    ?
         this.description = "Finds or replaces text within a string";
         
-        // 鍒涘缓杈撳叆绔彛
+        //                    ?
         IPort textInput = new BasePort(INPUT_TEXT_ID, "Text", 
                 "The text to search in", NodeDataType.STRING, this);
         addInputPort(textInput);
@@ -68,7 +68,7 @@ public class FindReplaceTextNode extends BaseNode {
                 "The text to replace with", NodeDataType.STRING, this);
         addInputPort(replaceInput);
         
-        // 鍒涘缓杈撳嚭绔彛
+        //                    ?
         IPort resultOutput = new BasePort(OUTPUT_RESULT_ID, "Result", 
                 "The resulting text (replaced or original)", NodeDataType.STRING, this);
         addOutputPort(resultOutput);
@@ -87,8 +87,8 @@ public class FindReplaceTextNode extends BaseNode {
     }
     
     /**
-     * 瀹炵幇INode鎺ュ彛鐨刧etDescription鏂规硶
-     * @return 鑺傜偣鎻忚堪
+     *         ode            tDescription      ?
+     * @return              ?
      */
     @Override
     public String getDescription() {
@@ -96,22 +96,22 @@ public class FindReplaceTextNode extends BaseNode {
     }
     
     /**
-     * 鑺傜偣鐨勮绠楅€昏緫
-     * @param context 鎵ц涓婁笅鏂?
+     *                         ?
+     * @param context                ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 鑾峰彇杈撳叆
+        //              ?
         Object textObj = inputValues.get(INPUT_TEXT_ID);
         Object findObj = inputValues.get(INPUT_FIND_ID);
         Object replaceObj = inputValues.get(INPUT_REPLACE_ID);
         
-        // 榛樿鍊?
+        //          ?
         String text = textObj != null ? textObj.toString() : "";
         String find = findObj != null ? findObj.toString() : "";
         String replace = replaceObj != null ? replaceObj.toString() : "";
         
-        // 澶勭悊绌烘煡鎵惧瓧绗︿覆鐨勬儏鍐?
+        //                                     ?
         if (find.isEmpty()) {
             outputValues.put(OUTPUT_RESULT_ID, text);
             outputValues.put(OUTPUT_FOUND_ID, false);
@@ -120,10 +120,10 @@ public class FindReplaceTextNode extends BaseNode {
             return;
         }
         
-        // 鏍规嵁鎿嶄綔妯″紡鎵ц涓嶅悓鐨勯€昏緫
+        //                                               
         try {
             if (useRegex) {
-                // 浣跨敤姝ｅ垯琛ㄨ揪寮?
+                //                       ?
                 int flags = ignoreCase ? Pattern.CASE_INSENSITIVE : 0;
                 Pattern pattern = Pattern.compile(find, flags);
                 Matcher matcher = pattern.matcher(text);
@@ -166,7 +166,7 @@ public class FindReplaceTextNode extends BaseNode {
                         break;
                 }
             } else {
-                // 浣跨敤鏅€氬瓧绗︿覆鏌ユ壘
+                //                                ?
                 switch (operationMode) {
                     case REPLACE:
                         String findStr = ignoreCase ? find.toLowerCase() : find;
@@ -228,7 +228,7 @@ public class FindReplaceTextNode extends BaseNode {
                 }
             }
         } catch (PatternSyntaxException e) {
-            // 姝ｅ垯琛ㄨ揪寮忛敊璇紝浠呰繑鍥炲師濮嬫枃鏈?
+            //                                                   ?
             outputValues.put(OUTPUT_RESULT_ID, text);
             outputValues.put(OUTPUT_FOUND_ID, false);
             outputValues.put(OUTPUT_COUNT_ID, 0);
@@ -237,7 +237,7 @@ public class FindReplaceTextNode extends BaseNode {
     }
     
     /**
-     * 璁＄畻姝ｅ垯琛ㄨ揪寮忔ā寮忕殑鍖归厤娆℃暟
+     *                                               ?
      */
     private int countMatches(Pattern pattern, String text) {
         Matcher matcher = pattern.matcher(text);
@@ -278,19 +278,19 @@ public class FindReplaceTextNode extends BaseNode {
     }
     
     /**
-     * 璁剧疆鎿嶄綔妯″紡锛堝瓧绗︿覆褰㈠紡锛岀敤浜庝粠UI鎴栭厤缃腑璁剧疆锛?
-     * @param modeStr 妯″紡瀛楃涓诧細"FIND", "REPLACE", "FIND_ALL"
+     *                                                         I                      ?
+     * @param modeStr                      "FIND", "REPLACE", "FIND_ALL"
      */
     public void setOperationModeString(String modeStr) {
         try {
             setOperationMode(Mode.valueOf(modeStr.toUpperCase()));
         } catch (IllegalArgumentException e) {
-            // 榛樿涓篟EPLACE
+            //             PLACE
             setOperationMode(Mode.REPLACE);
         }
     }
     
-    // --- 鑺傜偣鐘舵€佸簭鍒楀寲 ---
+    // ---                         ?---
     
     @Override
     public Object getNodeState() {

@@ -10,55 +10,55 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Compare 鑺傜偣: 姣旇緝涓や釜鍊硷紝杈撳嚭姣旇緝缁撴灉銆?
- * 鏀寔鏁板€兼瘮杈冿紙>銆?銆?=銆?=銆?=銆?=锛夈€?
+ * Compare node: compares two values and outputs comparison results.
+ * Supports operators ==, !=, >, <, >=, <=.
  */
 @NodeInfo(
-    id = "control.flow.compare",
-    displayName = "姣旇緝",
-    description = "姣旇緝涓や釜鍊肩殑澶у皬鍏崇郴",
-    category = "control.flow"
+    id = "utilities.flow_control.compare",
+    displayName = "Compare",
+    description = "Compares two values and outputs relation results.",
+    category = "utilities.flow_control"
 )
 public class CompareNode extends BaseNode {
 
-    // --- 杈撳叆绔彛 IDs ---
+    // --- Input port IDs ---
     private static final String INPUT_A_ID = "input_a";
     private static final String INPUT_B_ID = "input_b";
     private static final String INPUT_MODE_ID = "input_mode";
 
-    // --- 杈撳嚭绔彛 IDs ---
+    // --- Output port IDs ---
     private static final String OUTPUT_RESULT_ID = "output_result";
     private static final String OUTPUT_EQUAL_ID = "output_equal";
     private static final String OUTPUT_GREATER_ID = "output_greater";
     private static final String OUTPUT_LESS_ID = "output_less";
 
-    // 姣旇緝妯″紡: 0=绛変簬, 1=涓嶇瓑浜? 2=澶т簬, 3=灏忎簬, 4=澶т簬绛変簬, 5=灏忎簬绛変簬
+        // Compare mode: 0==, 1!=, 2>, 3<, 4>=, 5<=
     private int compareMode = 0;
 
-    // --- 鏋勯€犲嚱鏁?---
+        // --- Constructor ---
     public CompareNode() {
-        super(UUID.randomUUID(), "control.flow.compare");
+        super(UUID.randomUUID(), "utilities.flow_control.compare");
         
         addInputPort(new BasePort(INPUT_A_ID, "A",
-                "绗竴涓€?, NodeDataType.ANY, this));
+            "First value", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_B_ID, "B",
-                "绗簩涓€?, NodeDataType.ANY, this));
+            "Second value", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_MODE_ID, "Mode",
-                "姣旇緝妯″紡 (0=绛変簬, 1=涓嶇瓑浜? 2=澶т簬, 3=灏忎簬, 4=>=, 5=<=)", NodeDataType.INTEGER, this));
+            "Comparison mode (0==, 1!=, 2>, 3<, 4>=, 5<=)", NodeDataType.INTEGER, this));
         
         addOutputPort(new BasePort(OUTPUT_RESULT_ID, "Result",
-                "姣旇緝缁撴灉锛堝竷灏斿€硷級", NodeDataType.BOOLEAN, this));
+            "Result for selected comparison mode", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_EQUAL_ID, "A == B",
-                "A 鏄惁绛変簬 B", NodeDataType.BOOLEAN, this));
+            "Whether A equals B", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_GREATER_ID, "A > B",
-                "A 鏄惁澶т簬 B", NodeDataType.BOOLEAN, this));
+            "Whether A is greater than B", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_LESS_ID, "A < B",
-                "A 鏄惁灏忎簬 B", NodeDataType.BOOLEAN, this));
+            "Whether A is less than B", NodeDataType.BOOLEAN, this));
     }
 
     @Override
     public String getDescription() {
-        return "姣旇緝涓や釜鍊肩殑澶у皬鍏崇郴";
+        return "Compares two values and outputs relation results.";
     }
 
     @Override
@@ -66,7 +66,7 @@ public class CompareNode extends BaseNode {
         Object valA = inputValues.get(INPUT_A_ID);
         Object valB = inputValues.get(INPUT_B_ID);
         
-        // 鑾峰彇姣旇緝妯″紡
+        // Read compare mode
         Object modeObj = inputValues.get(INPUT_MODE_ID);
         int mode = this.compareMode;
         if (modeObj instanceof Number) {
@@ -94,7 +94,7 @@ public class CompareNode extends BaseNode {
             isEqual = (valA == null && valB == null);
         }
         
-        // 鏍规嵁妯″紡纭畾缁撴灉
+        // Evaluate selected compare mode
         boolean result = switch (mode) {
             case 0 -> isEqual;           // ==
             case 1 -> !isEqual;          // !=

@@ -20,43 +20,43 @@ import java.nio.file.Paths;
 import java.util.UUID;
 
 /**
- * 鏂囦欢璺緞鑺傜偣锛屾彁渚涙枃鏈緭鍏ユ鏉ョ紪杈戞枃浠舵垨鐩綍璺緞銆?
+ * File path input node for files or directories.
  */
 @NodeInfo(
-    id = "inputs.sources.file_path",
-    displayName = "鏂囦欢璺緞",
-    description = "鐢ㄤ簬杈撳叆鏂囦欢鎴栫洰褰曡矾寰?,
-    category = "inputs.sources"
+    id = "utilities.fileio.file_path",
+    displayName = "File Path",
+    description = "Used to input a file or directory path.",
+    category = "utilities.fileio"
 )
 public class FilePathNode extends BaseCustomUINode {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(FilePathNode.class);
     
-    @NodeProperty(displayName = "鏂囦欢璺緞", category = "璺緞", order = 1,
-                  description = "鏂囦欢鎴栫洰褰曠殑璺緞")
+    @NodeProperty(displayName = "File Path", category = "Path", order = 1,
+                  description = "Path to a file or directory")
     private volatile String filePath = "";
 
-    @NodeProperty(displayName = "蹇呴』瀛樺湪", category = "楠岃瘉", order = 10,
-                  description = "鏂囦欢鏄惁蹇呴』瀛樺湪")
+    @NodeProperty(displayName = "Must Exist", category = "Validation", order = 10,
+                  description = "Whether the target path must already exist")
     private boolean mustExist = false;
 
-    @NodeProperty(displayName = "鏄洰褰?, category = "璁剧疆", order = 11,
-                  description = "鏄惁涓虹洰褰曡矾寰?)
+    @NodeProperty(displayName = "Directory Mode", category = "Settings", order = 11,
+                  description = "Whether the path should be treated as a directory")
     private boolean isDirectory = false;
     
-    // --- 杈撳嚭绔彛 ---
+    // --- Output ports ---
     private static final String OUTPUT_PATH_ID = "output_path";
     private static final String OUTPUT_EXISTS_ID = "output_exists";
     private static final String OUTPUT_FILENAME_ID = "output_filename";
     private static final String OUTPUT_EXTENSION_ID = "output_extension";
     private static final String OUTPUT_DIRECTORY_ID = "output_directory";
     
-    // --- UI鐘舵€?---
+    // --- UI state ---
     private transient ImString pathBuffer = new ImString(1024);
     private transient volatile boolean bufferNeedsSync = true;
     
     public FilePathNode() {
-        super(UUID.randomUUID(), "inputs.sources.file_path");
+        super(UUID.randomUUID(), "utilities.fileio.file_path");
         
         addOutputPort(new BasePort(OUTPUT_PATH_ID, "Path", "The full file or directory path", NodeDataType.FILE_PATH, this));
         addOutputPort(new BasePort(OUTPUT_EXISTS_ID, "Exists", "Whether the file/directory exists", NodeDataType.BOOLEAN, this));
@@ -66,7 +66,7 @@ public class FilePathNode extends BaseCustomUINode {
     }
     
     @Override
-    public String getDescription() { return "杈撳叆鏂囦欢鎴栫洰褰曡矾寰?; }
+    public String getDescription() { return "Used to input a file or directory path."; }
     
     @Override
     public void processNode(@Nullable ExecutionContext context) {
@@ -98,7 +98,7 @@ public class FilePathNode extends BaseCustomUINode {
                 }
             }
             if (parent != null) directory = parent.toString();
-        } catch (Exception e) { /* 鏃犳晥璺緞 */ }
+        } catch (Exception e) { /* Invalid path */ }
         
         outputValues.put(OUTPUT_PATH_ID, filePath);
         outputValues.put(OUTPUT_EXISTS_ID, exists);
@@ -142,7 +142,7 @@ public class FilePathNode extends BaseCustomUINode {
                 l.pushFramePadding(4.0f, 3.0f);
                 ImGui.pushItemWidth(inputWidth);
                 
-                if (ImGui.inputTextWithHint("##file_path", "杈撳叆璺緞...", pathBuffer)) {
+                if (ImGui.inputTextWithHint("##file_path", "Enter path...", pathBuffer)) {
                     String newPath = pathBuffer.get().trim();
                     if (!newPath.equals(filePath)) {
                         setFilePath(newPath);
@@ -188,7 +188,7 @@ public class FilePathNode extends BaseCustomUINode {
 
                 l.addVerticalSpacing(getMediumPadding());
             } catch (Exception e) {
-                LOGGER.error("FilePathNode UI娓叉煋澶辫触", e);
+                LOGGER.error("FilePathNode UI render failed", e);
             }
             return changed;
         });

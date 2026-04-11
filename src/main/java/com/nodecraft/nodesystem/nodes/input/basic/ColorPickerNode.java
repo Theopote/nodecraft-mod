@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.color_picker",
-    displayName = "棰滆壊閫夋嫨鍣?,
-    description = "鍏佽鐢ㄦ埛閫夋嫨棰滆壊鍊硷紝鏀寔 RGB 鍜岄€忔槑搴?,
-    category = "inputs.basic"
+    id = "input.basic.color_picker",
+    displayName = "Color Picker",
+    description = "Allows selecting a color value with RGB and alpha support.",
+    category = "input.basic"
 )
 public class ColorPickerNode extends BaseCustomUINode {
 
@@ -31,45 +31,45 @@ public class ColorPickerNode extends BaseCustomUINode {
     private static final String OUTPUT_BLUE_ID = "output_blue";
     private static final String OUTPUT_ALPHA_ID = "output_alpha";
 
-    @NodeProperty(displayName = "棰滆壊", category = "璁剧疆", order = 1,
-        description = "褰撳墠閫変腑鐨勯鑹?)
+    @NodeProperty(displayName = "Color", category = "Settings", order = 1,
+        description = "Current selected color value")
     private Color color = new Color(1.0f, 1.0f, 1.0f, 1.0f);
 
-    @NodeProperty(displayName = "鍖呭惈閫忔槑搴?, category = "璁剧疆", order = 2,
-        description = "鏄惁鍚敤閫忔槑搴︾紪杈?)
+    @NodeProperty(displayName = "Include Alpha", category = "Settings", order = 2,
+        description = "Whether alpha channel editing is enabled")
     private boolean includeAlpha = true;
 
-    @NodeProperty(displayName = "鏄剧ず棰勮", category = "UI璁剧疆", order = 10,
-        description = "鏄剧ず椤堕儴棰滆壊棰勮鏉?)
+    @NodeProperty(displayName = "Show Preview", category = "UI Settings", order = 10,
+        description = "Show the top color preview bar")
     private boolean showPreview = true;
 
-    @NodeProperty(displayName = "鏄剧ず鍗佸叚杩涘埗", category = "UI璁剧疆", order = 11,
-        description = "鏄剧ず鍗佸叚杩涘埗棰滆壊鍊?)
+    @NodeProperty(displayName = "Show Hex Value", category = "UI Settings", order = 11,
+        description = "Show the hexadecimal color value")
     private boolean showHexValue = true;
 
-    @NodeProperty(displayName = "鏄剧ず RGB 鏁板€?, category = "UI璁剧疆", order = 12,
-        description = "鏄剧ず棰滆壊鍒嗛噺鏁板€?)
+    @NodeProperty(displayName = "Show RGB Values", category = "UI Settings", order = 12,
+        description = "Show numeric RGB channel values")
     private boolean showRGBValues = true;
 
-    @NodeProperty(displayName = "鏄剧ず閫忔槑搴﹀紑鍏?, category = "UI璁剧疆", order = 13,
-        description = "鏄惁鏄剧ず搴曢儴鐨勯€忔槑搴﹀紑鍏?)
+    @NodeProperty(displayName = "Show Alpha Toggle", category = "UI Settings", order = 13,
+        description = "Show alpha related controls in the editor")
     private boolean showAlphaToggle = true;
 
     private final float[] colorArray = {1.0f, 1.0f, 1.0f, 1.0f};
     private boolean needsUIUpdate = false;
 
     public ColorPickerNode() {
-        super(UUID.randomUUID(), "inputs.basic.color_picker");
+        super(UUID.randomUUID(), "input.basic.color_picker");
 
-        IPort colorOutput = new BasePort(OUTPUT_COLOR_ID, "Color", "褰撳墠棰滆壊鍊?, NodeDataType.COLOR, this);
+        IPort colorOutput = new BasePort(OUTPUT_COLOR_ID, "Color", "Current color value", NodeDataType.COLOR, this);
         addOutputPort(colorOutput);
-        IPort redOutput = new BasePort(OUTPUT_RED_ID, "Red", "绾㈣壊鍒嗛噺 (0-1)", NodeDataType.FLOAT, this);
+        IPort redOutput = new BasePort(OUTPUT_RED_ID, "Red", "Red channel (0-1)", NodeDataType.FLOAT, this);
         addOutputPort(redOutput);
-        IPort greenOutput = new BasePort(OUTPUT_GREEN_ID, "Green", "缁胯壊鍒嗛噺 (0-1)", NodeDataType.FLOAT, this);
+        IPort greenOutput = new BasePort(OUTPUT_GREEN_ID, "Green", "Green channel (0-1)", NodeDataType.FLOAT, this);
         addOutputPort(greenOutput);
-        IPort blueOutput = new BasePort(OUTPUT_BLUE_ID, "Blue", "钃濊壊鍒嗛噺 (0-1)", NodeDataType.FLOAT, this);
+        IPort blueOutput = new BasePort(OUTPUT_BLUE_ID, "Blue", "Blue channel (0-1)", NodeDataType.FLOAT, this);
         addOutputPort(blueOutput);
-        IPort alphaOutput = new BasePort(OUTPUT_ALPHA_ID, "Alpha", "閫忔槑搴﹀垎閲?(0-1)", NodeDataType.FLOAT, this);
+        IPort alphaOutput = new BasePort(OUTPUT_ALPHA_ID, "Alpha", "Alpha channel (0-1)", NodeDataType.FLOAT, this);
         addOutputPort(alphaOutput);
 
         updateColorArray();
@@ -78,7 +78,7 @@ public class ColorPickerNode extends BaseCustomUINode {
 
     @Override
     public String getDescription() {
-        return "鍏佽鐢ㄦ埛閫夋嫨棰滆壊鍊硷紝鏀寔 RGB 鍜岄€忔槑搴︺€?;
+        return "Allows selecting a color value with RGB and alpha support.";
     }
 
     @Override

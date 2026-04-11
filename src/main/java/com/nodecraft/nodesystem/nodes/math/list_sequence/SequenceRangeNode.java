@@ -13,22 +13,22 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 鑼冨洿鐢熸垚鑺傜偣锛岀敓鎴愭寚瀹氳寖鍥村拰姝ラ暱鐨勬暟瀛楀簭鍒?
+ *                                                                        ?
  */
 @NodeInfo(
-    id = "data.sequence.range",
+    id = "math.list_sequence.range",
     displayName = "Sequence Range",
     description = "Generates a sequence of numbers within a specified range",
-    category = "data.sequence"
+    category = "math.list_sequence"
 )
 public class SequenceRangeNode extends BaseNode {
     
-    // --- 鑺傜偣灞炴€?---
-    private boolean useIntegerType = true; // 鏄惁浣跨敤鏁存暟绫诲瀷锛堝惁鍒欎娇鐢ㄦ诞鐐规暟锛?
-    private boolean includeEnd = false; // 鏄惁鍖呭惈缁撴潫鍊?
-    private String description; // 瀛樺偍鑺傜偣鎻忚堪
+    // ---              ?---
+    private boolean useIntegerType = true; //                                                          ?
+    private boolean includeEnd = false; //                        ?
+    private String description; //                    ?
     
-    // --- 杈撳叆/杈撳嚭绔彛ID ---
+    // ---       ?              D ---
     private static final String INPUT_START_ID = "input_start";
     private static final String INPUT_END_ID = "input_end";
     private static final String INPUT_STEP_ID = "input_step";
@@ -36,16 +36,16 @@ public class SequenceRangeNode extends BaseNode {
     private static final String OUTPUT_COUNT_ID = "output_count";
     
     /**
-     * 鏋勯€犱竴涓柊鐨勮寖鍥寸敓鎴愯妭鐐?
+     *                                          ?
      */
     public SequenceRangeNode() {
-        // 璋冪敤鐖剁被鏋勯€犲嚱鏁帮紝浣跨敤UUID.randomUUID()鐢熸垚鏂扮殑ID
-        super(UUID.randomUUID(), "data.sequence.range");
+        //                                        UID.randomUUID()              D
+        super(UUID.randomUUID(), "math.list_sequence.range");
         
-        // 璁剧疆鑺傜偣鎻忚堪
+        //                    ?
         this.description = "Generates a sequence of numbers within a specified range";
         
-        // 鍒涘缓杈撳叆绔彛
+        //                    ?
         IPort startInput = new BasePort(INPUT_START_ID, "Start", 
                 "Starting value (inclusive)", NodeDataType.DOUBLE, this);
         addInputPort(startInput);
@@ -58,7 +58,7 @@ public class SequenceRangeNode extends BaseNode {
                 "Increment between values", NodeDataType.DOUBLE, this);
         addInputPort(stepInput);
         
-        // 鍒涘缓杈撳嚭绔彛
+        //                    ?
         IPort rangeOutput = new BasePort(OUTPUT_RANGE_ID, "Range", 
                 "The generated number sequence", NodeDataType.LIST, this);
         addOutputPort(rangeOutput);
@@ -69,8 +69,8 @@ public class SequenceRangeNode extends BaseNode {
     }
     
     /**
-     * 瀹炵幇INode鎺ュ彛鐨刧etDescription鏂规硶
-     * @return 鑺傜偣鎻忚堪
+     *         ode            tDescription      ?
+     * @return              ?
      */
     @Override
     public String getDescription() {
@@ -78,17 +78,17 @@ public class SequenceRangeNode extends BaseNode {
     }
     
     /**
-     * 鑺傜偣鐨勮绠楅€昏緫
-     * @param context 鎵ц涓婁笅鏂?
+     *                         ?
+     * @param context                ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 鑾峰彇杈撳叆
+        //              ?
         Object startObj = inputValues.get(INPUT_START_ID);
         Object endObj = inputValues.get(INPUT_END_ID);
         Object stepObj = inputValues.get(INPUT_STEP_ID);
         
-        // 璁剧疆榛樿鍊煎苟澶勭悊杈撳叆
+        //                                  ?
         double start = 0;
         if (startObj instanceof Number) {
             start = ((Number) startObj).doubleValue();
@@ -103,28 +103,28 @@ public class SequenceRangeNode extends BaseNode {
         if (stepObj instanceof Number) {
             step = ((Number) stepObj).doubleValue();
             if (step == 0) {
-                step = 1; // 闃叉姝ラ暱涓?瀵艰嚧鏃犻檺寰幆
+                step = 1; //                ?                    ?
             }
         }
         
-        // 鐢熸垚搴忓垪
+        //              ?
         List<Object> range = new ArrayList<>();
         
-        // 澶勭悊姝ｅ悜鍜屽弽鍚戣寖鍥?
+        //                             ?
         boolean ascending = step > 0;
         
-        // 纭畾缁堟鏉′欢
+        //                      
         double limitValue = end;
         if (includeEnd) {
-            // 濡傛灉鍖呭惈缁撴潫鍊硷紝鍒欏湪鎭板綋鐨勬柟鍚戣皟鏁撮檺鍒跺€?
+            //                                                                     ?
             if (ascending) {
-                limitValue = end + step * 0.5; // 绋嶅井瓒呰繃end锛岀‘淇濆寘鍚玡nd
+                limitValue = end + step * 0.5; //               nd                  nd
             } else {
-                limitValue = end - step * 0.5; // 绋嶅井浣庝簬end锛岀‘淇濆寘鍚玡nd
+                limitValue = end - step * 0.5; //               nd                  nd
             }
         }
         
-        // 鐢熸垚搴忓垪
+        //              ?
         if (ascending) {
             for (double value = start; value < limitValue; value += step) {
                 addValueToRange(range, value);
@@ -135,13 +135,13 @@ public class SequenceRangeNode extends BaseNode {
             }
         }
         
-        // 璁剧疆杈撳嚭
+        //              ?
         outputValues.put(OUTPUT_RANGE_ID, range);
         outputValues.put(OUTPUT_COUNT_ID, range.size());
     }
     
     /**
-     * 灏嗗€兼坊鍔犲埌鑼冨洿鍒楄〃涓紝鏍规嵁鎵€閫夌被鍨嬭浆鎹?
+     *                                                                   ?
      */
     private void addValueToRange(List<Object> range, double value) {
         if (useIntegerType) {
@@ -171,7 +171,7 @@ public class SequenceRangeNode extends BaseNode {
         markDirty();
     }
     
-    // --- 鑺傜偣鐘舵€佸簭鍒楀寲 ---
+    // ---                         ?---
     
     @Override
     public Object getNodeState() {

@@ -12,35 +12,35 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 鑾峰彇鍒楄〃椤硅妭鐐癸紝浠庡垪琛ㄤ腑鑾峰彇鎸囧畾绱㈠紩浣嶇疆鐨勫厓绱?
+ *                                                                             ?
  */
 @NodeInfo(
-    id = "data.lists.get_item",
-    displayName = "鑾峰彇鍒楄〃椤?,
-    description = "鏍规嵁绱㈠紩鑾峰彇鍒楄〃涓殑鐗瑰畾椤?,
-    category = "data.lists"
+    id = "math.list_sequence.get_item",
+    displayName = "Get Item",
+    description = "Gets an item from a list at a specified index.",
+    category = "math.list_sequence"
 )
 public class GetItemNode extends BaseNode {
     
-    // --- 鑺傜偣灞炴€?---
-    private boolean allowNegativeIndex = true; // 鏄惁鍏佽璐熺储寮曪紙浠庡垪琛ㄦ湯灏惧紑濮嬭绠楋級
-    private boolean wrapIndex = false; // 鏄惁瀵圭储寮曡繘琛屽惊鐜寘瑁?
-    private String description = "Gets an item from a list at a specified index"; // 鑺傜偣鎻忚堪
+    // ---              ?---
+    private boolean allowNegativeIndex = true; //                                                              ?
+    private boolean wrapIndex = false; //                                     ?
+    private String description = "Gets an item from a list at a specified index"; //              ?
     
-    // --- 杈撳叆/杈撳嚭绔彛ID ---
+    // ---       ?              D ---
     private static final String INPUT_LIST_ID = "input_list";
     private static final String INPUT_INDEX_ID = "input_index";
     private static final String OUTPUT_ITEM_ID = "output_item";
     private static final String OUTPUT_FOUND_ID = "output_found";
     
     /**
-     * 鏋勯€犱竴涓柊鐨勮幏鍙栧垪琛ㄩ」鑺傜偣
+     *                                             ?
      */
     public GetItemNode() {
-        // 浣跨敤鍒嗙被鍛藉悕 - data.lists.get_item
-        super(UUID.randomUUID(), "data.lists.get_item");
+        //                    ?- data.lists.get_item
+        super(UUID.randomUUID(), "math.list_sequence.get_item");
         
-        // 鍒涘缓杈撳叆绔彛
+        //                    ?
         IPort listInput = new BasePort(INPUT_LIST_ID, "List", 
                 "The list to get an item from", NodeDataType.LIST, this);
         addInputPort(listInput);
@@ -49,7 +49,7 @@ public class GetItemNode extends BaseNode {
                 "The index of the item (0-based)", NodeDataType.INTEGER, this);
         addInputPort(indexInput);
         
-        // 鍒涘缓杈撳嚭绔彛
+        //                    ?
         IPort itemOutput = new BasePort(OUTPUT_ITEM_ID, "Item", 
                 "The item at the specified index", NodeDataType.ANY, this);
         addOutputPort(itemOutput);
@@ -60,8 +60,8 @@ public class GetItemNode extends BaseNode {
     }
     
     /**
-     * 瀹炵幇INode鎺ュ彛鐨刧etDescription鏂规硶
-     * @return 鑺傜偣鎻忚堪
+     *         ode            tDescription      ?
+     * @return              ?
      */
     @Override
     public String getDescription() {
@@ -69,19 +69,19 @@ public class GetItemNode extends BaseNode {
     }
     
     /**
-     * 鑺傜偣鐨勮绠楅€昏緫
-     * @param context 鎵ц涓婁笅鏂?
+     *                         ?
+     * @param context                ?
      */
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 鑾峰彇杈撳叆鍒楄〃鍜岀储寮?
+        //                               ?
         Object inputObj = inputValues.get(INPUT_LIST_ID);
         Object indexObj = inputValues.get(INPUT_INDEX_ID);
         
         Object item = null;
         boolean found = false;
         
-        // 璁＄畻鍒楄〃椤?
+        //                 ?
         if (inputObj instanceof List && indexObj instanceof Number) {
             List<?> list = (List<?>) inputObj;
             int listSize = list.size();
@@ -89,26 +89,26 @@ public class GetItemNode extends BaseNode {
             if (listSize > 0) {
                 int index = ((Number) indexObj).intValue();
                 
-                // 澶勭悊璐熺储寮曪紙浠庡垪琛ㄦ湯灏惧紑濮嬭绠楋級
+                //                                                       ?
                 if (index < 0 && allowNegativeIndex) {
                     index = listSize + index;
                 }
                 
-                // 澶勭悊绱㈠紩鍖呰
+                //                    ?
                 if (wrapIndex && listSize > 0) {
-                    // 瀵瑰垪琛ㄩ暱搴﹀彇妯★紝纭繚绱㈠紩鎬绘槸鏈夋晥鐨?
+                    //                                                        ?
                     index = ((index % listSize) + listSize) % listSize;
                     found = true;
                     item = list.get(index);
                 } else if (index >= 0 && index < listSize) {
-                    // 甯歌绱㈠紩璁块棶
+                    //                    ?
                     found = true;
                     item = list.get(index);
                 }
             }
         }
         
-        // 璁剧疆杈撳嚭
+        //              ?
         outputValues.put(OUTPUT_ITEM_ID, item);
         outputValues.put(OUTPUT_FOUND_ID, found);
     }
@@ -133,7 +133,7 @@ public class GetItemNode extends BaseNode {
         markDirty();
     }
     
-    // --- 鑺傜偣鐘舵€佸簭鍒楀寲 ---
+    // ---                         ?---
     
     @Override
     public Object getNodeState() {
