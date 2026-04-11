@@ -137,6 +137,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> mathCompareOrder = getMathCompareOrder();
         categoryOrder.put("math.compare", mathCompareOrder);
 
+        Map<String, Integer> mathScalarMathOrder = getMathScalarMathOrder();
+        categoryOrder.put("math.scalar_math", mathScalarMathOrder);
+
         Map<String, Integer> spatialLegacyOrder = getStringIntegerMap();
         categoryOrder.put("spatial.legacy", spatialLegacyOrder);
 
@@ -250,6 +253,26 @@ public class NodeLibraryComponent implements EditorComponent {
         mathCompareOrder.put("math.compare.greater_than", 4);
         mathCompareOrder.put("math.compare.greater_than_or_equal", 5);
         return mathCompareOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getMathScalarMathOrder() {
+        Map<String, Integer> mathScalarMathOrder = new HashMap<>();
+        mathScalarMathOrder.put("math.scalar_math.addition", 0);
+        mathScalarMathOrder.put("math.scalar_math.subtraction", 1);
+        mathScalarMathOrder.put("math.scalar_math.multiplication", 2);
+        mathScalarMathOrder.put("math.scalar_math.division", 3);
+        mathScalarMathOrder.put("math.scalar_math.modulus", 4);
+        mathScalarMathOrder.put("math.scalar_math.power", 5);
+        mathScalarMathOrder.put("math.scalar_math.logarithm", 6);
+        mathScalarMathOrder.put("math.scalar_math.absolute", 7);
+        mathScalarMathOrder.put("math.scalar_math.min", 8);
+        mathScalarMathOrder.put("math.scalar_math.max", 9);
+        mathScalarMathOrder.put("math.scalar_math.clamp", 10);
+        mathScalarMathOrder.put("math.scalar_math.remap", 11);
+        mathScalarMathOrder.put("math.scalar_math.floor", 12);
+        mathScalarMathOrder.put("math.scalar_math.ceiling", 13);
+        mathScalarMathOrder.put("math.scalar_math.round", 14);
+        return mathScalarMathOrder;
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
@@ -574,6 +597,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.vector", new float[]{0.6f, 1.0f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.compare", new float[]{0.48f, 0.9f, 0.48f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("math.scalar_math", new float[]{0.42f, 0.87f, 0.42f, 1.0f});
             
             // Spatial and migrated-reference subcategories.
             CATEGORY_COLORS_FLOAT.put("spatial.arrays", new float[]{1.0f, 1.0f, 0.4f, 1.0f});
@@ -833,7 +857,7 @@ public class NodeLibraryComponent implements EditorComponent {
             "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids",
             "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
             "transform.basic_transforms", "transform.deformations", "transform.orientation",
-            "math.basic", "math.compare", "math.list_sequence", "data.lists", "spatial.legacy", "world.entity", 
+            "math.basic", "math.scalar_math", "math.compare", "math.list_sequence", "data.lists", "spatial.legacy", "world.entity", 
             "output.preview", "utilities.organization"
         };
         

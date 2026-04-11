@@ -1,0 +1,44 @@
+package com.nodecraft.nodesystem.nodes.math.scalar_math;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
+
+@NodeInfo(
+    id = "math.scalar_math.absolute",
+    displayName = "Absolute (Abs)",
+    description = "Returns the absolute value of the input.",
+    category = "math.scalar_math"
+)
+public class AbsoluteNode extends BaseNode {
+
+    private static final String INPUT_VALUE_ID = "input_value";
+    private static final String OUTPUT_ABSOLUTE_ID = "output_absolute";
+
+    public AbsoluteNode() {
+        super(UUID.randomUUID(), "math.scalar_math.absolute");
+        addInputPort(new BasePort(INPUT_VALUE_ID, "Value", "Input number", NodeDataType.ANY, this));
+        addOutputPort(new BasePort(OUTPUT_ABSOLUTE_ID, "Absolute", "Result |Value|", NodeDataType.DOUBLE, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "Returns the absolute value of the input.";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Absolute (Abs)";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object val = inputValues.get(INPUT_VALUE_ID);
+        outputValues.put(OUTPUT_ABSOLUTE_ID, val instanceof Number ? Math.abs(((Number) val).doubleValue()) : Double.NaN);
+    }
+}

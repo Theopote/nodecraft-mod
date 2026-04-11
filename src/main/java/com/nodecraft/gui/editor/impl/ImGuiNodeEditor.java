@@ -125,8 +125,8 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
                         "input.numeric.integer", "input.numeric.float_slider",
                         "input.numeric.boolean_toggle", "inputs.basic.text_input",
                         // 数学运算节点
-                        "math.basic.addition", "math.basic.multiplication", "math.basic.division",
-                        "math.basic.subtraction", "math.basic.power", "math.basic.clamp",
+                        "math.scalar_math.addition", "math.scalar_math.multiplication", "math.scalar_math.division",
+                        "math.scalar_math.subtraction", "math.scalar_math.power", "math.scalar_math.clamp",
                         // 数学逻辑节点（如果存在）
                         "math.logic.and", "math.logic.or", "math.logic.not"
                 };

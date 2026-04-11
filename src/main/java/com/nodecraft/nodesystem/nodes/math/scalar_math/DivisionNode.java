@@ -1,0 +1,54 @@
+package com.nodecraft.nodesystem.nodes.math.scalar_math;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.UUID;
+
+@NodeInfo(
+    id = "math.scalar_math.division",
+    displayName = "Division (/)",
+    description = "Outputs the result of A divided by B.",
+    category = "math.scalar_math"
+)
+public class DivisionNode extends BaseNode {
+
+    private static final String INPUT_A_ID = "input_a";
+    private static final String INPUT_B_ID = "input_b";
+    private static final String OUTPUT_QUOTIENT_ID = "output_quotient";
+
+    public DivisionNode() {
+        super(UUID.randomUUID(), "math.scalar_math.division");
+        addInputPort(new BasePort(INPUT_A_ID, "A", "Dividend", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_B_ID, "B", "Divisor", NodeDataType.ANY, this));
+        addOutputPort(new BasePort(OUTPUT_QUOTIENT_ID, "Quotient", "Result of A / B", NodeDataType.DOUBLE, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "Outputs the result of A divided by B.";
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Division (/)";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object valA = inputValues.get(INPUT_A_ID);
+        Object valB = inputValues.get(INPUT_B_ID);
+
+        if (valA instanceof Number && valB instanceof Number) {
+            double a = ((Number) valA).doubleValue();
+            double b = ((Number) valB).doubleValue();
+            outputValues.put(OUTPUT_QUOTIENT_ID, Math.abs(b) < 1e-10 ? Double.NaN : a / b);
+        } else {
+            outputValues.put(OUTPUT_QUOTIENT_ID, Double.NaN);
+        }
+    }
+}
