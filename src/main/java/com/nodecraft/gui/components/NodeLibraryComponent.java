@@ -536,8 +536,8 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("Transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.92f, 0.82f, 0.18f, 1.0f});
             
-            // 子分类颜色配置 - 使用略微淡化的主分类颜色
-            // inputs子分类
+            // Subcategory colors use slightly lighter variants of their parent colors.
+            // Input subcategories.
             CATEGORY_COLORS_FLOAT.put("inputs.basic", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.sources", new float[]{0.45f, 0.75f, 1.0f, 1.0f});
@@ -545,13 +545,13 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("input.context", new float[]{0.35f, 0.65f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.type_selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             
-            // data子分类
+            // Data subcategories.
             CATEGORY_COLORS_FLOAT.put("data.conversion", new float[]{1.0f, 0.65f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.lists", new float[]{1.0f, 0.7f, 0.3f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.sequence", new float[]{1.0f, 0.75f, 0.35f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.text", new float[]{1.0f, 0.8f, 0.4f, 1.0f});
             
-            // math子分类
+            // Math subcategories.
             CATEGORY_COLORS_FLOAT.put("math.basic", new float[]{0.4f, 0.85f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.randomness", new float[]{0.5f, 0.95f, 0.5f, 1.0f});
@@ -559,11 +559,11 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.vector", new float[]{0.6f, 1.0f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
             
-            // spatial子分类
+            // Spatial and migrated-reference subcategories.
             CATEGORY_COLORS_FLOAT.put("spatial.arrays", new float[]{1.0f, 1.0f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("spatial.generators", new float[]{1.0f, 1.0f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("spatial.legacy", new float[]{0.85f, 0.85f, 0.45f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("spatial.shapes", new float[]{1.0f, 1.0f, 0.45f, 1.0f});   // 兼容generators
+            CATEGORY_COLORS_FLOAT.put("spatial.shapes", new float[]{1.0f, 1.0f, 0.45f, 1.0f});   // Compatibility for old generators grouping.
             CATEGORY_COLORS_FLOAT.put("reference.points", new float[]{1.0f, 0.98f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.vectors", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.planes", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
@@ -577,11 +577,11 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("transform.deformations", new float[]{0.98f, 0.58f, 0.28f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.orientation", new float[]{1.0f, 0.68f, 0.38f, 1.0f});
             
-            // world子分类
+            // World subcategories.
             CATEGORY_COLORS_FLOAT.put("world.entity", new float[]{0.3f, 0.85f, 0.85f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.interaction", new float[]{0.35f, 0.9f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.inventory", new float[]{0.4f, 0.95f, 0.95f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("world.modify", new float[]{0.45f, 1.0f, 1.0f, 1.0f});     // 兼容modification
+            CATEGORY_COLORS_FLOAT.put("world.modify", new float[]{0.45f, 1.0f, 1.0f, 1.0f});     // Compatibility for old modification naming.
             CATEGORY_COLORS_FLOAT.put("world.modification", new float[]{0.45f, 1.0f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.nbt", new float[]{0.5f, 1.0f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.read", new float[]{0.5f, 0.95f, 1.0f, 1.0f});
@@ -592,7 +592,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("material", new float[]{0.8f, 0.55f, 0.2f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("material.basic_assignment", new float[]{0.88f, 0.6f, 0.24f, 1.0f});
             
-            // visualization子分类
+            // Output and legacy visualization subcategories.
             CATEGORY_COLORS_FLOAT.put("output.debug", new float[]{0.9f, 0.3f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("output.execute", new float[]{0.95f, 0.35f, 0.65f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("output.export", new float[]{0.98f, 0.45f, 0.72f, 1.0f});
@@ -602,42 +602,42 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("visualization.execute", new float[]{0.95f, 0.35f, 0.65f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("visualization.preview", new float[]{1.0f, 0.4f, 0.7f, 1.0f});
             
-            // utilities/workflow子分类
+            // Utilities and workflow compatibility subcategories.
             CATEGORY_COLORS_FLOAT.put("utilities.advanced", new float[]{0.75f, 0.75f, 0.75f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.experimental", new float[]{0.8f, 0.8f, 0.8f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.fileio", new float[]{0.85f, 0.85f, 0.85f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.organization", new float[]{0.9f, 0.9f, 0.9f, 1.0f});
             
-            // flora子分类 - 使用深绿色系
+            // Flora subcategories.
             CATEGORY_COLORS_FLOAT.put("flora.algorithms", new float[]{0.3f, 0.7f, 0.3f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("flora.generators", new float[]{0.35f, 0.75f, 0.35f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("flora.materials", new float[]{0.4f, 0.8f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("flora.modifiers", new float[]{0.45f, 0.85f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("flora.output", new float[]{0.5f, 0.9f, 0.5f, 1.0f});
             
-            // animation子分类 - 使用红色系
+            // Animation subcategories.
             CATEGORY_COLORS_FLOAT.put("animation.effects", new float[]{0.85f, 0.4f, 0.4f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("animation.interpolation", new float[]{0.9f, 0.45f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("animation.output", new float[]{0.95f, 0.5f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("animation.time", new float[]{1.0f, 0.55f, 0.55f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("animation.transforms", new float[]{1.0f, 0.6f, 0.6f, 1.0f});
             
-            // 兼容workflow前缀
+            // Compatibility for the legacy workflow.* prefix.
             CATEGORY_COLORS_FLOAT.put("workflow.advanced", new float[]{0.75f, 0.75f, 0.75f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("workflow.experimental", new float[]{0.8f, 0.8f, 0.8f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("workflow.fileio", new float[]{0.85f, 0.85f, 0.85f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("workflow.organization", new float[]{0.9f, 0.9f, 0.9f, 1.0f});
             
-            // 兼容旧分类
-            CATEGORY_COLORS_FLOAT.put("Params", new float[]{0.2f, 0.5f, 0.9f, 1.0f});        // 蓝色
-            CATEGORY_COLORS_FLOAT.put("Maths", new float[]{0.3f, 0.8f, 0.3f, 1.0f});         // 绿色
-            CATEGORY_COLORS_FLOAT.put("Sets", new float[]{0.95f, 0.6f, 0.2f, 1.0f});         // 橙色
-            CATEGORY_COLORS_FLOAT.put("Logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});       // 绿色
-            CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.9f, 0.9f, 0.2f, 1.0f});      // 黄色
-            CATEGORY_COLORS_FLOAT.put("Minecraft", new float[]{0.2f, 0.8f, 0.8f, 1.0f});     // 青色
-            CATEGORY_COLORS_FLOAT.put("General", DEFAULT_CATEGORY_COLOR_FLOAT);              // 通用默认颜色
+            // Compatibility for older display labels.
+            CATEGORY_COLORS_FLOAT.put("Params", new float[]{0.2f, 0.5f, 0.9f, 1.0f});        // Blue
+            CATEGORY_COLORS_FLOAT.put("Maths", new float[]{0.3f, 0.8f, 0.3f, 1.0f});         // Green
+            CATEGORY_COLORS_FLOAT.put("Sets", new float[]{0.95f, 0.6f, 0.2f, 1.0f});         // Orange
+            CATEGORY_COLORS_FLOAT.put("Logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});       // Green
+            CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.9f, 0.9f, 0.2f, 1.0f});      // Yellow
+            CATEGORY_COLORS_FLOAT.put("Minecraft", new float[]{0.2f, 0.8f, 0.8f, 1.0f});     // Cyan
+            CATEGORY_COLORS_FLOAT.put("General", DEFAULT_CATEGORY_COLOR_FLOAT);              // Fallback default color
 
-            // 转换浮点颜色为ImGui使用的打包整数颜色
+            // Convert float colors to packed ImGui colors.
             CATEGORY_COLORS_FLOAT.put("pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.linear", new float[]{0.98f, 0.78f, 0.28f, 1.0f});
@@ -650,59 +650,55 @@ public class NodeLibraryComponent implements EditorComponent {
             }
         }
         
-        // 获取颜色的辅助方法
+        // Helper for resolving the best packed color for a category name.
         static int getPackedColor(String categoryName) {
-            // 首先尝试直接查找精确匹配（包括大小写）
+            // Try exact match first, preserving caller casing.
             if (CATEGORY_COLORS_INT.containsKey(categoryName)) {
                 return CATEGORY_COLORS_INT.get(categoryName);
             }
             
-            // 转换为小写再查找（因为大部分ID都是小写的）
+            // Fall back to lowercase lookup because most IDs are lowercase.
             String lowerCaseName = categoryName.toLowerCase();
             if (CATEGORY_COLORS_INT.containsKey(lowerCaseName)) {
                 return CATEGORY_COLORS_INT.get(lowerCaseName);
             }
 
-            // 处理格式为"主分类 / 子分类"的显示名称
+            // Handle display names in the form "Parent / Child".
             if (categoryName.contains(" / ")) {
-                // 提取主分类部分
                 String mainPart = categoryName.substring(0, categoryName.indexOf(" / "));
                 
-                // 转换为小写查找
                 String mainPartLower = mainPart.toLowerCase();
                 if (CATEGORY_COLORS_INT.containsKey(mainPartLower)) {
                     return CATEGORY_COLORS_INT.get(mainPartLower);
                 }
                 
-                // 尝试使用主分类原始大小写
+                // Fall back to the original parent casing.
                 if (CATEGORY_COLORS_INT.containsKey(mainPart)) {
                     return CATEGORY_COLORS_INT.get(mainPart);
                 }
             }
             
-            // 如果是点号分隔的ID格式（例如：math.basic），尝试提取主分类
+            // For dotted IDs such as math.basic, try the top-level category next.
             if (categoryName.contains(".")) {
                 String mainCategory = categoryName.substring(0, categoryName.indexOf('.'));
                 
-                // 尝试查找主分类（小写）
                 if (CATEGORY_COLORS_INT.containsKey(mainCategory)) {
                     return CATEGORY_COLORS_INT.get(mainCategory);
                 }
                 
-                // 尝试查找主分类（首字母大写）
+                // Then try a title-cased top-level name.
                 String capitalized = mainCategory.substring(0, 1).toUpperCase() + mainCategory.substring(1);
                 if (CATEGORY_COLORS_INT.containsKey(capitalized)) {
                     return CATEGORY_COLORS_INT.get(capitalized);
                 }
                 
-                // 直接查找精确的子分类ID
+                // Finally try the exact dotted subcategory key.
                 if (CATEGORY_COLORS_INT.containsKey(categoryName)) {
                     return CATEGORY_COLORS_INT.get(categoryName);
                 }
             }
             
-            // 通过简单的字符串比较查找最匹配的颜色
-            // 例如，"math.something_unknown" 会匹配到 "math"
+            // Use the longest matching prefix as a final fallback.
             String bestMatch = null;
             int bestMatchLength = 0;
             
@@ -717,7 +713,7 @@ public class NodeLibraryComponent implements EditorComponent {
                 return CATEGORY_COLORS_INT.get(bestMatch);
             }
             
-            // 默认返回通用颜色
+            // Default fallback color.
             return DEFAULT_CATEGORY_COLOR_INT;
         }
     }
@@ -1141,42 +1137,35 @@ public class NodeLibraryComponent implements EditorComponent {
     }
     
     /**
-     * 渲染节点分类
+     * Renders the category list and its visible nodes.
      */
     private void renderNodeCategories() {
-        // 使用 0 高度让子窗口填充所有可用垂直空间，移除底部边距
+        // Use zero height so the child region consumes the remaining vertical space.
         ImGui.beginChild("##nodeListScrollingRegion", 0, 0, false, ImGuiWindowFlags.NoScrollbar);
 
-        // 没有匹配的节点或没有注册节点时显示提示信息
+        // Show empty-state feedback when nothing can be displayed.
         if (filteredCategories.isEmpty() && !searchManager.getSearchTerm().isEmpty()) {
             searchManager.renderNoMatchesMessage();
         } else if (allCategories.isEmpty()) {
-            // Check registry status indirectly
             ImGui.textDisabled("  No nodes registered."); 
             ImGui.spacing();
             ImGui.textDisabled("  Please restart the application or check logs.");
         }
 
-        // 设置分类之间的垂直间距
+        // Control vertical spacing between categories.
         ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ItemSpacing, ImGui.getStyle().getItemSpacingX(), NodeLibraryConstants.CATEGORY_ITEM_SPACING);
 
-        // 整理分类层级关系
+        // Rebuild the display hierarchy into top-level and child categories.
         Map<String, List<DisplayCategory>> childCategoriesMap = new HashMap<>();
         List<DisplayCategory> topLevelCategories = new ArrayList<>();
-        
-        // 规则：
-        // 1. 如果分类ID不包含点号，则为顶级分类
-        // 2. 如果分类ID格式为"x.y"，则将其作为"x"的子分类
 
-        // 首先识别顶级分类和子分类
+        // Split categories into top-level and one-level child groupings.
         for (DisplayCategory category : filteredCategories) {
             String id = category.getId();
             
             if (!id.contains(".")) {
-                // 顶级分类
                 topLevelCategories.add(category);
             } else {
-                // 子分类 - 获取父分类ID
                 String parentId = id.substring(0, id.lastIndexOf('.'));
                 childCategoriesMap
                     .computeIfAbsent(parentId, k -> new ArrayList<>())
@@ -1184,42 +1173,35 @@ public class NodeLibraryComponent implements EditorComponent {
             }
         }
         
-        // 按显示名称对顶级分类排序
+        // Keep display order stable.
         topLevelCategories.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
         
-        // 对每个子分类列表进行排序
         for (List<DisplayCategory> childList : childCategoriesMap.values()) {
             childList.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
         }
 
-        // 获取当前搜索状态
         boolean isSearching = searchManager.getSearchTerm() != null && !searchManager.getSearchTerm().isEmpty();
 
-        // 预处理：如果是搜索状态，确保包含非空节点的分类和它们的父分类都标记为展开
+        // In search mode, force open the categories that contain matching nodes.
         if (isSearching) {
-            // 遍历所有分类，找出包含节点的分类
             for (DisplayCategory category : filteredCategories) {
                 if (!category.getNodes().isEmpty()) {
                     String categoryId = category.getId();
-                    // 标记该分类为展开状态
                     expandedCategories.put(categoryId, true);
                     
-                    // 如果是子分类，确保父分类也是展开状态
                     if (categoryId.contains(".")) {
                         String parentId = categoryId.substring(0, categoryId.lastIndexOf('.'));
                         expandedCategories.put(parentId, true);
-                        NodeCraft.LOGGER.debug("搜索模式下强制展开父分类: {}", parentId);
+                        NodeCraft.LOGGER.debug("Forced parent category open during search: {}", parentId);
                     }
                 }
             }
         }
 
-        // 先渲染所有顶级分类
+        // Render top-level categories first, then any visible children.
         for (DisplayCategory topCategory : topLevelCategories) {
-            // 渲染顶级分类，并根据搜索状态决定是否展开
             renderCategory(topCategory, 0, isSearching);
             
-            // 如果此顶级分类展开且有子分类，则渲染其子分类
             if (expandedCategories.getOrDefault(topCategory.getId(), true)) {
                 List<DisplayCategory> children = childCategoriesMap.get(topCategory.getId());
                 
@@ -1227,7 +1209,6 @@ public class NodeLibraryComponent implements EditorComponent {
                     ImGui.indent(NodeLibraryConstants.CATEGORY_INDENT);
                     
                     for (DisplayCategory childCategory : children) {
-                        // 子分类使用相同的搜索状态
                         renderCategory(childCategory, 1, isSearching);
                     }
                     
@@ -1236,93 +1217,85 @@ public class NodeLibraryComponent implements EditorComponent {
             }
         }
         
-        ImGui.popStyleVar(); // 恢复ItemSpacing
-        ImGui.endChild(); // End ##nodeListScrollingRegion
+        ImGui.popStyleVar();
+        ImGui.endChild();
     }
     
     /**
-     * 渲染单个分类及其节点
-     * @param displayCategory 要渲染的分类
-     * @param level 层级深度，0为顶级分类
-     * @param shouldExpand 是否应该强制展开
+     * Renders a single category header and its visible nodes.
+     *
+     * @param displayCategory category to render
+     * @param level nesting depth, where 0 is top-level
+     * @param shouldExpand whether the category should be forced open
      */
     private void renderCategory(DisplayCategory displayCategory, int level, boolean shouldExpand) {
-        // 获取当前状态，如果不存在则默认为true (already handled in constructor)
+        // Default to expanded when a state entry is missing.
         boolean isExpanded = expandedCategories.getOrDefault(displayCategory.getId(), true);
         
-        // 搜索模式下检查此分类是否包含节点
         boolean hasNodes = !displayCategory.getNodes().isEmpty();
         
-        // 在搜索状态下，如果分类包含节点，那么状态应该为true
+        // Matching categories stay expanded in search mode.
         if (shouldExpand && hasNodes) {
             isExpanded = true;
-            // 记住搜索状态下的展开状态
             expandedCategories.put(displayCategory.getId(), true);
         }
         
-        // 获取分类的颜色 - 优先使用原始分类ID以确保使用正确的颜色映射
+        // Prefer category IDs over display names for color lookup.
         int packedColor;
-        String categoryId = displayCategory.getId(); // 使用ID而不是显示名称
+        String categoryId = displayCategory.getId();
         
-        // 直接使用分类ID获取颜色
         if (NodeLibraryConstants.CATEGORY_COLORS_INT.containsKey(categoryId)) {
             packedColor = NodeLibraryConstants.CATEGORY_COLORS_INT.get(categoryId);
         } else {
-            // 如果找不到精确匹配，使用getPackedColor寻找最佳匹配
             packedColor = NodeLibraryConstants.getPackedColor(categoryId);
         }
         
-        // 计算背景颜色 - 使用更鲜明的分类颜色
+        // Derive background tones from the category color.
         imgui.ImVec4 colorVec = new imgui.ImVec4();
         ImGui.colorConvertU32ToFloat4(packedColor, colorVec);
         float[] color = new float[]{colorVec.x, colorVec.y, colorVec.z, colorVec.w};
         
-        // 根据类别级别调整颜色强度
-        float alphaBase = level == 0 ? 0.7f : 0.5f; // 顶级分类更明显
-        float colorIntensity = level == 0 ? 0.7f : 0.6f; // 顶级分类颜色更强
+        float alphaBase = level == 0 ? 0.7f : 0.5f;
+        float colorIntensity = level == 0 ? 0.7f : 0.6f;
         
-        // 计算不同状态下的颜色
+        // Compute colors for normal, hover, and active states.
         int bgColor = ImGui.colorConvertFloat4ToU32(
             color[0] * colorIntensity, 
             color[1] * colorIntensity, 
             color[2] * colorIntensity, 
-            alphaBase); // 标准背景色
+            alphaBase);
             
         int hoverBgColor = ImGui.colorConvertFloat4ToU32(
             Math.min(1.0f, color[0] * 1.2f * colorIntensity), 
             Math.min(1.0f, color[1] * 1.2f * colorIntensity), 
             Math.min(1.0f, color[2] * 1.2f * colorIntensity), 
-            alphaBase + 0.2f); // 悬停时更亮
+            alphaBase + 0.2f);
             
         int activeBgColor = ImGui.colorConvertFloat4ToU32(
             Math.min(1.0f, color[0] * 1.3f * colorIntensity), 
             Math.min(1.0f, color[1] * 1.3f * colorIntensity), 
             Math.min(1.0f, color[2] * 1.3f * colorIntensity), 
-            alphaBase + 0.3f); // 激活时最亮
+            alphaBase + 0.3f);
 
-        // --- 样式设置 ---
+        // Styling setup.
         ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ItemSpacing, ImGui.getStyle().getItemSpacingX(), 0);
         
-        // 增强文本颜色的饱和度和对比度
+        // Increase text contrast against the colored headers.
         float[] saturatedColor = new float[4];
         System.arraycopy(color, 0, saturatedColor, 0, 4);
         
-        // 增加色彩鲜艳度和对比度
         for (int i = 0; i < 3; i++) {
-            // 对于深色，增加亮度；对于亮色，增加饱和度
             if (saturatedColor[i] < 0.5f) {
-                saturatedColor[i] = Math.min(1.0f, saturatedColor[i] * 1.6f); // 更大的增益
+                saturatedColor[i] = Math.min(1.0f, saturatedColor[i] * 1.6f);
             } else {
-                saturatedColor[i] = Math.min(1.0f, 0.8f + saturatedColor[i] * 0.2f); // 更亮
+                saturatedColor[i] = Math.min(1.0f, 0.8f + saturatedColor[i] * 0.2f);
             }
         }
         
-        // 确保文本在背景上有足够的对比度
         float textLuminance = 0.299f * saturatedColor[0] + 0.587f * saturatedColor[1] + 0.114f * saturatedColor[2];
-        // 如果颜色太暗，则使用白色文本；否则使用更亮的颜色
         int enhancedTextColor;
         if (textLuminance < 0.6f) {
-            enhancedTextColor = ImGui.colorConvertFloat4ToU32(1.0f, 1.0f, 1.0f, 1.0f); // 白色文本
+            enhancedTextColor = ImGui.colorConvertFloat4ToU32(1.0f, 1.0f, 1.0f, 1.0f);
         } else {
             enhancedTextColor = ImGui.colorConvertFloat4ToU32(saturatedColor[0], saturatedColor[1], saturatedColor[2], 1.0f);
         }
@@ -1332,47 +1305,40 @@ public class NodeLibraryComponent implements EditorComponent {
         ImGui.pushStyleColor(ImGuiCol.HeaderHovered, hoverBgColor);
         ImGui.pushStyleColor(ImGuiCol.HeaderActive, activeBgColor);
 
-        // 对顶级分类使用稍大一些的字体
+        // Give top-level categories a little more visual weight.
         if (level == 0) {
             ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.FramePadding, 4, 6);
         }
 
-        // 获取合适的显示标题
+        // Build the label shown in the collapsing header.
         String displayTitle = getString(displayCategory, level, categoryId);
 
-        // 定义折叠头部标志
         int headerFlags = ImGuiSelectableFlags.None;
         
-        // 如果是搜索模式下且分类包含节点，强制展开
         if (shouldExpand && hasNodes) {
-            ImGui.setNextItemOpen(true); // 强制下一个折叠头部为展开状态
+            ImGui.setNextItemOpen(true);
         }
         
-        // 使用标准的可折叠标题
         boolean headerClicked = ImGui.collapsingHeader(displayTitle + "##header_" + displayCategory.getId(), headerFlags);
 
-        // 恢复样式
         if (level == 0) {
             ImGui.popStyleVar();
         }
         ImGui.popStyleColor(4);
         ImGui.popStyleVar();
 
-        // 更新存储的状态
+        // Persist the latest expansion state.
         expandedCategories.put(displayCategory.getId(), headerClicked);
 
-        // 渲染节点 - 仅当分类展开时
+        // Render nodes only while the category is open.
         if (headerClicked) {
             ImGui.indent(NodeLibraryConstants.CATEGORY_INDENT);
             
-            // 根据层级添加适当的垂直间距
             ImGui.dummy(0, 2.0f);
 
-            // 检查该分类是否有子分类
             boolean hasSubcategories = false;
             String catId = displayCategory.getId();
             
-            // 检查是否有以此分类ID为前缀的其他分类
             for (DisplayCategory otherCategory : filteredCategories) {
                 if (otherCategory != displayCategory && 
                     otherCategory.getId().startsWith(catId + ".")) {
@@ -1381,26 +1347,21 @@ public class NodeLibraryComponent implements EditorComponent {
                 }
             }
             
-            // 'displayCategory.getNodes()' here already contains the filtered list if searching
             List<NodeInfo> nodesToRender = getSortedNodesForDisplay(displayCategory);
             
-            // 打印该分类中节点数量的调试信息
-            NodeCraft.LOGGER.debug("分类 {} 有 {} 个节点需要渲染", displayCategory.getDisplayName(), nodesToRender.size());
+            NodeCraft.LOGGER.debug("Category {} has {} nodes to render", displayCategory.getDisplayName(), nodesToRender.size());
             
-            // 如果是搜索模式，添加更多的调试信息
             if (!searchManager.getSearchTerm().isEmpty()) {
-                NodeCraft.LOGGER.debug("搜索模式: '{}'，分类 {} 中可见节点: {}", 
+                NodeCraft.LOGGER.debug("Search mode '{}', visible nodes in category {}: {}", 
                     searchManager.getSearchTerm(), 
                     displayCategory.getDisplayName(), 
                     nodesToRender.stream().map(NodeInfo::getDisplayName).collect(Collectors.joining(", ")));
             }
 
-            // 只有当分类没有子分类且节点列表为空时才显示"此分类中没有节点"
             if (nodesToRender.isEmpty() && searchManager.getSearchTerm().isEmpty() && !hasSubcategories) {
                 ImGui.textDisabled("  (No nodes in this category)");
             } else if (nodesToRender.isEmpty() && !searchManager.getSearchTerm().isEmpty()) {
-                // If searching and no nodes matched in this category (but category name might have matched)
-                // Do nothing, the main "No matching nodes found" message handles this.
+                // Category name matched, but there are no visible nodes to draw.
             } else {
                 if (displayMode == DisplayMode.GRID) {
                     renderNodesAsGrid(nodesToRender, displayCategory);
@@ -1411,7 +1372,7 @@ public class NodeLibraryComponent implements EditorComponent {
             ImGui.unindent(NodeLibraryConstants.CATEGORY_INDENT);
             ImGui.dummy(0, NodeLibraryConstants.CATEGORY_SPACING_EXPANDED);
         } else {
-             // Optional: Add very small spacing below collapsed header for visual separation
+             // Keep a small spacer below collapsed headers for readability.
              ImGui.dummy(0, NodeLibraryConstants.CATEGORY_SPACING_COLLAPSED);
         }
     }
@@ -1435,7 +1396,7 @@ public class NodeLibraryComponent implements EditorComponent {
             if (selected && selectCallback != null) {
                 selectCallback.onNodeSelected(node.getId(), node.getDisplayName());
                 if (NodeCraft.LOGGER.isDebugEnabled()) {
-                    NodeCraft.LOGGER.debug("节点选择: {} ({})", node.getDisplayName(), node.getId());
+                    NodeCraft.LOGGER.debug("Node selected: {} ({})", node.getDisplayName(), node.getId());
                 }
             }
         }
@@ -1443,7 +1404,7 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private void renderNodesAsGrid(List<NodeInfo> nodesToRender, DisplayCategory displayCategory) {
         float listLikeSpacing = ImGui.getStyle().getItemSpacingY();
-        // 1x 基准：分类标签行高（ImGui frame height）
+        // Use frame height as the 1x baseline for grid tiles.
         float tileSide = ImGui.getFrameHeight() * gridTileSizeScale;
         float spacingX = listLikeSpacing;
         float spacingY = listLikeSpacing;
@@ -1466,7 +1427,7 @@ public class NodeLibraryComponent implements EditorComponent {
             if (selected && selectCallback != null) {
                 selectCallback.onNodeSelected(node.getId(), node.getDisplayName());
                 if (NodeCraft.LOGGER.isDebugEnabled()) {
-                    NodeCraft.LOGGER.debug("节点选择: {} ({})", node.getDisplayName(), node.getId());
+                    NodeCraft.LOGGER.debug("Node selected: {} ({})", node.getDisplayName(), node.getId());
                 }
             }
 
@@ -1555,7 +1516,7 @@ public class NodeLibraryComponent implements EditorComponent {
             }
 
             ImGui.separator();
-            ImGui.textDisabled("分类: " + displayCategory.getDisplayName());
+            ImGui.textDisabled("Category: " + displayCategory.getDisplayName());
 
             ImGui.endTooltip();
         }
@@ -1596,20 +1557,20 @@ public class NodeLibraryComponent implements EditorComponent {
         String displayTitle;
 
         if (level > 0 && categoryId.contains(".")) {
-            // 对于子分类，我们在UI层动态构建"父分类 / 子分类"格式的显示名称
+            // Build a short subcategory label in the UI layer.
             String subCategoryPart = categoryId.substring(categoryId.lastIndexOf('.') + 1);
-            // 首字母大写
+            // Title-case the first letter for display.
             subCategoryPart = subCategoryPart.substring(0, 1).toUpperCase() + subCategoryPart.substring(1);
             displayTitle = subCategoryPart;
         } else {
-            // 对于顶级分类，直接使用原始显示名称
+            // Top-level categories use their stored display names directly.
             displayTitle = displayCategory.getDisplayName();
         }
         return displayTitle;
     }
 
     /**
-     * 修改renderNode方法，使用搜索管理器高亮文本
+     * Renders a node row and highlights matching text while searching.
      */
     private void renderNode(ImDrawList drawList, ImVec2 rectMin, ImVec2 textSize, NodeInfo node, String nodeCategory, float iconSize, float iconPadding) {
         float actualLineHeight = ImGui.getTextLineHeight();
@@ -1619,59 +1580,50 @@ public class NodeLibraryComponent implements EditorComponent {
         }
         drawNodeIcon(drawList, new ImVec2(rectMin.x, rectMin.y + yOffset), node, nodeCategory, iconSize);
         
-        // 如果需要绘制文本（只有在正常显示节点时，拖放和工具提示时不需要）
+        // Draw text only for the normal row view, not for drag previews or tooltips.
         if (iconPadding > 0) {
-            // 计算文本位置
+            // Compute text placement.
             float textStartX = rectMin.x + iconSize + iconPadding;
             float textPosY = rectMin.y + (actualLineHeight - ImGui.getTextLineHeight()) * 0.5f;
             
-            // 获取当前搜索词
             String searchTerm = searchManager.getSearchTerm();
             String nodeDisplayName = node.getDisplayName();
             
-            // 绘制文本 - 在搜索模式下高亮显示匹配部分
+            // Highlight matching text while searching.
             int textColor = ImGui.getColorU32(ImGuiCol.Text);
             
             if (searchTerm != null && !searchTerm.isEmpty()) {
-                // 检查节点名称是否包含搜索词（不区分大小写）
                 String lowerNodeName = nodeDisplayName.toLowerCase();
                 String lowerSearchTerm = searchTerm.toLowerCase();
                 
                 if (lowerNodeName.contains(lowerSearchTerm)) {
-                    // 高亮显示匹配部分
-                    int highlightColor = ImGui.colorConvertFloat4ToU32(1.0f, 0.8f, 0.0f, 1.0f); // 亮黄色高亮
+                    int highlightColor = ImGui.colorConvertFloat4ToU32(1.0f, 0.8f, 0.0f, 1.0f);
                     
-                    // 分段绘制文本
                     int matchStart = lowerNodeName.indexOf(lowerSearchTerm);
                     int matchEnd = matchStart + lowerSearchTerm.length();
                     
-                    // 前部分
                     if (matchStart > 0) {
                         String prefix = nodeDisplayName.substring(0, matchStart);
                         drawList.addText(textStartX, textPosY, textColor, prefix);
                         textStartX += ImGui.calcTextSize(prefix).x;
                     }
                     
-                    // 高亮部分
                     String highlight = nodeDisplayName.substring(matchStart, matchEnd);
                     drawList.addText(textStartX, textPosY, highlightColor, highlight);
                     textStartX += ImGui.calcTextSize(highlight).x;
                     
-                    // 后部分
                     if (matchEnd < nodeDisplayName.length()) {
                         String suffix = nodeDisplayName.substring(matchEnd);
                         drawList.addText(textStartX, textPosY, textColor, suffix);
                     }
                 } else {
-                    // 节点通过ID或描述匹配，但名称不匹配
+                    // The node matched by ID or description rather than display name.
                     drawList.addText(textStartX, textPosY, textColor, nodeDisplayName);
                     
-                    // 添加一个小的指示器，表示此节点是通过其他属性匹配的
                     float indicatorSize = 3.0f;
                     float indicatorX = textStartX - indicatorSize - 2.0f;
                     float indicatorY = textPosY + ImGui.getTextLineHeight() / 2.0f - indicatorSize / 2.0f;
                     
-                    // 绘制一个指示器
                     int indicatorColor = ImGui.colorConvertFloat4ToU32(1.0f, 0.8f, 0.0f, 1.0f);
                     drawList.addRectFilled(
                         indicatorX, indicatorY,
@@ -1680,7 +1632,7 @@ public class NodeLibraryComponent implements EditorComponent {
                     );
                 }
             } else {
-                // 普通模式下直接绘制文本
+                // Normal mode: draw the text directly.
                 drawList.addText(textStartX, textPosY, textColor, nodeDisplayName);
             }
         }
