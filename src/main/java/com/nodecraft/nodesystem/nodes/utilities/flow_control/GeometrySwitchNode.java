@@ -14,10 +14,10 @@ import java.util.UUID;
  * Selects one geometry from multiple candidates by index.
  */
 @NodeInfo(
-    id = "control.flow.geometry_switch",
+    id = "utilities.flow_control.geometry_switch",
     displayName = "Geometry Switch",
     description = "Selects one geometry input by index",
-    category = "control.flow"
+    category = "utilities.flow_control"
 )
 public class GeometrySwitchNode extends BaseNode {
 
@@ -32,7 +32,7 @@ public class GeometrySwitchNode extends BaseNode {
     private static final String OUTPUT_MATCHED_INDEX_ID = "output_matched_index";
 
     public GeometrySwitchNode() {
-        super(UUID.randomUUID(), "control.flow.geometry_switch");
+        super(UUID.randomUUID(), "utilities.flow_control.geometry_switch");
 
         addInputPort(new BasePort(INPUT_INDEX_ID, "Index", "Geometry selection index (0-3)", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_0_ID, "Geometry 0", "Geometry input 0", NodeDataType.GEOMETRY, this));

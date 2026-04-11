@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.selectors.item_type_selector",
+    id = "utilities.selectors.item_type_selector",
     displayName = "Item Type Selector",
     description = "Searches and selects a Minecraft item type.",
-    category = "inputs.selectors"
+    category = "utilities.selectors"
 )
 public class ItemTypeSelectorNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class ItemTypeSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public ItemTypeSelectorNode() {
-        super(UUID.randomUUID(), "inputs.selectors.item_type_selector");
+        super(UUID.randomUUID(), "utilities.selectors.item_type_selector");
 
         addOutputPort(new BasePort(OUTPUT_ITEM_ID, "Item ID", "The selected item's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected item ID", NodeDataType.STRING, this));

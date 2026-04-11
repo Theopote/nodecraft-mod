@@ -33,10 +33,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.minecraft.selected_block_sequence",
+    id = "world.selection.selected_block_sequence",
     displayName = "Selected Block Sequence",
     description = "Collects multiple picked blocks in click order and outputs an ordered block sequence",
-    category = "inputs.minecraft"
+    category = "world.selection"
 )
 public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBlockPickerCallback {
 
@@ -85,7 +85,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     private String previewPathColor = "#FFD933";
 
     public SelectedBlockSequenceNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.selected_block_sequence");
+        super(UUID.randomUUID(), "world.selection.selected_block_sequence");
 
         addOutputPort(new BasePort(OUTPUT_COORDINATES_ID, "Coordinates", "Ordered list of picked block coordinates", NodeDataType.COORDINATE_LIST, this));
         addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Ordered list of picked block positions", NodeDataType.BLOCK_LIST, this));
@@ -118,7 +118,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         if (pickingActive) {
             int pickedCount = snapshotPickedBlocks().size();
             MinecraftClientController.getInstance().showHudMessage(
-                "姝ｅ湪閫夋嫨鏂瑰潡: 宸﹂敭娣诲姞, 鍙抽敭瀹屾垚 (宸查€夋嫨 " + pickedCount + " 涓?"
+                "Picking blocks: LMB add, RMB finish (selected " + pickedCount + ")"
             );
         }
 
@@ -159,7 +159,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
     public void onPickingCancelled() {
         pickingActive = false;
         pendingRepick = false;
-        MinecraftClientController.getInstance().showHudMessage("鏂瑰潡搴忓垪閫夋嫨瀹屾垚");
+        MinecraftClientController.getInstance().showHudMessage("Block sequence picking finished");
         updatePathPreview();
         markDirty();
     }
@@ -197,7 +197,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = true;
         pendingRepick = false;
         requestNextPick();
-        MinecraftClientController.getInstance().showHudMessage("姝ｅ湪閫夋嫨鏂瑰潡: 宸﹂敭娣诲姞, 鍙抽敭瀹屾垚");
+        MinecraftClientController.getInstance().showHudMessage("Picking blocks: LMB add, RMB finish");
         updatePathPreview();
         markDirty();
     }
@@ -206,7 +206,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
         pickingActive = false;
         pendingRepick = false;
         NodeEditorInteractionManager.getInstance().cancelBlockPick();
-        MinecraftClientController.getInstance().showHudMessage("鏂瑰潡搴忓垪閫夋嫨瀹屾垚");
+        MinecraftClientController.getInstance().showHudMessage("Block sequence picking finished");
         updatePathPreview();
         markDirty();
     }
@@ -318,7 +318,7 @@ public class SelectedBlockSequenceNode extends BaseCustomUINode implements IBloc
             if (now - lastPathPreviewFailureNoticeAt > 2000L) {
                 lastPathPreviewFailureNoticeAt = now;
                 NodeCraft.LOGGER.warn("SelectedBlockSequenceNode path preview creation failed: nodeId={}, points={}", getId(), points.size());
-                MinecraftClientController.getInstance().showHudMessage("璺緞棰勮鍒涘缓澶辫触锛岃鏌ョ湅鏃ュ織");
+                MinecraftClientController.getInstance().showHudMessage("Path preview creation failed, please check logs");
             }
         }
     }

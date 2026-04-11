@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.analysis.sphere_point_info",
     displayName = "Sphere Point Info",
     description = "Reports surface relationship, nearest surface point, and normal for a point relative to a sphere",
-    category = "spatial.analysis"
+    category = "utilities.legacy.spatial.analysis"
 )
 public class SpherePointInfoNode extends BaseNode {
 

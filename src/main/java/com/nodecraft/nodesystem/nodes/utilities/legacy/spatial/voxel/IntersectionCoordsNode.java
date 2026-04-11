@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.voxel.intersection_coords",
     displayName = "Intersection Coords",
     description = "Computes the overlap between two block-coordinate lists.",
-    category = "spatial.voxel"
+    category = "utilities.legacy.spatial.voxel"
 )
 public class IntersectionCoordsNode extends BaseNode {
 

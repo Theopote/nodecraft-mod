@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.analysis.sphere_uv",
     displayName = "Sphere UV",
     description = "Projects a point onto a sphere and reports UV, longitude, and latitude parameters",
-    category = "spatial.analysis"
+    category = "utilities.legacy.spatial.analysis"
 )
 public class SphereUVNode extends BaseNode {
 

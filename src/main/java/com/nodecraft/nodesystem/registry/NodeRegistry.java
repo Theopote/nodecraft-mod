@@ -294,22 +294,7 @@ public class NodeRegistry {
     }
 
     private static Map<String, String> createNodeCategoryOverrides() {
-        Map<String, String> overrides = new HashMap<>();
-        overrides.put("spatial.analysis.geometry_info", "spatial.legacy");
-        overrides.put("spatial.analysis.select_sphere_band_sector", "spatial.legacy");
-        overrides.put("spatial.analysis.sphere_uv", "spatial.legacy");
-        overrides.put("spatial.analysis.sphere_point_info", "spatial.legacy");
-        overrides.put("spatial.analysis.deconstruct_surface_strip", "spatial.legacy");
-        overrides.put("spatial.points.point_between_two_points", "spatial.legacy");
-        overrides.put("spatial.points.randomize_coordinates", "spatial.legacy");
-        overrides.put("spatial.voxel.union_coords", "spatial.legacy");
-        overrides.put("spatial.voxel.intersection_coords", "spatial.legacy");
-        overrides.put("spatial.voxel.difference_coords", "spatial.legacy");
-        overrides.put("spatial.instancing.grow_along_normals", "spatial.legacy");
-        overrides.put("spatial.instancing.grow_along_sphere_normal", "spatial.legacy");
-        overrides.put("inputs.minecraft.selected_block_sequence", "spatial.legacy");
-        overrides.put("inputs.minecraft.selected_entity", "spatial.legacy");
-        return Map.copyOf(overrides);
+        return Map.of();
     }
 
     private String normalizeNodeId(String nodeId) {
@@ -317,7 +302,51 @@ public class NodeRegistry {
             return null;
         }
         String normalizedId = nodeId.toLowerCase();
-        return NODE_ID_ALIASES.getOrDefault(normalizedId, normalizedId);
+        String aliasedId = NODE_ID_ALIASES.getOrDefault(normalizedId, normalizedId);
+        return remapMigratedNodePrefixes(aliasedId);
+    }
+
+    private String remapMigratedNodePrefixes(String nodeId) {
+        if (nodeId.startsWith("data.lists.")) {
+            return "math.list_sequence." + nodeId.substring("data.lists.".length());
+        }
+        if ("data.sequence.range".equals(nodeId)) {
+            return "math.list_sequence.range";
+        }
+        if ("data.sequence.repeat".equals(nodeId)) {
+            return "math.list_sequence.repeat";
+        }
+        if ("data.sequence.series".equals(nodeId)) {
+            return "math.list_sequence.series";
+        }
+        if (nodeId.startsWith("data.conversion.")) {
+            return "utilities.data_conversion." + nodeId.substring("data.conversion.".length());
+        }
+        if (nodeId.startsWith("data.text.")) {
+            return "utilities.text_processing." + nodeId.substring("data.text.".length());
+        }
+        if (nodeId.startsWith("control.flow.")) {
+            return "utilities.flow_control." + nodeId.substring("control.flow.".length());
+        }
+        if (nodeId.startsWith("inputs.basic.")) {
+            return "input.basic." + nodeId.substring("inputs.basic.".length());
+        }
+        if (nodeId.startsWith("inputs.selectors.")) {
+            return "utilities.selectors." + nodeId.substring("inputs.selectors.".length());
+        }
+        if (nodeId.startsWith("inputs.sources.")) {
+            return "utilities.fileio." + nodeId.substring("inputs.sources.".length());
+        }
+        if ("inputs.minecraft.selected_entity".equals(nodeId)) {
+            return "world.selection.selected_entity";
+        }
+        if ("inputs.minecraft.selected_block_sequence".equals(nodeId)) {
+            return "world.selection.selected_block_sequence";
+        }
+        if ("deferred.math.math_series".equals(nodeId)) {
+            return "math.deferred.math_series";
+        }
+        return nodeId;
     }
 
     public String resolveCanonicalNodeId(String nodeId) {

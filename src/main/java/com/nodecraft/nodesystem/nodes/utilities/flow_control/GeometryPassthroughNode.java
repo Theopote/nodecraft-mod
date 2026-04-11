@@ -14,10 +14,10 @@ import java.util.UUID;
  * Forwards a unified geometry object without changing it.
  */
 @NodeInfo(
-    id = "control.flow.geometry_passthrough",
+    id = "utilities.flow_control.geometry_passthrough",
     displayName = "Geometry Passthrough",
     description = "Forwards one geometry input to a geometry output",
-    category = "control.flow"
+    category = "utilities.flow_control"
 )
 public class GeometryPassthroughNode extends BaseNode {
 
@@ -27,7 +27,7 @@ public class GeometryPassthroughNode extends BaseNode {
     private static final String OUTPUT_HAS_GEOMETRY_ID = "output_has_geometry";
 
     public GeometryPassthroughNode() {
-        super(UUID.randomUUID(), "control.flow.geometry_passthrough");
+        super(UUID.randomUUID(), "utilities.flow_control.geometry_passthrough");
 
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified geometry input", NodeDataType.GEOMETRY, this));
 

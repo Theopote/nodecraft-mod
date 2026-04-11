@@ -20,50 +20,50 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * 鏂囨湰闈㈡澘鑺傜偣锛屾彁渚涘琛屾枃鏈紪杈戝尯鍩熴€?
+ * Text panel node that provides a multi-line editable text area.
  */
 @NodeInfo(
-    id = "inputs.sources.text_panel",
-    displayName = "鏂囨湰闈㈡澘",
-    description = "鐢ㄤ簬鎵嬪姩杈撳叆鏂囨湰鍒楄〃鎴栨樉绀烘暟鎹?,
-    category = "inputs.sources"
+    id = "utilities.fileio.text_panel",
+    displayName = "Text Panel",
+    description = "Used to manually input text or display text data.",
+    category = "utilities.fileio"
 )
 public class TextPanelNode extends BaseCustomUINode {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TextPanelNode.class);
     
-    @NodeProperty(displayName = "鏂囨湰鍐呭", category = "鏂囨湰", order = 1,
-                  description = "鏂囨湰鍐呭")
+    @NodeProperty(displayName = "Text Content", category = "Text", order = 1,
+                  description = "Text content")
     private volatile String text = "";
 
-    @NodeProperty(displayName = "澶氳妯″紡", category = "璁剧疆", order = 10,
-                  description = "鏄惁涓哄琛屾枃鏈?)
+    @NodeProperty(displayName = "Multiline Mode", category = "Settings", order = 10,
+                  description = "Whether input is multiline")
     private boolean isMultiline = true;
 
-    @NodeProperty(displayName = "鍒嗚杈撳嚭", category = "璁剧疆", order = 11,
-                  description = "鏄惁灏嗘枃鏈寜琛屽垎鍓蹭负鍒楄〃杈撳嚭")
+    @NodeProperty(displayName = "Split Lines", category = "Settings", order = 11,
+                  description = "Split text into lines for list output")
     private boolean splitLines = true;
 
-    @NodeProperty(displayName = "鍙", category = "璁剧疆", order = 12,
-                  description = "鏄惁涓哄彧璇绘ā寮?)
+    @NodeProperty(displayName = "Read Only", category = "Settings", order = 12,
+                  description = "Whether editing is disabled")
     private boolean readOnly = false;
 
-    @NodeProperty(displayName = "鍒嗛殧绗?, category = "璁剧疆", order = 13,
-                  description = "琛屽垎闅旂")
+    @NodeProperty(displayName = "Delimiter", category = "Settings", order = 13,
+                  description = "Line splitting delimiter")
     private String delimiter = "\n";
     
-    // --- 绔彛 ---
+    // --- Ports ---
     private static final String INPUT_TEXT_ID = "input_text";
     private static final String OUTPUT_TEXT_ID = "output_text";
     private static final String OUTPUT_LINES_ID = "output_lines";
     private static final String OUTPUT_LINE_COUNT_ID = "output_line_count";
     
-    // --- UI鐘舵€?---
+    // --- UI state ---
     private transient ImString textBuffer = new ImString(32768);
     private transient volatile boolean bufferNeedsSync = true;
     
     public TextPanelNode() {
-        super(UUID.randomUUID(), "inputs.sources.text_panel");
+        super(UUID.randomUUID(), "utilities.fileio.text_panel");
         
         addInputPort(new BasePort(INPUT_TEXT_ID, "Text Input", "Optional text input to display", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_TEXT_ID, "Text", "The text content as a single string", NodeDataType.STRING, this));
@@ -72,7 +72,7 @@ public class TextPanelNode extends BaseCustomUINode {
     }
     
     @Override
-    public String getDescription() { return "鎵嬪姩杈撳叆鏂囨湰鎴栨樉绀烘暟鎹?; }
+    public String getDescription() { return "Used to manually input text or display text data."; }
     
     @Override
     public void processNode(@Nullable ExecutionContext context) {
@@ -97,12 +97,12 @@ public class TextPanelNode extends BaseCustomUINode {
     protected float calculateUIHeight() {
         float height = getSmallPadding();
         if (isMultiline) {
-            height += ImGui.getTextLineHeightWithSpacing() * 6; // 6琛岄珮搴︾殑鏂囨湰鍖?
+            height += ImGui.getTextLineHeightWithSpacing() * 6; // 6-line text area
         } else {
-            height += ImGui.getFrameHeight(); // 鍗曡杈撳叆
+            height += ImGui.getFrameHeight(); // single-line input
         }
         height += getSmallPadding();
-        height += ImGui.getTextLineHeight(); // 淇℃伅琛?
+        height += ImGui.getTextLineHeight(); // status line
         height += getSmallPadding();
         return height;
     }
@@ -128,7 +128,7 @@ public class TextPanelNode extends BaseCustomUINode {
                 if (readOnly) flags |= ImGuiInputTextFlags.ReadOnly;
                 
                 if (isMultiline) {
-                    // === 澶氳鏂囨湰鍖?===
+                    // === Multiline input ===
                     float textAreaHeight = ImGui.getTextLineHeightWithSpacing() * 6;
                     ImGui.setCursorPosX(baseCursorX + edgeMargin);
                     if (ImGui.inputTextMultiline("##text_panel", textBuffer, 
@@ -141,11 +141,11 @@ public class TextPanelNode extends BaseCustomUINode {
                         }
                     }
                 } else {
-                    // === 鍗曡杈撳叆 ===
+                    // === Single line input ===
                     l.pushFramePadding(4.0f, 3.0f);
                     ImGui.setCursorPosX(baseCursorX + edgeMargin);
                     l.setItemWidth(availableWidth / Math.max(zoom, 0.001f));
-                    if (ImGui.inputTextWithHint("##text_panel", "杈撳叆鏂囨湰...", textBuffer, flags)) {
+                    if (ImGui.inputTextWithHint("##text_panel", "Enter text...", textBuffer, flags)) {
                         String newText = textBuffer.get();
                         if (!newText.equals(text)) {
                             text = newText;
@@ -159,17 +159,17 @@ public class TextPanelNode extends BaseCustomUINode {
                 
                 l.addVerticalSpacing(getSmallPadding());
                 
-                // === 淇℃伅琛?===
+                // === Status line ===
                 int charCount = text.length();
                 int lineCount = text.isEmpty() ? 0 : text.split(delimiter, -1).length;
                 ImGui.setCursorPosX(baseCursorX + edgeMargin);
                 ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 1.0f);
-                ImGui.text(lineCount + " 琛?| " + charCount + " 瀛楃");
+                ImGui.text(lineCount + " lines | " + charCount + " chars");
                 ImGui.popStyleColor();
                 
                 l.addVerticalSpacing(getSmallPadding());
             } catch (Exception e) {
-                LOGGER.error("TextPanelNode UI娓叉煋澶辫触", e);
+                LOGGER.error("TextPanelNode UI render failed", e);
             }
             return changed;
         });

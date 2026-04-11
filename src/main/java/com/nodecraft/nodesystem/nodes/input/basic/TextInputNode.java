@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.text_input",
-    displayName = "鏂囨湰杈撳叆",
-    description = "鍏佽鐢ㄦ埛杈撳叆鍗曡鎴栧琛屾枃鏈?,
-    category = "inputs.basic"
+    id = "input.basic.text_input",
+    displayName = "Text Input",
+    description = "Allows entering single-line or multi-line text.",
+    category = "input.basic"
 )
 public class TextInputNode extends BaseCustomUINode {
 
@@ -30,41 +30,41 @@ public class TextInputNode extends BaseCustomUINode {
     private static final int SINGLE_LINE_BUF_SIZE = 1024;
     private static final int MULTI_LINE_BUF_SIZE = 32768;
 
-    @NodeProperty(displayName = "鏂囨湰鍐呭", category = "鍐呭", order = 1,
-        description = "褰撳墠鏂囨湰鍐呭")
+    @NodeProperty(displayName = "Text", category = "Content", order = 1,
+        description = "Current text content")
     private volatile String text = "";
 
-    @NodeProperty(displayName = "澶氳妯″紡", category = "UI璁剧疆", order = 10,
-        description = "鏄惁鍚敤澶氳杈撳叆")
+    @NodeProperty(displayName = "Multiline", category = "UI Settings", order = 10,
+        description = "Whether multi-line mode is enabled")
     private volatile boolean multiline = true;
 
-    @NodeProperty(displayName = "鏈€澶ч暱搴?, category = "闄愬埗", order = 11,
-        description = "鍏佽杈撳叆鐨勬渶澶у瓧绗︽暟")
+    @NodeProperty(displayName = "Max Length", category = "Limits", order = 11,
+        description = "Maximum allowed input length")
     private volatile int maxLength = 32767;
 
-    @NodeProperty(displayName = "鍗犱綅鏂囨湰", category = "UI璁剧疆", order = 12,
-        description = "杈撳叆妗嗕负绌烘椂鏄剧ず鐨勬彁绀烘枃鏈?)
-    private volatile String placeholder = "杈撳叆鏂囨湰...";
+    @NodeProperty(displayName = "Placeholder", category = "UI Settings", order = 12,
+        description = "Hint text shown when input is empty")
+    private volatile String placeholder = "Enter text...";
 
-    @NodeProperty(displayName = "鏄剧ず瀛楁暟缁熻", category = "UI璁剧疆", order = 13,
-        description = "鏄惁鍦ㄥ簳閮ㄦ樉绀哄綋鍓嶅瓧鏁板拰鏈€澶ч暱搴?)
+    @NodeProperty(displayName = "Show Length Counter", category = "UI Settings", order = 13,
+        description = "Whether to show current and max character count")
     private volatile boolean showLengthCounter = true;
 
     private transient ImString inputBuffer;
     private transient boolean bufferNeedsSync = true;
 
     public TextInputNode() {
-        super(UUID.randomUUID(), "inputs.basic.text_input");
-        IPort textOutput = new BasePort(OUTPUT_TEXT_ID, "Text", "杈撳叆鐨勬枃鏈唴瀹?, NodeDataType.STRING, this);
+        super(UUID.randomUUID(), "input.basic.text_input");
+        IPort textOutput = new BasePort(OUTPUT_TEXT_ID, "Text", "Input text content", NodeDataType.STRING, this);
         addOutputPort(textOutput);
-        IPort lengthOutput = new BasePort(OUTPUT_LENGTH_ID, "Length", "鏂囨湰闀垮害", NodeDataType.INTEGER, this);
+        IPort lengthOutput = new BasePort(OUTPUT_LENGTH_ID, "Length", "Text length", NodeDataType.INTEGER, this);
         addOutputPort(lengthOutput);
         updateOutput();
     }
 
     @Override
     public String getDescription() {
-        return "鍏佽鐢ㄦ埛杈撳叆鍗曡鎴栧琛屾枃鏈€?;
+        return "Allows entering single-line or multi-line text.";
     }
 
     @Override
@@ -110,7 +110,7 @@ public class TextInputNode extends BaseCustomUINode {
 
             if (showLengthCounter) {
                 l.addVerticalSpacing(getSmallPadding());
-                String countText = text.length() + " / " + maxLength + " 瀛楃";
+                String countText = text.length() + " / " + maxLength + " chars";
                 float countWidth = ImGui.calcTextSize(countText).x;
                 float offsetX = availableWidth - countWidth;
                 ImGui.setCursorPosX(baseCursorX + edgeMargin + Math.max(0.0f, offsetX));
@@ -230,7 +230,7 @@ public class TextInputNode extends BaseCustomUINode {
     }
 
     public void setPlaceholder(String placeholder) {
-        String normalized = placeholder != null ? placeholder : "杈撳叆鏂囨湰...";
+        String normalized = placeholder != null ? placeholder : "Enter text...";
         if (!this.placeholder.equals(normalized)) {
             this.placeholder = normalized;
             markDirty();

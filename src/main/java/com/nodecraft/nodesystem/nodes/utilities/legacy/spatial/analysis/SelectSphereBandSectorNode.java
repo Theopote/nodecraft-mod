@@ -26,7 +26,7 @@ import java.util.UUID;
     id = "spatial.analysis.select_sphere_band_sector",
     displayName = "Select Sphere Band Sector",
     description = "Filters sphere surface points by latitude band and longitude sector while preserving point-normal pairing",
-    category = "spatial.analysis"
+    category = "utilities.legacy.spatial.analysis"
 )
 public class SelectSphereBandSectorNode extends BaseNode {
 

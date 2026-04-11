@@ -27,7 +27,7 @@ import java.util.UUID;
     id = "spatial.generators.region_box_blocks",
     displayName = "Region To Box (Blocks)",
     description = "Generates a filled or hollow box from a region or bounding box input",
-    category = "spatial.generators"
+    category = "utilities.legacy.spatial.generators"
 )
 public class RegionBoxBlocksNode extends BaseNode {
 

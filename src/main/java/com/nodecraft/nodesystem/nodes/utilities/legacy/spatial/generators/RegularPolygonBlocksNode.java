@@ -12,12 +12,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * 姝ｅ杈瑰舰鐢熸垚鍣細鍦ㄦ寚瀹氬钩闈㈢敓鎴愭澶氳竟褰紙瀹炲績鎴栬疆寤擄級鐨勬柟鍧楀潗鏍囧垪琛ㄣ€? */
+ * Generates a regular polygon area or outline on a selected plane. */
 @NodeInfo(
     id = "spatial.generators.regular_polygon_blocks",
-    displayName = "姝ｅ杈瑰舰",
-    description = "鐢熸垚姝ｅ杈瑰舰鍖哄煙鐨勫潗鏍囧垪琛?,
-    category = "spatial.generators"
+    displayName = "Regular Polygon",
+    description = "Generates a regular polygon region as block coordinates.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class RegularPolygonBlocksNode extends BaseNode {
 
@@ -33,14 +33,14 @@ public class RegularPolygonBlocksNode extends BaseNode {
 
     public RegularPolygonBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.regular_polygon_blocks");
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "涓績", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "澶栨帴鍦嗗崐寰勶紙鏍硷級", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_SIDES_ID, "Sides", "杈规暟锛堚墺3锛?, NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "澶氳竟褰笂鐨勬柟鍧楀潗鏍?, NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center position", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Circumradius in blocks", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_SIDES_ID, "Sides", "Number of sides (>= 3)", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Generated polygon block coordinates", NodeDataType.BLOCK_LIST, this));
     }
 
     @Override
-    public String getDescription() { return "鐢熸垚姝ｅ杈瑰舰鍖哄煙鐨勫潗鏍囧垪琛?; }
+    public String getDescription() { return "Generates a regular polygon region as block coordinates."; }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {

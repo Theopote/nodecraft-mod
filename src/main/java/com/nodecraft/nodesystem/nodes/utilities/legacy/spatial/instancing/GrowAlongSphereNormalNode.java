@@ -28,7 +28,7 @@ import java.util.UUID;
     id = "spatial.instancing.grow_along_sphere_normal",
     displayName = "Grow Along Sphere Normal",
     description = "Builds cylinder geometry growing outward from sphere surface points along their normals",
-    category = "spatial.instancing"
+    category = "utilities.legacy.spatial.instancing"
 )
 public class GrowAlongSphereNormalNode extends BaseNode {
 

@@ -27,7 +27,7 @@ import java.util.UUID;
     id = "spatial.instancing.grow_along_normals",
     displayName = "Grow Along Normals",
     description = "Builds cylinder geometry along point-normal pairs for generic growth and instancing workflows",
-    category = "spatial.instancing"
+    category = "utilities.legacy.spatial.instancing"
 )
 public class GrowAlongNormalsNode extends BaseNode {
 

@@ -17,10 +17,10 @@ import java.util.UUID;
  * Merges multiple geometry inputs into one unified geometry value.
  */
 @NodeInfo(
-    id = "control.flow.geometry_merge",
+    id = "utilities.flow_control.geometry_merge",
     displayName = "Geometry Merge",
     description = "Combines multiple geometry inputs into a single geometry value",
-    category = "control.flow"
+    category = "utilities.flow_control"
 )
 public class GeometryMergeNode extends BaseNode {
 
@@ -34,7 +34,7 @@ public class GeometryMergeNode extends BaseNode {
     private static final String OUTPUT_HAS_GEOMETRY_ID = "output_has_geometry";
 
     public GeometryMergeNode() {
-        super(UUID.randomUUID(), "control.flow.geometry_merge");
+        super(UUID.randomUUID(), "utilities.flow_control.geometry_merge");
 
         addInputPort(new BasePort(INPUT_GEOMETRY_0_ID, "Geometry 0", "First geometry input", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_1_ID, "Geometry 1", "Second geometry input", NodeDataType.GEOMETRY, this));

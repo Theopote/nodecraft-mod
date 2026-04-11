@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.voxel.union_coords",
     displayName = "Union Coords",
     description = "Merges two block-coordinate lists and removes duplicates.",
-    category = "spatial.voxel"
+    category = "utilities.legacy.spatial.voxel"
 )
 public class UnionCoordsNode extends BaseNode {
 

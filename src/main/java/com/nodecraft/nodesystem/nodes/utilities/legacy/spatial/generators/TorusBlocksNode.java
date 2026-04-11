@@ -27,7 +27,7 @@ import java.util.UUID;
     id = "spatial.generators.torus_blocks",
     displayName = "Torus (Blocks)",
     description = "Generates a torus block volume with optional plane-based orientation",
-    category = "spatial.generators"
+    category = "utilities.legacy.spatial.generators"
 )
 public class TorusBlocksNode extends BaseNode {
 

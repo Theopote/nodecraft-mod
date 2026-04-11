@@ -32,7 +32,7 @@ import java.util.UUID;
     id = "spatial.analysis.geometry_info",
     displayName = "Geometry Info",
     description = "Reports type and bounds information for any supported geometry",
-    category = "spatial.analysis"
+    category = "utilities.legacy.spatial.analysis"
 )
 public class GeometryInfoNode extends BaseNode {
 

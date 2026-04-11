@@ -18,7 +18,7 @@ import java.util.UUID;
     id = "spatial.points.point_between_two_points",
     displayName = "Point Between Two Points",
     description = "Interpolates a point between A and B using a parameter t where 0 is A and 1 is B",
-    category = "spatial.points"
+    category = "utilities.legacy.spatial.points"
 )
 public class PointBetweenTwoPointsNode extends BaseNode {
 

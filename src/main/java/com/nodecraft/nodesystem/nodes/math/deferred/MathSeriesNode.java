@@ -17,10 +17,10 @@ import java.util.UUID;
  * semantics are reconciled with range/sequence nodes.
  */
 @NodeInfo(
-    id = "deferred.math.math_series",
+    id = "math.deferred.math_series",
     displayName = "Series",
     description = "Generates an arithmetic series with Start, Step, and Count.",
-    category = "deferred.math"
+    category = "math.deferred"
 )
 public class MathSeriesNode extends BaseNode {
 
@@ -30,7 +30,7 @@ public class MathSeriesNode extends BaseNode {
     private static final String OUTPUT_SERIES_ID = "output_series";
 
     public MathSeriesNode() {
-        super(UUID.randomUUID(), "deferred.math.math_series");
+        super(UUID.randomUUID(), "math.deferred.math_series");
         addInputPort(new BasePort(INPUT_START_ID, "Start", "The first number in the series", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_STEP_ID, "Step", "The increment between numbers", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_COUNT_ID, "Count", "The total number of items in the series", NodeDataType.INTEGER, this));

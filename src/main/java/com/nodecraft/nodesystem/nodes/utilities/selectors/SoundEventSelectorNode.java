@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.selectors.sound_event_selector",
+    id = "utilities.selectors.sound_event_selector",
     displayName = "Sound Event Selector",
     description = "Searches and selects a Minecraft sound event.",
-    category = "inputs.selectors"
+    category = "utilities.selectors"
 )
 public class SoundEventSelectorNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class SoundEventSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public SoundEventSelectorNode() {
-        super(UUID.randomUUID(), "inputs.selectors.sound_event_selector");
+        super(UUID.randomUUID(), "utilities.selectors.sound_event_selector");
 
         addOutputPort(new BasePort(OUTPUT_SOUND_ID, "Sound ID", "The selected sound's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected sound ID", NodeDataType.STRING, this));

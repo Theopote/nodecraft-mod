@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.minecraft.selected_entity",
+    id = "world.selection.selected_entity",
     displayName = "Selected Entity",
     description = "Gets information about the entity selected by the player.",
-    category = "inputs.minecraft"
+    category = "world.selection"
 )
 public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorInteractionManager.IEntityPickerCallback {
 
@@ -57,7 +57,7 @@ public class SelectedEntityNode extends BaseCustomUINode implements NodeEditorIn
     private volatile boolean hasPickedEntity = false;
 
     public SelectedEntityNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.selected_entity");
+        super(UUID.randomUUID(), "world.selection.selected_entity");
 
         addOutputPort(new BasePort(OUTPUT_ENTITY_ID, "Entity ID", "The unique identifier of the entity", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_ENTITY_TYPE, "Entity Type", "The type of the entity", NodeDataType.STRING, this));
