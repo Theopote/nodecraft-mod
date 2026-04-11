@@ -2,9 +2,29 @@
 
 Last updated: 2026-04-11
 
-## 1. Result
+## 1. Mainline Scope
 
-The v1 node-system mainline taxonomy is now structurally closed for the scoped domains:
+This audit follows the committed v1.0 taxonomy only.
+
+In-scope:
+
+- architectural form-making
+- geometric modeling
+- world-grounded construction
+
+Out of scope for the v1 mainline:
+
+- `animation.*`
+- `flora.*`
+- `world.nbt.*`
+- `world.inventory.*`
+- experimental nodes
+
+These domains may still exist in source, but they are not evidence that the v1 mainline migration is unfinished.
+
+## 2. Mainline Status
+
+The following v1 domains are now structurally closed as canonical implementation paths:
 
 - `input`
 - `reference`
@@ -23,52 +43,39 @@ The v1 node-system mainline taxonomy is now structurally closed for the scoped d
 - `math.trigonometry`
 - `math.list_sequence`
 
-The old `math.basic`, `math.randomness`, and `math.vector` domains have been removed from active implementation paths.
+Legacy compatibility is routed through:
 
-## 2. Closed Migrations
-
-### 2.1 Math
-
-The following are now canonical:
-
-- `math.scalar_math.*`
-- `math.compare.*`
-- `math.random.*`
-- `math.trigonometry.*`
-- `math.list_sequence.*`
-
-Legacy IDs are preserved through aliases in `NodeRegistry`.
-
-### 2.2 Deferred math
-
-`MathSeriesNode` is not part of the v1 main tree.
-
-- Old ID: `math.basic.series`
-- New deferred ID: `deferred.math.math_series`
-- Reason: semantics overlap with range/sequence generation but are not committed in the v1 taxonomy
-
-## 3. Explicitly Out Of v1 Scope
-
-These domains still exist in the repository, but they are not v1 main-tree work:
-
-- `animation.*`
-- `flora.*`
-- `world.inventory.*`
-- `world.nbt.*`
-- `inputs.basic.text_input`
-- `inputs.basic.color_picker`
-- `inputs.selectors.*` except `block_type_selector`
-- `inputs.minecraft.selected_entity`
-- `inputs.minecraft.selected_block_sequence`
-- `inputs.sources.*`
 - `spatial.legacy`
+
+Explicitly deferred nodes are routed through:
+
 - `deferred.*`
 
-These should not be used as evidence that the v1 mainline migration is incomplete.
+## 3. Math Closeout
 
-## 4. Remaining Non-Mainline Domains
+The old math domains have been retired from active mainline use:
 
-The scan still shows several older or separate systems that need later policy decisions, but not as part of the v1 scoped migration:
+- `math.basic`
+- `math.randomness`
+- `math.vector`
+
+Their canonical replacements are:
+
+- `math.basic.* -> math.scalar_math.*`
+- `math.basic.range -> math.list_sequence.range`
+- `math.logic` compare-family -> `math.compare.*`
+- `math.randomness.* -> math.random.*`
+- `math.vector.construct -> reference.vectors.vector`
+- `math.vector.construct_coordinate -> reference.points.point_from_coordinates`
+
+`MathSeriesNode` was not promoted into the v1 main tree.
+
+- old id: `math.basic.series`
+- current id: `deferred.math.math_series`
+
+## 4. What Still Exists But Is Not Mainline Work
+
+The repository still contains several other systems:
 
 - `data.*`
 - `utilities.*`
@@ -77,23 +84,23 @@ The scan still shows several older or separate systems that need later policy de
 - `world.interaction.*`
 - `spatial.sdf.*`
 
-These are outside the currently committed v1 architecture boundary.
+These require separate product and architecture decisions.
+They should not be folded into the v1 taxonomy migration by default.
 
-## 5. Current Migration Boundary
+## 5. Practical Rule Going Forward
 
-Going forward, new work should follow this rule:
+For any future node work:
 
-1. If a node belongs to the committed v1 tree, add it directly under its canonical v1 category.
-2. If a node is intentionally postponed, place it under `deferred.*`.
-3. If a node exists only for backward compatibility with pre-v1 graphs, route it through `spatial.legacy`.
+1. If the node belongs to the committed v1 tree, place it directly in its canonical v1 category.
+2. If it is intentionally postponed, place it under `deferred.*`.
+3. If it exists only for backward compatibility with old graphs, route it through `spatial.legacy`.
 
-## 6. Practical Conclusion
+## 6. Engineering Conclusion
 
-For the original v1 refactor objective, the node taxonomy migration is functionally complete for the scoped domains.
+For the original v1 refactor objective, the taxonomy migration is functionally complete for the scoped domains.
 
-The next engineering phase should not continue ad hoc taxonomy renames. It should focus on one of:
+The next phase should focus on one of:
 
-- full compile and runtime verification
-- serialization / graph load compatibility validation
-- removal or quarantine of obsolete helper code and package-level leftovers
-- a separate architecture pass for out-of-scope systems such as `data`, `utilities`, `control`, `entity`, and `sdf`
+- compile and runtime verification
+- graph serialization / alias compatibility validation
+- separate scope definition for out-of-v1 systems such as `data`, `utilities`, `control`, `entity`, `interaction`, and `sdf`
