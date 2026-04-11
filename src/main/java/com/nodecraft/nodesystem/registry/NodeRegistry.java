@@ -342,6 +342,9 @@ public class NodeRegistry {
     private boolean isOutOfScopeCategory(String normalizedCategoryId) {
         return normalizedCategoryId.startsWith("animation")
             || normalizedCategoryId.startsWith("flora")
+            || normalizedCategoryId.startsWith("spatial.sdf")
+            || normalizedCategoryId.startsWith("world.entity")
+            || normalizedCategoryId.startsWith("world.interaction")
             || normalizedCategoryId.startsWith("world.nbt")
             || normalizedCategoryId.startsWith("world.inventory")
             || normalizedCategoryId.startsWith("utilities.experimental")
