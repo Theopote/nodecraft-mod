@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.integer_input",
+    id = "input.numeric.integer",
     displayName = "整数输入",
     description = "允许手动输入整数值的节点",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class IntegerInputNode extends BaseCustomUINode {
 
@@ -51,7 +51,7 @@ public class IntegerInputNode extends BaseCustomUINode {
     private boolean showLabel = true;
 
     public IntegerInputNode() {
-        super(UUID.randomUUID(), "inputs.basic.integer_input");
+        super(UUID.randomUUID(), "input.numeric.integer");
         IPort valueOutput = new BasePort(OUTPUT_VALUE_ID, "Value", "当前整数值", NodeDataType.INTEGER, this);
         addOutputPort(valueOutput);
         normalizeRange();

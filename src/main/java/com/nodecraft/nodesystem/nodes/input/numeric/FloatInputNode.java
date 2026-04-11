@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -16,10 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.float_input",
+    id = "input.numeric.float",
     displayName = "浮点数输入",
     description = "允许用户手动输入浮点数值",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class FloatInputNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class FloatInputNode extends BaseCustomUINode {
     private transient String formatString = "%.2f";
 
     public FloatInputNode() {
-        super(UUID.randomUUID(), "inputs.basic.float_input");
+        super(UUID.randomUUID(), "input.numeric.float");
         IPort valueOutput = new BasePort(OUTPUT_VALUE_ID, "Value", "当前浮点数值", NodeDataType.FLOAT, this);
         addOutputPort(valueOutput);
         refreshPrecisionState();

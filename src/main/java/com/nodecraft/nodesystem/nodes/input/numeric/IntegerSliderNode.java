@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -15,10 +15,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.integer_slider",
+    id = "input.numeric.integer_slider",
     displayName = "整数滑动条",
     description = "输出一个可通过滑动条调节的整数值",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class IntegerSliderNode extends BaseCustomUINode {
 
@@ -53,7 +53,7 @@ public class IntegerSliderNode extends BaseCustomUINode {
     private volatile boolean compact = false;
 
     public IntegerSliderNode() {
-        super(UUID.randomUUID(), "inputs.basic.integer_slider");
+        super(UUID.randomUUID(), "input.numeric.integer_slider");
         addOutputPort(new BasePort(OUTPUT_ID, "Value", "选中的整数值", NodeDataType.INTEGER, this));
         normalizeRange();
         updateOutput();

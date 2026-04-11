@@ -110,6 +110,23 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "world.modification.clone_region", "world.write.clone_region");
         addMovedNodeAlias(aliases, "world.modification.remove_blocks", "world.write.clear_region");
         addMovedNodeAlias(aliases, "world.modification.material_mapper", "material.basic_assignment.replace_material");
+        addMovedNodeAlias(aliases, "inputs.basic.integer_input", "input.numeric.integer");
+        addMovedNodeAlias(aliases, "inputs.basic.float_input", "input.numeric.float");
+        addMovedNodeAlias(aliases, "inputs.basic.integer_slider", "input.numeric.integer_slider");
+        addMovedNodeAlias(aliases, "inputs.basic.float_slider", "input.numeric.float_slider");
+        addMovedNodeAlias(aliases, "inputs.basic.angle_slider", "input.numeric.angle");
+        addMovedNodeAlias(aliases, "inputs.basic.circular_angle", "input.numeric.angle_picker");
+        addMovedNodeAlias(aliases, "inputs.basic.boolean_toggle", "input.numeric.boolean_toggle");
+        addMovedNodeAlias(aliases, "inputs.basic.vector_input", "reference.vectors.vector");
+        addMovedNodeAlias(aliases, "inputs.basic.coordinate_input", "reference.points.point_from_coordinates");
+        addMovedNodeAlias(aliases, "inputs.basic.plane_selector", "reference.planes.world_plane");
+        addMovedNodeAlias(aliases, "inputs.minecraft.player_position", "input.context.player_position");
+        addMovedNodeAlias(aliases, "inputs.minecraft.player_look_at", "input.context.player_look_direction");
+        addMovedNodeAlias(aliases, "inputs.minecraft.selected_block", "world.selection.selected_block");
+        addMovedNodeAlias(aliases, "inputs.minecraft.selected_region", "world.selection.selected_region");
+        addMovedNodeAlias(aliases, "inputs.minecraft.biome_at_player", "world.read.biome_at_player");
+        addMovedNodeAlias(aliases, "inputs.selectors.block_type_selector", "input.type_selectors.block_type_selector");
+        addMovedNodeAlias(aliases, "inputs.sources.create_list", "math.list_sequence.create_list");
         return Collections.unmodifiableMap(aliases);
     }
 

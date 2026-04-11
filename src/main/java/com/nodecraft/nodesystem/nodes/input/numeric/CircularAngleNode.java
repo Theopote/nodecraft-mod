@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.circular_angle",
+    id = "input.numeric.angle_picker",
     displayName = "圆形角度选择器",
     description = "通过圆形表盘选择角度，同时输出度和弧度。",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class CircularAngleNode extends BaseCustomUINode {
 
@@ -50,7 +50,7 @@ public class CircularAngleNode extends BaseCustomUINode {
     private boolean allowDirectDrawing = false;
 
     public CircularAngleNode() {
-        super(UUID.randomUUID(), "inputs.basic.circular_angle");
+        super(UUID.randomUUID(), "input.numeric.angle_picker");
         IPort angleOutput = new BasePort(OUTPUT_ANGLE_ID, "Degrees", "当前角度（度）", NodeDataType.DOUBLE, this);
         IPort radiansOutput = new BasePort(OUTPUT_RADIANS_ID, "Radians", "当前角度（弧度）", NodeDataType.DOUBLE, this);
         addOutputPort(angleOutput);

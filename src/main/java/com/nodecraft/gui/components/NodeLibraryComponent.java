@@ -68,6 +68,30 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> materialBasicAssignmentOrder = getMaterialBasicAssignmentOrder();
         categoryOrder.put("material.basic_assignment", materialBasicAssignmentOrder);
 
+        Map<String, Integer> inputNumericOrder = getInputNumericOrder();
+        categoryOrder.put("input.numeric", inputNumericOrder);
+
+        Map<String, Integer> inputContextOrder = getInputContextOrder();
+        categoryOrder.put("input.context", inputContextOrder);
+
+        Map<String, Integer> inputTypeSelectorsOrder = getInputTypeSelectorsOrder();
+        categoryOrder.put("input.type_selectors", inputTypeSelectorsOrder);
+
+        Map<String, Integer> worldSelectionOrder = getWorldSelectionOrder();
+        categoryOrder.put("world.selection", worldSelectionOrder);
+
+        Map<String, Integer> referencePointsOrder = getReferencePointsOrder();
+        categoryOrder.put("reference.points", referencePointsOrder);
+
+        Map<String, Integer> referenceVectorsOrder = getReferenceVectorsOrder();
+        categoryOrder.put("reference.vectors", referenceVectorsOrder);
+
+        Map<String, Integer> referencePlanesOrder = getReferencePlanesOrder();
+        categoryOrder.put("reference.planes", referencePlanesOrder);
+
+        Map<String, Integer> mathListSequenceOrder = getMathListSequenceOrder();
+        categoryOrder.put("math.list_sequence", mathListSequenceOrder);
+
         Map<String, Integer> inputsMinecraftOrder = getInputsMinecraftOrder();
         categoryOrder.put("inputs.minecraft", inputsMinecraftOrder);
 
@@ -104,16 +128,67 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private static @NonNull Map<String, Integer> getInputsMinecraftOrder() {
         Map<String, Integer> inputsMinecraftOrder = new HashMap<>();
-        inputsMinecraftOrder.put("inputs.minecraft.selected_block", 0);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_block_sequence", 1);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_region", 2);
-        inputsMinecraftOrder.put("inputs.minecraft.selected_entity", 3);
-        inputsMinecraftOrder.put("inputs.minecraft.player_position", 4);
-        inputsMinecraftOrder.put("inputs.minecraft.player_look_at", 5);
-        inputsMinecraftOrder.put("inputs.minecraft.dimension_info", 6);
-        inputsMinecraftOrder.put("inputs.minecraft.current_time", 7);
-        inputsMinecraftOrder.put("inputs.minecraft.biome_at_player", 8);
+        inputsMinecraftOrder.put("inputs.minecraft.selected_block_sequence", 0);
+        inputsMinecraftOrder.put("inputs.minecraft.selected_entity", 1);
+        inputsMinecraftOrder.put("inputs.minecraft.dimension_info", 2);
+        inputsMinecraftOrder.put("inputs.minecraft.current_time", 3);
         return inputsMinecraftOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getInputNumericOrder() {
+        Map<String, Integer> inputNumericOrder = new HashMap<>();
+        inputNumericOrder.put("input.numeric.integer", 0);
+        inputNumericOrder.put("input.numeric.float", 1);
+        inputNumericOrder.put("input.numeric.integer_slider", 2);
+        inputNumericOrder.put("input.numeric.float_slider", 3);
+        inputNumericOrder.put("input.numeric.angle", 4);
+        inputNumericOrder.put("input.numeric.angle_picker", 5);
+        inputNumericOrder.put("input.numeric.boolean_toggle", 6);
+        return inputNumericOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getInputContextOrder() {
+        Map<String, Integer> inputContextOrder = new HashMap<>();
+        inputContextOrder.put("input.context.player_position", 0);
+        inputContextOrder.put("input.context.player_look_direction", 1);
+        return inputContextOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getInputTypeSelectorsOrder() {
+        Map<String, Integer> inputTypeSelectorsOrder = new HashMap<>();
+        inputTypeSelectorsOrder.put("input.type_selectors.block_type_selector", 0);
+        return inputTypeSelectorsOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getWorldSelectionOrder() {
+        Map<String, Integer> worldSelectionOrder = new HashMap<>();
+        worldSelectionOrder.put("world.selection.selected_block", 0);
+        worldSelectionOrder.put("world.selection.selected_region", 1);
+        return worldSelectionOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getReferencePointsOrder() {
+        Map<String, Integer> referencePointsOrder = new HashMap<>();
+        referencePointsOrder.put("reference.points.point_from_coordinates", 0);
+        return referencePointsOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getReferenceVectorsOrder() {
+        Map<String, Integer> referenceVectorsOrder = new HashMap<>();
+        referenceVectorsOrder.put("reference.vectors.vector", 0);
+        return referenceVectorsOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getReferencePlanesOrder() {
+        Map<String, Integer> referencePlanesOrder = new HashMap<>();
+        referencePlanesOrder.put("reference.planes.world_plane", 0);
+        return referencePlanesOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getMathListSequenceOrder() {
+        Map<String, Integer> mathListSequenceOrder = new HashMap<>();
+        mathListSequenceOrder.put("math.list_sequence.create_list", 0);
+        return mathListSequenceOrder;
     }
 
     private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
@@ -192,6 +267,7 @@ public class NodeLibraryComponent implements EditorComponent {
         worldReadOrder.put("world.read.get_blocks_in_region", 1);
         worldReadOrder.put("world.read.find_blocks", 2);
         worldReadOrder.put("world.read.get_biome", 3);
+        worldReadOrder.put("world.read.biome_at_player", 4);
         return worldReadOrder;
     }
 
@@ -340,6 +416,8 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("flora", new float[]{0.2f, 0.6f, 0.2f, 1.0f});           // 深绿色 - 植物生成
             CATEGORY_COLORS_FLOAT.put("animation", new float[]{0.8f, 0.3f, 0.3f, 1.0f});       // 红色 - 动画
             CATEGORY_COLORS_FLOAT.put("workflow", new float[]{0.7f, 0.7f, 0.7f, 1.0f});        // 兼容utilities/workflow
+            CATEGORY_COLORS_FLOAT.put("input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
             
             // 同时为首字母大写的版本添加相同的颜色（兼容性）
             CATEGORY_COLORS_FLOAT.put("Inputs", new float[]{0.2f, 0.5f, 0.9f, 1.0f});          // 蓝色
@@ -352,6 +430,8 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("Utilities", new float[]{0.7f, 0.7f, 0.7f, 1.0f});       // 灰色
             CATEGORY_COLORS_FLOAT.put("Flora", new float[]{0.2f, 0.6f, 0.2f, 1.0f});           // 深绿色
             CATEGORY_COLORS_FLOAT.put("Animation", new float[]{0.8f, 0.3f, 0.3f, 1.0f});       // 红色
+            CATEGORY_COLORS_FLOAT.put("Input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("Reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
             
             // 子分类颜色配置 - 使用略微淡化的主分类颜色
             // inputs子分类
@@ -359,6 +439,9 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("inputs.minecraft", new float[]{0.35f, 0.65f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.sources", new float[]{0.45f, 0.75f, 1.0f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("input.numeric", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("input.context", new float[]{0.35f, 0.65f, 1.0f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("input.type_selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             
             // data子分类
             CATEGORY_COLORS_FLOAT.put("data.conversion", new float[]{1.0f, 0.65f, 0.25f, 1.0f});
@@ -372,6 +455,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.randomness", new float[]{0.5f, 0.95f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.trigonometry", new float[]{0.55f, 1.0f, 0.55f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.vector", new float[]{0.6f, 1.0f, 0.6f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
             
             // spatial子分类
             CATEGORY_COLORS_FLOAT.put("spatial.analysis", new float[]{0.95f, 0.95f, 0.35f, 1.0f});
@@ -384,6 +468,9 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("spatial.shapes", new float[]{1.0f, 1.0f, 0.45f, 1.0f});   // 兼容generators
             CATEGORY_COLORS_FLOAT.put("spatial.points", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("spatial.voxel", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("reference.points", new float[]{1.0f, 0.98f, 0.45f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("reference.vectors", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("reference.planes", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
             
             // world子分类
             CATEGORY_COLORS_FLOAT.put("world.entity", new float[]{0.3f, 0.85f, 0.85f, 1.0f});
@@ -394,6 +481,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("world.nbt", new float[]{0.5f, 1.0f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.read", new float[]{0.5f, 0.95f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.query", new float[]{0.55f, 1.0f, 1.0f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("world.selection", new float[]{0.42f, 0.94f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.write", new float[]{0.45f, 1.0f, 1.0f, 1.0f});
 
             CATEGORY_COLORS_FLOAT.put("material", new float[]{0.8f, 0.55f, 0.2f, 1.0f});
@@ -623,8 +711,9 @@ public class NodeLibraryComponent implements EditorComponent {
         
         // 确保主要分类始终展开，即使它们是子分类
         String[] keyCategories = {
-            "inputs", "data", "material", "math", "output", "spatial", "world", "utilities",
-            "inputs.basic", "math.basic", "data.lists", "spatial.points", "world.entity", 
+            "input", "inputs", "data", "material", "math", "output", "reference", "spatial", "world", "utilities",
+            "input.numeric", "input.context", "input.type_selectors", "reference.points", "world.selection",
+            "math.basic", "math.list_sequence", "data.lists", "spatial.points", "world.entity", 
             "output.preview", "utilities.organization"
         };
         

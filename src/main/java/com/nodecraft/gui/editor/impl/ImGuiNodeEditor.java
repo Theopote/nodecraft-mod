@@ -122,8 +122,8 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
 
                 String[] testNodeTypes = {
                         // 基础输入节点（如果存在）
-                        "inputs.basic.integer_input", "inputs.basic.float_slider",
-                        "inputs.basic.boolean_toggle", "inputs.basic.text_input",
+                        "input.numeric.integer", "input.numeric.float_slider",
+                        "input.numeric.boolean_toggle", "inputs.basic.text_input",
                         // 数学运算节点
                         "math.basic.addition", "math.basic.multiplication", "math.basic.division",
                         "math.basic.subtraction", "math.basic.power", "math.basic.clamp",

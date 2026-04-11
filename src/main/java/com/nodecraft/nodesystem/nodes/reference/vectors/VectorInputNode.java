@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.reference.vectors;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.vector_input",
+    id = "reference.vectors.vector",
     displayName = "向量输入",
     description = "输入一个三维向量，并同时输出 X / Y / Z 分量",
-    category = "inputs.basic"
+    category = "reference.vectors"
 )
 public class VectorInputNode extends BaseCustomUINode {
 
@@ -45,7 +45,7 @@ public class VectorInputNode extends BaseCustomUINode {
     private int precision = 2;
 
     public VectorInputNode() {
-        super(UUID.randomUUID(), "inputs.basic.vector_input");
+        super(UUID.randomUUID(), "reference.vectors.vector");
         addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Vector", "三维向量", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X 分量", NodeDataType.DOUBLE, this));
         addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y 分量", NodeDataType.DOUBLE, this));

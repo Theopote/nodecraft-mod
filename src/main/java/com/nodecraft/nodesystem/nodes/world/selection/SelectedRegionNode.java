@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.minecraft;
+package com.nodecraft.nodesystem.nodes.world.selection;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager;
@@ -23,10 +23,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.minecraft.selected_region",
+    id = "world.selection.selected_region",
     displayName = "Selected Region",
     description = "Gets the player's selected region defined by two corner points.",
-    category = "inputs.minecraft"
+    category = "world.selection"
 )
 public class SelectedRegionNode extends BaseCustomUINode {
 
@@ -107,7 +107,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     }
 
     public SelectedRegionNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.selected_region");
+        super(UUID.randomUUID(), "world.selection.selected_region");
 
         addOutputPort(new BasePort(OUTPUT_POS1_ID, "Position 1", "The first corner position", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_POS2_ID, "Position 2", "The second corner position", NodeDataType.VECTOR, this));

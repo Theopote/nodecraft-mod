@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.reference.planes;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.plane_selector",
+    id = "reference.planes.world_plane",
     displayName = "平面选择器",
     description = "创建标准 XY / YZ / XZ 平面，并支持设置或输入原点",
-    category = "inputs.basic"
+    category = "reference.planes"
 )
 public class PlaneSelectorNode extends BaseNode {
 
@@ -51,7 +51,7 @@ public class PlaneSelectorNode extends BaseNode {
     private int originZ = 0;
 
     public PlaneSelectorNode() {
-        super(UUID.randomUUID(), "inputs.basic.plane_selector");
+        super(UUID.randomUUID(), "reference.planes.world_plane");
 
         addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin", "可选的平面原点输入", NodeDataType.BLOCK_POS, this));
         addOutputPort(new BasePort(OUTPUT_PLANE_ID, "Plane", "生成的平面数据", NodeDataType.PLANE, this));

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.minecraft;
+package com.nodecraft.nodesystem.nodes.input.context;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -13,10 +13,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.minecraft.player_look_at",
+    id = "input.context.player_look_direction",
     displayName = "Player Look At",
     description = "Gets the player's look direction and current raycast hit information.",
-    category = "inputs.minecraft"
+    category = "input.context"
 )
 public class PlayerLookAtNode extends BaseCustomUINode {
 
@@ -51,7 +51,7 @@ public class PlayerLookAtNode extends BaseCustomUINode {
     private static final String OUTPUT_HAS_HIT_ID = "output_has_hit";
 
     public PlayerLookAtNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.player_look_at");
+        super(UUID.randomUUID(), "input.context.player_look_direction");
 
         addOutputPort(new BasePort(OUTPUT_HIT_POSITION_ID, "Hit Position", "The current hit position", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_HIT_BLOCK_ID, "Hit Block", "The currently hit block", NodeDataType.BLOCK_INFO, this));

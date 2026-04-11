@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.minecraft;
+package com.nodecraft.nodesystem.nodes.world.read;
 
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -15,10 +15,10 @@ import java.util.UUID;
  * 获取玩家当前位置生物群系的节点
  */
 @NodeInfo(
-    id = "inputs.minecraft.biome_at_player",
+    id = "world.read.biome_at_player",
     displayName = "玩家位置生物群系",
     description = "获取玩家当前位置的生物群系信息",
-    category = "inputs.minecraft"
+    category = "world.read"
 )
 public class BiomeAtPlayerNode extends BaseNode {
     
@@ -36,8 +36,7 @@ public class BiomeAtPlayerNode extends BaseNode {
      * 构造一个新的生物群系节点
      */
     public BiomeAtPlayerNode() {
-        // 使用新的分类命名 - inputs.minecraft.biome_at_player
-        super(UUID.randomUUID(), "inputs.minecraft.biome_at_player");
+        super(UUID.randomUUID(), "world.read.biome_at_player");
         
         // 创建并添加输出端口
         IPort biomeIdOutput = new BasePort(OUTPUT_BIOME_ID, "Biome ID", 

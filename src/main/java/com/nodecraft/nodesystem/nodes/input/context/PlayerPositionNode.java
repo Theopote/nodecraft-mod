@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.minecraft;
+package com.nodecraft.nodesystem.nodes.input.context;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -13,10 +13,10 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.minecraft.player_position",
+    id = "input.context.player_position",
     displayName = "Player Position",
     description = "Gets the player's current world position.",
-    category = "inputs.minecraft"
+    category = "input.context"
 )
 public class PlayerPositionNode extends BaseCustomUINode {
 
@@ -34,7 +34,7 @@ public class PlayerPositionNode extends BaseCustomUINode {
     private static final String OUTPUT_Z_ID = "output_z";
 
     public PlayerPositionNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.player_position");
+        super(UUID.randomUUID(), "input.context.player_position");
 
         addOutputPort(new BasePort(OUTPUT_POSITION_ID, "Position", "The player's position vector", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X coordinate", NodeDataType.FLOAT, this));

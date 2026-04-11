@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.sources;
+package com.nodecraft.nodesystem.nodes.math.list_sequence;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
@@ -23,10 +23,10 @@ import java.util.UUID;
  * 提供+/-按钮来动态调整输入端口数量。
  */
 @NodeInfo(
-    id = "inputs.sources.create_list",
+    id = "math.list_sequence.create_list",
     displayName = "创建列表",
     description = "将多个输入项打包成一个列表",
-    category = "inputs.sources"
+    category = "math.list_sequence"
 )
 public class CreateListNode extends BaseCustomUINode {
 
@@ -43,7 +43,7 @@ public class CreateListNode extends BaseCustomUINode {
     private static final String OUTPUT_LIST_ID = "output_list";
     
     public CreateListNode() {
-        super(UUID.randomUUID(), "inputs.sources.create_list");
+        super(UUID.randomUUID(), "math.list_sequence.create_list");
         rebuildInputPorts();
         
         addOutputPort(new BasePort(OUTPUT_LIST_ID, "List", 

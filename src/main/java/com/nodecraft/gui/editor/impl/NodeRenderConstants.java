@@ -47,10 +47,12 @@ public class NodeRenderConstants {
     static {
         // 所有节点类别都使用默认颜色，保持统一的外观
         CATEGORY_COLORS.put("world", DEFAULT_CATEGORY_COLOR);
+        CATEGORY_COLORS.put("reference", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("visualization", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("utilities", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("spatial", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("math", DEFAULT_CATEGORY_COLOR);
+        CATEGORY_COLORS.put("input", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("inputs", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("flora", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("data", DEFAULT_CATEGORY_COLOR);
@@ -75,10 +77,12 @@ public class NodeRenderConstants {
         
         // 检查是否以已知类别开头
         if (nodeTypeId.startsWith("world.")) return "world";
+        if (nodeTypeId.startsWith("reference.")) return "reference";
         if (nodeTypeId.startsWith("visualization.")) return "visualization";
         if (nodeTypeId.startsWith("utilities.")) return "utilities";
         if (nodeTypeId.startsWith("spatial.")) return "spatial";
         if (nodeTypeId.startsWith("math.")) return "math";
+        if (nodeTypeId.startsWith("input.")) return "input";
         if (nodeTypeId.startsWith("inputs.")) return "inputs";
         if (nodeTypeId.startsWith("flora.")) return "flora";
         if (nodeTypeId.startsWith("data.")) return "data";

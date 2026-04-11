@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -18,10 +18,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.angle_slider",
+    id = "input.numeric.angle",
     displayName = "角度滑动条",
     description = "输出一个可通过滑动条调节的角度值，支持度和弧度输出。",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class AngleSliderNode extends BaseCustomUINode {
 
@@ -73,7 +73,7 @@ public class AngleSliderNode extends BaseCustomUINode {
     private boolean allowDirectDrawing = false;
 
     public AngleSliderNode() {
-        super(UUID.randomUUID(), "inputs.basic.angle_slider");
+        super(UUID.randomUUID(), "input.numeric.angle");
         IPort angleOutput = new BasePort(OUTPUT_ANGLE_ID, "Angle", "当前角度值", NodeDataType.DOUBLE, this);
         addOutputPort(angleOutput);
         normalizeRange();

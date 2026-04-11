@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.reference.points;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -17,10 +17,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.coordinate_input",
+    id = "reference.points.point_from_coordinates",
     displayName = "坐标输入",
     description = "输入一个整数坐标，并同时输出 Coordinate / Block Pos / X / Y / Z",
-    category = "inputs.basic"
+    category = "reference.points"
 )
 public class CoordinateInputNode extends BaseCustomUINode {
 
@@ -43,7 +43,7 @@ public class CoordinateInputNode extends BaseCustomUINode {
     private boolean showLabel = true;
 
     public CoordinateInputNode() {
-        super(UUID.randomUUID(), "inputs.basic.coordinate_input");
+        super(UUID.randomUUID(), "reference.points.point_from_coordinates");
         addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate", "整数坐标", NodeDataType.COORDINATE, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_POS_ID, "Block Pos", "方块坐标", NodeDataType.BLOCK_POS, this));
         addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X 分量", NodeDataType.INTEGER, this));

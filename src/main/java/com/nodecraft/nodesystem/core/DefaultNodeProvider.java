@@ -46,10 +46,12 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("animation", "Animation & Effects"));
         registry.registerCategory(new NodeRegistry.NodeCategory("data", "Data & Lists"));
         registry.registerCategory(new NodeRegistry.NodeCategory("flora", "Flora & Nature"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input", "Input"));
         registry.registerCategory(new NodeRegistry.NodeCategory("inputs", "Inputs & Parameters"));
         registry.registerCategory(new NodeRegistry.NodeCategory("material", "Material & Mapping"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math", "Math & Logic"));
         registry.registerCategory(new NodeRegistry.NodeCategory("output", "Output & Execution"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("reference", "Reference"));
         registry.registerCategory(new NodeRegistry.NodeCategory("spatial", "Spatial & Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities & Workflow"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist & Reroute"));
@@ -65,7 +67,14 @@ public class DefaultNodeProvider implements INodeProvider {
         NodeCraft.LOGGER.info("注册示例节点...");
         
         // 注册一些子分类
-        registry.registerCategory(new NodeRegistry.NodeCategory("inputs.basic", "Basic Inputs"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input.numeric", "Numeric"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input.context", "Context"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input.type_selectors", "Type Selectors"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("reference.points", "Points"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("reference.vectors", "Vectors"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("reference.planes", "Planes"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("world.selection", "Selection"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("math.list_sequence", "List / Sequence"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math.basic", "Basic Operations"));
         registry.registerCategory(new NodeRegistry.NodeCategory("data.text", "Text Processing"));
         

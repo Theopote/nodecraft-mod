@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.selectors;
+package com.nodecraft.nodesystem.nodes.input.type_selectors;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.selectors.block_type_selector",
+    id = "input.type_selectors.block_type_selector",
     displayName = "Block Type Selector",
     description = "Searches and selects a Minecraft block type.",
-    category = "inputs.selectors"
+    category = "input.type_selectors"
 )
 public class BlockTypeSelectorNode extends BaseCustomUINode {
 
@@ -66,7 +66,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public BlockTypeSelectorNode() {
-        super(UUID.randomUUID(), "inputs.selectors.block_type_selector");
+        super(UUID.randomUUID(), "input.type_selectors.block_type_selector");
 
         addOutputPort(new BasePort(OUTPUT_BLOCK_ID, "Block ID", "The selected block's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected block ID", NodeDataType.STRING, this));

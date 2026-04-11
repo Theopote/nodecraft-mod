@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.minecraft;
+package com.nodecraft.nodesystem.nodes.world.selection;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.style.MinecraftUITheme;
@@ -43,10 +43,10 @@ import org.joml.Vector3d;
  * 职责明确：仅负责输出拾取到的方块数据，不直接管理交互模式
  */
 @NodeInfo(
-    id = "inputs.minecraft.selected_block",
+    id = "world.selection.selected_block",
     displayName = "选定方块",
     description = "获取方块信息，支持交互拾取或坐标输入",
-    category = "inputs.minecraft"
+    category = "world.selection"
 )
 public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerCallback {
     
@@ -155,7 +155,7 @@ public class SelectedBlockNode extends BaseCustomUINode implements IBlockPickerC
     private static final String OUTPUT_BLOCK_Z_ID = "output_block_z";
     
     public SelectedBlockNode() {
-        super(UUID.randomUUID(), "inputs.minecraft.selected_block");
+        super(UUID.randomUUID(), "world.selection.selected_block");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_X_ID, "X", 

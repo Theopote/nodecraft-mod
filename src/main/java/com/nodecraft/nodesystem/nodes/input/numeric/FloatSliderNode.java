@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.inputs.basic;
+package com.nodecraft.nodesystem.nodes.input.numeric;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -16,10 +16,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.basic.float_slider",
+    id = "input.numeric.float_slider",
     displayName = "浮点数滑动条",
     description = "输出一个可通过滑动条调节的浮点数。",
-    category = "inputs.basic"
+    category = "input.numeric"
 )
 public class FloatSliderNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class FloatSliderNode extends BaseCustomUINode {
     private transient volatile String formatString = "%.2f";
 
     public FloatSliderNode() {
-        super(UUID.randomUUID(), "inputs.basic.float_slider");
+        super(UUID.randomUUID(), "input.numeric.float_slider");
         IPort valueOutput = new BasePort(OUTPUT_VALUE_ID, "Value", "当前浮点数值", NodeDataType.DOUBLE, this);
         addOutputPort(valueOutput);
         refreshFormatting();
