@@ -162,6 +162,14 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.points.point_to_block_if_grid", "world.selection.point_to_block_if_grid");
         addMovedNodeAlias(aliases, "spatial.points.is_grid_point", "world.query.is_grid_point");
         addMovedNodeAlias(aliases, "spatial.points.filter_grid_points", "world.query.filter_grid_points");
+        addMovedNodeAlias(aliases, "spatial.points.offset_coordinate", "transform.basic_transforms.move_point");
+        addMovedNodeAlias(aliases, "spatial.points.offset_coordinates", "transform.basic_transforms.move_points");
+        addMovedNodeAlias(aliases, "spatial.points.rotate_coordinates", "transform.basic_transforms.rotate_points");
+        addMovedNodeAlias(aliases, "spatial.points.scale_coordinates", "transform.basic_transforms.scale_points");
+        addMovedNodeAlias(aliases, "spatial.points.mirror_coordinates", "transform.basic_transforms.mirror_points");
+        addMovedNodeAlias(aliases, "spatial.points.project_point_to_plane", "transform.orientation.project_to_plane");
+        addMovedNodeAlias(aliases, "spatial.analysis.offset_box_face", "transform.basic_transforms.offset_face");
+        addMovedNodeAlias(aliases, "spatial.analysis.inset_box_face", "transform.basic_transforms.inset_face");
         return Collections.unmodifiableMap(aliases);
     }
 

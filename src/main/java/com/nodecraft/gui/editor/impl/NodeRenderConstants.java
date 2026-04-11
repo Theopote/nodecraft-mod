@@ -54,6 +54,7 @@ public class NodeRenderConstants {
         CATEGORY_COLORS.put("math", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("input", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("inputs", DEFAULT_CATEGORY_COLOR);
+        CATEGORY_COLORS.put("transform", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("flora", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("data", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("animation", DEFAULT_CATEGORY_COLOR);
@@ -84,6 +85,7 @@ public class NodeRenderConstants {
         if (nodeTypeId.startsWith("math.")) return "math";
         if (nodeTypeId.startsWith("input.")) return "input";
         if (nodeTypeId.startsWith("inputs.")) return "inputs";
+        if (nodeTypeId.startsWith("transform.")) return "transform";
         if (nodeTypeId.startsWith("flora.")) return "flora";
         if (nodeTypeId.startsWith("data.")) return "data";
         if (nodeTypeId.startsWith("animation.")) return "animation";

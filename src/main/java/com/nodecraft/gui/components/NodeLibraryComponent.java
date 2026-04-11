@@ -92,6 +92,12 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> referencePlanesOrder = getReferencePlanesOrder();
         categoryOrder.put("reference.planes", referencePlanesOrder);
 
+        Map<String, Integer> transformBasicTransformsOrder = getTransformBasicTransformsOrder();
+        categoryOrder.put("transform.basic_transforms", transformBasicTransformsOrder);
+
+        Map<String, Integer> transformOrientationOrder = getTransformOrientationOrder();
+        categoryOrder.put("transform.orientation", transformOrientationOrder);
+
         Map<String, Integer> mathListSequenceOrder = getMathListSequenceOrder();
         categoryOrder.put("math.list_sequence", mathListSequenceOrder);
 
@@ -230,6 +236,24 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> mathListSequenceOrder = new HashMap<>();
         mathListSequenceOrder.put("math.list_sequence.create_list", 0);
         return mathListSequenceOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getTransformBasicTransformsOrder() {
+        Map<String, Integer> transformBasicTransformsOrder = new HashMap<>();
+        transformBasicTransformsOrder.put("transform.basic_transforms.move_point", 0);
+        transformBasicTransformsOrder.put("transform.basic_transforms.move_points", 1);
+        transformBasicTransformsOrder.put("transform.basic_transforms.rotate_points", 2);
+        transformBasicTransformsOrder.put("transform.basic_transforms.scale_points", 3);
+        transformBasicTransformsOrder.put("transform.basic_transforms.mirror_points", 4);
+        transformBasicTransformsOrder.put("transform.basic_transforms.offset_face", 5);
+        transformBasicTransformsOrder.put("transform.basic_transforms.inset_face", 6);
+        return transformBasicTransformsOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getTransformOrientationOrder() {
+        Map<String, Integer> transformOrientationOrder = new HashMap<>();
+        transformOrientationOrder.put("transform.orientation.project_to_plane", 0);
+        return transformOrientationOrder;
     }
 
     private static @NonNull Map<String, Integer> getSpatialVoxelOrder() {
@@ -459,6 +483,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("workflow", new float[]{0.7f, 0.7f, 0.7f, 1.0f});        // 兼容utilities/workflow
             CATEGORY_COLORS_FLOAT.put("input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
             
             // 同时为首字母大写的版本添加相同的颜色（兼容性）
             CATEGORY_COLORS_FLOAT.put("Inputs", new float[]{0.2f, 0.5f, 0.9f, 1.0f});          // 蓝色
@@ -473,6 +498,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("Animation", new float[]{0.8f, 0.3f, 0.3f, 1.0f});       // 红色
             CATEGORY_COLORS_FLOAT.put("Input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("Transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
             
             // 子分类颜色配置 - 使用略微淡化的主分类颜色
             // inputs子分类
@@ -512,6 +538,8 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("reference.points", new float[]{1.0f, 0.98f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.vectors", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.planes", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("transform.basic_transforms", new float[]{1.0f, 0.62f, 0.32f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("transform.orientation", new float[]{1.0f, 0.68f, 0.38f, 1.0f});
             
             // world子分类
             CATEGORY_COLORS_FLOAT.put("world.entity", new float[]{0.3f, 0.85f, 0.85f, 1.0f});
@@ -752,8 +780,9 @@ public class NodeLibraryComponent implements EditorComponent {
         
         // 确保主要分类始终展开，即使它们是子分类
         String[] keyCategories = {
-            "input", "inputs", "data", "material", "math", "output", "reference", "spatial", "world", "utilities",
+            "input", "inputs", "data", "material", "math", "output", "reference", "spatial", "transform", "world", "utilities",
             "input.numeric", "input.context", "input.type_selectors", "reference.points", "world.selection",
+            "transform.basic_transforms", "transform.orientation",
             "math.basic", "math.list_sequence", "data.lists", "spatial.points", "world.entity", 
             "output.preview", "utilities.organization"
         };
