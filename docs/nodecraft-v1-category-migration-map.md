@@ -211,7 +211,7 @@ Representative node mapping:
 - `spatial.instancing.grow_along_sphere_normal` -> deferred unless retained as distribution logic
 - `spatial.voxel.geometry_to_blocks` -> `output.execute`
 - primitive-specific voxelizers -> `output.execute` or removed once unified bake path exists
-- `spatial.sdf.*` -> deferred
+- `spatial.sdf.*` -> removed (2026-04-11)
 - `spatial.generators.*_blocks` -> legacy compatibility only; semantically split into `geometry.*` plus `output.execute`
 
 ## 4.4 `world.*`
@@ -220,8 +220,8 @@ Representative node mapping:
 |---|---|---|---|
 | `world.query` | split across `world.read`, `world.query` | split | Data retrieval and environmental checks must be separated |
 | `world.modification` | split across `world.write`, `material.basic_assignment` | split | Direct write nodes stay in `world.write`; material-style mapping nodes move to material |
-| `world.nbt` | deferred | deferred | Out of v1.0 main scope |
-| `world.inventory` | deferred | deferred | Out of v1.0 main scope |
+| `world.nbt` | removed | removed | Out of v1.0 main scope; physically removed on 2026-04-11 |
+| `world.inventory` | removed | removed | Out of v1.0 main scope; physically removed on 2026-04-11 |
 | `world.entity` | deferred | deferred | Out of v1.0 main scope |
 | `world.interaction` | deferred | deferred | Out of v1.0 main scope |
 
@@ -318,8 +318,8 @@ Representative node mapping:
 
 | Old Category | New Category | Status | Rule |
 |---|---|---|---|
-| `animation.*` | deferred | deferred | Entire domain excluded from v1.0 main tree |
-| `flora.*` | deferred | deferred | Entire domain excluded from v1.0 main tree |
+| `animation.*` | removed | removed | Entire domain excluded from v1.0 main tree; physically removed on 2026-04-11 |
+| `flora.*` | removed | removed | Entire domain excluded from v1.0 main tree; physically removed on 2026-04-11 |
 
 ## 5. Migration Work Order
 

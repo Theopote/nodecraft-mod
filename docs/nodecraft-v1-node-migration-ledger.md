@@ -444,16 +444,16 @@ They should not be migrated into canonical v1.0 categories during the current re
 
 | domain | disposition | notes |
 |---|---|---|
-| `animation.*` | defer | whole domain excluded from v1.0 main tree |
-| `flora.*` | defer | whole domain excluded from v1.0 main tree |
-| `world.nbt.*` | defer | excluded by scope |
-| `world.inventory.*` | defer | excluded by scope |
+| `animation.*` | removed | physically removed on 2026-04-11; domain excluded from v1.0 main tree |
+| `flora.*` | removed | physically removed on 2026-04-11; domain excluded from v1.0 main tree |
+| `world.nbt.*` | removed | physically removed on 2026-04-11; excluded by scope |
+| `world.inventory.*` | removed | physically removed on 2026-04-11; excluded by scope |
 | `world.entity.*` | defer | excluded by scope |
 | `world.interaction.*` | defer | excluded by scope |
 | `utilities.*` | defer | workflow/editor system, not core v1.0 taxonomy |
 | `data.text.*` | defer | text subsystem outside current main tree |
 | `data.conversion.*` | defer | conversion subsystem outside current main tree |
-| `spatial.sdf.*` | defer | explicitly postponed |
+| `spatial.sdf.*` | removed | physically removed on 2026-04-11; previously explicitly postponed |
 
 ## 12. Migration Order
 

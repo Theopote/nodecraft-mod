@@ -59,6 +59,16 @@ It is the operational boundary for compatibility debt that remains loadable but 
 - `inputs.minecraft.selected_block_sequence`
 - `inputs.minecraft.selected_entity`
 
+## Physically Removed (2026-04-11)
+
+These out-of-v1 domains were physically removed from source and are no longer part of legacy/deferred inventory:
+
+- `animation.*`
+- `flora.*`
+- `world.nbt.*`
+- `world.inventory.*`
+- `spatial.sdf.*`
+
 ## Canonical Migrations Already Completed
 
 These ids used to live in legacy domains but now have canonical v1 homes:

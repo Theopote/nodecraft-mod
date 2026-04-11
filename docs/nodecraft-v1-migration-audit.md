@@ -27,6 +27,10 @@ Out-of-scope domains are not treated as migration failures:
 - `utilities.*`
 - deferred text / file / entity / experimental domains
 
+Status note (2026-04-11):
+
+- `animation.*`, `flora.*`, `world.inventory.*`, and `world.nbt.*` were physically removed from source.
+
 ## 2. Status Summary
 
 ### 2.1 Main conclusion
@@ -331,11 +335,9 @@ These items are not currently blocking the v1 main-tree migration, but they need
 
 ### 6.1 `spatial.sdf.*`
 
-Current nodes found:
+Current status:
 
-- `spatial.sdf.box`
-- `spatial.sdf.sphere`
-- `spatial.sdf.voxelizer`
+- `spatial.sdf.*` was physically removed from source on 2026-04-11.
 
 Problem:
 
@@ -351,21 +353,25 @@ Choose one of:
 - mark as legacy
 - or create a separate SDF appendix if the design is still intended
 
-Until that decision is made, they should be considered out of the v1 main tree.
+Historic note: before removal, this domain was considered out of the v1 main tree pending explicit product decision.
 
-### 6.2 Out-of-scope but still present domains
+### 6.2 Out-of-scope domains (current status)
 
-These domains are still live in source, but they do not currently block the v1 main-tree refactor:
+These domains do not currently block the v1 main-tree refactor:
 
-- `animation.*`
-- `flora.*`
 - `control.flow.*`
 - `data.*`
 - `utilities.*`
 - `world.entity.*`
+- `world.interaction.*`
+
+Physically removed on 2026-04-11:
+
+- `animation.*`
+- `flora.*`
 - `world.inventory.*`
 - `world.nbt.*`
-- `world.interaction.*`
+- `spatial.sdf.*`
 
 They should not be mixed into the canonical v1 taxonomy unless the committed scope expands.
 
@@ -376,7 +382,6 @@ The main migration is not blocked by `spatial.*` anymore.
 The actual unfinished main-line work is now mostly:
 
 - math taxonomy normalization
-- explicit disposition for `spatial.sdf.*`
 - continued restraint so deferred / legacy domains are not mistaken for canonical v1 coverage
 
 In practical terms:

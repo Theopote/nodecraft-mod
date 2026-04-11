@@ -20,7 +20,7 @@ Out of scope for the v1 mainline:
 - `world.inventory.*`
 - experimental nodes
 
-These domains may still exist in source, but they are not evidence that the v1 mainline migration is unfinished.
+As of 2026-04-11, the first four domains above were physically removed from source. They are no longer carried as legacy/deferred runtime surface.
 
 ## 2. Mainline Status
 
@@ -82,7 +82,11 @@ The repository still contains several other systems:
 - `control.flow.*`
 - `world.entity.*`
 - `world.interaction.*`
-- `spatial.sdf.*`
+
+Note:
+
+- `spatial.sdf.*` has been physically removed (2026-04-11).
+- The systems listed above remain out-of-v1 and require separate product/architecture decisions.
 
 These require separate product and architecture decisions.
 They should not be folded into the v1 taxonomy migration by default.
