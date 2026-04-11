@@ -20,10 +20,10 @@ import java.util.Set;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "inputs.selectors.effect_type_selector",
+    id = "utilities.selectors.effect_type_selector",
     displayName = "Effect Type Selector",
     description = "Searches and selects a Minecraft status effect.",
-    category = "inputs.selectors"
+    category = "utilities.selectors"
 )
 public class EffectTypeSelectorNode extends BaseCustomUINode {
 
@@ -65,7 +65,7 @@ public class EffectTypeSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public EffectTypeSelectorNode() {
-        super(UUID.randomUUID(), "inputs.selectors.effect_type_selector");
+        super(UUID.randomUUID(), "utilities.selectors.effect_type_selector");
 
         addOutputPort(new BasePort(OUTPUT_EFFECT_ID, "Effect ID", "The selected effect's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected effect ID", NodeDataType.STRING, this));

@@ -25,7 +25,7 @@ import java.util.UUID;
     id = "spatial.generators.circle_sphere_blocks",
     displayName = "Circle / Sphere (Blocks)",
     description = "Generates a circle or sphere of blocks",
-    category = "spatial.generators"
+    category = "utilities.legacy.spatial.generators"
 )
 public class CircleSphereBlocksNode extends BaseNode {
 

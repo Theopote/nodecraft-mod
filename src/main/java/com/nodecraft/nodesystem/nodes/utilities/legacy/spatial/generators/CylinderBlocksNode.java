@@ -24,7 +24,7 @@ import java.util.UUID;
     id = "spatial.generators.cylinder_blocks",
     displayName = "Cylinder (Blocks)",
     description = "Generates a cylinder of blocks and outputs cylinder geometry",
-    category = "spatial.generators"
+    category = "utilities.legacy.spatial.generators"
 )
 public class CylinderBlocksNode extends BaseNode {
 

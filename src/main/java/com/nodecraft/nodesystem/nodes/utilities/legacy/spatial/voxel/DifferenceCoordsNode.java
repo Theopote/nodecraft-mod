@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "spatial.voxel.difference_coords",
     displayName = "Difference Coords",
     description = "Subtracts one block-coordinate list from another.",
-    category = "spatial.voxel"
+    category = "utilities.legacy.spatial.voxel"
 )
 public class DifferenceCoordsNode extends BaseNode {
 

@@ -23,7 +23,7 @@ import java.util.UUID;
     id = "spatial.analysis.deconstruct_surface_strip",
     displayName = "Deconstruct Surface Strip",
     description = "Breaks a surface strip into section paths, flattened points, and rail segments",
-    category = "spatial.analysis"
+    category = "utilities.legacy.spatial.analysis"
 )
 public class DeconstructSurfaceStripNode extends BaseNode {
 

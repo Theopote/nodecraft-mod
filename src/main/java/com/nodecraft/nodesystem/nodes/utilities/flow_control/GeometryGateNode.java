@@ -14,10 +14,10 @@ import java.util.UUID;
  * Conditionally forwards geometry based on a boolean gate.
  */
 @NodeInfo(
-    id = "control.flow.geometry_gate",
+    id = "utilities.flow_control.geometry_gate",
     displayName = "Geometry Gate",
     description = "Passes geometry through only when enabled",
-    category = "control.flow"
+    category = "utilities.flow_control"
 )
 public class GeometryGateNode extends BaseNode {
 
@@ -28,7 +28,7 @@ public class GeometryGateNode extends BaseNode {
     private static final String OUTPUT_ACTIVE_ID = "output_active";
 
     public GeometryGateNode() {
-        super(UUID.randomUUID(), "control.flow.geometry_gate");
+        super(UUID.randomUUID(), "utilities.flow_control.geometry_gate");
 
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified geometry input", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_ENABLED_ID, "Enabled", "Whether geometry should pass through", NodeDataType.BOOLEAN, this));
