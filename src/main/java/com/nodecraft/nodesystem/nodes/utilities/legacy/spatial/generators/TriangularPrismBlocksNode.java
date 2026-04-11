@@ -16,10 +16,10 @@ import java.util.UUID;
  * 底面为等边三角形，沿Y轴向上延伸
  */
 @NodeInfo(
-        id = "spatial.generators.triangular_prism_blocks",
-        displayName = "三棱柱生成器",
-        description = "生成三棱柱区域的坐标列表，底面为等边三角形",
-        category = "spatial.generators"
+    id = "spatial.generators.triangular_prism_blocks",
+    displayName = "三棱柱生成器",
+    description = "生成三棱柱区域的坐标列表，底面为等边三角形",
+    category = "utilities.legacy.spatial.generators"
 )
 public class TriangularPrismBlocksNode extends BaseNode {
 

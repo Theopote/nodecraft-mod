@@ -17,10 +17,10 @@ import java.util.UUID;
  * 使用半空间交集法来判断点是否在正四面体内部。
  */
 @NodeInfo(
-        id = "spatial.generators.tetrahedron_blocks",
-        displayName = "正四面体生成器",
-        description = "生成正四面体区域的坐标列表",
-        category = "spatial.generators"
+    id = "spatial.generators.tetrahedron_blocks",
+    displayName = "正四面体生成器",
+    description = "生成正四面体区域的坐标列表",
+    category = "utilities.legacy.spatial.generators"
 )
 public class TetrahedronBlocksNode extends BaseNode {
 

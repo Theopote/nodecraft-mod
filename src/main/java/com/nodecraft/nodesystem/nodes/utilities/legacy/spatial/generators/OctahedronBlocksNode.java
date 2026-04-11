@@ -16,10 +16,10 @@ import java.util.UUID;
  * 正八面体由 |x| + |y| + |z| <= radius 定义
  */
 @NodeInfo(
-        id = "spatial.generators.octahedron_blocks",
-        displayName = "正八面体生成器",
-        description = "生成正八面体区域的坐标列表",
-        category = "spatial.generators"
+    id = "spatial.generators.octahedron_blocks",
+    displayName = "正八面体生成器",
+    description = "生成正八面体区域的坐标列表",
+    category = "utilities.legacy.spatial.generators"
 )
 public class OctahedronBlocksNode extends BaseNode {
 
