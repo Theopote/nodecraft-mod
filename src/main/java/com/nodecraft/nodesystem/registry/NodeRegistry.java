@@ -256,7 +256,10 @@ public class NodeRegistry {
     }
 
     private static Map<String, String> createNodeCategoryOverrides() {
-        return Map.of();
+        Map<String, String> overrides = new HashMap<>();
+        overrides.put("spatial.instancing.grow_along_normals", "spatial.legacy");
+        overrides.put("spatial.instancing.grow_along_sphere_normal", "spatial.legacy");
+        return Map.copyOf(overrides);
     }
 
     private String normalizeNodeId(String nodeId) {
