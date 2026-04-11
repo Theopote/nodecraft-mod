@@ -46,6 +46,7 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("animation", "Animation & Effects"));
         registry.registerCategory(new NodeRegistry.NodeCategory("data", "Data & Lists"));
         registry.registerCategory(new NodeRegistry.NodeCategory("flora", "Flora & Nature"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("geometry", "Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input", "Input"));
         registry.registerCategory(new NodeRegistry.NodeCategory("inputs", "Inputs & Parameters"));
         registry.registerCategory(new NodeRegistry.NodeCategory("material", "Material & Mapping"));
@@ -74,6 +75,9 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.points", "Points"));
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.vectors", "Vectors"));
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.planes", "Planes"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("geometry.boolean", "Boolean"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("geometry.primitives", "Primitives"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("geometry.profiles", "Profiles"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.basic_transforms", "Basic Transforms"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.orientation", "Orientation"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world.selection", "Selection"));
