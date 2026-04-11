@@ -12,47 +12,47 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Cone (Blocks) 鑺傜偣: 鐢熸垚鍦嗛敟浣撳尯鍩熺殑鍧愭爣鍒楄〃
+ * Cone (Blocks): generates a cone-shaped block volume.
  */
 @NodeInfo(
     id = "spatial.generators.cone_blocks",
-    displayName = "鍦嗛敟浣撶敓鎴愬櫒",
-    description = "鐢熸垚鍦嗛敟浣撳尯鍩熺殑鍧愭爣鍒楄〃",
-    category = "spatial.generators"
+    displayName = "Cone Generator",
+    description = "Generates a cone-shaped block volume.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class ConeBlocksNode extends BaseNode {
 
-    // --- 鑺傜偣灞炴€?---
+    // ---          ?---
     private boolean hollow = false;
     private int thickness = 1;
 
-    // --- 杈撳叆绔彛 IDs ---
+    // ---           IDs ---
     private static final String INPUT_CENTER_ID = "input_center";
     private static final String INPUT_RADIUS_ID = "input_radius";
     private static final String INPUT_HEIGHT_ID = "input_height";
     private static final String INPUT_HOLLOW_ID = "input_hollow";
     private static final String INPUT_THICKNESS_ID = "input_thickness";
 
-    // --- 杈撳嚭绔彛 IDs ---
+    // ---           IDs ---
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
     public ConeBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.cone_blocks");
 
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Base Center", "鍦嗛敟浣撳簳闈腑蹇冪偣", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "搴曢潰鍗婂緞", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_HEIGHT_ID, "Height", "鍦嗛敟浣撻珮搴?, NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "鏄惁绌哄績", NodeDataType.BOOLEAN, this));
-        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "澹佸帤锛堢┖蹇冩椂鏈夋晥锛?, NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Base Center", "Center of cone base", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Base radius", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_HEIGHT_ID, "Height", "Cone height", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "Whether cone is hollow", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "Shell thickness when hollow", NodeDataType.INTEGER, this));
 
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "缁勬垚鍦嗛敟浣撶殑鏂瑰潡鍒楄〃", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "鏂瑰潡鏁伴噺", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Generated cone blocks", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of generated blocks", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "鐢熸垚鍦嗛敟浣撳尯鍩熺殑鍧愭爣鍒楄〃";
+        return "Generates a cone-shaped block volume.";
     }
 
     @Override
@@ -85,9 +85,9 @@ public class ConeBlocksNode extends BaseNode {
             int cy = center.getY();
             int cz = center.getZ();
 
-            // 浠庡簳闈?y=0)鍒伴《鐐?y=height-1)閫愬眰鐢熸垚
+            //       ?y=0)      ?y=height-1)         
             for (int dy = 0; dy < height; dy++) {
-                // 褰撳墠灞傜殑鍗婂緞绾挎€ч€掑噺: 搴曢潰鏈€澶? 椤剁偣涓?
+                //                        ?          ?       ?
                 double layerRadius = baseRadius * (1.0 - (double) dy / height);
                 double innerRadius = isHollow ? Math.max(0, layerRadius - shellThickness) : 0;
 
@@ -99,10 +99,10 @@ public class ConeBlocksNode extends BaseNode {
 
                         if (distance <= layerRadius) {
                             if (isHollow) {
-                                // 绌哄績: 鍙繚鐣欏澹?+ 搴曢潰
+                                //     ?           ?+     ?
                                 boolean isBottom = (dy == 0);
                                 boolean isShell = (distance >= innerRadius);
-                                // 椤堕儴鍑犲眰鍗婂緞寰堝皬鏃跺叏閮ㄥ～鍏?
+                                //                             ?
                                 boolean isNearTip = (layerRadius <= shellThickness);
                                 if (isBottom || isShell || isNearTip) {
                                     result.add(new BlockPos(cx + dx, cy + dy, cz + dz));

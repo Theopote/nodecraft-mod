@@ -12,12 +12,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * 妞渾鐢熸垚鍣細鍦ㄦ寚瀹氬钩闈㈢敓鎴?2D 妞渾锛堝疄蹇冩垨杞粨锛夌殑鏂瑰潡鍧愭爣鍒楄〃銆? */
+ * Generates a 2D ellipse region or outline on a selected plane. */
 @NodeInfo(
     id = "spatial.generators.ellipse_blocks",
-    displayName = "妞渾",
-    description = "鐢熸垚浜岀淮妞渾鍖哄煙鐨勫潗鏍囧垪琛?,
-    category = "spatial.generators"
+    displayName = "Ellipse",
+    description = "Generates a 2D ellipse region as block coordinates.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class EllipseBlocksNode extends BaseNode {
 
@@ -33,14 +33,14 @@ public class EllipseBlocksNode extends BaseNode {
 
     public EllipseBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.ellipse_blocks");
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "妞渾涓績", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_RADIUS_A_ID, "Radius A", "鍗婇暱杞达紙鏍硷級", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_RADIUS_B_ID, "Radius B", "鍗婄煭杞达紙鏍硷級", NodeDataType.DOUBLE, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "妞渾涓婄殑鏂瑰潡鍧愭爣", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Ellipse center", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_RADIUS_A_ID, "Radius A", "First ellipse radius", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_RADIUS_B_ID, "Radius B", "Second ellipse radius", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Generated ellipse blocks", NodeDataType.BLOCK_LIST, this));
     }
 
     @Override
-    public String getDescription() { return "鐢熸垚浜岀淮妞渾鍖哄煙鐨勫潗鏍囧垪琛?; }
+    public String getDescription() { return "Generates a 2D ellipse region as block coordinates."; }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {

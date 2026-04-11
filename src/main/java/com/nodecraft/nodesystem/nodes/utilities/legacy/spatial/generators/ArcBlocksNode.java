@@ -14,12 +14,12 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * 鍦嗗姬鐢熸垚鍣細鍦ㄦ寚瀹氬钩闈㈢敓鎴愬渾寮э紙鍦嗗績銆佸崐寰勩€佽捣姝㈣搴︼級鐨勬柟鍧楀潗鏍囧垪琛ㄣ€? * 瑙掑害涓哄害锛? 涓?X 姝ｈ酱鏂瑰悜锛岄€嗘椂閽堜负姝ｃ€? */
+ * Generates an arc on a selected plane using center, radius, and angle range. */
 @NodeInfo(
     id = "spatial.generators.arc_blocks",
-    displayName = "鍦嗗姬",
-    description = "鐢熸垚鍦嗗姬涓婄殑鏂瑰潡鍧愭爣鍒楄〃",
-    category = "spatial.generators"
+    displayName = "Arc",
+    description = "Generates block coordinates on an arc.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class ArcBlocksNode extends BaseNode {
 
@@ -35,15 +35,15 @@ public class ArcBlocksNode extends BaseNode {
 
     public ArcBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.arc_blocks");
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "鍦嗗績", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "鍗婂緞锛堟牸锛?, NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_START_ANGLE_ID, "Start Angle", "璧峰瑙掞紙搴︼紝0=鍙筹級", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_END_ANGLE_ID, "End Angle", "缁撴潫瑙掞紙搴︼級", NodeDataType.DOUBLE, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "鍦嗗姬涓婄殑鏂瑰潡鍧愭爣", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Arc center", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Radius in blocks", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_START_ANGLE_ID, "Start Angle", "Start angle in degrees (0 = +X)", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_END_ANGLE_ID, "End Angle", "End angle in degrees", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "Generated arc blocks", NodeDataType.BLOCK_LIST, this));
     }
 
     @Override
-    public String getDescription() { return "鐢熸垚鍦嗗姬涓婄殑鏂瑰潡鍧愭爣鍒楄〃"; }
+    public String getDescription() { return "Generates block coordinates on an arc."; }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {

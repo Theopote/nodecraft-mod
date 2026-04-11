@@ -13,12 +13,12 @@ import org.joml.Vector3d;
 import java.util.UUID;
 
 /**
- * Line (Blocks) 鑺傜偣: 鐢熸垚涓ょ偣涔嬮棿鐨勭洿绾垮潗鏍囧垪琛? */
+ * Line (Blocks): generates a line path between two points. */
 @NodeInfo(
     id = "spatial.generators.line_blocks",
-    displayName = "鐩寸嚎鐢熸垚鍣?,
-    description = "鐢熸垚涓ょ偣涔嬮棿鐨勭洿绾垮潗鏍囧垪琛?,
-    category = "spatial.generators"
+    displayName = "Line Generator",
+    description = "Generates a line path of blocks between two points.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class LineBlocksNode extends BaseNode {
 

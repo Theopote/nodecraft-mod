@@ -12,13 +12,12 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Rectangle (Blocks) 鑺傜偣: 鐢熸垚涓€涓钩闈㈢煩褰㈠尯鍩熺殑鍧愭爣鍒楄〃
- */
+ * Rectangle (Blocks): generates a rectangular area on a plane. */
 @NodeInfo(
     id = "spatial.generators.rectangle_blocks",
-    displayName = "鐭╁舰鐢熸垚鍣?,
-    description = "鐢熸垚浜岀淮鐭╁舰鍖哄煙鐨勫潗鏍囧垪琛?,
-    category = "spatial.generators"
+    displayName = "Rectangle Generator",
+    description = "Generates a planar rectangle of blocks.",
+    category = "utilities.legacy.spatial.generators"
 )
 public class RectangleBlocksNode extends BaseNode {
 
