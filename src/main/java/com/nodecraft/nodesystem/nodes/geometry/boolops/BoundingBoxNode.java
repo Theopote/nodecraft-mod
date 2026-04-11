@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.geometry.boolean;
+package com.nodecraft.nodesystem.nodes.geometry.boolops;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
