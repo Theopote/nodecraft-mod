@@ -12,46 +12,46 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Regular Octahedron (Blocks) 鑺傜偣: 鐢熸垚姝ｅ叓闈綋鍖哄煙鐨勫潗鏍囧垪琛?
- * 姝ｅ叓闈綋鐢?|x| + |y| + |z| <= radius 瀹氫箟
+ * Regular Octahedron (Blocks) 节点: 生成正八面体区域的坐标列表
+ * 正八面体由 |x| + |y| + |z| <= radius 定义
  */
 @NodeInfo(
-    id = "spatial.generators.octahedron_blocks",
-    displayName = "姝ｅ叓闈綋鐢熸垚鍣?,
-    description = "鐢熸垚姝ｅ叓闈綋鍖哄煙鐨勫潗鏍囧垪琛?,
-    category = "spatial.generators"
+        id = "spatial.generators.octahedron_blocks",
+        displayName = "正八面体生成器",
+        description = "生成正八面体区域的坐标列表",
+        category = "spatial.generators"
 )
 public class OctahedronBlocksNode extends BaseNode {
 
-    // --- 鑺傜偣灞炴€?---
+    // --- 节点属性 ---
     private boolean hollow = false;
     private int thickness = 1;
 
-    // --- 杈撳叆绔彛 IDs ---
+    // --- 输入端口 IDs ---
     private static final String INPUT_CENTER_ID = "input_center";
     private static final String INPUT_SIZE_ID = "input_size";
     private static final String INPUT_HOLLOW_ID = "input_hollow";
     private static final String INPUT_THICKNESS_ID = "input_thickness";
 
-    // --- 杈撳嚭绔彛 IDs ---
+    // --- 输出端口 IDs ---
     private static final String OUTPUT_BLOCKS_ID = "output_blocks";
     private static final String OUTPUT_COUNT_ID = "output_count";
 
     public OctahedronBlocksNode() {
         super(UUID.randomUUID(), "spatial.generators.octahedron_blocks");
 
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "姝ｅ叓闈綋涓績鐐?, NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_SIZE_ID, "Size", "浠庝腑蹇冨埌椤剁偣鐨勮窛绂?, NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "鏄惁绌哄績", NodeDataType.BOOLEAN, this));
-        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "澹佸帤锛堢┖蹇冩椂鏈夋晥锛?, NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "正八面体中心点", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_SIZE_ID, "Size", "从中心到顶点的距离", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_HOLLOW_ID, "Hollow", "是否空心", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "壁厚（空心时有效）", NodeDataType.INTEGER, this));
 
-        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "缁勬垚姝ｅ叓闈綋鐨勬柟鍧楀垪琛?, NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "鏂瑰潡鏁伴噺", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCKS_ID, "Blocks", "组成正八面体的方块列表", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "方块数量", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "鐢熸垚姝ｅ叓闈綋鍖哄煙鐨勫潗鏍囧垪琛?;
+        return "生成正八面体区域的坐标列表";
     }
 
     @Override
@@ -79,7 +79,7 @@ public class OctahedronBlocksNode extends BaseNode {
             int cy = center.getY();
             int cz = center.getZ();
 
-            // 姝ｅ叓闈綋: |dx| + |dy| + |dz| <= size
+            // 正八面体: |dx| + |dy| + |dz| <= size
             for (int dx = -size; dx <= size; dx++) {
                 for (int dy = -size; dy <= size; dy++) {
                     for (int dz = -size; dz <= size; dz++) {
