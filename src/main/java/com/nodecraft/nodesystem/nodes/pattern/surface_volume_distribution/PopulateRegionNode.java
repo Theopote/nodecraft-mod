@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.arrays;
+package com.nodecraft.nodesystem.nodes.pattern.surface_volume_distribution;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.UUID;
  * Populate Region 节点: 在指定区域内随机或均匀生成坐标列表
  */
 @NodeInfo(
-    id = "spatial.arrays.populate_region",
+    id = "pattern.surface_volume_distribution.populate_region",
     displayName = "区域填充",
     description = "在指定区域内随机或均匀生成坐标列表",
-    category = "spatial.arrays"
+    category = "pattern.surface_volume_distribution"
 )
 public class PopulateRegionNode extends BaseNode {
 
@@ -47,7 +47,7 @@ public class PopulateRegionNode extends BaseNode {
 
     // --- 构造函数 ---
     public PopulateRegionNode() {
-        super(UUID.randomUUID(), "spatial.arrays.populate_region");
+        super(UUID.randomUUID(), "pattern.surface_volume_distribution.populate_region");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_MIN_CORNER_ID, "Min Corner", 

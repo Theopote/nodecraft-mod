@@ -193,6 +193,10 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "spatial.analysis.is_point_in_region", "world.query.is_point_in_region");
         addMovedNodeAlias(aliases, "spatial.analysis.sample_sphere_surface", "pattern.surface_volume_distribution.sample_surface");
         addMovedNodeAlias(aliases, "spatial.analysis.scatter_on_sphere_surface", "pattern.surface_volume_distribution.surface_scatter");
+        addMovedNodeAlias(aliases, "spatial.arrays.linear_array", "pattern.linear.linear_array");
+        addMovedNodeAlias(aliases, "spatial.arrays.grid_array", "pattern.grid.grid_array");
+        addMovedNodeAlias(aliases, "spatial.arrays.polar_array", "pattern.radial.polar_array");
+        addMovedNodeAlias(aliases, "spatial.arrays.populate_region", "pattern.surface_volume_distribution.populate_region");
         return Collections.unmodifiableMap(aliases);
     }
 

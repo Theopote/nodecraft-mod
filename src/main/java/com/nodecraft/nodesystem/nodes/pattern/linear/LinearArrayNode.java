@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.arrays;
+package com.nodecraft.nodesystem.nodes.pattern.linear;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.UUID;
  * Linear Array 节点: 将Coordinate列表沿直线方向重复
  */
 @NodeInfo(
-    id = "spatial.arrays.linear_array",
+    id = "pattern.linear.linear_array",
     displayName = "线性阵列",
     description = "将坐标列表沿直线方向重复排列",
-    category = "spatial.arrays"
+    category = "pattern.linear"
 )
 public class LinearArrayNode extends BaseNode {
 
@@ -40,7 +40,7 @@ public class LinearArrayNode extends BaseNode {
 
     // --- 构造函数 ---
     public LinearArrayNode() {
-        super(UUID.randomUUID(), "spatial.arrays.linear_array");
+        super(UUID.randomUUID(), "pattern.linear.linear_array");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

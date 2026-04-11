@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.arrays;
+package com.nodecraft.nodesystem.nodes.pattern.grid;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.UUID;
  * Grid Array 节点: 在平面或三维网格上重复Coordinate列表
  */
 @NodeInfo(
-    id = "spatial.arrays.grid_array",
+    id = "pattern.grid.grid_array",
     displayName = "网格阵列",
     description = "在平面或三维网格上重复坐标列表",
-    category = "spatial.arrays"
+    category = "pattern.grid"
 )
 public class GridArrayNode extends BaseNode {
 
@@ -50,7 +50,7 @@ public class GridArrayNode extends BaseNode {
 
     // --- 构造函数 ---
     public GridArrayNode() {
-        super(UUID.randomUUID(), "spatial.arrays.grid_array");
+        super(UUID.randomUUID(), "pattern.grid.grid_array");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

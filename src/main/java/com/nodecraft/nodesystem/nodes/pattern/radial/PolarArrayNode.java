@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.spatial.arrays;
+package com.nodecraft.nodesystem.nodes.pattern.radial;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -19,10 +19,10 @@ import java.util.UUID;
  * Polar Array 节点: 将Coordinate列表绕中心点重复旋转
  */
 @NodeInfo(
-    id = "spatial.arrays.polar_array",
+    id = "pattern.radial.polar_array",
     displayName = "极坐标阵列",
     description = "将坐标列表绕中心点重复旋转排列",
-    category = "spatial.arrays"
+    category = "pattern.radial"
 )
 public class PolarArrayNode extends BaseNode {
 
@@ -41,7 +41,7 @@ public class PolarArrayNode extends BaseNode {
 
     // --- 构造函数 ---
     public PolarArrayNode() {
-        super(UUID.randomUUID(), "spatial.arrays.polar_array");
+        super(UUID.randomUUID(), "pattern.radial.polar_array");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

@@ -107,6 +107,15 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> geometryProfilesOrder = getGeometryProfilesOrder();
         categoryOrder.put("geometry.profiles", geometryProfilesOrder);
 
+        Map<String, Integer> patternLinearOrder = getPatternLinearOrder();
+        categoryOrder.put("pattern.linear", patternLinearOrder);
+
+        Map<String, Integer> patternGridOrder = getPatternGridOrder();
+        categoryOrder.put("pattern.grid", patternGridOrder);
+
+        Map<String, Integer> patternRadialOrder = getPatternRadialOrder();
+        categoryOrder.put("pattern.radial", patternRadialOrder);
+
         Map<String, Integer> patternSurfaceVolumeDistributionOrder = getPatternSurfaceVolumeDistributionOrder();
         categoryOrder.put("pattern.surface_volume_distribution", patternSurfaceVolumeDistributionOrder);
 
@@ -459,9 +468,28 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private static @NonNull Map<String, Integer> getPatternSurfaceVolumeDistributionOrder() {
         Map<String, Integer> patternSurfaceVolumeDistributionOrder = new HashMap<>();
-        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.sample_surface", 0);
-        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.surface_scatter", 1);
+        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.populate_region", 0);
+        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.sample_surface", 1);
+        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.surface_scatter", 2);
         return patternSurfaceVolumeDistributionOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getPatternLinearOrder() {
+        Map<String, Integer> patternLinearOrder = new HashMap<>();
+        patternLinearOrder.put("pattern.linear.linear_array", 0);
+        return patternLinearOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getPatternGridOrder() {
+        Map<String, Integer> patternGridOrder = new HashMap<>();
+        patternGridOrder.put("pattern.grid.grid_array", 0);
+        return patternGridOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getPatternRadialOrder() {
+        Map<String, Integer> patternRadialOrder = new HashMap<>();
+        patternRadialOrder.put("pattern.radial.polar_array", 0);
+        return patternRadialOrder;
     }
 
     private static @NonNull Map<String, Integer> getIntegerMap() {
@@ -681,6 +709,9 @@ public class NodeLibraryComponent implements EditorComponent {
             // 转换浮点颜色为ImGui使用的打包整数颜色
             CATEGORY_COLORS_FLOAT.put("pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("Pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("pattern.linear", new float[]{0.98f, 0.78f, 0.28f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("pattern.grid", new float[]{1.0f, 0.82f, 0.32f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("pattern.radial", new float[]{1.0f, 0.76f, 0.26f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.surface_volume_distribution", new float[]{1.0f, 0.8f, 0.3f, 1.0f});
             for (Map.Entry<String, float[]> entry : CATEGORY_COLORS_FLOAT.entrySet()) {
                 float[] c = entry.getValue();
@@ -862,7 +893,8 @@ public class NodeLibraryComponent implements EditorComponent {
         String[] keyCategories = {
             "geometry", "input", "inputs", "data", "material", "math", "output", "pattern", "reference", "spatial", "transform", "world", "utilities",
             "input.numeric", "input.context", "input.type_selectors", "reference.points", "reference.frames", "world.selection",
-            "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "pattern.surface_volume_distribution",
+            "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles",
+            "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
             "transform.basic_transforms", "transform.orientation",
             "math.basic", "math.list_sequence", "data.lists", "spatial.points", "world.entity", 
             "output.preview", "utilities.organization"
