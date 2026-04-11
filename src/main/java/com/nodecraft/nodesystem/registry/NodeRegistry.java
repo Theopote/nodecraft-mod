@@ -330,6 +330,9 @@ public class NodeRegistry {
         if (explicitOverride != null) {
             return explicitOverride;
         }
+        if (isListSequenceMigrationTarget(normalizedNodeId, normalizedCategoryId)) {
+            return "math.list_sequence";
+        }
         if (isOutOfScopeCategory(normalizedCategoryId)) {
             return "deferred.out_of_scope";
         }
@@ -354,6 +357,12 @@ public class NodeRegistry {
             || normalizedCategoryId.startsWith("utilities.fileio")
             || normalizedCategoryId.startsWith("utilities.experimental")
             || normalizedCategoryId.startsWith("workflow.experimental");
+    }
+
+    private boolean isListSequenceMigrationTarget(String normalizedNodeId, String normalizedCategoryId) {
+        return normalizedCategoryId.startsWith("data.lists")
+            || "data.sequence.range".equals(normalizedNodeId)
+            || "data.sequence.repeat".equals(normalizedNodeId);
     }
 
     private boolean isLegacyDirectOutputNode(String normalizedNodeId) {
