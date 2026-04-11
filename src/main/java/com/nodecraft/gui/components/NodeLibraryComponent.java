@@ -134,6 +134,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> mathListSequenceOrder = getMathListSequenceOrder();
         categoryOrder.put("math.list_sequence", mathListSequenceOrder);
 
+        Map<String, Integer> mathCompareOrder = getMathCompareOrder();
+        categoryOrder.put("math.compare", mathCompareOrder);
+
         Map<String, Integer> spatialLegacyOrder = getStringIntegerMap();
         categoryOrder.put("spatial.legacy", spatialLegacyOrder);
 
@@ -234,7 +237,19 @@ public class NodeLibraryComponent implements EditorComponent {
     private static @NonNull Map<String, Integer> getMathListSequenceOrder() {
         Map<String, Integer> mathListSequenceOrder = new HashMap<>();
         mathListSequenceOrder.put("math.list_sequence.create_list", 0);
+        mathListSequenceOrder.put("math.list_sequence.range", 1);
         return mathListSequenceOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getMathCompareOrder() {
+        Map<String, Integer> mathCompareOrder = new HashMap<>();
+        mathCompareOrder.put("math.compare.equals", 0);
+        mathCompareOrder.put("math.compare.not_equals", 1);
+        mathCompareOrder.put("math.compare.less_than", 2);
+        mathCompareOrder.put("math.compare.less_than_or_equal", 3);
+        mathCompareOrder.put("math.compare.greater_than", 4);
+        mathCompareOrder.put("math.compare.greater_than_or_equal", 5);
+        return mathCompareOrder;
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
@@ -558,6 +573,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.trigonometry", new float[]{0.55f, 1.0f, 0.55f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.vector", new float[]{0.6f, 1.0f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("math.compare", new float[]{0.48f, 0.9f, 0.48f, 1.0f});
             
             // Spatial and migrated-reference subcategories.
             CATEGORY_COLORS_FLOAT.put("spatial.arrays", new float[]{1.0f, 1.0f, 0.4f, 1.0f});
@@ -817,7 +833,7 @@ public class NodeLibraryComponent implements EditorComponent {
             "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids",
             "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
             "transform.basic_transforms", "transform.deformations", "transform.orientation",
-            "math.basic", "math.list_sequence", "data.lists", "spatial.legacy", "world.entity", 
+            "math.basic", "math.compare", "math.list_sequence", "data.lists", "spatial.legacy", "world.entity", 
             "output.preview", "utilities.organization"
         };
         

@@ -128,6 +128,13 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "inputs.minecraft.dimension_info", "input.context.dimension_info");
         addMovedNodeAlias(aliases, "inputs.selectors.block_type_selector", "input.type_selectors.block_type_selector");
         addMovedNodeAlias(aliases, "inputs.sources.create_list", "math.list_sequence.create_list");
+        addMovedNodeAlias(aliases, "math.basic.range", "math.list_sequence.range");
+        addMovedNodeAlias(aliases, "math.logic.equals", "math.compare.equals");
+        addMovedNodeAlias(aliases, "math.logic.not_equals", "math.compare.not_equals");
+        addMovedNodeAlias(aliases, "math.logic.less_than", "math.compare.less_than");
+        addMovedNodeAlias(aliases, "math.logic.less_than_or_equal", "math.compare.less_than_or_equal");
+        addMovedNodeAlias(aliases, "math.logic.greater_than", "math.compare.greater_than");
+        addMovedNodeAlias(aliases, "math.logic.greater_than_or_equal", "math.compare.greater_than_or_equal");
         addMovedNodeAlias(aliases, "math.vector.construct", "reference.vectors.vector");
         addMovedNodeAlias(aliases, "math.vector.cross_product", "reference.vectors.cross_product");
         addMovedNodeAlias(aliases, "math.vector.dot_product", "reference.vectors.dot_product");
