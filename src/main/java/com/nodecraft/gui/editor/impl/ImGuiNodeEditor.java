@@ -84,6 +84,8 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
     private long lastAutoPreviewDirtyChangeAt = 0L;
     private long lastAutoPreviewExecutionAt = 0L;
     private NodeExecutor autoPreviewExecutor = null;
+    private long graphDirtyEpoch = 0L;
+    private final java.util.Set<UUID> invalidatedNodeIds = new HashSet<>();
 
     /**
      * 获取单例实例
@@ -117,8 +119,25 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         if (currentGraph.getNode(node.getId()) == null) {
             return;
         }
+        invalidatedNodeIds.clear();
+        invalidatedNodeIds.addAll(currentGraph.getDirtyImpactNodeIds(node.getId()));
+        graphDirtyEpoch++;
         io.markDirty();
-        NodeCraft.LOGGER.debug("Graph dirty version bumped from node {} dirty version {}", node.getId(), dirtyVersion);
+        NodeCraft.LOGGER.debug(
+                "Graph dirty version bumped from node {} dirty version {}. Impacted nodes: {}, graphDirtyEpoch={}",
+                node.getId(),
+                dirtyVersion,
+                invalidatedNodeIds.size(),
+                graphDirtyEpoch
+        );
+    }
+
+    public long getGraphDirtyEpoch() {
+        return graphDirtyEpoch;
+    }
+
+    public java.util.Set<UUID> getInvalidatedNodeIds() {
+        return new HashSet<>(invalidatedNodeIds);
     }
 
     /**

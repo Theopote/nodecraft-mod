@@ -1,9 +1,12 @@
 package com.nodecraft.nodesystem.graph;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import com.nodecraft.nodesystem.api.INode;
@@ -307,6 +310,51 @@ public class NodeGraph {
      */
     public List<Connection> getConnections() {
         return new ArrayList<>(connections);
+    }
+
+    /**
+     * Returns all downstream node ids reachable from the given source node.
+     * The source node itself is not included.
+     */
+    public Set<UUID> getDownstreamNodeIds(UUID sourceNodeId) {
+        Set<UUID> downstream = new HashSet<>();
+        if (sourceNodeId == null || !nodeMap.containsKey(sourceNodeId)) {
+            return downstream;
+        }
+
+        ArrayDeque<UUID> queue = new ArrayDeque<>();
+        queue.add(sourceNodeId);
+
+        while (!queue.isEmpty()) {
+            UUID current = queue.removeFirst();
+            for (Connection connection : connections) {
+                if (!connection.sourceNode.getId().equals(current)) {
+                    continue;
+                }
+
+                UUID targetId = connection.targetNode.getId();
+                if (sourceNodeId.equals(targetId)) {
+                    continue;
+                }
+                if (downstream.add(targetId)) {
+                    queue.addLast(targetId);
+                }
+            }
+        }
+
+        return downstream;
+    }
+
+    /**
+     * Returns the dirty impact set for a changed node, including the node itself
+     * and every downstream dependency.
+     */
+    public Set<UUID> getDirtyImpactNodeIds(UUID sourceNodeId) {
+        Set<UUID> impacted = getDownstreamNodeIds(sourceNodeId);
+        if (sourceNodeId != null && nodeMap.containsKey(sourceNodeId)) {
+            impacted.add(sourceNodeId);
+        }
+        return impacted;
     }
 
     private IPort findOutputPort(INode node, String portId) {
