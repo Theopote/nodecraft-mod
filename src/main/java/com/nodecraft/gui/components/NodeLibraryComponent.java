@@ -288,46 +288,15 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getMathScalarMathOrder() {
-        Map<String, Integer> mathScalarMathOrder = new HashMap<>();
-        mathScalarMathOrder.put("math.scalar_math.addition", 0);
-        mathScalarMathOrder.put("math.scalar_math.subtraction", 1);
-        mathScalarMathOrder.put("math.scalar_math.multiplication", 2);
-        mathScalarMathOrder.put("math.scalar_math.division", 3);
-        mathScalarMathOrder.put("math.scalar_math.modulus", 4);
-        mathScalarMathOrder.put("math.scalar_math.power", 5);
-        mathScalarMathOrder.put("math.scalar_math.logarithm", 6);
-        mathScalarMathOrder.put("math.scalar_math.absolute", 7);
-        mathScalarMathOrder.put("math.scalar_math.min", 8);
-        mathScalarMathOrder.put("math.scalar_math.max", 9);
-        mathScalarMathOrder.put("math.scalar_math.clamp", 10);
-        mathScalarMathOrder.put("math.scalar_math.remap", 11);
-        mathScalarMathOrder.put("math.scalar_math.floor", 12);
-        mathScalarMathOrder.put("math.scalar_math.ceiling", 13);
-        mathScalarMathOrder.put("math.scalar_math.round", 14);
-        return mathScalarMathOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getMathRandomOrder() {
-        Map<String, Integer> mathRandomOrder = new HashMap<>();
-        mathRandomOrder.put("math.random.random_number", 0);
-        mathRandomOrder.put("math.random.noise", 1);
-        mathRandomOrder.put("math.random.random_list_item", 2);
-        mathRandomOrder.put("math.random.random_vector", 3);
-        return mathRandomOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getMathTrigonometryOrder() {
-        Map<String, Integer> mathTrigonometryOrder = new HashMap<>();
-        mathTrigonometryOrder.put("math.trigonometry.sin", 0);
-        mathTrigonometryOrder.put("math.trigonometry.cos", 1);
-        mathTrigonometryOrder.put("math.trigonometry.tan", 2);
-        mathTrigonometryOrder.put("math.trigonometry.deg_to_rad", 3);
-        mathTrigonometryOrder.put("math.trigonometry.rad_to_deg", 4);
-        mathTrigonometryOrder.put("math.trigonometry.asin", 5);
-        mathTrigonometryOrder.put("math.trigonometry.acos", 6);
-        mathTrigonometryOrder.put("math.trigonometry.atan", 7);
-        mathTrigonometryOrder.put("math.trigonometry.pi", 8);
-        return mathTrigonometryOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {

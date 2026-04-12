@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.round",
     displayName = "Round",
     description = "Rounds a value to the nearest integer.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 14
 )
 public class RoundNode extends BaseNode {
 

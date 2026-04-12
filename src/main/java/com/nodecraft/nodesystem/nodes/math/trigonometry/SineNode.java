@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.sin",
     displayName = "正弦函数 (Sin)",
     description = "计算角度的正弦值（输入为弧度）",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 0
 )
 public class SineNode extends BaseNode {
 

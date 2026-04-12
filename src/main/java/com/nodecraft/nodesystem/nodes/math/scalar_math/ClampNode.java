@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.scalar_math.clamp",
     displayName = "Clamp",
     description = "Restricts a value to the specified minimum and maximum values.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 10
 )
 public class ClampNode extends BaseNode {
 

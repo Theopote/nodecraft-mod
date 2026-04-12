@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.atan",
     displayName = "反正切函数 (ArcTan)",
     description = "计算输入值的反正切值（结果以弧度为单位）",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 7
 )
 public class ArcTanNode extends BaseNode {
 

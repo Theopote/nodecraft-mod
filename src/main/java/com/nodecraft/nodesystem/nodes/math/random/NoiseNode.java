@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.random.noise",
     displayName = "Noise",
     description = "Samples coherent noise from a 3D position and seed.",
-    category = "math.random"
+    category = "math.random",
+    order = 1
 )
 public class NoiseNode extends BaseNode {
 

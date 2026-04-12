@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.max",
     displayName = "Max",
     description = "Returns the maximum of two values.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 9
 )
 public class MaxNode extends BaseNode {
 

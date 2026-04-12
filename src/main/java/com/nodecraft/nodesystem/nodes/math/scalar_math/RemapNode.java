@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.scalar_math.remap",
     displayName = "Remap",
     description = "Maps a value from an input range to an output range.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 11
 )
 public class RemapNode extends BaseNode {
 

@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.min",
     displayName = "Min",
     description = "Returns the minimum of two values.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 8
 )
 public class MinNode extends BaseNode {
 

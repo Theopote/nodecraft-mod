@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.pi",
     displayName = "圆周率",
     description = "输出数学常数π的值",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 8
 )
 public class PiNode extends BaseNode {
 

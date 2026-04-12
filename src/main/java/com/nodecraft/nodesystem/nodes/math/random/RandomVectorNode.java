@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "math.random.random_vector",
     displayName = "Random Vector",
     description = "Generates random vectors within a specified bounding box.",
-    category = "math.random"
+    category = "math.random",
+    order = 3
 )
 public class RandomVectorNode extends BaseNode {
 

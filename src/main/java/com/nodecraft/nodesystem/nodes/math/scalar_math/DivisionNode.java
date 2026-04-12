@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.division",
     displayName = "Division (/)",
     description = "Outputs the result of A divided by B.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 3
 )
 public class DivisionNode extends BaseNode {
 

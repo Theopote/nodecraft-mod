@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.asin",
     displayName = "反正弦函数 (ArcSin)",
     description = "计算输入值的反正弦值（结果以弧度为单位）",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 5
 )
 public class ArcSinNode extends BaseNode {
 

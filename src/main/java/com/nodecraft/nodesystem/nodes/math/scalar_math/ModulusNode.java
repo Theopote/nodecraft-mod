@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.modulus",
     displayName = "Modulus (%)",
     description = "Returns the remainder of A divided by B.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 4
 )
 public class ModulusNode extends BaseNode {
 

@@ -14,7 +14,8 @@ import java.util.UUID;
     id = "math.scalar_math.addition",
     displayName = "Addition (+)",
     description = "Adds two numeric inputs.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 0
 )
 public class AdditionNode extends BaseNode implements INode {
 

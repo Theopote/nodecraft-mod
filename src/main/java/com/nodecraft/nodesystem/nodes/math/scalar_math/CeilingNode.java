@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.ceiling",
     displayName = "Ceiling",
     description = "Rounds a value up to the nearest integer.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 13
 )
 public class CeilingNode extends BaseNode {
 

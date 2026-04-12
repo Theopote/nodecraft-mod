@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.tan",
     displayName = "正切函数 (Tan)",
     description = "计算角度的正切值（输入为弧度）",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 2
 )
 public class TangentNode extends BaseNode {
 

@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.absolute",
     displayName = "Absolute (Abs)",
     description = "Returns the absolute value of the input.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 7
 )
 public class AbsoluteNode extends BaseNode {
 

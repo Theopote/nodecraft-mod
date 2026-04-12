@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.floor",
     displayName = "Floor",
     description = "Rounds a value down to the nearest integer.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 12
 )
 public class FloorNode extends BaseNode {
 

@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.cos",
     displayName = "余弦函数 (Cos)",
     description = "计算角度的余弦值（输入为弧度）",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 1
 )
 public class CosineNode extends BaseNode {
 

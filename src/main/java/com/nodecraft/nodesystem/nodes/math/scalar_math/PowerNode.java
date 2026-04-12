@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.power",
     displayName = "Power (^)",
     description = "Computes Base raised to Exponent.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 5
 )
 public class PowerNode extends BaseNode {
 

@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.subtraction",
     displayName = "Subtraction (-)",
     description = "Outputs the result of A minus B.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 1
 )
 public class SubtractionNode extends BaseNode {
 

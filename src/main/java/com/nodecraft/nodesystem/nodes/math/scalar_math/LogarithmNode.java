@@ -13,7 +13,8 @@ import java.util.UUID;
     id = "math.scalar_math.logarithm",
     displayName = "Logarithm (log)",
     description = "Computes the logarithm of Number using Base.",
-    category = "math.scalar_math"
+    category = "math.scalar_math",
+    order = 6
 )
 public class LogarithmNode extends BaseNode {
 

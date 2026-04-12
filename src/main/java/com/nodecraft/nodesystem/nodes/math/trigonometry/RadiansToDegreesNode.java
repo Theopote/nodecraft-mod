@@ -15,7 +15,8 @@ import java.util.UUID;
     id = "math.trigonometry.rad_to_deg",
     displayName = "弧度转角度",
     description = "将角度从弧度转换为度数",
-    category = "math.trigonometry"
+    category = "math.trigonometry",
+    order = 4
 )
 public class RadiansToDegreesNode extends BaseNode {
 

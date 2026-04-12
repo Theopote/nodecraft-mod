@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "math.random.random_list_item",
     displayName = "Random List Item",
     description = "Randomly selects one or more items from a list.",
-    category = "math.random"
+    category = "math.random",
+    order = 2
 )
 public class RandomListItemNode extends BaseNode {
 

@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "math.random.random_number",
     displayName = "Random Number",
     description = "Generates random numbers within a specified range.",
-    category = "math.random"
+    category = "math.random",
+    order = 0
 )
 public class RandomNumberNode extends BaseNode {
 
