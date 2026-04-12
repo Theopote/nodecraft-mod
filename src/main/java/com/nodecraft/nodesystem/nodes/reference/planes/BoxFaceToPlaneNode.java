@@ -13,7 +13,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "reference.planes.block_face_plane",
     displayName = "Box Face To Plane",
-    description = "Converts a box face into its supporting plane and related face frame data",
+    description = "Explicitly converts a box face into its supporting plane and related face frame data",
     category = "reference.planes",
     order = 4
 )
@@ -43,7 +43,7 @@ public class BoxFaceToPlaneNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a box face into its supporting plane and related face frame data";
+        return "Explicitly converts a box face into its supporting plane and related face frame data";
     }
 
     @Override

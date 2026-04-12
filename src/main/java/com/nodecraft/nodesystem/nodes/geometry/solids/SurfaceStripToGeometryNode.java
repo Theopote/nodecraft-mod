@@ -20,7 +20,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "geometry.solids.surface_strip_to_geometry",
     displayName = "Surface Strip To Geometry",
-    description = "Bridges a surface strip into reusable geometry by sampling section edges and rails as cylinders",
+    description = "Explicitly converts a surface strip into reusable geometry by sampling section edges and rails as cylinders",
     category = "geometry.solids",
     order = 7
 )
@@ -55,7 +55,7 @@ public class SurfaceStripToGeometryNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Bridges a surface strip into reusable geometry by sampling section edges and rails as cylinders";
+        return "Explicitly converts a surface strip into reusable geometry by sampling section edges and rails as cylinders";
     }
 
     @Override

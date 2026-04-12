@@ -16,7 +16,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "reference.points.block_to_vector",
     displayName = "Block To Vector",
-    description = "Converts a block coordinate into a Vector3d position, optionally using the block center.",
+    description = "Explicitly converts a block coordinate into a Vector3d position, with optional block-center offset.",
     category = "reference.points",
     order = 3
 )
@@ -38,7 +38,7 @@ public class BlockToVectorNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Converts a block coordinate into a Vector3d position, optionally using the block center.";
+        return "Explicitly converts a block coordinate into a Vector3d position, with optional block-center offset.";
     }
 
     @Override

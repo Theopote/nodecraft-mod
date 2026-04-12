@@ -9,6 +9,9 @@ package com.nodecraft.nodesystem.api;
  */
 public final class TypeConversionRegistry {
 
+    public record ConversionSuggestion(String nodeId, String displayName) {
+    }
+
     public enum ConversionPolicy {
         IMPLICIT_SAFE,
         EXPLICIT_REQUIRED,
@@ -66,6 +69,28 @@ public final class TypeConversionRegistry {
             case EXPLICIT_REQUIRED -> "explicit conversion node required";
             case UNSUPPORTED -> "unsupported type relationship";
         };
+    }
+
+    public static ConversionSuggestion getSuggestedConversion(NodeDataType outputType, NodeDataType inputType) {
+        NodeDataType output = outputType == null ? NodeDataType.ANY : outputType;
+        NodeDataType input = inputType == null ? NodeDataType.ANY : inputType;
+
+        if (isBlockCoordinateToPointConversion(output, input)) {
+            return new ConversionSuggestion("reference.points.point_from_block", "Block To Point");
+        }
+        if (isBlockCoordinateToVectorConversion(output, input)) {
+            return new ConversionSuggestion("reference.points.block_to_vector", "Block To Vector");
+        }
+        if (isPointToBlockCoordinateConversion(output, input)) {
+            return new ConversionSuggestion("world.selection.snap_point_to_block", "Snap Point To Block");
+        }
+        if (isBlockFaceToPlaneConversion(output, input)) {
+            return new ConversionSuggestion("reference.planes.block_face_plane", "Box Face To Plane");
+        }
+        if (isSurfaceStripToGeometryConversion(output, input)) {
+            return new ConversionSuggestion("geometry.solids.surface_strip_to_geometry", "Surface Strip To Geometry");
+        }
+        return null;
     }
 
     private static boolean isExplicitConversionPair(NodeDataType outputType, NodeDataType inputType) {

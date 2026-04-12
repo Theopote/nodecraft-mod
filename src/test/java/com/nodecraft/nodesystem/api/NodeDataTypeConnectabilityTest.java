@@ -75,6 +75,33 @@ class NodeDataTypeConnectabilityTest {
     }
 
     @Test
+    void blockCoordinateToPointRequiresExplicitConversionNode() {
+        assertFalse(NodeDataType.isConnectableTo(NodeDataType.BLOCK_POS, NodeDataType.POINT));
+        assertEquals(
+                TypeConversionRegistry.ConversionPolicy.EXPLICIT_REQUIRED,
+                TypeConversionRegistry.classify(NodeDataType.BLOCK_POS, NodeDataType.POINT)
+        );
+    }
+
+    @Test
+    void blockCoordinateToVectorRequiresExplicitConversionNode() {
+        assertFalse(NodeDataType.isConnectableTo(NodeDataType.BLOCK_POS, NodeDataType.VECTOR));
+        assertEquals(
+                TypeConversionRegistry.ConversionPolicy.EXPLICIT_REQUIRED,
+                TypeConversionRegistry.classify(NodeDataType.BLOCK_POS, NodeDataType.VECTOR)
+        );
+    }
+
+    @Test
+    void surfaceStripToGeometryRequiresExplicitConversionNode() {
+        assertFalse(NodeDataType.isConnectableTo(NodeDataType.SURFACE_STRIP, NodeDataType.GEOMETRY));
+        assertEquals(
+                TypeConversionRegistry.ConversionPolicy.EXPLICIT_REQUIRED,
+                TypeConversionRegistry.classify(NodeDataType.SURFACE_STRIP, NodeDataType.GEOMETRY)
+        );
+    }
+
+    @Test
     void explicitConversionReasonIsReturnedForSupportedButNonImplicitPairs() {
         String reason = NodeDataType.getConnectabilityRejectionReason(NodeDataType.BOX_FACE, NodeDataType.PLANE);
         assertNotNull(reason);

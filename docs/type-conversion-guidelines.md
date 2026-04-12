@@ -34,6 +34,10 @@ These relationships are considered safe because they do not require a user-facin
 
 These must stay as explicit nodes in the graph:
 
+- `BLOCK_POS / COORDINATE -> POINT`
+  - corner vs center policy matters
+- `BLOCK_POS / COORDINATE -> VECTOR / POSITION`
+  - corner vs center policy matters
 - `POINT -> COORDINATE / BLOCK_POS`
   - grid snap / rounding policy matters
 - `BOX_FACE -> PLANE`
@@ -42,6 +46,14 @@ These must stay as explicit nodes in the graph:
   - geometry construction step
 - `GEOMETRY -> BLOCK_LIST / BLOCK_PLACEMENT_LIST`
   - voxelization / bake policy matters
+
+Current canonical explicit conversion nodes:
+
+- [BlockToPointNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/reference/points/BlockToPointNode.java)
+- [BlockToVectorNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/reference/points/BlockToVectorNode.java)
+- [SnapPointToBlockNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/world/selection/SnapPointToBlockNode.java)
+- [BoxFaceToPlaneNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/reference/planes/BoxFaceToPlaneNode.java)
+- [SurfaceStripToGeometryNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/solids/SurfaceStripToGeometryNode.java)
 
 ### Unsupported
 
