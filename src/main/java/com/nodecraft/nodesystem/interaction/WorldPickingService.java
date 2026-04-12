@@ -90,11 +90,11 @@ public final class WorldPickingService {
             }
 
             NodeCraft.LOGGER.warn("主要射线计算方法失败，使用备用方法");
-            return getFallbackRayFromMouse(mouseX, mouseY);
+            return getFallbackRayFromMouse();
 
         } catch (Exception e) {
             NodeCraft.LOGGER.error("计算鼠标射线时出错", e);
-            return getFallbackRayFromMouse(mouseX, mouseY);
+            return getFallbackRayFromMouse();
         }
     }
 
@@ -207,7 +207,7 @@ public final class WorldPickingService {
         return rayCacheHitCount;
     }
 
-    private Ray getFallbackRayFromMouse(float mouseX, float mouseY) {
+    private Ray getFallbackRayFromMouse() {
         try {
             MinecraftClient client = MinecraftClient.getInstance();
             if (client.world == null || client.getCameraEntity() == null) {

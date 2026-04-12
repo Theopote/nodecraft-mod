@@ -19,17 +19,13 @@ import java.util.Map;
 import java.util.HashMap;
 
 /**
- * 节点编辑器交互管理器
+ * 节点编辑器交互编排：交互状态机、悬停高亮、每帧 update 与拾取请求 API。
  * <p>
- * 核心功能：
- * 1. 编辑模式管理 (enterEditorMode/exitEditorMode)
- * 2. 鼠标射线投射 (Mouse Raycasting)
- * 3. 世界拾取 (World Picking)
- * 4. 实时高亮反馈
- * 5. 状态管理
+ * 职责已拆分：{@link EditorModeCameraService}（编辑视图 / 中键视角）、
+ * {@link WorldPickingService}（鼠标射线、方块 raycast、射线缓存）。
+ * 本类仍负责交互模式 handler、区域预览样式与 ImGui/世界输入门控。
  * <p>
- * 单例模式，确保全局只有一个交互状态。
- * 射线/方块拾取与编辑模式视角由 {@link WorldPickingService}、{@link EditorModeCameraService} 承担。
+ * 单例，保证全局唯一交互状态。
  */
 public class NodeEditorInteractionManager {
 
