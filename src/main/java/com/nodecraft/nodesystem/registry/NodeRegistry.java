@@ -23,7 +23,6 @@ public class NodeRegistry {
 
     private static NodeRegistry instance;
     private static final Map<String, String> NODE_ID_ALIASES = createNodeIdAliases();
-    private static final Map<String, String> NODE_CATEGORY_OVERRIDES = createNodeCategoryOverrides();
 
     private final Map<String, NodeInfo> nodeInfoMap = new ConcurrentHashMap<>();
     private final Map<String, NodeCategory> categoryMap = new ConcurrentHashMap<>();
@@ -47,6 +46,8 @@ public class NodeRegistry {
 
     private static Map<String, String> createNodeIdAliases() {
         Map<String, String> aliases = new HashMap<>();
+
+        // Output migration aliases.
         addMovedNodeAlias(aliases, "visualization.preview.geometry_viewer", "output.preview.geometry_viewer");
         addMovedNodeAlias(aliases, "visualization.preview.preview_geometry", "output.preview.preview_geometry");
         addMovedNodeAlias(aliases, "visualization.preview.preview_blocks", "output.preview.preview_blocks");
@@ -67,6 +68,7 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "visualization.debugging.execution_timer", "output.debug.execution_timer");
         addMovedNodeAlias(aliases, "visualization.debugging.panel", "output.debug.data_inspector");
 
+        // World and material migration aliases.
         addMovedNodeAlias(aliases, "world.query.get_block", "world.read.get_block");
         addMovedNodeAlias(aliases, "world.query.get_blocks_in_region", "world.read.get_blocks_in_region");
         addMovedNodeAlias(aliases, "world.query.find_blocks", "world.read.find_blocks");
@@ -79,6 +81,8 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "world.modification.remove_blocks", "world.write.clear_region");
         addMovedNodeAlias(aliases, "world.modification.material_mapper", "material.gradient_mapping.height_gradient_map");
         addMovedNodeAlias(aliases, "material.basic_assignment.replace_material", "material.gradient_mapping.height_gradient_map");
+
+        // Input and reference migration aliases.
         addMovedNodeAlias(aliases, "inputs.basic.integer_input", "input.numeric.integer");
         addMovedNodeAlias(aliases, "inputs.basic.float_input", "input.numeric.float");
         addMovedNodeAlias(aliases, "inputs.basic.integer_slider", "input.numeric.integer_slider");
@@ -98,6 +102,8 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "inputs.minecraft.dimension_info", "input.context.dimension_info");
         addMovedNodeAlias(aliases, "inputs.selectors.block_type_selector", "input.type_selectors.block_type_selector");
         addMovedNodeAlias(aliases, "inputs.sources.create_list", "math.list_sequence.create_list");
+
+        // Math migration aliases.
         addMovedNodeAlias(aliases, "math.basic.range", "math.list_sequence.range");
         addMovedNodeAlias(aliases, "math.basic.absolute", "math.scalar_math.absolute");
         addMovedNodeAlias(aliases, "math.basic.addition", "math.scalar_math.addition");
@@ -155,6 +161,7 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "math.vector.construct_plane_from_points", "reference.planes.plane_from_points");
         addMovedNodeAlias(aliases, "math.vector.rotate", "transform.orientation.rotate_vector");
         addMovedNodeAlias(aliases, "math.vector.rotate_vector", "transform.orientation.rotate_vector");
+
         return Collections.unmodifiableMap(aliases);
     }
 
@@ -164,10 +171,6 @@ public class NodeRegistry {
 
     private static void addMovedNodeAlias(Map<String, String> aliases, String legacyId, String canonicalId) {
         addAlias(aliases, legacyId, canonicalId);
-    }
-
-    private static Map<String, String> createNodeCategoryOverrides() {
-        return Map.of();
     }
 
     private String normalizeNodeId(String nodeId) {
@@ -195,19 +198,7 @@ public class NodeRegistry {
     }
 
     private String remapCategory(String normalizedNodeId, String categoryId) {
-        String normalizedCategoryId = categoryId == null ? "" : categoryId.toLowerCase();
-        String explicitOverride = NODE_CATEGORY_OVERRIDES.get(normalizedNodeId);
-        if (explicitOverride != null) {
-            return explicitOverride;
-        }
-        if (isListSequenceMigrationTarget(normalizedNodeId, normalizedCategoryId)) {
-            return "math.list_sequence";
-        }
-        return normalizedCategoryId;
-    }
-
-    private boolean isListSequenceMigrationTarget(String normalizedNodeId, String normalizedCategoryId) {
-        return false;
+        return categoryId == null ? "" : categoryId.toLowerCase();
     }
 
     private String remapDescription(String targetCategoryId, String description) {
