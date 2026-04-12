@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "pattern.grid.grid_array",
     displayName = "网格阵列",
     description = "在平面或三维网格上重复坐标列表",
-    category = "pattern.grid"
+    category = "pattern.grid",
+    order = 0
 )
 public class GridArrayNode extends BaseNode {
 

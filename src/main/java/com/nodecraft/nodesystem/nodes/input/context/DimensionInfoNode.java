@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "input.context.dimension_info",
     displayName = "Dimension Info",
     description = "Gets the current dimension and basic dimension traits from the active Minecraft world.",
-    category = "input.context"
+    category = "input.context",
+    order = 2
 )
 public class DimensionInfoNode extends BaseNode {
 

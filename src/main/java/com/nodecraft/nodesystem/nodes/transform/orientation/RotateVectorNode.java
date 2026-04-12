@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "transform.orientation.rotate_vector",
     displayName = "旋转向量",
     description = "绕指定轴旋转向量",
-    category = "transform.orientation"
+    category = "transform.orientation",
+    order = 1
 )
 public class RotateVectorNode extends BaseNode {
 

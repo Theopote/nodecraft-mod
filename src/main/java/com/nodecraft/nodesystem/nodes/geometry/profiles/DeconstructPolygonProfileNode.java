@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.profiles.deconstruct_profile",
     displayName = "Deconstruct Polygon Profile",
     description = "Extracts points, boundary, plane, center, perimeter, and area from a polygon profile",
-    category = "geometry.profiles"
+    category = "geometry.profiles",
+    order = 4
 )
 public class DeconstructPolygonProfileNode extends BaseNode {
 

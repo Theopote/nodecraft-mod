@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "input.numeric.float_slider",
     displayName = "浮点数滑动条",
     description = "输出一个可通过滑动条调节的浮点数。",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 3
 )
 public class FloatSliderNode extends BaseCustomUINode {
 

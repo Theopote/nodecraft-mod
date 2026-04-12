@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "input.type_selectors.block_type_selector",
     displayName = "Block Type Selector",
     description = "Searches and selects a Minecraft block type.",
-    category = "input.type_selectors"
+    category = "input.type_selectors",
+    order = 0
 )
 public class BlockTypeSelectorNode extends BaseCustomUINode {
 

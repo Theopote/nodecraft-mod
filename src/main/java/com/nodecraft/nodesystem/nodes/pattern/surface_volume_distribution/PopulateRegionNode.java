@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "pattern.surface_volume_distribution.populate_region",
     displayName = "区域填充",
     description = "在指定区域内随机或均匀生成坐标列表",
-    category = "pattern.surface_volume_distribution"
+    category = "pattern.surface_volume_distribution",
+    order = 0
 )
 public class PopulateRegionNode extends BaseNode {
 

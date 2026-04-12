@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "input.basic.text_input",
     displayName = "Text Input",
     description = "Allows entering single-line or multi-line text.",
-    category = "input.basic"
+    category = "input.basic",
+    order = 0
 )
 public class TextInputNode extends BaseCustomUINode {
 

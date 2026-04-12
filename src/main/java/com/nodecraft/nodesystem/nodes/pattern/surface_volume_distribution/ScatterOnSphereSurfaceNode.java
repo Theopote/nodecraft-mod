@@ -25,7 +25,8 @@ import java.util.UUID;
     id = "pattern.surface_volume_distribution.surface_scatter",
     displayName = "Scatter On Sphere Surface",
     description = "Scatters points on a sphere surface and outputs matching normals and optional snapped block coordinates",
-    category = "pattern.surface_volume_distribution"
+    category = "pattern.surface_volume_distribution",
+    order = 2
 )
 public class ScatterOnSphereSurfaceNode extends BaseNode {
 

@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_sphere",
     displayName = "Deconstruct Sphere",
     description = "Extracts center, radius, diameter, bounds, area, and volume from sphere geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 11
 )
 public class DeconstructSphereNode extends BaseNode {
 

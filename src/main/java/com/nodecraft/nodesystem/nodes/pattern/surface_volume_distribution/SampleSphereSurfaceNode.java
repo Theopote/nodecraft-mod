@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "pattern.surface_volume_distribution.sample_surface",
     displayName = "Sample Sphere Surface",
     description = "Samples points and normals on a sphere surface for scattering and growth workflows",
-    category = "pattern.surface_volume_distribution"
+    category = "pattern.surface_volume_distribution",
+    order = 1
 )
 public class SampleSphereSurfaceNode extends BaseNode {
 

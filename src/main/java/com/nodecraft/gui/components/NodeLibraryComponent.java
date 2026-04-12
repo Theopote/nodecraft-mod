@@ -171,37 +171,19 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getInputNumericOrder() {
-        Map<String, Integer> inputNumericOrder = new HashMap<>();
-        inputNumericOrder.put("input.numeric.integer", 0);
-        inputNumericOrder.put("input.numeric.float", 1);
-        inputNumericOrder.put("input.numeric.integer_slider", 2);
-        inputNumericOrder.put("input.numeric.float_slider", 3);
-        inputNumericOrder.put("input.numeric.angle", 4);
-        inputNumericOrder.put("input.numeric.angle_picker", 5);
-        inputNumericOrder.put("input.numeric.boolean_toggle", 6);
-        return inputNumericOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getInputBasicOrder() {
-        Map<String, Integer> inputBasicOrder = new HashMap<>();
-        inputBasicOrder.put("input.basic.text_input", 0);
-        inputBasicOrder.put("input.basic.color_picker", 1);
-        return inputBasicOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getInputContextOrder() {
-        Map<String, Integer> inputContextOrder = new HashMap<>();
-        inputContextOrder.put("input.context.player_position", 0);
-        inputContextOrder.put("input.context.player_look_direction", 1);
-        inputContextOrder.put("input.context.dimension_info", 2);
-        inputContextOrder.put("input.context.current_time", 3);
-        return inputContextOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getInputTypeSelectorsOrder() {
-        Map<String, Integer> inputTypeSelectorsOrder = new HashMap<>();
-        inputTypeSelectorsOrder.put("input.type_selectors.block_type_selector", 0);
-        return inputTypeSelectorsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getWorldSelectionOrder() {
@@ -269,28 +251,15 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getTransformBasicTransformsOrder() {
-        Map<String, Integer> transformBasicTransformsOrder = new HashMap<>();
-        transformBasicTransformsOrder.put("transform.basic_transforms.move_point", 0);
-        transformBasicTransformsOrder.put("transform.basic_transforms.move_points", 1);
-        transformBasicTransformsOrder.put("transform.basic_transforms.rotate_points", 2);
-        transformBasicTransformsOrder.put("transform.basic_transforms.scale_points", 3);
-        transformBasicTransformsOrder.put("transform.basic_transforms.mirror_points", 4);
-        transformBasicTransformsOrder.put("transform.basic_transforms.offset_face", 5);
-        transformBasicTransformsOrder.put("transform.basic_transforms.inset_face", 6);
-        return transformBasicTransformsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getTransformOrientationOrder() {
-        Map<String, Integer> transformOrientationOrder = new HashMap<>();
-        transformOrientationOrder.put("transform.orientation.project_to_plane", 0);
-        transformOrientationOrder.put("transform.orientation.rotate_vector", 1);
-        return transformOrientationOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getTransformDeformationsOrder() {
-        Map<String, Integer> transformDeformationsOrder = new HashMap<>();
-        transformDeformationsOrder.put("transform.deformations.twist", 0);
-        return transformDeformationsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getPreviewOrder() {
@@ -346,29 +315,19 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getPatternSurfaceVolumeDistributionOrder() {
-        Map<String, Integer> patternSurfaceVolumeDistributionOrder = new HashMap<>();
-        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.populate_region", 0);
-        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.sample_surface", 1);
-        patternSurfaceVolumeDistributionOrder.put("pattern.surface_volume_distribution.surface_scatter", 2);
-        return patternSurfaceVolumeDistributionOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getPatternLinearOrder() {
-        Map<String, Integer> patternLinearOrder = new HashMap<>();
-        patternLinearOrder.put("pattern.linear.linear_array", 0);
-        return patternLinearOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getPatternGridOrder() {
-        Map<String, Integer> patternGridOrder = new HashMap<>();
-        patternGridOrder.put("pattern.grid.grid_array", 0);
-        return patternGridOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getPatternRadialOrder() {
-        Map<String, Integer> patternRadialOrder = new HashMap<>();
-        patternRadialOrder.put("pattern.radial.polar_array", 0);
-        return patternRadialOrder;
+        return new HashMap<>();
     }
 
     // Internal UI constants.

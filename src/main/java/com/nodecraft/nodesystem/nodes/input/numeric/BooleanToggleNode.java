@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "input.numeric.boolean_toggle",
     displayName = "布尔开关",
     description = "提供一个可以切换的布尔值开关控制",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 6
 )
 public class BooleanToggleNode extends BaseCustomUINode {
 

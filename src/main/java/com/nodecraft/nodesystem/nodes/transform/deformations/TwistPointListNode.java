@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "transform.deformations.twist",
     displayName = "Twist Point List",
     description = "Twists a point list around an axis by distributing rotation along a specified axial length",
-    category = "transform.deformations"
+    category = "transform.deformations",
+    order = 0
 )
 public class TwistPointListNode extends BaseNode {
 

@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "input.numeric.float",
     displayName = "浮点数输入",
     description = "允许用户手动输入浮点数值",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 1
 )
 public class FloatInputNode extends BaseCustomUINode {
 

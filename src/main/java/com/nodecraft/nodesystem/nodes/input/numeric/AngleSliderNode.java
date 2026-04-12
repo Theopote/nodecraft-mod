@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "input.numeric.angle",
     displayName = "角度滑动条",
     description = "输出一个可通过滑动条调节的角度值，支持度和弧度输出。",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 4
 )
 public class AngleSliderNode extends BaseCustomUINode {
 

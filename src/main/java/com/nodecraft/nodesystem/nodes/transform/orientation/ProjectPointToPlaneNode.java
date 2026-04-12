@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "transform.orientation.project_to_plane",
     displayName = "Project Point To Plane",
     description = "Projects a geometric point onto a plane and reports the projection distance",
-    category = "transform.orientation"
+    category = "transform.orientation",
+    order = 0
 )
 public class ProjectPointToPlaneNode extends BaseNode {
 

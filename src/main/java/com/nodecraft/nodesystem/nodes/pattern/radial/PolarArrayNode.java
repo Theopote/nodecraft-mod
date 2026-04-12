@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "pattern.radial.polar_array",
     displayName = "极坐标阵列",
     description = "将坐标列表绕中心点重复旋转排列",
-    category = "pattern.radial"
+    category = "pattern.radial",
+    order = 0
 )
 public class PolarArrayNode extends BaseNode {
 

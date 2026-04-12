@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "transform.basic_transforms.scale_points",
     displayName = "坐标缩放",
     description = "以指定中心点为基准缩放坐标列表",
-    category = "transform.basic_transforms"
+    category = "transform.basic_transforms",
+    order = 3
 )
 public class ScaleCoordinatesNode extends BaseNode {
 

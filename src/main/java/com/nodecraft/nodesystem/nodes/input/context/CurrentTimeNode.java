@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "input.context.current_time",
     displayName = "Current Time",
     description = "Gets the current time and weather state from the active Minecraft world.",
-    category = "input.context"
+    category = "input.context",
+    order = 3
 )
 public class CurrentTimeNode extends BaseNode {
 

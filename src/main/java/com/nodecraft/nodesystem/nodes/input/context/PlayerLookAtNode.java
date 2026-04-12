@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "input.context.player_look_direction",
     displayName = "Player Look At",
     description = "Gets the player's look direction and current raycast hit information.",
-    category = "input.context"
+    category = "input.context",
+    order = 1
 )
 public class PlayerLookAtNode extends BaseCustomUINode {
 

@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "transform.basic_transforms.inset_face",
     displayName = "Inset Box Face",
     description = "Creates an inset or outset reference face boundary from a box face without modifying the source box",
-    category = "transform.basic_transforms"
+    category = "transform.basic_transforms",
+    order = 6
 )
 public class InsetBoxFaceNode extends BaseNode {
 

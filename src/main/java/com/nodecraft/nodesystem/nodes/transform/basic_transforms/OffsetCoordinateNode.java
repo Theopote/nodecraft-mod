@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "transform.basic_transforms.move_point",
     displayName = "Offset Coordinate",
     description = "Offsets a single block coordinate by integer X, Y, Z amounts",
-    category = "transform.basic_transforms"
+    category = "transform.basic_transforms",
+    order = 0
 )
 public class OffsetCoordinateNode extends BaseNode {
 

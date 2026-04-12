@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "input.basic.color_picker",
     displayName = "Color Picker",
     description = "Allows selecting a color value with RGB and alpha support.",
-    category = "input.basic"
+    category = "input.basic",
+    order = 1
 )
 public class ColorPickerNode extends BaseCustomUINode {
 

@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "input.numeric.integer",
     displayName = "整数输入",
     description = "允许手动输入整数值的节点",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 0
 )
 public class IntegerInputNode extends BaseCustomUINode {
 

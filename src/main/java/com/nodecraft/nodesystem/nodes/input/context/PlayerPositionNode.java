@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "input.context.player_position",
     displayName = "Player Position",
     description = "Gets the player's current world position.",
-    category = "input.context"
+    category = "input.context",
+    order = 0
 )
 public class PlayerPositionNode extends BaseCustomUINode {
 

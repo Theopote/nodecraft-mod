@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "input.numeric.angle_picker",
     displayName = "圆形角度选择器",
     description = "通过圆形表盘选择角度，同时输出度和弧度。",
-    category = "input.numeric"
+    category = "input.numeric",
+    order = 5
 )
 public class CircularAngleNode extends BaseCustomUINode {
 

@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "transform.basic_transforms.offset_face",
     displayName = "Offset Box Face",
     description = "Offsets a box face along its normal without modifying the source box geometry",
-    category = "transform.basic_transforms"
+    category = "transform.basic_transforms",
+    order = 5
 )
 public class OffsetBoxFaceNode extends BaseNode {
 

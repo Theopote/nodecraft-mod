@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "pattern.linear.linear_array",
     displayName = "线性阵列",
     description = "将坐标列表沿直线方向重复排列",
-    category = "pattern.linear"
+    category = "pattern.linear",
+    order = 0
 )
 public class LinearArrayNode extends BaseNode {
 

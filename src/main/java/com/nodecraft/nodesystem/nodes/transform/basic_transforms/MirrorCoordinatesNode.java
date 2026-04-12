@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "transform.basic_transforms.mirror_points",
     displayName = "坐标镜像",
     description = "沿指定平面镜像坐标列表",
-    category = "transform.basic_transforms"
+    category = "transform.basic_transforms",
+    order = 4
 )
 public class MirrorCoordinatesNode extends BaseNode {
 
