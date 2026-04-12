@@ -801,6 +801,9 @@ public class NodeLibraryComponent implements EditorComponent {
     private final List<NodeCategory> allCategories; // All categories exposed by the registry.
     private final Map<String, Boolean> expandedCategories = new HashMap<>();
     private List<DisplayCategory> filteredCategories; // Filtered categories for the current search term.
+    private List<DisplayCategory> cachedTopLevelCategories = List.of();
+    private Map<String, List<DisplayCategory>> cachedChildCategoriesMap = Map.of();
+    private boolean categoryHierarchyCacheDirty = true;
     private boolean visible = true;
     private DisplayMode displayMode = DisplayMode.LIST;
     private float gridTileSizeScale = NodeLibraryConstants.GRID_TILE_SIZE_SCALE;
@@ -1073,7 +1076,7 @@ public class NodeLibraryComponent implements EditorComponent {
         boolean searchChanged = searchManager.renderSearchBar(this::updateFilteredCategories);
         
         if (searchChanged) {
-            NodeCraft.LOGGER.info("Search term changed. Node library will refresh on the next frame.");
+            NodeCraft.LOGGER.debug("Search term changed. Node library will refresh on the next frame.");
         }
     }
     
@@ -1083,7 +1086,7 @@ public class NodeLibraryComponent implements EditorComponent {
      * @param searchTerm search term
      */
     private void updateFilteredCategories(String searchTerm) {
-        NodeCraft.LOGGER.info("Updating node library search results for term: '{}'", searchTerm);
+        NodeCraft.LOGGER.debug("Updating node library search results for term: '{}'", searchTerm);
         
         // Empty search shows all categories and nodes.
         if (searchTerm == null || searchTerm.isEmpty()) {
@@ -1091,13 +1094,14 @@ public class NodeLibraryComponent implements EditorComponent {
             this.filteredCategories = this.allCategories.stream()
                 .map(cat -> new DisplayCategory(cat, new ArrayList<>(cat.getNodes())))
                 .collect(Collectors.toList());
+            this.categoryHierarchyCacheDirty = true;
             NodeCraft.LOGGER.debug("Filtered category count for empty search: {}", this.filteredCategories.size());
             return;
         }
 
         // Normalize the search term before matching.
         String processedTerm = searchTerm.toLowerCase().trim();
-        NodeCraft.LOGGER.info("Normalized search term: '{}'", processedTerm);
+        NodeCraft.LOGGER.debug("Normalized search term: '{}'", processedTerm);
 
         // Scan all categories and nodes directly.
         List<DisplayCategory> searchResults = new ArrayList<>();
@@ -1154,7 +1158,7 @@ public class NodeLibraryComponent implements EditorComponent {
             NodeCraft.LOGGER.debug("Expanded parent category {}", parentId);
         }
         
-        NodeCraft.LOGGER.info("Search '{}' matched {} categories", processedTerm, searchResults.size());
+        NodeCraft.LOGGER.debug("Search '{}' matched {} categories", processedTerm, searchResults.size());
         
         if (!searchResults.isEmpty()) {
             // Ensure parent categories remain visible even when only child categories match.
@@ -1179,14 +1183,15 @@ public class NodeLibraryComponent implements EditorComponent {
             
             this.filteredCategories = completeResults;
         } else {
-            NodeCraft.LOGGER.info("No matches found. Showing empty top-level categories.");
+            NodeCraft.LOGGER.debug("No matches found. Showing empty top-level categories.");
             this.filteredCategories = allCategories.stream()
                 .filter(cat -> !cat.getId().contains("."))
                 .map(cat -> new DisplayCategory(cat, new ArrayList<>()))
                 .collect(Collectors.toList());
         }
         
-        NodeCraft.LOGGER.info("Filtered category count: {}", this.filteredCategories.size());
+        this.categoryHierarchyCacheDirty = true;
+        NodeCraft.LOGGER.debug("Filtered category count: {}", this.filteredCategories.size());
     }
     
     /**
@@ -1225,52 +1230,9 @@ public class NodeLibraryComponent implements EditorComponent {
         // Control vertical spacing between categories.
         ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ItemSpacing, ImGui.getStyle().getItemSpacingX(), NodeLibraryConstants.CATEGORY_ITEM_SPACING);
 
-        // Rebuild the display hierarchy into top-level and child categories.
-        Map<String, List<DisplayCategory>> childCategoriesMap = new HashMap<>();
-        List<DisplayCategory> topLevelCategories = new ArrayList<>();
-
-        // Split categories into top-level and one-level child groupings.
-        for (DisplayCategory category : filteredCategories) {
-            String id = category.getId();
-            
-            if (!id.contains(".")) {
-                topLevelCategories.add(category);
-            } else {
-                String parentId = id.substring(0, id.lastIndexOf('.'));
-                childCategoriesMap
-                    .computeIfAbsent(parentId, k -> new ArrayList<>())
-                    .add(category);
-            }
-        }
-        
-        // Keep display order stable.
-        topLevelCategories.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
-        
-        for (List<DisplayCategory> childList : childCategoriesMap.values()) {
-            childList.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
-        }
-
-        // Collapse empty wrapper categories that only exist to hold child groups.
-        List<DisplayCategory> promotedTopLevelCategories = new ArrayList<>();
-        List<DisplayCategory> retainedTopLevelCategories = new ArrayList<>();
-        for (DisplayCategory topCategory : topLevelCategories) {
-            List<DisplayCategory> children = childCategoriesMap.get(topCategory.getId());
-            boolean shouldPromoteOnlyLegacyChild =
-                topCategory.getNodes().isEmpty()
-                    && children != null
-                    && children.size() == 1
-                    && children.getFirst().getId().endsWith(".legacy");
-
-            if (shouldPromoteOnlyLegacyChild) {
-                promotedTopLevelCategories.add(children.getFirst());
-                childCategoriesMap.remove(topCategory.getId());
-                NodeCraft.LOGGER.debug("Promoted lone legacy child category {} to top-level display", children.getFirst().getId());
-            } else {
-                retainedTopLevelCategories.add(topCategory);
-            }
-        }
-        topLevelCategories = retainedTopLevelCategories;
-        topLevelCategories.addAll(promotedTopLevelCategories);
+        ensureCategoryHierarchyCache();
+        List<DisplayCategory> topLevelCategories = cachedTopLevelCategories;
+        Map<String, List<DisplayCategory>> childCategoriesMap = cachedChildCategoriesMap;
         
         boolean isSearching = searchManager.getSearchTerm() != null && !searchManager.getSearchTerm().isEmpty();
 
@@ -1311,6 +1273,62 @@ public class NodeLibraryComponent implements EditorComponent {
         
         ImGui.popStyleVar();
         ImGui.endChild();
+    }
+
+    private void ensureCategoryHierarchyCache() {
+        if (!categoryHierarchyCacheDirty) {
+            return;
+        }
+
+        Map<String, List<DisplayCategory>> childCategoriesMap = new HashMap<>();
+        List<DisplayCategory> topLevelCategories = new ArrayList<>();
+
+        for (DisplayCategory category : filteredCategories) {
+            String id = category.getId();
+
+            if (!id.contains(".")) {
+                topLevelCategories.add(category);
+            } else {
+                String parentId = id.substring(0, id.lastIndexOf('.'));
+                childCategoriesMap
+                    .computeIfAbsent(parentId, k -> new ArrayList<>())
+                    .add(category);
+            }
+        }
+
+        topLevelCategories.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
+        for (List<DisplayCategory> childList : childCategoriesMap.values()) {
+            childList.sort((cat1, cat2) -> cat1.getDisplayName().compareToIgnoreCase(cat2.getDisplayName()));
+        }
+
+        List<DisplayCategory> promotedTopLevelCategories = new ArrayList<>();
+        List<DisplayCategory> retainedTopLevelCategories = new ArrayList<>();
+        for (DisplayCategory topCategory : topLevelCategories) {
+            List<DisplayCategory> children = childCategoriesMap.get(topCategory.getId());
+            boolean shouldPromoteOnlyLegacyChild =
+                topCategory.getNodes().isEmpty()
+                    && children != null
+                    && children.size() == 1
+                    && children.getFirst().getId().endsWith(".legacy");
+
+            if (shouldPromoteOnlyLegacyChild) {
+                promotedTopLevelCategories.add(children.getFirst());
+                childCategoriesMap.remove(topCategory.getId());
+                NodeCraft.LOGGER.debug("Promoted lone legacy child category {} to top-level display", children.getFirst().getId());
+            } else {
+                retainedTopLevelCategories.add(topCategory);
+            }
+        }
+
+        retainedTopLevelCategories.addAll(promotedTopLevelCategories);
+        this.cachedTopLevelCategories = List.copyOf(retainedTopLevelCategories);
+
+        Map<String, List<DisplayCategory>> cachedChildren = new HashMap<>();
+        for (Map.Entry<String, List<DisplayCategory>> entry : childCategoriesMap.entrySet()) {
+            cachedChildren.put(entry.getKey(), List.copyOf(entry.getValue()));
+        }
+        this.cachedChildCategoriesMap = Map.copyOf(cachedChildren);
+        this.categoryHierarchyCacheDirty = false;
     }
     
     /**

@@ -467,7 +467,7 @@ public class NodeRegistry {
         String current = categoryId;
         while (current != null && current.contains(".") && !current.endsWith(".")) {
             current = current.substring(0, current.lastIndexOf('.'));
-            chain.add(0, current);
+            chain.addFirst(current);
         }
         return chain;
     }
