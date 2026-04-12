@@ -578,7 +578,9 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getMaterialPatternMappingOrder() {
-        return new HashMap<>();
+        Map<String, Integer> materialPatternMappingOrder = new HashMap<>();
+        materialPatternMappingOrder.put("material.pattern_mapping.checker_pattern_map", 0);
+        return materialPatternMappingOrder;
     }
 
     private static @NonNull Map<String, Integer> getMaterialBlockStateOrder() {
