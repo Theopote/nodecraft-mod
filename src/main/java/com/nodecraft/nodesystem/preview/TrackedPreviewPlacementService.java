@@ -19,7 +19,7 @@ import com.nodecraft.nodesystem.bake.PlacementMode;
 /**
  * Tracks temporary preview blocks placed directly into the world.
  * Clearing a tracked preview restores the previous world state.
- * Committing a tracked preview only removes the tracking metadata.
+ * This service only manages preview lifecycle and never commits builds.
  */
 public final class TrackedPreviewPlacementService {
 
@@ -162,24 +162,6 @@ public final class TrackedPreviewPlacementService {
         );
 
         return restoredCount;
-    }
-
-    public synchronized boolean commitTrackedPreview(World world, String nodeId) {
-        if (world == null || nodeId == null || nodeId.isEmpty()) {
-            return false;
-        }
-
-        Map<String, TrackedPreviewState> byNode = trackedPreviews.get(world);
-        if (byNode == null) {
-            return false;
-        }
-
-        boolean removed = byNode.remove(nodeId) != null;
-        if (byNode.isEmpty()) {
-            trackedPreviews.remove(world);
-        }
-        NodeCraft.LOGGER.info("TrackedPreviewPlacementService.commitTrackedPreview nodeId={} committed={}", nodeId, removed);
-        return removed;
     }
 
     public synchronized int getTrackedCount(World world, String nodeId) {
