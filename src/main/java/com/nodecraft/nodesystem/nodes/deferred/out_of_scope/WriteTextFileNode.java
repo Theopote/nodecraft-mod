@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -21,10 +21,10 @@ import java.util.UUID;
  * Write Text File 节点: 将字符串写入文本文件
  */
 @NodeInfo(
-    id = "utilities.fileio.write_text_file",
+    id = "deferred.out_of_scope.write_text_file",
     displayName = "写入文本文件",
     description = "将字符串写入文本文件",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class WriteTextFileNode extends BaseNode {
 
@@ -53,7 +53,7 @@ public class WriteTextFileNode extends BaseNode {
      * 构造一个新的写入文本文件节点
      */
     public WriteTextFileNode() {
-        super(UUID.randomUUID(), "utilities.fileio.write_text_file");
+        super(UUID.randomUUID(), "deferred.out_of_scope.write_text_file");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

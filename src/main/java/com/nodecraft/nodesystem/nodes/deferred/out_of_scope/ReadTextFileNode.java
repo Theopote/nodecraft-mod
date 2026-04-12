@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,10 +20,10 @@ import java.util.UUID;
  * Read Text File 节点: 读取文本文件内容为字符串
  */
 @NodeInfo(
-    id = "utilities.fileio.read_text_file",
+    id = "deferred.out_of_scope.read_text_file",
     displayName = "读取文本文件",
     description = "读取文本文件内容为字符串",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class ReadTextFileNode extends BaseNode {
 
@@ -52,7 +52,7 @@ public class ReadTextFileNode extends BaseNode {
      * 构造一个新的读取文本文件节点
      */
     public ReadTextFileNode() {
-        super(UUID.randomUUID(), "utilities.fileio.read_text_file");
+        super(UUID.randomUUID(), "deferred.out_of_scope.read_text_file");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -17,10 +17,10 @@ import java.util.UUID;
  * 此节点允许从文件加载节点图，并触发加载事件
  */
 @NodeInfo(
-    id = "utilities.fileio.load_graph",
+    id = "deferred.out_of_scope.load_graph",
     displayName = "加载图形",
     description = "加载 .nodecraft 文件",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class LoadGraphNode extends BaseNode {
 
@@ -43,7 +43,7 @@ public class LoadGraphNode extends BaseNode {
      * 构造一个新的加载图节点
      */
     public LoadGraphNode() {
-        super(UUID.randomUUID(), "utilities.fileio.load_graph");
+        super(UUID.randomUUID(), "deferred.out_of_scope.load_graph");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

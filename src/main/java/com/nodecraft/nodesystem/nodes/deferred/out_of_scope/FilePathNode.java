@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ZoomHelper;
@@ -23,10 +23,10 @@ import java.util.UUID;
  * File path input node for files or directories.
  */
 @NodeInfo(
-    id = "utilities.fileio.file_path",
+    id = "deferred.out_of_scope.file_path",
     displayName = "File Path",
     description = "Used to input a file or directory path.",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class FilePathNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class FilePathNode extends BaseCustomUINode {
     private transient volatile boolean bufferNeedsSync = true;
     
     public FilePathNode() {
-        super(UUID.randomUUID(), "utilities.fileio.file_path");
+        super(UUID.randomUUID(), "deferred.out_of_scope.file_path");
         
         addOutputPort(new BasePort(OUTPUT_PATH_ID, "Path", "The full file or directory path", NodeDataType.FILE_PATH, this));
         addOutputPort(new BasePort(OUTPUT_EXISTS_ID, "Exists", "Whether the file/directory exists", NodeDataType.BOOLEAN, this));

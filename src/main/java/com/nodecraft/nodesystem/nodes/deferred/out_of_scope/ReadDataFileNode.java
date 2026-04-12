@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -26,10 +26,10 @@ import java.util.UUID;
  * Read Data File 节点: 读取结构化数据文件（CSV、JSON 等）
  */
 @NodeInfo(
-    id = "utilities.fileio.read_data_file",
+    id = "deferred.out_of_scope.read_data_file",
     displayName = "读取数据文件",
     description = "读取结构化数据文件（CSV、JSON 等）",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class ReadDataFileNode extends BaseNode {
 
@@ -67,7 +67,7 @@ public class ReadDataFileNode extends BaseNode {
      * 构造一个新的读取数据文件节点
      */
     public ReadDataFileNode() {
-        super(UUID.randomUUID(), "utilities.fileio.read_data_file");
+        super(UUID.randomUUID(), "deferred.out_of_scope.read_data_file");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

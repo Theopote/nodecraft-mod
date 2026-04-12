@@ -355,6 +355,14 @@ public class NodeLibraryComponent implements EditorComponent {
         deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_merge", 17);
         deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_passthrough", 18);
         deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_switch", 19);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.file_path", 20);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.load_graph", 21);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.save_graph", 22);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.read_data_file", 23);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.read_text_file", 24);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.write_data_file", 25);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.write_text_file", 26);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.text_panel", 27);
         return deferredOutOfScopeOrder;
     }
 

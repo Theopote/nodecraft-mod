@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -23,10 +23,10 @@ import java.util.UUID;
  * Write Data File 节点: 将数据写入结构化文件（JSON、CSV等）
  */
 @NodeInfo(
-    id = "utilities.fileio.write_data_file",
+    id = "deferred.out_of_scope.write_data_file",
     displayName = "写入数据文件",
     description = "将数据写入结构化文件（JSON、CSV等）",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class WriteDataFileNode extends BaseNode {
 
@@ -65,7 +65,7 @@ public class WriteDataFileNode extends BaseNode {
      * 构造一个新的写入数据文件节点
      */
     public WriteDataFileNode() {
-        super(UUID.randomUUID(), "utilities.fileio.write_data_file");
+        super(UUID.randomUUID(), "deferred.out_of_scope.write_data_file");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -17,10 +17,10 @@ import java.util.UUID;
  * 此节点允许将当前节点图保存到文件
  */
 @NodeInfo(
-    id = "utilities.fileio.save_graph",
+    id = "deferred.out_of_scope.save_graph",
     displayName = "保存图形",
     description = "保存当前 .nodecraft 文件",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class SaveGraphNode extends BaseNode {
 
@@ -46,7 +46,7 @@ public class SaveGraphNode extends BaseNode {
      * 构造一个新的保存图节点
      */
     public SaveGraphNode() {
-        super(UUID.randomUUID(), "utilities.fileio.save_graph");
+        super(UUID.randomUUID(), "deferred.out_of_scope.save_graph");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_FILE_PATH_ID, "File Path", 

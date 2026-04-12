@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.fileio;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -23,10 +23,10 @@ import java.util.UUID;
  * Text panel node that provides a multi-line editable text area.
  */
 @NodeInfo(
-    id = "utilities.fileio.text_panel",
+    id = "deferred.out_of_scope.text_panel",
     displayName = "Text Panel",
     description = "Used to manually input text or display text data.",
-    category = "utilities.fileio"
+    category = "deferred.out_of_scope"
 )
 public class TextPanelNode extends BaseCustomUINode {
 
@@ -63,7 +63,7 @@ public class TextPanelNode extends BaseCustomUINode {
     private transient volatile boolean bufferNeedsSync = true;
     
     public TextPanelNode() {
-        super(UUID.randomUUID(), "utilities.fileio.text_panel");
+        super(UUID.randomUUID(), "deferred.out_of_scope.text_panel");
         
         addInputPort(new BasePort(INPUT_TEXT_ID, "Text Input", "Optional text input to display", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_TEXT_ID, "Text", "The text content as a single string", NodeDataType.STRING, this));

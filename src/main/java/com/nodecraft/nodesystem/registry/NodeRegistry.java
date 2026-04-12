@@ -182,6 +182,14 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "utilities.advanced.node_group", "deferred.out_of_scope.node_group");
         addMovedNodeAlias(aliases, "utilities.advanced.script", "deferred.out_of_scope.script");
         addMovedNodeAlias(aliases, "utilities.advanced.set_attribute", "deferred.out_of_scope.set_attribute");
+        addMovedNodeAlias(aliases, "utilities.fileio.file_path", "deferred.out_of_scope.file_path");
+        addMovedNodeAlias(aliases, "utilities.fileio.load_graph", "deferred.out_of_scope.load_graph");
+        addMovedNodeAlias(aliases, "utilities.fileio.save_graph", "deferred.out_of_scope.save_graph");
+        addMovedNodeAlias(aliases, "utilities.fileio.read_data_file", "deferred.out_of_scope.read_data_file");
+        addMovedNodeAlias(aliases, "utilities.fileio.read_text_file", "deferred.out_of_scope.read_text_file");
+        addMovedNodeAlias(aliases, "utilities.fileio.write_data_file", "deferred.out_of_scope.write_data_file");
+        addMovedNodeAlias(aliases, "utilities.fileio.write_text_file", "deferred.out_of_scope.write_text_file");
+        addMovedNodeAlias(aliases, "utilities.fileio.text_panel", "deferred.out_of_scope.text_panel");
         addMovedNodeAlias(aliases, "math.trigonometry.sine", "math.trigonometry.sin");
         addMovedNodeAlias(aliases, "math.trigonometry.cosine", "math.trigonometry.cos");
         addMovedNodeAlias(aliases, "math.trigonometry.tangent", "math.trigonometry.tan");
@@ -364,7 +372,7 @@ public class NodeRegistry {
             return "deferred.out_of_scope." + nodeId.substring("inputs.selectors.".length());
         }
         if (nodeId.startsWith("inputs.sources.")) {
-            return "utilities.fileio." + nodeId.substring("inputs.sources.".length());
+            return "deferred.out_of_scope." + nodeId.substring("inputs.sources.".length());
         }
         return switch (nodeId) {
             case "inputs.minecraft.selected_entity" -> "world.selection.selected_entity";
