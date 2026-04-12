@@ -137,6 +137,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> mathCompareOrder = getMathCompareOrder();
         categoryOrder.put("math.compare", mathCompareOrder);
 
+        Map<String, Integer> mathLogicOrder = getMathLogicOrder();
+        categoryOrder.put("math.logic", mathLogicOrder);
+
         Map<String, Integer> mathScalarMathOrder = getMathScalarMathOrder();
         categoryOrder.put("math.scalar_math", mathScalarMathOrder);
 
@@ -258,13 +261,25 @@ public class NodeLibraryComponent implements EditorComponent {
 
     private static @NonNull Map<String, Integer> getMathCompareOrder() {
         Map<String, Integer> mathCompareOrder = new HashMap<>();
-        mathCompareOrder.put("math.compare.equals", 0);
-        mathCompareOrder.put("math.compare.not_equals", 1);
-        mathCompareOrder.put("math.compare.less_than", 2);
-        mathCompareOrder.put("math.compare.less_than_or_equal", 3);
-        mathCompareOrder.put("math.compare.greater_than", 4);
-        mathCompareOrder.put("math.compare.greater_than_or_equal", 5);
+        mathCompareOrder.put("math.compare.compare", 0);
+        mathCompareOrder.put("math.compare.equals", 1);
+        mathCompareOrder.put("math.compare.not_equals", 2);
+        mathCompareOrder.put("math.compare.less_than", 3);
+        mathCompareOrder.put("math.compare.less_than_or_equal", 4);
+        mathCompareOrder.put("math.compare.greater_than", 5);
+        mathCompareOrder.put("math.compare.greater_than_or_equal", 6);
         return mathCompareOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getMathLogicOrder() {
+        Map<String, Integer> mathLogicOrder = new HashMap<>();
+        mathLogicOrder.put("math.logic.if", 0);
+        mathLogicOrder.put("math.logic.switch", 1);
+        mathLogicOrder.put("math.logic.and", 2);
+        mathLogicOrder.put("math.logic.or", 3);
+        mathLogicOrder.put("math.logic.not", 4);
+        mathLogicOrder.put("math.logic.xor", 5);
+        return mathLogicOrder;
     }
 
     private static @NonNull Map<String, Integer> getMathScalarMathOrder() {
@@ -895,7 +910,7 @@ public class NodeLibraryComponent implements EditorComponent {
             "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids",
             "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
             "transform.basic_transforms", "transform.deformations", "transform.orientation",
-            "math.scalar_math", "math.compare", "math.random", "math.trigonometry", "math.list_sequence", "deferred.math", "deferred.out_of_scope", "spatial.legacy",
+            "math.scalar_math", "math.compare", "math.logic", "math.random", "math.trigonometry", "math.list_sequence", "deferred.math", "deferred.out_of_scope", "spatial.legacy",
             "output.preview", "output.execute", "output.export", "output.debug", "utilities.organization", "utilities.assist"
         };
         

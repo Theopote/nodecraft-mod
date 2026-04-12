@@ -155,6 +155,11 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "math.logic.less_than_or_equal", "math.compare.less_than_or_equal");
         addMovedNodeAlias(aliases, "math.logic.greater_than", "math.compare.greater_than");
         addMovedNodeAlias(aliases, "math.logic.greater_than_or_equal", "math.compare.greater_than_or_equal");
+        addMovedNodeAlias(aliases, "logic.if", "math.logic.if");
+        addMovedNodeAlias(aliases, "logic.select_item", "math.logic.switch");
+        addMovedNodeAlias(aliases, "utilities.flow_control.branch", "math.logic.if");
+        addMovedNodeAlias(aliases, "utilities.flow_control.switch_select", "math.logic.switch");
+        addMovedNodeAlias(aliases, "utilities.flow_control.compare", "math.compare.compare");
         addMovedNodeAlias(aliases, "math.trigonometry.sine", "math.trigonometry.sin");
         addMovedNodeAlias(aliases, "math.trigonometry.cosine", "math.trigonometry.cos");
         addMovedNodeAlias(aliases, "math.trigonometry.tangent", "math.trigonometry.tan");
