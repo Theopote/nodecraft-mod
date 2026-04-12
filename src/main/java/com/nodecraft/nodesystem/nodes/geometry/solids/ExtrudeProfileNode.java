@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.solids.extrude",
     displayName = "Extrude Profile",
     description = "Extrudes a polygon profile by a direction vector into a top profile and side surface strip",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 0
 )
 public class ExtrudeProfileNode extends BaseNode {
 

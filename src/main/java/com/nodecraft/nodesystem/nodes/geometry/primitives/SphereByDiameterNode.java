@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.sphere_from_diameter",
     displayName = "Sphere By Diameter",
     description = "Constructs sphere geometry from two diameter endpoints",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 4
 )
 public class SphereByDiameterNode extends BaseNode {
 

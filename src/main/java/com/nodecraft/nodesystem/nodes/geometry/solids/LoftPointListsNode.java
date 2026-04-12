@@ -25,7 +25,8 @@ import java.util.UUID;
     id = "geometry.solids.loft_from_points",
     displayName = "Loft Point Lists",
     description = "Connects two ordered point lists and emits source paths, target paths, and loft rail segments",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 4
 )
 public class LoftPointListsNode extends BaseNode {
 

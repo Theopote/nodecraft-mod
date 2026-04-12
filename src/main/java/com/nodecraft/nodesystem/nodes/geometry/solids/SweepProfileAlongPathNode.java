@@ -24,7 +24,8 @@ import java.util.UUID;
     id = "geometry.solids.sweep",
     displayName = "Sweep Profile Along Path",
     description = "Sweeps a polygon profile along a path and emits section profiles plus a side surface strip",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 5
 )
 public class SweepProfileAlongPathNode extends BaseNode {
 

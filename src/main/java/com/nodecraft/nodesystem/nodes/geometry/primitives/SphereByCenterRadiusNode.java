@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.primitives.sphere",
     displayName = "Sphere By Center Radius",
     description = "Constructs sphere geometry from a center point and radius",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 3
 )
 public class SphereByCenterRadiusNode extends BaseNode {
 

@@ -9,7 +9,8 @@ import net.minecraft.util.math.BlockPos;
     id = "geometry.primitives.box_from_corner_size",
     displayName = "Box by Corner + Size",
     description = "Generates a box from one anchor corner and signed X/Y/Z sizes. Negative values grow in the opposite local axis direction.",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 1
 )
 public class BoxCornerSizeNode extends AbstractBoxGeneratorNode {
 

@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "geometry.solids.deconstruct_surface_strip",
     displayName = "Deconstruct Surface Strip",
     description = "Breaks a surface strip into section paths, flattened points, and rail segments",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 11
 )
 public class DeconstructSurfaceStripNode extends BaseNode {
 

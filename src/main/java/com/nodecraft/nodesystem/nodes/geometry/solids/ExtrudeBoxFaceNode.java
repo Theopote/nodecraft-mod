@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "geometry.solids.extrude_box_face",
     displayName = "Extrude Box Face",
     description = "Extrudes a box face into a new box segment and returns a composite geometry",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 2
 )
 public class ExtrudeBoxFaceNode extends BaseNode {
 

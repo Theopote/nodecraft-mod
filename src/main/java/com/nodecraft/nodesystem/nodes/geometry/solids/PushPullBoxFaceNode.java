@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.solids.push_pull_face",
     displayName = "Push/Pull Box Face",
     description = "Moves one box face along its normal and outputs a new box geometry",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 8
 )
 public class PushPullBoxFaceNode extends BaseNode {
 

@@ -26,7 +26,8 @@ import java.util.UUID;
     id = "geometry.solids.sweep_from_points",
     displayName = "Sweep Point List Along Path",
     description = "Sweeps an ordered point profile along a path and emits section paths plus connecting rail segments",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 6
 )
 public class SweepPointListAlongPathNode extends BaseNode {
 

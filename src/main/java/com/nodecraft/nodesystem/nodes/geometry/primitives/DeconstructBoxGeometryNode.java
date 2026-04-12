@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_box",
     displayName = "Deconstruct Box Geometry",
     description = "Extracts center, half extents, orientation, corners, and faces from box geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 10
 )
 public class DeconstructBoxGeometryNode extends BaseNode {
 

@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.curves.face_boundary_curve",
     displayName = "Box Face Boundary Path",
     description = "Builds a closed boundary path from a box face for preview and downstream path workflows",
-    category = "geometry.curves"
+    category = "geometry.curves",
+    order = 3
 )
 public class BoxFaceBoundaryPathNode extends BaseNode {
 

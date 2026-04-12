@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.profiles.resample_profile",
     displayName = "Resample Polygon Profile",
     description = "Resamples a polygon profile to a target edge count using perimeter-distance sampling",
-    category = "geometry.profiles"
+    category = "geometry.profiles",
+    order = 3
 )
 public class ResamplePolygonProfileNode extends BaseNode {
 

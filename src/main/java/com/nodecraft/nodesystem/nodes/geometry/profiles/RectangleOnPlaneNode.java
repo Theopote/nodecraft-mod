@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "geometry.profiles.rectangle_profile",
     displayName = "Rectangle On Plane",
     description = "Constructs a planar rectangle from a center point, width, height, and plane",
-    category = "geometry.profiles"
+    category = "geometry.profiles",
+    order = 0
 )
 public class RectangleOnPlaneNode extends BaseNode {
 

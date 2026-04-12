@@ -249,69 +249,23 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
-        Map<String, Integer> geometryBooleanOrder = new HashMap<>();
-        geometryBooleanOrder.put("geometry.boolean.bounding_box", 0);
-        geometryBooleanOrder.put("geometry.boolean.geometry_bounds", 1);
-        return geometryBooleanOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometryPrimitivesOrder() {
-        Map<String, Integer> geometryPrimitivesOrder = new HashMap<>();
-        geometryPrimitivesOrder.put("geometry.primitives.box", 0);
-        geometryPrimitivesOrder.put("geometry.primitives.box_from_corner_size", 1);
-        geometryPrimitivesOrder.put("geometry.primitives.box_from_corners", 2);
-        geometryPrimitivesOrder.put("geometry.primitives.sphere", 3);
-        geometryPrimitivesOrder.put("geometry.primitives.sphere_from_diameter", 4);
-        geometryPrimitivesOrder.put("geometry.primitives.cylinder", 5);
-        geometryPrimitivesOrder.put("geometry.primitives.cone", 6);
-        geometryPrimitivesOrder.put("geometry.primitives.ellipsoid", 7);
-        geometryPrimitivesOrder.put("geometry.primitives.octahedron", 8);
-        geometryPrimitivesOrder.put("geometry.primitives.tetrahedron", 9);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_box", 10);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_sphere", 11);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_cylinder", 12);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_cone", 13);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_ellipsoid", 14);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_octahedron", 15);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_tetrahedron", 16);
-        geometryPrimitivesOrder.put("geometry.primitives.deconstruct_prism", 17);
-        return geometryPrimitivesOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometryCurvesOrder() {
-        Map<String, Integer> geometryCurvesOrder = new HashMap<>();
-        geometryCurvesOrder.put("geometry.curves.curve_from_points", 0);
-        geometryCurvesOrder.put("geometry.curves.divide_curve_to_points", 1);
-        geometryCurvesOrder.put("geometry.curves.edge_to_curve", 2);
-        geometryCurvesOrder.put("geometry.curves.face_boundary_curve", 3);
-        return geometryCurvesOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometryProfilesOrder() {
-        Map<String, Integer> geometryProfilesOrder = new HashMap<>();
-        geometryProfilesOrder.put("geometry.profiles.rectangle_profile", 0);
-        geometryProfilesOrder.put("geometry.profiles.polygon_profile", 1);
-        geometryProfilesOrder.put("geometry.profiles.custom_profile", 2);
-        geometryProfilesOrder.put("geometry.profiles.resample_profile", 3);
-        geometryProfilesOrder.put("geometry.profiles.deconstruct_profile", 4);
-        return geometryProfilesOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getGeometrySolidsOrder() {
-        Map<String, Integer> geometrySolidsOrder = new HashMap<>();
-        geometrySolidsOrder.put("geometry.solids.extrude", 0);
-        geometrySolidsOrder.put("geometry.solids.extrude_from_points", 1);
-        geometrySolidsOrder.put("geometry.solids.extrude_box_face", 2);
-        geometrySolidsOrder.put("geometry.solids.loft", 3);
-        geometrySolidsOrder.put("geometry.solids.loft_from_points", 4);
-        geometrySolidsOrder.put("geometry.solids.sweep", 5);
-        geometrySolidsOrder.put("geometry.solids.sweep_from_points", 6);
-        geometrySolidsOrder.put("geometry.solids.surface_strip_to_geometry", 7);
-        geometrySolidsOrder.put("geometry.solids.push_pull_face", 8);
-        geometrySolidsOrder.put("geometry.solids.extrude_profile", 9);
-        geometrySolidsOrder.put("geometry.solids.extrude_profile_from_points", 10);
-        geometrySolidsOrder.put("geometry.solids.deconstruct_surface_strip", 11);
-        return geometrySolidsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getTransformBasicTransformsOrder() {

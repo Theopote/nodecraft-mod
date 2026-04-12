@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "geometry.profiles.polygon_profile",
     displayName = "Regular Polygon On Plane",
     description = "Constructs a regular polygon from a center point, radius, side count, and plane",
-    category = "geometry.profiles"
+    category = "geometry.profiles",
+    order = 1
 )
 public class RegularPolygonOnPlaneNode extends BaseNode {
 

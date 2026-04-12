@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_octahedron",
     displayName = "Deconstruct Octahedron",
     description = "Extracts center, size, vertices, bounds, and analytical values from octahedron geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 15
 )
 public class DeconstructOctahedronNode extends BaseNode {
 

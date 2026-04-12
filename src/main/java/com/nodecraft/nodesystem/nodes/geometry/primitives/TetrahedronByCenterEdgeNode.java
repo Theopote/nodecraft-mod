@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.primitives.tetrahedron",
     displayName = "Tetrahedron By Center Edge",
     description = "Constructs tetrahedron geometry from a center point and edge length",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 9
 )
 public class TetrahedronByCenterEdgeNode extends BaseNode {
 

@@ -8,7 +8,6 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
-import imgui.type.ImBoolean;
 import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;

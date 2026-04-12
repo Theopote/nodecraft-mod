@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_cone",
     displayName = "Deconstruct Cone",
     description = "Extracts axis, height, radius, bounds, and analytical values from cone geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 13
 )
 public class DeconstructConeNode extends BaseNode {
 

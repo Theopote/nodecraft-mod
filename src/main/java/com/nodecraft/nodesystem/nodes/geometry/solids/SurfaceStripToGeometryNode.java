@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "geometry.solids.surface_strip_to_geometry",
     displayName = "Surface Strip To Geometry",
     description = "Bridges a surface strip into reusable geometry by sampling section edges and rails as cylinders",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 7
 )
 public class SurfaceStripToGeometryNode extends BaseNode {
 

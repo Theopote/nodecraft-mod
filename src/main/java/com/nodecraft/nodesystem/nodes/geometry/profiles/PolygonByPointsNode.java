@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "geometry.profiles.custom_profile",
     displayName = "Polygon By Points",
     description = "Constructs a planar polygon profile from an ordered point list",
-    category = "geometry.profiles"
+    category = "geometry.profiles",
+    order = 2
 )
 public class PolygonByPointsNode extends BaseNode {
 

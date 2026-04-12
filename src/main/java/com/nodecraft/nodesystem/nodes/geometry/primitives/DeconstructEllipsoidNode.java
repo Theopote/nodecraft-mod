@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_ellipsoid",
     displayName = "Deconstruct Ellipsoid",
     description = "Extracts center, radii, bounds, volume, and approximate surface area from ellipsoid geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 14
 )
 public class DeconstructEllipsoidNode extends BaseNode {
 

@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "geometry.primitives.octahedron",
     displayName = "Octahedron By Center Size",
     description = "Constructs octahedron geometry from a center point and vertex radius",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 8
 )
 public class OctahedronByCenterSizeNode extends BaseNode {
 

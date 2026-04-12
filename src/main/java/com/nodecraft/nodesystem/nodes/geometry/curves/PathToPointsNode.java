@@ -22,7 +22,8 @@ import java.util.UUID;
     id = "geometry.curves.divide_curve_to_points",
     displayName = "Path To Points",
     description = "Extracts an ordered point list from a line, polyline, or curve",
-    category = "geometry.curves"
+    category = "geometry.curves",
+    order = 1
 )
 public class PathToPointsNode extends BaseNode {
 

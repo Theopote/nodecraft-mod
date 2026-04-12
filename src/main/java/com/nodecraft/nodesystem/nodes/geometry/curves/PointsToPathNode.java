@@ -24,7 +24,8 @@ import java.util.UUID;
     id = "geometry.curves.curve_from_points",
     displayName = "Points To Path",
     description = "Builds a line or polyline from an ordered point list",
-    category = "geometry.curves"
+    category = "geometry.curves",
+    order = 0
 )
 public class PointsToPathNode extends BaseNode {
 

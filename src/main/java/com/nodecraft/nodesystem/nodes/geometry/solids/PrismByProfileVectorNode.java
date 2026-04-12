@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "geometry.solids.extrude_profile",
     displayName = "Prism By Profile Vector",
     description = "Constructs prism geometry from a polygon profile and an extrusion vector",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 9
 )
 public class PrismByProfileVectorNode extends BaseNode {
 

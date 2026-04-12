@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.cylinder",
     displayName = "Cylinder By Axis Radius",
     description = "Constructs cylinder geometry from two axis endpoints and a radius",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 5
 )
 public class CylinderByAxisRadiusNode extends BaseNode {
 

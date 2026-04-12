@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "geometry.primitives.cone",
     displayName = "Cone By Base Apex Radius",
     description = "Constructs cone geometry from a base center, apex point, and base radius",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 6
 )
 public class ConeByBaseApexRadiusNode extends BaseNode {
 

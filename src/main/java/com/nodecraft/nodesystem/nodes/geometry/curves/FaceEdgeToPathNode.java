@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "geometry.curves.edge_to_curve",
     displayName = "Face Edge To Path",
     description = "Converts a face edge into line, polyline, and point outputs for path workflows",
-    category = "geometry.curves"
+    category = "geometry.curves",
+    order = 2
 )
 public class FaceEdgeToPathNode extends BaseNode {
 

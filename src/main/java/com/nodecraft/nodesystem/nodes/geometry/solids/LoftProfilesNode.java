@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "geometry.solids.loft",
     displayName = "Loft Profiles",
     description = "Lofts two polygon profiles with matching edge counts into a side surface strip",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 3
 )
 public class LoftProfilesNode extends BaseNode {
 

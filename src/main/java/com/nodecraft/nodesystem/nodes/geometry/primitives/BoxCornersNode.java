@@ -9,7 +9,8 @@ import net.minecraft.util.math.BlockPos;
     id = "geometry.primitives.box_from_corners",
     displayName = "Box by Two Corners",
     description = "Generates an axis-aligned box from two opposite corner points",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 2
 )
 public class BoxCornersNode extends AbstractBoxGeneratorNode {
 

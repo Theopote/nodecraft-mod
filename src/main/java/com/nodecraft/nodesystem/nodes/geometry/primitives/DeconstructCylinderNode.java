@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "geometry.primitives.deconstruct_cylinder",
     displayName = "Deconstruct Cylinder",
     description = "Extracts axis, radius, height, bounds, and analytical values from cylinder geometry",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 12
 )
 public class DeconstructCylinderNode extends BaseNode {
 

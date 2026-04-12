@@ -9,7 +9,8 @@ import net.minecraft.util.math.BlockPos;
     id = "geometry.primitives.box",
     displayName = "Box by Center + Size",
     description = "Generates a box from a center point and explicit X/Y/Z sizes",
-    category = "geometry.primitives"
+    category = "geometry.primitives",
+    order = 0
 )
 public class BoxCenterSizeNode extends AbstractBoxGeneratorNode {
 

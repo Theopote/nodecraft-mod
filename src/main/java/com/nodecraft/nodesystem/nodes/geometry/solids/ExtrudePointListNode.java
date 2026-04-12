@@ -25,7 +25,8 @@ import java.util.UUID;
     id = "geometry.solids.extrude_from_points",
     displayName = "Extrude Point List",
     description = "Extrudes an ordered point list by a direction vector and emits source path, top path, and side segments",
-    category = "geometry.solids"
+    category = "geometry.solids",
+    order = 1
 )
 public class ExtrudePointListNode extends BaseNode {
 
