@@ -17,8 +17,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "reference.planes.world_plane",
-    displayName = "平面选择器",
-    description = "创建标准 XY / YZ / XZ 平面，并支持设置或输入原点",
+    displayName = "World Plane",
+    description = "Creates a standard XY, YZ, or XZ world plane with a configurable origin",
     category = "reference.planes"
 )
 public class PlaneSelectorNode extends BaseNode {
@@ -34,34 +34,55 @@ public class PlaneSelectorNode extends BaseNode {
     private static final String OUTPUT_ORIGIN_ID = "output_origin";
     private static final String OUTPUT_NORMAL_ID = "output_normal";
 
-    @NodeProperty(displayName = "平面预设", category = "平面", order = 1,
-        description = "选择标准平面的朝向")
+    @NodeProperty(
+        displayName = "Plane Preset",
+        category = "Plane",
+        order = 1,
+        description = "Selects which standard world plane to construct"
+    )
     private PlanePreset planePreset = PlanePreset.XZ;
 
-    @NodeProperty(displayName = "原点 X", category = "原点", order = 2,
-        description = "未连接原点输入时使用的 X 坐标")
+    @NodeProperty(
+        displayName = "Origin X",
+        category = "Origin",
+        order = 2,
+        description = "Fallback X coordinate when no origin input is connected"
+    )
     private int originX = 0;
 
-    @NodeProperty(displayName = "原点 Y", category = "原点", order = 3,
-        description = "未连接原点输入时使用的 Y 坐标")
+    @NodeProperty(
+        displayName = "Origin Y",
+        category = "Origin",
+        order = 3,
+        description = "Fallback Y coordinate when no origin input is connected"
+    )
     private int originY = 0;
 
-    @NodeProperty(displayName = "原点 Z", category = "原点", order = 4,
-        description = "未连接原点输入时使用的 Z 坐标")
+    @NodeProperty(
+        displayName = "Origin Z",
+        category = "Origin",
+        order = 4,
+        description = "Fallback Z coordinate when no origin input is connected"
+    )
     private int originZ = 0;
 
     public PlaneSelectorNode() {
         super(UUID.randomUUID(), "reference.planes.world_plane");
 
-        addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin", "可选的平面原点输入", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_PLANE_ID, "Plane", "生成的平面数据", NodeDataType.PLANE, this));
-        addOutputPort(new BasePort(OUTPUT_ORIGIN_ID, "Origin", "平面原点", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_NORMAL_ID, "Normal", "平面法线", NodeDataType.VECTOR, this));
+        addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin",
+            "Optional block-position origin for the selected world plane",
+            NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_PLANE_ID, "Plane",
+            "Constructed plane data", NodeDataType.PLANE, this));
+        addOutputPort(new BasePort(OUTPUT_ORIGIN_ID, "Origin",
+            "Plane origin as a block position", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_NORMAL_ID, "Normal",
+            "Plane normal vector", NodeDataType.VECTOR, this));
     }
 
     @Override
     public String getDescription() {
-        return "创建标准 XY / YZ / XZ 平面，并支持设置或输入原点。";
+        return "Creates a standard XY, YZ, or XZ world plane with a configurable origin";
     }
 
     @Override
