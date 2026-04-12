@@ -584,7 +584,9 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getMaterialBlockStateOrder() {
-        return new HashMap<>();
+        Map<String, Integer> materialBlockStateOrder = new HashMap<>();
+        materialBlockStateOrder.put("material.block_state.block_state_assign", 0);
+        return materialBlockStateOrder;
     }
 
     private static @NonNull Map<String, Integer> getMaterialSurfaceAgingOrder() {

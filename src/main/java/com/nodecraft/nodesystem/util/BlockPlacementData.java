@@ -3,9 +3,26 @@ package com.nodecraft.nodesystem.util;
 import net.minecraft.util.math.BlockPos;
 
 /**
- * 单个方块的放置信息：坐标 + 方块类型 ID。
- * 用于材质代理等节点输出「按位置分配不同方块」的列表。
+ * Immutable placement data for a single block position, block id, and optional state overrides.
  */
-public record BlockPlacementData(BlockPos pos, String blockId) {
-    public BlockPos pos() { return pos != null ? pos.toImmutable() : null; }
+public record BlockPlacementData(BlockPos pos, String blockId, BlockStateData stateData) {
+
+    public BlockPlacementData(BlockPos pos, String blockId) {
+        this(pos, blockId, null);
+    }
+
+    public BlockPlacementData {
+        pos = pos != null ? pos.toImmutable() : null;
+        stateData = stateData != null ? stateData.copy() : null;
+    }
+
+    @Override
+    public BlockPos pos() {
+        return pos != null ? pos.toImmutable() : null;
+    }
+
+    @Override
+    public BlockStateData stateData() {
+        return stateData != null ? stateData.copy() : null;
+    }
 }
