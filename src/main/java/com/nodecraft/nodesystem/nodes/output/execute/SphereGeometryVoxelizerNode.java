@@ -19,8 +19,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_sphere_to_blocks",
-    displayName = "Sphere Geometry To Blocks",
-    description = "Voxelizes SphereData into Minecraft block coordinates",
+    displayName = "Bake Sphere To Blocks",
+    description = "Bakes sphere geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 5
 )
@@ -53,7 +53,7 @@ public class SphereGeometryVoxelizerNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Voxelizes SphereData into Minecraft block coordinates";
+        return "Bakes sphere geometry into Minecraft block coordinates for final execution";
     }
 
     @Override

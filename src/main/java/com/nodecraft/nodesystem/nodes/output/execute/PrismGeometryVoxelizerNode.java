@@ -18,8 +18,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_prism_to_blocks",
-    displayName = "Prism Geometry To Blocks",
-    description = "Voxelizes PrismGeometryData into Minecraft block coordinates (supports solid and shell modes)",
+    displayName = "Bake Prism To Blocks",
+    description = "Bakes prism geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 9
 )

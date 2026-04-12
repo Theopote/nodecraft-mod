@@ -18,8 +18,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_octahedron_to_blocks",
-    displayName = "Octahedron Geometry To Blocks",
-    description = "Voxelizes OctahedronGeometryData into Minecraft block coordinates",
+    displayName = "Bake Octahedron To Blocks",
+    description = "Bakes octahedron geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 10
 )

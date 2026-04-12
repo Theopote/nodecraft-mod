@@ -18,8 +18,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_cone_to_blocks",
-    displayName = "Cone Geometry To Blocks",
-    description = "Voxelizes ConeGeometryData into Minecraft block coordinates",
+    displayName = "Bake Cone To Blocks",
+    description = "Bakes cone geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 7
 )

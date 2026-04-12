@@ -95,6 +95,12 @@ Practical rule:
 2. If a node executes or commits the result of the modeling/material pipeline, it belongs in `output.execute`.
 3. Geometry-to-block conversion that exists to support final build execution should stay aligned with `output.execute`, not `world.write`.
 
+In practice this means:
+
+- `output.execute.apply_changes` is the final commit node
+- `output.execute.bake_*_to_blocks` nodes are execution-side preparation nodes
+- `world.write.*` remains for explicit direct world-edit commands
+
 ## Removed Compatibility Buckets
 
 The following source trees have been physically removed:

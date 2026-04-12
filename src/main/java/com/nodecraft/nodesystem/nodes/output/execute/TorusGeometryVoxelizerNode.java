@@ -21,8 +21,8 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.execute.bake_torus_to_blocks",
-    displayName = "Torus Geometry To Blocks",
-    description = "Voxelizes TorusGeometryData into Minecraft block coordinates",
+    displayName = "Bake Torus To Blocks",
+    description = "Bakes torus geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 12
 )

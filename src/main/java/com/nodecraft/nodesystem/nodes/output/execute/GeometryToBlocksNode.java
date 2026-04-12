@@ -21,8 +21,8 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.execute.bake_geometry_to_blocks",
-    displayName = "Geometry To Blocks",
-    description = "Voxelizes any supported geometry into Minecraft block coordinates",
+    displayName = "Bake Geometry To Blocks",
+    description = "Bakes any supported geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 2
 )
@@ -50,7 +50,7 @@ public class GeometryToBlocksNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Voxelizes any supported geometry into Minecraft block coordinates";
+        return "Bakes any supported geometry into Minecraft block coordinates for final execution";
     }
 
     @Override

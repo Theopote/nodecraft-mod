@@ -21,8 +21,8 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.execute.bake_box_to_blocks",
-    displayName = "Box Geometry To Blocks",
-    description = "Voxelizes BoxGeometryData into Minecraft block coordinates",
+    displayName = "Bake Box To Blocks",
+    description = "Bakes box geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 4
 )
@@ -50,12 +50,12 @@ public class BoxGeometryVoxelizerNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Voxelizes BoxGeometryData into Minecraft block coordinates";
+        return "Bakes box geometry into Minecraft block coordinates for final execution";
     }
 
     @Override
     public String getDisplayName() {
-        return "Box Geometry To Blocks";
+        return "Bake Box To Blocks";
     }
 
     @Override

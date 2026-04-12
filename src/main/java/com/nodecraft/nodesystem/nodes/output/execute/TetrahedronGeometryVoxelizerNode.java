@@ -15,8 +15,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_tetrahedron_to_blocks",
-    displayName = "Tetrahedron Geometry To Blocks",
-    description = "Voxelizes TetrahedronGeometryData into Minecraft block coordinates",
+    displayName = "Bake Tetrahedron To Blocks",
+    description = "Bakes tetrahedron geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 11
 )

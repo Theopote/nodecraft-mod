@@ -18,8 +18,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_surface_strip_to_blocks",
-    displayName = "Surface Strip To Blocks",
-    description = "Approximates a surface strip as a sampled block lattice using section edges and rails",
+    displayName = "Bake Surface Strip To Blocks",
+    description = "Bakes a surface strip into block coordinates for final execution",
     category = "output.execute",
     order = 3
 )
@@ -51,7 +51,7 @@ public class SurfaceStripToBlocksNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Approximates a surface strip as a sampled block lattice using section edges and rails";
+        return "Bakes a surface strip into block coordinates for final execution";
     }
 
     @Override

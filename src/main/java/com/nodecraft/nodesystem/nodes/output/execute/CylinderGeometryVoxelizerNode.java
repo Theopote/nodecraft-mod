@@ -18,8 +18,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_cylinder_to_blocks",
-    displayName = "Cylinder Geometry To Blocks",
-    description = "Voxelizes CylinderGeometryData into Minecraft block coordinates",
+    displayName = "Bake Cylinder To Blocks",
+    description = "Bakes cylinder geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 6
 )

@@ -19,8 +19,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "output.execute.bake_ellipsoid_to_blocks",
-    displayName = "Ellipsoid Geometry To Blocks",
-    description = "Voxelizes EllipsoidGeometryData into Minecraft block coordinates",
+    displayName = "Bake Ellipsoid To Blocks",
+    description = "Bakes ellipsoid geometry into Minecraft block coordinates for final execution",
     category = "output.execute",
     order = 8
 )
