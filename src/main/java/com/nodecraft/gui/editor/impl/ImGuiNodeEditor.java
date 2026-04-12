@@ -123,7 +123,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
                 String[] testNodeTypes = {
                         // 基础输入节点（如果存在）
                         "input.numeric.integer", "input.numeric.float_slider",
-                        "input.numeric.boolean_toggle", "inputs.basic.text_input",
+                        "input.numeric.boolean_toggle", "input.basic.text_input",
                         // 数学运算节点
                         "math.scalar_math.addition", "math.scalar_math.multiplication", "math.scalar_math.division",
                         "math.scalar_math.subtraction", "math.scalar_math.power", "math.scalar_math.clamp",

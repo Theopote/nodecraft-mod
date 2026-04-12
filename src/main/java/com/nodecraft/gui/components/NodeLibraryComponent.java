@@ -668,7 +668,6 @@ public class NodeLibraryComponent implements EditorComponent {
             
             // Subcategory colors use slightly lighter variants of their parent colors.
             // Input subcategories.
-            CATEGORY_COLORS_FLOAT.put("inputs.basic", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("inputs.sources", new float[]{0.45f, 0.75f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.numeric", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
@@ -676,16 +675,13 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("input.type_selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             
             // Data subcategories.
-            CATEGORY_COLORS_FLOAT.put("data.conversion", new float[]{1.0f, 0.65f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.lists", new float[]{1.0f, 0.7f, 0.3f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.sequence", new float[]{1.0f, 0.75f, 0.35f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("data.text", new float[]{1.0f, 0.8f, 0.4f, 1.0f});
             
             // Math subcategories.
             CATEGORY_COLORS_FLOAT.put("math.logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("math.randomness", new float[]{0.5f, 0.95f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.trigonometry", new float[]{0.55f, 1.0f, 0.55f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("math.vector", new float[]{0.6f, 1.0f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.compare", new float[]{0.48f, 0.9f, 0.48f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.scalar_math", new float[]{0.42f, 0.87f, 0.42f, 1.0f});
@@ -737,9 +733,7 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("visualization.preview", new float[]{1.0f, 0.4f, 0.7f, 1.0f});
             
             // Utilities and workflow compatibility subcategories.
-            CATEGORY_COLORS_FLOAT.put("utilities.advanced", new float[]{0.75f, 0.75f, 0.75f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.experimental", new float[]{0.8f, 0.8f, 0.8f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("utilities.fileio", new float[]{0.85f, 0.85f, 0.85f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.organization", new float[]{0.9f, 0.9f, 0.9f, 1.0f});
             
             // Flora subcategories.

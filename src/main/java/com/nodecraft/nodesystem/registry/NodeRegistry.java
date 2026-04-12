@@ -359,17 +359,14 @@ public class NodeRegistry {
                 return "math.list_sequence.repeat";
             }
             case "data.sequence.series" -> {
-                return "math.list_sequence.series";
+                return "deferred.math.math_series";
             }
         }
         if (nodeId.startsWith("data.conversion.")) {
-            return "utilities.data_conversion." + nodeId.substring("data.conversion.".length());
+            return "deferred.out_of_scope." + nodeId.substring("data.conversion.".length());
         }
         if (nodeId.startsWith("data.text.")) {
             return "deferred.out_of_scope." + nodeId.substring("data.text.".length());
-        }
-        if (nodeId.startsWith("control.flow.")) {
-            return "utilities.flow_control." + nodeId.substring("control.flow.".length());
         }
         if (nodeId.startsWith("inputs.basic.")) {
             return "input.basic." + nodeId.substring("inputs.basic.".length());
@@ -381,9 +378,16 @@ public class NodeRegistry {
             return "deferred.out_of_scope." + nodeId.substring("inputs.sources.".length());
         }
         return switch (nodeId) {
+            case "control.flow.compare" -> "math.compare.compare";
+            case "control.flow.branch" -> "math.logic.if";
+            case "control.flow.switch", "control.flow.switch_select" -> "math.logic.switch";
+            case "control.flow.for_each" -> "deferred.out_of_scope.for_each";
+            case "control.flow.geometry_gate" -> "deferred.out_of_scope.geometry_gate";
+            case "control.flow.geometry_merge" -> "deferred.out_of_scope.geometry_merge";
+            case "control.flow.geometry_passthrough" -> "deferred.out_of_scope.geometry_passthrough";
+            case "control.flow.geometry_switch" -> "deferred.out_of_scope.geometry_switch";
             case "inputs.minecraft.selected_entity" -> "world.selection.selected_entity";
             case "inputs.minecraft.selected_block_sequence" -> "world.selection.selected_block_sequence";
-            case "deferred.math.math_series" -> "math.deferred.math_series";
             default -> nodeId;
         };
     }
