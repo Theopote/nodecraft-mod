@@ -11,12 +11,14 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.BlockStateData;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
 import imgui.flag.ImGuiCol;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
+import net.minecraft.state.property.Property;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -275,24 +277,30 @@ public class ApplyChangesNode extends BaseCustomUINode {
     }
 
     private int applyPlacementList(ExecutionContext context, List<BlockPlacementData> placements) {
-        Map<String, List<BlockPos>> byBlockId = new LinkedHashMap<>();
+        Map<String, List<BlockPlacementData>> byBlockId = new LinkedHashMap<>();
         for (BlockPlacementData placement : placements) {
-            byBlockId.computeIfAbsent(placement.blockId(), ignored -> new ArrayList<>()).add(placement.pos().toImmutable());
+            byBlockId.computeIfAbsent(placement.blockId(), ignored -> new ArrayList<>()).add(placement);
         }
 
         int count = 0;
-        for (Map.Entry<String, List<BlockPos>> entry : byBlockId.entrySet()) {
-            BlockState state = resolveBlockState(entry.getKey());
-            if (state == null) {
+        for (Map.Entry<String, List<BlockPlacementData>> entry : byBlockId.entrySet()) {
+            BlockState defaultState = resolveBlockState(entry.getKey());
+            if (defaultState == null) {
                 continue;
             }
 
-            List<BlockPos> positions = entry.getValue();
-            if (useAsyncBake) {
+            List<BlockPlacementData> placementBatch = entry.getValue();
+            boolean hasStateOverrides = placementBatch.stream().anyMatch(placement -> placement.stateData() != null && !placement.stateData().isEmpty());
+
+            if (useAsyncBake && !hasStateOverrides) {
+                List<BlockPos> positions = new ArrayList<>(placementBatch.size());
+                for (BlockPlacementData placement : placementBatch) {
+                    positions.add(placement.pos().toImmutable());
+                }
                 BakePlacementService.getInstance().enqueue(
                     context.getWorld(),
                     new ArrayList<>(positions),
-                    state,
+                    defaultState,
                     placementMode,
                     recordUndo,
                     1000,
@@ -300,10 +308,12 @@ public class ApplyChangesNode extends BaseCustomUINode {
                 );
                 count += positions.size();
             } else {
-                for (BlockPos pos : positions) {
+                for (BlockPlacementData placement : placementBatch) {
+                    BlockPos pos = placement.pos();
                     if (placementMode == PlacementMode.INCREMENTAL && !context.getWorld().isAir(pos)) {
                         continue;
                     }
+                    BlockState state = applyBlockStateData(defaultState, placement.stateData());
                     if (context.getWorld().setBlockState(pos, state, Block.NOTIFY_ALL)) {
                         count++;
                     }
@@ -311,6 +321,31 @@ public class ApplyChangesNode extends BaseCustomUINode {
             }
         }
         return count;
+    }
+
+    private BlockState applyBlockStateData(BlockState baseState, @Nullable BlockStateData stateData) {
+        if (baseState == null || stateData == null || stateData.isEmpty()) {
+            return baseState;
+        }
+
+        BlockState resolved = baseState;
+        for (Map.Entry<String, String> entry : stateData.entrySet()) {
+            Property<?> property = resolved.getProperties().stream()
+                .filter(candidate -> candidate.getName().equals(entry.getKey()))
+                .findFirst()
+                .orElse(null);
+            if (property == null) {
+                continue;
+            }
+            resolved = applyPropertyValue(resolved, property, entry.getValue());
+        }
+        return resolved;
+    }
+
+    private <T extends Comparable<T>> BlockState applyPropertyValue(BlockState state, Property<T> property, String rawValue) {
+        return property.parse(rawValue)
+            .map(parsed -> state.with(property, parsed))
+            .orElse(state);
     }
 
     private int applyUniformBlocks(ExecutionContext context, BlockPosList blocks, BlockState targetState) {

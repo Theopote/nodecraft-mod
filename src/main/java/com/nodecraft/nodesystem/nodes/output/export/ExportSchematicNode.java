@@ -129,6 +129,11 @@ public class ExportSchematicNode extends BaseCustomUINode {
             entry.put("y", NbtInt.of(bpd.pos().getY()));
             entry.put("z", NbtInt.of(bpd.pos().getZ()));
             entry.put("block", NbtString.of(bpd.blockId()));
+            if (bpd.stateData() != null && !bpd.stateData().isEmpty()) {
+                NbtCompound state = new NbtCompound();
+                bpd.stateData().forEach((key, value) -> state.put(key, NbtString.of(value)));
+                entry.put("state", state);
+            }
             blocksList.add(entry);
         }
         root.put("blocks", blocksList);
