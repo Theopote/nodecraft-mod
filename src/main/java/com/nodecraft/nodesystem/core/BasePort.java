@@ -8,13 +8,18 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
- * 基础端口类，实现 IPort 接口。
+ * Default port implementation.
  *
- * 连接语义：
- * - 输入端口最多只能连接一个上游输出端口
- * - 输出端口可以连接多个下游输入端口
+ * <p>Direction is explicit metadata and is assigned by the owning node when the
+ * port is added as an input or output.</p>
  */
 public class BasePort implements IPort {
+
+    public enum Direction {
+        INPUT,
+        OUTPUT,
+        UNASSIGNED
+    }
 
     private final String id;
     private final String displayName;
@@ -22,6 +27,7 @@ public class BasePort implements IPort {
     private final NodeDataType dataType;
     private final INode node;
     private final boolean allowMultipleIncomingConnections;
+    private Direction direction = Direction.UNASSIGNED;
     private boolean isConnected = false;
     private IPort connectedPort = null;
     private final Set<IPort> connectedPorts = new LinkedHashSet<>();
@@ -44,30 +50,12 @@ public class BasePort implements IPort {
 
     private void initializeDefaultValue() {
         switch (dataType) {
-            case INTEGER:
-                value = 0;
-                break;
-            case FLOAT:
-                value = 0.0f;
-                break;
-            case DOUBLE:
-                value = 0.0d;
-                break;
-            case BOOLEAN:
-                value = false;
-                break;
-            case STRING:
-                value = "";
-                break;
-            case VECTOR:
-            case BLOCK_POS:
-            case BLOCK_LIST:
-            case CURVE:
-            case COLOR:
-            case ANY:
-            default:
-                value = null;
-                break;
+            case INTEGER -> value = 0;
+            case FLOAT -> value = 0.0f;
+            case DOUBLE -> value = 0.0d;
+            case BOOLEAN -> value = false;
+            case STRING -> value = "";
+            default -> value = null;
         }
     }
 
@@ -93,20 +81,11 @@ public class BasePort implements IPort {
 
     @Override
     public boolean isInput() {
-        return !isOutput();
+        return resolveDirection() == Direction.INPUT;
     }
 
     public boolean isOutput() {
-        if (node != null && node.getOutputPorts() != null) {
-            for (IPort outputPort : node.getOutputPorts()) {
-                if (outputPort == this) {
-                    return true;
-                }
-            }
-        }
-
-        // 兼容旧逻辑：在节点列表不可用时仍回退到命名前缀判断。
-        return id.startsWith("output_");
+        return resolveDirection() == Direction.OUTPUT;
     }
 
     @Override
@@ -139,15 +118,22 @@ public class BasePort implements IPort {
     @Override
     public boolean connectTo(IPort targetPort) {
         if (targetPort == null || targetPort == this) {
-            com.nodecraft.core.NodeCraft.LOGGER.debug("Port connect rejected: target is null or self (sourcePort={}, sourceNode={})",
-                    getId(), node != null ? node.getId() : "null");
+            com.nodecraft.core.NodeCraft.LOGGER.debug(
+                    "Port connect rejected: target is null or self (sourcePort={}, sourceNode={})",
+                    getId(),
+                    node != null ? node.getId() : "null"
+            );
             return false;
         }
 
         if (isInput() == targetPort.isInput()) {
             com.nodecraft.core.NodeCraft.LOGGER.debug(
                     "Port connect rejected: same direction (sourcePort={}, sourceIsInput={}, targetPort={}, targetIsInput={})",
-                    getId(), isInput(), targetPort.getId(), targetPort.isInput());
+                    getId(),
+                    isInput(),
+                    targetPort.getId(),
+                    targetPort.isInput()
+            );
             return false;
         }
 
@@ -162,7 +148,8 @@ public class BasePort implements IPort {
                     outputPort.getNode() != null ? outputPort.getNode().getId() : "null",
                     outputPort.getId(),
                     inputPort.getNode() != null ? inputPort.getNode().getId() : "null",
-                    inputPort.getId());
+                    inputPort.getId()
+            );
             return false;
         }
 
@@ -170,7 +157,8 @@ public class BasePort implements IPort {
             com.nodecraft.core.NodeCraft.LOGGER.debug(
                     "Port connect rejected: input already connected and does not allow multiple incoming (inputNode={}, inputPort={})",
                     inputPort.getNode() != null ? inputPort.getNode().getId() : "null",
-                    inputPort.getId());
+                    inputPort.getId()
+            );
             return false;
         }
 
@@ -180,8 +168,11 @@ public class BasePort implements IPort {
             return true;
         }
 
-    com.nodecraft.core.NodeCraft.LOGGER.debug("Port connect rejected: unsupported port implementation (output={}, input={})",
-        outputPort.getClass().getName(), inputPort.getClass().getName());
+        com.nodecraft.core.NodeCraft.LOGGER.debug(
+                "Port connect rejected: unsupported port implementation (output={}, input={})",
+                outputPort.getClass().getName(),
+                inputPort.getClass().getName()
+        );
         return false;
     }
 
@@ -199,16 +190,51 @@ public class BasePort implements IPort {
         }
     }
 
-    /**
-     * Disconnect this port from one specific peer without affecting other links.
-     */
     public void disconnectFrom(IPort port) {
-        if (!(port instanceof BasePort basePort)) {
-            return;
+        if (port instanceof BasePort basePort) {
+            unlink(basePort);
+            basePort.unlink(this);
+        }
+    }
+
+    void setDirection(Direction direction) {
+        if (direction != null) {
+            this.direction = direction;
+        }
+    }
+
+    public Direction getDirection() {
+        return direction;
+    }
+
+    private Direction resolveDirection() {
+        if (direction != Direction.UNASSIGNED) {
+            return direction;
         }
 
-        unlink(basePort);
-        basePort.unlink(this);
+        if (node != null) {
+            if (node.getInputPorts() != null) {
+                for (IPort inputPort : node.getInputPorts()) {
+                    if (inputPort == this) {
+                        return Direction.INPUT;
+                    }
+                }
+            }
+            if (node.getOutputPorts() != null) {
+                for (IPort outputPort : node.getOutputPorts()) {
+                    if (outputPort == this) {
+                        return Direction.OUTPUT;
+                    }
+                }
+            }
+        }
+
+        com.nodecraft.core.NodeCraft.LOGGER.warn(
+                "Port {} on node {} has no explicit direction metadata. Treating it as input until registered.",
+                id,
+                node != null ? node.getId() : "null"
+        );
+        return Direction.INPUT;
     }
 
     private void link(IPort port) {

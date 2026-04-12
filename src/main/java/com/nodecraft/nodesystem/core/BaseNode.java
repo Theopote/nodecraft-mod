@@ -170,10 +170,16 @@ public abstract class BaseNode implements INode {
     }
 
     protected void addInputPort(IPort port) {
+        if (port instanceof BasePort basePort) {
+            basePort.setDirection(BasePort.Direction.INPUT);
+        }
         inputPorts.add(port);
     }
 
     protected void addOutputPort(IPort port) {
+        if (port instanceof BasePort basePort) {
+            basePort.setDirection(BasePort.Direction.OUTPUT);
+        }
         outputPorts.add(port);
     }
 
