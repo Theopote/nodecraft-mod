@@ -213,48 +213,15 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getReferencePointsOrder() {
-        Map<String, Integer> referencePointsOrder = new HashMap<>();
-        referencePointsOrder.put("reference.points.point_from_coordinates", 0);
-        referencePointsOrder.put("reference.points.point_from_block", 1);
-        referencePointsOrder.put("reference.points.point_along_vector", 2);
-        referencePointsOrder.put("reference.points.block_to_vector", 3);
-        referencePointsOrder.put("reference.points.deconstruct_point", 4);
-        referencePointsOrder.put("reference.points.mid_point", 5);
-        referencePointsOrder.put("reference.points.distance_between_points", 6);
-        referencePointsOrder.put("reference.points.closest_point", 7);
-        referencePointsOrder.put("reference.points.point_list_center", 8);
-        referencePointsOrder.put("reference.points.point_list_bounds", 9);
-        referencePointsOrder.put("reference.points.get_box_corner", 10);
-        referencePointsOrder.put("reference.points.get_box_face", 11);
-        referencePointsOrder.put("reference.points.get_face_edge", 12);
-        referencePointsOrder.put("reference.points.deconstruct_face", 13);
-        referencePointsOrder.put("reference.points.deconstruct_edge", 14);
-        return referencePointsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getReferenceVectorsOrder() {
-        Map<String, Integer> referenceVectorsOrder = new HashMap<>();
-        referenceVectorsOrder.put("reference.vectors.vector", 0);
-        referenceVectorsOrder.put("reference.vectors.deconstruct_vector", 1);
-        referenceVectorsOrder.put("reference.vectors.normalize_vector", 2);
-        referenceVectorsOrder.put("reference.vectors.cross_product", 3);
-        referenceVectorsOrder.put("reference.vectors.dot_product", 4);
-        referenceVectorsOrder.put("reference.vectors.vector_length", 5);
-        referenceVectorsOrder.put("reference.vectors.vector_addition", 6);
-        referenceVectorsOrder.put("reference.vectors.vector_subtraction", 7);
-        referenceVectorsOrder.put("reference.vectors.vector_scalar_multiply", 8);
-        referenceVectorsOrder.put("reference.vectors.vector_scalar_divide", 9);
-        return referenceVectorsOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getReferencePlanesOrder() {
-        Map<String, Integer> referencePlanesOrder = new HashMap<>();
-        referencePlanesOrder.put("reference.planes.world_plane", 0);
-        referencePlanesOrder.put("reference.planes.construct_plane", 1);
-        referencePlanesOrder.put("reference.planes.plane_from_points", 2);
-        referencePlanesOrder.put("reference.planes.distance_point_to_plane", 3);
-        referencePlanesOrder.put("reference.planes.block_face_plane", 4);
-        return referencePlanesOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getMathListSequenceOrder() {
@@ -421,10 +388,7 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getReferenceFramesOrder() {
-        Map<String, Integer> referenceFramesOrder = new HashMap<>();
-        referenceFramesOrder.put("reference.frames.frame_from_face", 0);
-        referenceFramesOrder.put("reference.frames.frame_along_surface", 1);
-        return referenceFramesOrder;
+        return new HashMap<>();
     }
 
     private static @NonNull Map<String, Integer> getPatternSurfaceVolumeDistributionOrder() {

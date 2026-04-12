@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.vector_scalar_divide",
     displayName = "向量标量除法",
     description = "向量除以标量 (Vector / Scalar)",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 9
 )
 public class VectorScalarDivideNode extends BaseNode {
 

@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.vector_addition",
     displayName = "向量加法 (+)",
     description = "计算两个向量的和，输出A + B",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 6
 )
 public class VectorAdditionNode extends BaseNode {
 

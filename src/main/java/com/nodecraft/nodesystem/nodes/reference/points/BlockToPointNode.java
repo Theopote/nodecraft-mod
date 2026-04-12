@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "reference.points.point_from_block",
     displayName = "Block To Point",
     description = "Converts a block coordinate into a geometric point for downstream geometry operations",
-    category = "reference.points"
+    category = "reference.points",
+    order = 1
 )
 public class BlockToPointNode extends BaseNode {
 

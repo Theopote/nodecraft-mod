@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "reference.points.block_to_vector",
     displayName = "Block To Vector",
     description = "Converts a block coordinate into a Vector3d position, optionally using the block center.",
-    category = "reference.points"
+    category = "reference.points",
+    order = 3
 )
 public class BlockToVectorNode extends BaseNode {
 

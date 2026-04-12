@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "reference.points.point_list_center",
     displayName = "Point List Center",
     description = "Calculates the average geometric center of a point list",
-    category = "reference.points"
+    category = "reference.points",
+    order = 8
 )
 public class PointListCenterNode extends BaseNode {
 

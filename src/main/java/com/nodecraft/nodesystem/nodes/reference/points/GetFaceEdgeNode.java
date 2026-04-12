@@ -21,7 +21,8 @@ import java.util.UUID;
     id = "reference.points.get_face_edge",
     displayName = "Get Face Edge",
     description = "Gets a single edge from a face by index",
-    category = "reference.points"
+    category = "reference.points",
+    order = 12
 )
 public class GetFaceEdgeNode extends BaseNode {
 

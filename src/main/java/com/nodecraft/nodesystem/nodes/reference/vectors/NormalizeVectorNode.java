@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.normalize_vector",
     displayName = "向量归一化",
     description = "将向量归一化为单位长度",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 2
 )
 public class NormalizeVectorNode extends BaseNode {
 

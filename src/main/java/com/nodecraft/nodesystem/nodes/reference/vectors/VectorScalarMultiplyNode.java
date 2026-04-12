@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.vector_scalar_multiply",
     displayName = "向量标量乘法",
     description = "向量与标量相乘 (Vector * Scalar)",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 8
 )
 public class VectorScalarMultiplyNode extends BaseNode {
 

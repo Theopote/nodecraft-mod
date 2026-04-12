@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.planes.distance_point_to_plane",
     displayName = "Distance Point To Plane",
     description = "Measures the absolute and signed distance from a geometric point to a plane",
-    category = "reference.planes"
+    category = "reference.planes",
+    order = 3
 )
 public class DistancePointToPlaneNode extends BaseNode {
 

@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "reference.points.point_along_vector",
     displayName = "Point Along Vector",
     description = "Creates a new point by moving a start point along a direction vector by a distance",
-    category = "reference.points"
+    category = "reference.points",
+    order = 2
 )
 public class PointAlongVectorNode extends BaseNode {
 

@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.points.distance_between_points",
     displayName = "Distance Between Points",
     description = "Computes the distance between two input points",
-    category = "reference.points"
+    category = "reference.points",
+    order = 6
 )
 public class DistanceNode extends BaseNode {
 

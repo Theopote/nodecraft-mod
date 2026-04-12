@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.points.deconstruct_face",
     displayName = "Deconstruct Box Face",
     description = "Extracts corners, edges, plane, center, and normal from a box face",
-    category = "reference.points"
+    category = "reference.points",
+    order = 13
 )
 public class DeconstructBoxFaceNode extends BaseNode {
 

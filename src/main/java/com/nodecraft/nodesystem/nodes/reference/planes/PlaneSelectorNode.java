@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.planes.world_plane",
     displayName = "World Plane",
     description = "Creates a standard XY, YZ, or XZ world plane with a configurable origin",
-    category = "reference.planes"
+    category = "reference.planes",
+    order = 0
 )
 public class PlaneSelectorNode extends BaseNode {
 

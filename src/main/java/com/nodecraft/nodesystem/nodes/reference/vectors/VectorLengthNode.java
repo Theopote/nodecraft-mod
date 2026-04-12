@@ -16,7 +16,8 @@ import com.nodecraft.nodesystem.api.NodeInfo;
     id = "reference.vectors.vector_length",
     displayName = "向量长度",
     description = "计算向量的长度（模长）",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 5
 )
 public class VectorLengthNode extends BaseNode {
 

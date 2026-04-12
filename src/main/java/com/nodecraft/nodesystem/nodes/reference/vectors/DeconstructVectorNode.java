@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.deconstruct_vector",
     displayName = "解构向量",
     description = "输出向量的X、Y、Z分量",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 1
 )
 public class DeconstructVectorNode extends BaseNode {
 

@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.dot_product",
     displayName = "点积",
     description = "计算两个向量的点积（A · B）",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 4
 )
 public class DotProductNode extends BaseNode {
 

@@ -16,7 +16,8 @@ import com.nodecraft.nodesystem.api.NodeInfo;
     id = "reference.vectors.vector_subtraction",
     displayName = "向量减法 (-)",
     description = "计算两个向量的差，输出A - B",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 7
 )
 public class VectorSubtractionNode extends BaseNode {
 

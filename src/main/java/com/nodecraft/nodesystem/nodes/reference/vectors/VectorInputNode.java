@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "reference.vectors.vector",
     displayName = "向量输入",
     description = "输入一个三维向量，并同时输出 X / Y / Z 分量",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 0
 )
 public class VectorInputNode extends BaseCustomUINode {
 

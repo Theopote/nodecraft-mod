@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.points.deconstruct_point",
     displayName = "分解坐标",
     description = "将坐标分解为X、Y、Z分量",
-    category = "reference.points"
+    category = "reference.points",
+    order = 4
 )
 public class DeconstructCoordinateNode extends BaseNode {
 

@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "reference.frames.frame_along_surface",
     displayName = "Sphere Surface Frame",
     description = "Builds a local tangent frame on a sphere using the nearest surface point and outward normal",
-    category = "reference.frames"
+    category = "reference.frames",
+    order = 1
 )
 public class SphereSurfaceFrameNode extends BaseNode {
 

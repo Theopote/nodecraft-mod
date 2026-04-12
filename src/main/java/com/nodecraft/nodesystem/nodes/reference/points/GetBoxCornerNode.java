@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.points.get_box_corner",
     displayName = "Get Box Corner",
     description = "Gets a single corner from box geometry by index",
-    category = "reference.points"
+    category = "reference.points",
+    order = 10
 )
 public class GetBoxCornerNode extends BaseNode {
 

@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.vectors.cross_product",
     displayName = "叉积",
     description = "计算两个向量的叉积（A × B）",
-    category = "reference.vectors"
+    category = "reference.vectors",
+    order = 3
 )
 public class CrossProductNode extends BaseNode {
 

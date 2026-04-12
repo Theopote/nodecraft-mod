@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.points.deconstruct_edge",
     displayName = "Deconstruct Face Edge",
     description = "Extracts endpoints, midpoint, direction, vector, and length from a face edge",
-    category = "reference.points"
+    category = "reference.points",
+    order = 14
 )
 public class DeconstructFaceEdgeNode extends BaseNode {
 

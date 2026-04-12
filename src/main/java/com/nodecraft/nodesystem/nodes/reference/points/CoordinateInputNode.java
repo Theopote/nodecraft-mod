@@ -20,7 +20,8 @@ import java.util.UUID;
     id = "reference.points.point_from_coordinates",
     displayName = "坐标输入",
     description = "输入一个整数坐标，并同时输出 Coordinate / Block Pos / X / Y / Z",
-    category = "reference.points"
+    category = "reference.points",
+    order = 0
 )
 public class CoordinateInputNode extends BaseCustomUINode {
 

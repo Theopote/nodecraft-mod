@@ -17,7 +17,8 @@ import java.util.UUID;
     id = "reference.planes.plane_from_points",
     displayName = "Construct Plane From Points",
     description = "Constructs a plane from three non-collinear points",
-    category = "reference.planes"
+    category = "reference.planes",
+    order = 2
 )
 public class ConstructPlaneFromPointsNode extends BaseNode {
 

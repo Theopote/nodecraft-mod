@@ -18,7 +18,8 @@ import java.util.UUID;
     id = "reference.planes.construct_plane",
     displayName = "Construct Plane",
     description = "Constructs a plane from an origin point and a normal vector",
-    category = "reference.planes"
+    category = "reference.planes",
+    order = 1
 )
 public class ConstructPlaneNode extends BaseNode {
 

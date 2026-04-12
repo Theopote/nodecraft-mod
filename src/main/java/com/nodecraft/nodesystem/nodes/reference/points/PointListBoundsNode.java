@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.points.point_list_bounds",
     displayName = "Point List Bounds",
     description = "Calculates an axis-aligned bounding box from a list of geometric points",
-    category = "reference.points"
+    category = "reference.points",
+    order = 9
 )
 public class PointListBoundsNode extends BaseNode {
 

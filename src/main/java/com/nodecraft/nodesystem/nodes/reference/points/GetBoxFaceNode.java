@@ -19,7 +19,8 @@ import java.util.UUID;
     id = "reference.points.get_box_face",
     displayName = "Get Box Face",
     description = "Gets a single face from box geometry by index",
-    category = "reference.points"
+    category = "reference.points",
+    order = 11
 )
 public class GetBoxFaceNode extends BaseNode {
 

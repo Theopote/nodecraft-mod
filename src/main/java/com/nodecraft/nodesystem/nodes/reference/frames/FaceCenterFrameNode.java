@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.frames.frame_from_face",
     displayName = "Face Center Frame",
     description = "Builds a local frame at the center of a box face using the face plane and boundary directions",
-    category = "reference.frames"
+    category = "reference.frames",
+    order = 0
 )
 public class FaceCenterFrameNode extends BaseNode {
 

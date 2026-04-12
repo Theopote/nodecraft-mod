@@ -16,7 +16,8 @@ import java.util.UUID;
     id = "reference.points.mid_point",
     displayName = "Mid Point",
     description = "Computes the midpoint between two input points",
-    category = "reference.points"
+    category = "reference.points",
+    order = 5
 )
 public class MidpointNode extends BaseNode {
 
