@@ -75,6 +75,26 @@ The codebase currently uses these canonical v1 paths:
 - `math.trigonometry`
 - `math.list_sequence`
 
+## Execution Boundary
+
+`world.write` and `output.execute` are both active, but they serve different responsibilities:
+
+- `world.write`
+  - low-level direct world mutation
+  - explicit block and region operations such as set, fill, replace, clone, and clear
+  - should not absorb geometry baking or material-placement pipeline logic
+
+- `output.execute`
+  - mainline build execution and commit
+  - turns geometry or prepared placements into final world changes
+  - owns bake/apply/preview-commit style nodes used at the end of the modeling pipeline
+
+Practical rule:
+
+1. If a node directly expresses a world-edit command, it belongs in `world.write`.
+2. If a node executes or commits the result of the modeling/material pipeline, it belongs in `output.execute`.
+3. Geometry-to-block conversion that exists to support final build execution should stay aligned with `output.execute`, not `world.write`.
+
 ## Removed Compatibility Buckets
 
 The following source trees have been physically removed:

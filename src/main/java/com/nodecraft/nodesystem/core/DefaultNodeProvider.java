@@ -46,15 +46,15 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry", "Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input", "Input"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input.basic", "Basic"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("material", "Material & Mapping"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("material", "Material"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math", "Math & Logic"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("output", "Output & Execution"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("output", "Output"));
         registry.registerCategory(new NodeRegistry.NodeCategory("pattern", "Pattern"));
         registry.registerCategory(new NodeRegistry.NodeCategory("reference", "Reference"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform", "Transform"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities & Workflow"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist & Reroute"));
-        registry.registerCategory(new NodeRegistry.NodeCategory("world", "World Interaction"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("world", "World"));
 
         NodeCraft.LOGGER.debug("Registered top-level categories for the built-in provider.");
     }
