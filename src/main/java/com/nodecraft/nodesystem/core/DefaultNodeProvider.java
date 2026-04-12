@@ -75,6 +75,7 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.planes", "Planes"));
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.frames", "Frames"));
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry.boolean", "Boolean"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("geometry.architectural_primitives", "Architectural Primitives"));
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry.curves", "Curves"));
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry.primitives", "Primitives"));
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry.profiles", "Profiles"));
