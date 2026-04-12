@@ -58,6 +58,7 @@ The following domains are now active canonical paths in code:
 - `pattern.surface_volume_distribution`
 - `material.basic_assignment`
 - `material.gradient_mapping`
+- `material.directional_mapping`
 - `world.read`
 - `world.query`
 - `world.selection`

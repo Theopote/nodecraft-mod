@@ -572,7 +572,9 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getMaterialDirectionalMappingOrder() {
-        return new HashMap<>();
+        Map<String, Integer> materialDirectionalMappingOrder = new HashMap<>();
+        materialDirectionalMappingOrder.put("material.directional_mapping.top_side_bottom_map", 0);
+        return materialDirectionalMappingOrder;
     }
 
     private static @NonNull Map<String, Integer> getMaterialPatternMappingOrder() {
