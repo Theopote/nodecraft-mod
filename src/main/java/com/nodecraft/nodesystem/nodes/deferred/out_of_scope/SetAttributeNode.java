@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,10 +20,10 @@ import java.util.UUID;
  * Set Attribute 节点: 给坐标或方块列表附加自定义数据（属性）
  */
 @NodeInfo(
-    id = "utilities.advanced.set_attribute",
+    id = "deferred.out_of_scope.set_attribute",
     displayName = "设置属性",
     description = "给坐标或方块列表附加自定义数据（属性）",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class SetAttributeNode extends BaseNode {
     
@@ -48,7 +48,7 @@ public class SetAttributeNode extends BaseNode {
      * 构造属性设置节点
      */
     public SetAttributeNode() {
-        super(UUID.randomUUID(), "utilities.advanced.set_attribute");
+        super(UUID.randomUUID(), "deferred.out_of_scope.set_attribute");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

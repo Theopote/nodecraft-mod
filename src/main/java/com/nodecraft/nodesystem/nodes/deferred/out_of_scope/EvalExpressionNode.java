@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -22,10 +22,10 @@ import java.util.UUID;
  * 支持变量替换和复杂的数学运算
  */
 @NodeInfo(
-    id = "utilities.advanced.eval_expression",
+    id = "deferred.out_of_scope.eval_expression",
     displayName = "表达式计算",
     description = "计算数学表达式，支持变量替换",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class EvalExpressionNode extends BaseNode {
 
@@ -55,7 +55,7 @@ public class EvalExpressionNode extends BaseNode {
      * 构造表达式求值节点
      */
     public EvalExpressionNode() {
-        super(UUID.randomUUID(), "utilities.advanced.eval_expression");
+        super(UUID.randomUUID(), "deferred.out_of_scope.eval_expression");
         
         // 创建脚本引擎管理器
         engineManager = new ScriptEngineManager();

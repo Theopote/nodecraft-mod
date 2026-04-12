@@ -340,6 +340,21 @@ public class NodeLibraryComponent implements EditorComponent {
         deferredOutOfScopeOrder.put("deferred.out_of_scope.text_to_value", 2);
         deferredOutOfScopeOrder.put("deferred.out_of_scope.color_to_components", 3);
         deferredOutOfScopeOrder.put("deferred.out_of_scope.components_to_color", 4);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.effect_type_selector", 5);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.entity_type_selector", 6);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.item_type_selector", 7);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.sound_event_selector", 8);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.eval_expression", 9);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.filter_by_attribute", 10);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.get_attribute", 11);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.node_group", 12);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.script", 13);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.set_attribute", 14);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.for_each", 15);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_gate", 16);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_merge", 17);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_passthrough", 18);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.geometry_switch", 19);
         return deferredOutOfScopeOrder;
     }
 

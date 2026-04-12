@@ -160,6 +160,11 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "utilities.flow_control.branch", "math.logic.if");
         addMovedNodeAlias(aliases, "utilities.flow_control.switch_select", "math.logic.switch");
         addMovedNodeAlias(aliases, "utilities.flow_control.compare", "math.compare.compare");
+        addMovedNodeAlias(aliases, "utilities.flow_control.for_each", "deferred.out_of_scope.for_each");
+        addMovedNodeAlias(aliases, "utilities.flow_control.geometry_gate", "deferred.out_of_scope.geometry_gate");
+        addMovedNodeAlias(aliases, "utilities.flow_control.geometry_merge", "deferred.out_of_scope.geometry_merge");
+        addMovedNodeAlias(aliases, "utilities.flow_control.geometry_passthrough", "deferred.out_of_scope.geometry_passthrough");
+        addMovedNodeAlias(aliases, "utilities.flow_control.geometry_switch", "deferred.out_of_scope.geometry_switch");
         addMovedNodeAlias(aliases, "utilities.data_conversion.coordinate_to_vector", "reference.points.block_to_vector");
         addMovedNodeAlias(aliases, "utilities.data_conversion.vector_to_coordinate", "world.selection.snap_vector_to_block");
         addMovedNodeAlias(aliases, "utilities.data_conversion.number_to_boolean", "deferred.out_of_scope.number_to_boolean");
@@ -167,6 +172,16 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "utilities.data_conversion.text_to_value", "deferred.out_of_scope.text_to_value");
         addMovedNodeAlias(aliases, "utilities.data_conversion.color_to_components", "deferred.out_of_scope.color_to_components");
         addMovedNodeAlias(aliases, "utilities.data_conversion.components_to_color", "deferred.out_of_scope.components_to_color");
+        addMovedNodeAlias(aliases, "utilities.selectors.effect_type_selector", "deferred.out_of_scope.effect_type_selector");
+        addMovedNodeAlias(aliases, "utilities.selectors.entity_type_selector", "deferred.out_of_scope.entity_type_selector");
+        addMovedNodeAlias(aliases, "utilities.selectors.item_type_selector", "deferred.out_of_scope.item_type_selector");
+        addMovedNodeAlias(aliases, "utilities.selectors.sound_event_selector", "deferred.out_of_scope.sound_event_selector");
+        addMovedNodeAlias(aliases, "utilities.advanced.eval_expression", "deferred.out_of_scope.eval_expression");
+        addMovedNodeAlias(aliases, "utilities.advanced.filter_by_attribute", "deferred.out_of_scope.filter_by_attribute");
+        addMovedNodeAlias(aliases, "utilities.advanced.get_attribute", "deferred.out_of_scope.get_attribute");
+        addMovedNodeAlias(aliases, "utilities.advanced.node_group", "deferred.out_of_scope.node_group");
+        addMovedNodeAlias(aliases, "utilities.advanced.script", "deferred.out_of_scope.script");
+        addMovedNodeAlias(aliases, "utilities.advanced.set_attribute", "deferred.out_of_scope.set_attribute");
         addMovedNodeAlias(aliases, "math.trigonometry.sine", "math.trigonometry.sin");
         addMovedNodeAlias(aliases, "math.trigonometry.cosine", "math.trigonometry.cos");
         addMovedNodeAlias(aliases, "math.trigonometry.tangent", "math.trigonometry.tan");
@@ -346,7 +361,7 @@ public class NodeRegistry {
             return "input.basic." + nodeId.substring("inputs.basic.".length());
         }
         if (nodeId.startsWith("inputs.selectors.")) {
-            return "utilities.selectors." + nodeId.substring("inputs.selectors.".length());
+            return "deferred.out_of_scope." + nodeId.substring("inputs.selectors.".length());
         }
         if (nodeId.startsWith("inputs.sources.")) {
             return "utilities.fileio." + nodeId.substring("inputs.sources.".length());

@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -21,10 +21,10 @@ import java.util.UUID;
  * 支持嵌套属性访问和类型转换
  */
 @NodeInfo(
-    id = "utilities.advanced.get_attribute",
+    id = "deferred.out_of_scope.get_attribute",
     displayName = "获取属性",
     description = "从对象中获取指定属性的值",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class GetAttributeNode extends BaseNode {
     
@@ -48,7 +48,7 @@ public class GetAttributeNode extends BaseNode {
      * 构造获取属性节点
      */
     public GetAttributeNode() {
-        super(UUID.randomUUID(), "utilities.advanced.get_attribute");
+        super(UUID.randomUUID(), "deferred.out_of_scope.get_attribute");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

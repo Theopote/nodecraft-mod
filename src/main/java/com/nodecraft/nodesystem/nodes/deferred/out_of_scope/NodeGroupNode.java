@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -18,10 +18,10 @@ import java.util.UUID;
  * 这是一个高级节点，允许创建自定义的复合节点
  */
 @NodeInfo(
-    id = "utilities.advanced.node_group",
+    id = "deferred.out_of_scope.node_group",
     displayName = "节点组",
     description = "将一组节点封装为一个可重用的组件",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class NodeGroupNode extends BaseNode {
     
@@ -44,7 +44,7 @@ public class NodeGroupNode extends BaseNode {
      * 构造一个新的节点组节点
      */
     public NodeGroupNode() {
-        super(UUID.randomUUID(), "utilities.advanced.node_group");
+        super(UUID.randomUUID(), "deferred.out_of_scope.node_group");
         
         // 节点组的端口是动态的，在编辑器中配置
         // 此构造函数创建一个空的节点组，端口将在以后添加

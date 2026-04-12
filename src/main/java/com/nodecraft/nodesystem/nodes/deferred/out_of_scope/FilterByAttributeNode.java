@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -21,10 +21,10 @@ import java.util.function.Predicate;
  * Filter by Attribute 节点: 根据属性值过滤坐标或方块列表
  */
 @NodeInfo(
-    id = "utilities.advanced.filter_by_attribute",
+    id = "deferred.out_of_scope.filter_by_attribute",
     displayName = "按属性过滤",
     description = "根据属性值过滤坐标或方块列表",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class FilterByAttributeNode extends BaseNode {
     
@@ -62,7 +62,7 @@ public class FilterByAttributeNode extends BaseNode {
      * 构造属性过滤节点
      */
     public FilterByAttributeNode() {
-        super(UUID.randomUUID(), "utilities.advanced.filter_by_attribute");
+        super(UUID.randomUUID(), "deferred.out_of_scope.filter_by_attribute");
         
         // 创建输入端口
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 

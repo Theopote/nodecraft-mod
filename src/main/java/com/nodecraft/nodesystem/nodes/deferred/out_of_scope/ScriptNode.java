@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.advanced;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -20,10 +20,10 @@ import java.util.UUID;
  * 支持JavaScript和Lua脚本
  */
 @NodeInfo(
-    id = "utilities.advanced.script",
+    id = "deferred.out_of_scope.script",
     displayName = "脚本节点",
     description = "执行JavaScript或Lua脚本代码",
-    category = "utilities.advanced"
+    category = "deferred.out_of_scope"
 )
 public class ScriptNode extends BaseNode {
 
@@ -54,7 +54,7 @@ public class ScriptNode extends BaseNode {
      * 构造脚本节点
      */
     public ScriptNode() {
-        super(UUID.randomUUID(), "utilities.advanced.script");
+        super(UUID.randomUUID(), "deferred.out_of_scope.script");
         
         // 创建脚本引擎管理器
         engineManager = new ScriptEngineManager();

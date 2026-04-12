@@ -55,11 +55,11 @@ public class ColorToComponentsNode extends BaseNode {
         float blue = 0f;
         float alpha = 1f;
 
-        if (colorObj instanceof ColorData color) {
-            red = color.r();
-            green = color.g();
-            blue = color.b();
-            alpha = color.a();
+        if (colorObj instanceof ColorData(float r, float g, float b, float a)) {
+            red = r;
+            green = g;
+            blue = b;
+            alpha = a;
         }
 
         if (outputFloatValues) {

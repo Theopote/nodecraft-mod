@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.selectors;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "utilities.selectors.sound_event_selector",
+    id = "deferred.out_of_scope.sound_event_selector",
     displayName = "Sound Event Selector",
     description = "Searches and selects a Minecraft sound event.",
-    category = "utilities.selectors"
+    category = "deferred.out_of_scope"
 )
 public class SoundEventSelectorNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class SoundEventSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public SoundEventSelectorNode() {
-        super(UUID.randomUUID(), "utilities.selectors.sound_event_selector");
+        super(UUID.randomUUID(), "deferred.out_of_scope.sound_event_selector");
 
         addOutputPort(new BasePort(OUTPUT_SOUND_ID, "Sound ID", "The selected sound's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected sound ID", NodeDataType.STRING, this));

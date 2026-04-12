@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.utilities.selectors;
+package com.nodecraft.nodesystem.nodes.deferred.out_of_scope;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -19,10 +19,10 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "utilities.selectors.entity_type_selector",
+    id = "deferred.out_of_scope.entity_type_selector",
     displayName = "Entity Type Selector",
     description = "Searches and selects a Minecraft entity type.",
-    category = "utilities.selectors"
+    category = "deferred.out_of_scope"
 )
 public class EntityTypeSelectorNode extends BaseCustomUINode {
 
@@ -56,7 +56,7 @@ public class EntityTypeSelectorNode extends BaseCustomUINode {
     private static final int MAX_RESULTS = 20;
 
     public EntityTypeSelectorNode() {
-        super(UUID.randomUUID(), "utilities.selectors.entity_type_selector");
+        super(UUID.randomUUID(), "deferred.out_of_scope.entity_type_selector");
 
         addOutputPort(new BasePort(OUTPUT_ENTITY_ID, "Entity ID", "The selected entity's full identifier", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_NAMESPACE, "Namespace", "The namespace part of the selected entity ID", NodeDataType.STRING, this));
