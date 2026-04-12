@@ -162,6 +162,11 @@ public class NodeRegistry {
         addMovedNodeAlias(aliases, "utilities.flow_control.compare", "math.compare.compare");
         addMovedNodeAlias(aliases, "utilities.data_conversion.coordinate_to_vector", "reference.points.block_to_vector");
         addMovedNodeAlias(aliases, "utilities.data_conversion.vector_to_coordinate", "world.selection.snap_vector_to_block");
+        addMovedNodeAlias(aliases, "utilities.data_conversion.number_to_boolean", "deferred.out_of_scope.number_to_boolean");
+        addMovedNodeAlias(aliases, "utilities.data_conversion.number_to_integer", "deferred.out_of_scope.number_to_integer");
+        addMovedNodeAlias(aliases, "utilities.data_conversion.text_to_value", "deferred.out_of_scope.text_to_value");
+        addMovedNodeAlias(aliases, "utilities.data_conversion.color_to_components", "deferred.out_of_scope.color_to_components");
+        addMovedNodeAlias(aliases, "utilities.data_conversion.components_to_color", "deferred.out_of_scope.components_to_color");
         addMovedNodeAlias(aliases, "math.trigonometry.sine", "math.trigonometry.sin");
         addMovedNodeAlias(aliases, "math.trigonometry.cosine", "math.trigonometry.cos");
         addMovedNodeAlias(aliases, "math.trigonometry.tangent", "math.trigonometry.tan");

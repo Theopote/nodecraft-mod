@@ -334,7 +334,13 @@ public class NodeLibraryComponent implements EditorComponent {
     }
 
     private static @NonNull Map<String, Integer> getDeferredOutOfScopeOrder() {
-        return new HashMap<>();
+        Map<String, Integer> deferredOutOfScopeOrder = new HashMap<>();
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.number_to_boolean", 0);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.number_to_integer", 1);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.text_to_value", 2);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.color_to_components", 3);
+        deferredOutOfScopeOrder.put("deferred.out_of_scope.components_to_color", 4);
+        return deferredOutOfScopeOrder;
     }
 
     private static @NonNull Map<String, Integer> getGeometryBooleanOrder() {
