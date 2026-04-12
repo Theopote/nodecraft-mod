@@ -53,6 +53,7 @@ public class NodeLibraryComponent implements EditorComponent {
     private static class NodeLibraryConstants {
         static final String PREF_DISPLAY_MODE_KEY = "node_library.display_mode";
         static final String PREF_GRID_TILE_SCALE_KEY = "node_library.grid_tile_scale";
+        static final String PREF_VIEW_MODE_KEY = "node_library.view_mode";
         static final float CHILD_WINDOW_MIN_WIDTH = 50;
         static final float CHILD_WINDOW_MIN_HEIGHT = 50;
         static final float CATEGORY_INDENT = 10f;
@@ -132,6 +133,14 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("pattern.grid", new float[]{1.0f, 0.82f, 0.32f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.radial", new float[]{1.0f, 0.76f, 0.26f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.surface_volume_distribution", new float[]{1.0f, 0.8f, 0.3f, 1.0f});
+
+            // Task view colors.
+            CATEGORY_COLORS_FLOAT.put("task.massing", new float[]{0.95f, 0.8f, 0.22f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("task.facade", new float[]{0.96f, 0.64f, 0.24f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("task.materials", new float[]{0.82f, 0.54f, 0.2f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("task.build", new float[]{0.94f, 0.34f, 0.62f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("task.world_tools", new float[]{0.36f, 0.88f, 0.96f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("task.advanced", new float[]{0.72f, 0.72f, 0.72f, 1.0f});
 
             // Convert float colors to packed ImGui colors.
             for (Map.Entry<String, float[]> entry : CATEGORY_COLORS_FLOAT.entrySet()) {
@@ -214,7 +223,13 @@ public class NodeLibraryComponent implements EditorComponent {
         GRID
     }
 
-    private final List<CategoryPresentation> allCategories; // UI-facing presentation categories.
+    public enum CategoryViewMode {
+        CANONICAL,
+        TASK
+    }
+
+    private final List<NodeCategory> canonicalCategories; // Registry categories remain the source of truth.
+    private List<CategoryPresentation> allCategories; // Current UI-facing presentation categories.
     private final Map<String, Boolean> expandedCategories = new HashMap<>();
     private List<DisplayCategory> filteredCategories; // Filtered categories for the current search term.
     private List<DisplayCategory> cachedTopLevelCategories = List.of();
@@ -222,6 +237,7 @@ public class NodeLibraryComponent implements EditorComponent {
     private boolean categoryHierarchyCacheDirty = true;
     private boolean visible = true;
     private DisplayMode displayMode = DisplayMode.LIST;
+    private CategoryViewMode categoryViewMode = CategoryViewMode.CANONICAL;
     private float gridTileSizeScale = NodeLibraryConstants.GRID_TILE_SIZE_SCALE;
 
     // Icon manager.
@@ -252,23 +268,9 @@ public class NodeLibraryComponent implements EditorComponent {
         // Validate registry output before building local state.
         if (categoriesFromRegistry == null || categoriesFromRegistry.isEmpty()) {
             NodeCraft.LOGGER.warn("NodeRegistry returned an empty or invalid category list.");
-            this.allCategories = new ArrayList<>();
+            this.canonicalCategories = new ArrayList<>();
         } else {
-            this.allCategories = PRESENTATION_MAPPER.mapCategories(categoriesFromRegistry);
-        }
-        
-        // Show the full category list before any search input is applied.
-        updateFilteredCategories("");
-        
-        // Expand top-level categories by default and collapse subcategories.
-        for (CategoryPresentation cat : allCategories) {
-            expandedCategories.put(cat.displayCategoryId(), false);
-        }
-
-        for (CategoryPresentation cat : allCategories) {
-            if (cat.defaultExpanded()) {
-                expandedCategories.put(cat.displayCategoryId(), true);
-            }
+            this.canonicalCategories = new ArrayList<>(categoriesFromRegistry);
         }
 
         // Restore persisted display mode preferences.
@@ -284,6 +286,15 @@ public class NodeLibraryComponent implements EditorComponent {
             NodeLibraryConstants.GRID_TILE_SIZE_SCALE
         );
         setGridTileSizeScale(storedGridScale);
+
+        String storedViewMode = UserPreferences.getString(NodeLibraryConstants.PREF_VIEW_MODE_KEY, CategoryViewMode.CANONICAL.name());
+        try {
+            this.categoryViewMode = CategoryViewMode.valueOf(storedViewMode);
+        } catch (IllegalArgumentException e) {
+            this.categoryViewMode = CategoryViewMode.CANONICAL;
+        }
+
+        rebuildPresentationCategories();
         
         // Initialize icon resources.
         iconManager.initialize();
@@ -338,6 +349,7 @@ public class NodeLibraryComponent implements EditorComponent {
                 
                 // Search bar.
                 renderSearchBar();
+                renderViewModeControls();
                 
                 ImGui.separator();
                 ImGui.spacing();
@@ -423,6 +435,19 @@ public class NodeLibraryComponent implements EditorComponent {
         this.gridTileSizeScale = clamped;
         UserPreferences.setFloat(NodeLibraryConstants.PREF_GRID_TILE_SCALE_KEY, clamped);
     }
+
+    public CategoryViewMode getCategoryViewMode() {
+        return categoryViewMode;
+    }
+
+    public void setCategoryViewMode(CategoryViewMode mode) {
+        if (mode == null || this.categoryViewMode == mode) {
+            return;
+        }
+        this.categoryViewMode = mode;
+        UserPreferences.setString(NodeLibraryConstants.PREF_VIEW_MODE_KEY, mode.name());
+        rebuildPresentationCategories();
+    }
     
     /**
      * {@inheritDoc}
@@ -451,6 +476,49 @@ public class NodeLibraryComponent implements EditorComponent {
         if (searchChanged) {
             NodeCraft.LOGGER.debug("Search term changed. Node library will refresh on the next frame.");
         }
+    }
+
+    private void renderViewModeControls() {
+        boolean canonicalSelected = categoryViewMode == CategoryViewMode.CANONICAL;
+        boolean taskSelected = categoryViewMode == CategoryViewMode.TASK;
+
+        if (canonicalSelected) {
+            ImGui.pushStyleColor(ImGuiCol.Button, 0xFF4E7AC7);
+        }
+        if (ImGui.button("Canonical")) {
+            setCategoryViewMode(CategoryViewMode.CANONICAL);
+        }
+        if (canonicalSelected) {
+            ImGui.popStyleColor();
+        }
+
+        ImGui.sameLine();
+
+        if (taskSelected) {
+            ImGui.pushStyleColor(ImGuiCol.Button, 0xFFC77A32);
+        }
+        if (ImGui.button("Tasks")) {
+            setCategoryViewMode(CategoryViewMode.TASK);
+        }
+        if (taskSelected) {
+            ImGui.popStyleColor();
+        }
+    }
+
+    private void rebuildPresentationCategories() {
+        this.allCategories = PRESENTATION_MAPPER.mapCategories(
+            canonicalCategories,
+            categoryViewMode == CategoryViewMode.TASK
+                ? NodeCategoryPresentationMapper.PresentationMode.TASK
+                : NodeCategoryPresentationMapper.PresentationMode.CANONICAL
+        );
+
+        expandedCategories.clear();
+        for (CategoryPresentation category : allCategories) {
+            expandedCategories.put(category.displayCategoryId(), category.defaultExpanded());
+        }
+
+        updateFilteredCategories(searchManager.getSearchTerm());
     }
     
     /**
