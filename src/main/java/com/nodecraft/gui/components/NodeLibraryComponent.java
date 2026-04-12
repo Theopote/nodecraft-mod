@@ -71,6 +71,9 @@ public class NodeLibraryComponent implements EditorComponent {
         Map<String, Integer> inputNumericOrder = getInputNumericOrder();
         categoryOrder.put("input.numeric", inputNumericOrder);
 
+        Map<String, Integer> inputBasicOrder = getInputBasicOrder();
+        categoryOrder.put("input.basic", inputBasicOrder);
+
         Map<String, Integer> inputContextOrder = getInputContextOrder();
         categoryOrder.put("input.context", inputContextOrder);
 
@@ -171,6 +174,13 @@ public class NodeLibraryComponent implements EditorComponent {
         inputNumericOrder.put("input.numeric.angle_picker", 5);
         inputNumericOrder.put("input.numeric.boolean_toggle", 6);
         return inputNumericOrder;
+    }
+
+    private static @NonNull Map<String, Integer> getInputBasicOrder() {
+        Map<String, Integer> inputBasicOrder = new HashMap<>();
+        inputBasicOrder.put("input.basic.text_input", 0);
+        inputBasicOrder.put("input.basic.color_picker", 1);
+        return inputBasicOrder;
     }
 
     private static @NonNull Map<String, Integer> getInputContextOrder() {
@@ -669,6 +679,7 @@ public class NodeLibraryComponent implements EditorComponent {
             // Subcategory colors use slightly lighter variants of their parent colors.
             // Input subcategories.
             CATEGORY_COLORS_FLOAT.put("input.numeric", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("input.basic", new float[]{0.33f, 0.62f, 0.97f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.context", new float[]{0.35f, 0.65f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.type_selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             
@@ -914,7 +925,7 @@ public class NodeLibraryComponent implements EditorComponent {
         // Keep the main categories expanded even when they are nested.
         String[] keyCategories = {
             "geometry", "input", "material", "math", "output", "pattern", "reference", "transform", "world", "utilities", "deferred", "spatial",
-            "input.numeric", "input.context", "input.type_selectors", "reference.points", "reference.vectors", "reference.planes", "reference.frames", "world.selection", "world.read", "world.query", "world.write",
+            "input.basic", "input.numeric", "input.context", "input.type_selectors", "reference.points", "reference.vectors", "reference.planes", "reference.frames", "world.selection", "world.read", "world.query", "world.write",
             "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids",
             "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
             "transform.basic_transforms", "transform.deformations", "transform.orientation",

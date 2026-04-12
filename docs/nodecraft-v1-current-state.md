@@ -36,6 +36,7 @@ Out of the current v1 mainline:
 
 The following domains are now active canonical paths in code:
 
+- `input.basic`
 - `input.numeric`
 - `input.context`
 - `input.type_selectors`

@@ -65,31 +65,9 @@ Delete nodes or helper layers when they are:
 
 These are the best first deletion targets if you want to aggressively simplify the codebase now.
 
-### A. Non-v1 UI input nodes still living outside `deferred.*`
+### A. Compatibility registration shell if legacy point nodes are removed
 
 Current files:
-
-- [TextInputNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/input/basic/TextInputNode.java)
-- [ColorPickerNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/input/basic/ColorPickerNode.java)
-
-Recommendation:
-
-- move them to `deferred.out_of_scope` or delete them outright
-
-Reason:
-
-- they are not part of the committed v1 input tree
-- they keep `input.basic` alive as an unofficial side taxonomy
-- they encourage general-purpose editor inputs to leak back into the modeling tree
-
-Preferred action:
-
-- if text/color input nodes are not on the near-term roadmap, delete them
-- if you still want to keep them around experimentally, move them under `deferred.out_of_scope`
-
-### B. Compatibility registration shell if legacy point nodes are removed
-
-Current file:
 
 - [SpatialPointNodes.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/utilities/legacy/spatial/points/SpatialPointNodes.java)
 
@@ -303,6 +281,7 @@ If you want to simplify aggressively, use this order:
 My recommendation for an early-stage project is:
 
 - keep canonical mainline
+- keep `input.basic` for editor-friendly primitive inputs such as text and color
 - keep `utilities.assist`
 - keep `utilities.organization`
 - keep minimal tested compatibility

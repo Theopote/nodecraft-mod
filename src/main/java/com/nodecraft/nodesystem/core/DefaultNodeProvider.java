@@ -45,6 +45,7 @@ public class DefaultNodeProvider implements INodeProvider {
         // Keep the mainline v1 entry focused on canonical domains.
         registry.registerCategory(new NodeRegistry.NodeCategory("geometry", "Geometry"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input", "Input"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input.basic", "Basic"));
         registry.registerCategory(new NodeRegistry.NodeCategory("material", "Material & Mapping"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math", "Math & Logic"));
         registry.registerCategory(new NodeRegistry.NodeCategory("output", "Output & Execution"));
@@ -70,6 +71,7 @@ public class DefaultNodeProvider implements INodeProvider {
 
         // Register representative subcategories so the editor still has a usable taxonomy.
         registry.registerCategory(new NodeRegistry.NodeCategory("input.numeric", "Numeric"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("input.basic", "Basic"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input.context", "Context"));
         registry.registerCategory(new NodeRegistry.NodeCategory("input.type_selectors", "Type Selectors"));
         registry.registerCategory(new NodeRegistry.NodeCategory("reference.points", "Points"));
