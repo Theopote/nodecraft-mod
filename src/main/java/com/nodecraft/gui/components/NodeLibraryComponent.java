@@ -18,7 +18,6 @@ import com.nodecraft.nodesystem.registry.NodeRegistry.NodeCategory;
 import com.nodecraft.gui.utils.NodeIconManager;
 import com.nodecraft.gui.utils.UserPreferences;
 import com.nodecraft.gui.components.search.NodeSearchManager;
-import org.jspecify.annotations.NonNull;
 import org.lwjgl.opengl.GL11;
 
 import imgui.ImGui;
@@ -63,48 +62,24 @@ public class NodeLibraryComponent implements EditorComponent {
         static final int DEFAULT_CATEGORY_COLOR_INT = ImGui.colorConvertFloat4ToU32(DEFAULT_CATEGORY_COLOR_FLOAT[0], DEFAULT_CATEGORY_COLOR_FLOAT[1], DEFAULT_CATEGORY_COLOR_FLOAT[2], DEFAULT_CATEGORY_COLOR_FLOAT[3]);
 
         static {
-            // Top-level category colors. Lowercase IDs are the canonical lookup keys.
-            CATEGORY_COLORS_FLOAT.put("inputs", new float[]{0.2f, 0.5f, 0.9f, 1.0f});          // Blue: input sources
-            CATEGORY_COLORS_FLOAT.put("data", new float[]{0.95f, 0.6f, 0.2f, 1.0f});           // Orange: data processing
-            CATEGORY_COLORS_FLOAT.put("math", new float[]{0.3f, 0.8f, 0.3f, 1.0f});            // Green: math and logic
-            CATEGORY_COLORS_FLOAT.put("spatial", new float[]{0.9f, 0.9f, 0.2f, 1.0f});         // Yellow: legacy spatial domain
-            CATEGORY_COLORS_FLOAT.put("world", new float[]{0.2f, 0.8f, 0.8f, 1.0f});           // Cyan: world interaction
-            CATEGORY_COLORS_FLOAT.put("output", new float[]{0.85f, 0.2f, 0.5f, 1.0f});         // Pink: output and execution
-            CATEGORY_COLORS_FLOAT.put("visualization", new float[]{0.85f, 0.2f, 0.5f, 1.0f});  // Legacy visualization alias
-            CATEGORY_COLORS_FLOAT.put("deferred", new float[]{0.65f, 0.65f, 0.65f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("utilities", new float[]{0.7f, 0.7f, 0.7f, 1.0f});       // Gray: utility nodes
-            CATEGORY_COLORS_FLOAT.put("flora", new float[]{0.2f, 0.6f, 0.2f, 1.0f});           // Dark green: flora generation
-            CATEGORY_COLORS_FLOAT.put("animation", new float[]{0.8f, 0.3f, 0.3f, 1.0f});       // Red: animation
-            CATEGORY_COLORS_FLOAT.put("workflow", new float[]{0.7f, 0.7f, 0.7f, 1.0f});        // Compatibility for utilities/workflow
+            // Canonical top-level category colors.
+            CATEGORY_COLORS_FLOAT.put("math", new float[]{0.3f, 0.8f, 0.3f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("world", new float[]{0.2f, 0.8f, 0.8f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("output", new float[]{0.85f, 0.2f, 0.5f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("utilities", new float[]{0.7f, 0.7f, 0.7f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("geometry", new float[]{0.92f, 0.82f, 0.18f, 1.0f});
-            
-            // Add title-case variants for compatibility with older display labels.
-            CATEGORY_COLORS_FLOAT.put("Inputs", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Data", new float[]{0.95f, 0.6f, 0.2f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Math", new float[]{0.3f, 0.8f, 0.3f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Spatial", new float[]{0.9f, 0.9f, 0.2f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("World", new float[]{0.2f, 0.8f, 0.8f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Output", new float[]{0.85f, 0.2f, 0.5f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Visualization", new float[]{0.85f, 0.2f, 0.5f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Utilities", new float[]{0.7f, 0.7f, 0.7f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Flora", new float[]{0.2f, 0.6f, 0.2f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Animation", new float[]{0.8f, 0.3f, 0.3f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Input", new float[]{0.2f, 0.5f, 0.9f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Reference", new float[]{0.95f, 0.9f, 0.25f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Transform", new float[]{0.95f, 0.55f, 0.25f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.92f, 0.82f, 0.18f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("material", new float[]{0.8f, 0.55f, 0.2f, 1.0f});
+            CATEGORY_COLORS_FLOAT.put("pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
             
             // Subcategory colors use slightly lighter variants of their parent colors.
-            // Input subcategories.
             CATEGORY_COLORS_FLOAT.put("input.numeric", new float[]{0.3f, 0.6f, 0.95f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.basic", new float[]{0.33f, 0.62f, 0.97f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.context", new float[]{0.35f, 0.65f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("input.type_selectors", new float[]{0.4f, 0.7f, 1.0f, 1.0f});
             
-            // Math subcategories.
             CATEGORY_COLORS_FLOAT.put("math.logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.trigonometry", new float[]{0.55f, 1.0f, 0.55f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.list_sequence", new float[]{0.5f, 0.92f, 0.5f, 1.0f});
@@ -112,7 +87,6 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("math.scalar_math", new float[]{0.42f, 0.87f, 0.42f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("math.random", new float[]{0.52f, 0.95f, 0.52f, 1.0f});
 
-            // Reference and geometry subcategories.
             CATEGORY_COLORS_FLOAT.put("reference.points", new float[]{1.0f, 0.98f, 0.45f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.vectors", new float[]{1.0f, 1.0f, 0.5f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("reference.planes", new float[]{1.0f, 1.0f, 0.55f, 1.0f});
@@ -126,17 +100,11 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("transform.deformations", new float[]{0.98f, 0.58f, 0.28f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("transform.orientation", new float[]{1.0f, 0.68f, 0.38f, 1.0f});
             
-            // World subcategories.
-            CATEGORY_COLORS_FLOAT.put("world.entity", new float[]{0.3f, 0.85f, 0.85f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("world.interaction", new float[]{0.35f, 0.9f, 0.9f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("world.inventory", new float[]{0.4f, 0.95f, 0.95f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("world.nbt", new float[]{0.5f, 1.0f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.read", new float[]{0.5f, 0.95f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.query", new float[]{0.55f, 1.0f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.selection", new float[]{0.42f, 0.94f, 1.0f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("world.write", new float[]{0.45f, 1.0f, 1.0f, 1.0f});
 
-            CATEGORY_COLORS_FLOAT.put("material", new float[]{0.8f, 0.55f, 0.2f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("material.basic_assignment", new float[]{0.86f, 0.58f, 0.22f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("material.gradient_mapping", new float[]{0.93f, 0.68f, 0.26f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("material.directional_mapping", new float[]{0.9f, 0.56f, 0.3f, 1.0f});
@@ -144,45 +112,20 @@ public class NodeLibraryComponent implements EditorComponent {
             CATEGORY_COLORS_FLOAT.put("material.block_state", new float[]{0.82f, 0.5f, 0.2f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("material.surface_aging", new float[]{0.74f, 0.48f, 0.24f, 1.0f});
             
-            // Output subcategories.
             CATEGORY_COLORS_FLOAT.put("output.debug", new float[]{0.9f, 0.3f, 0.6f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("output.execute", new float[]{0.95f, 0.35f, 0.65f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("output.export", new float[]{0.98f, 0.45f, 0.72f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("output.preview", new float[]{1.0f, 0.4f, 0.7f, 1.0f});
             
-            // Utilities compatibility subcategories.
+            // Utilities categories that are still intentionally exposed.
+            CATEGORY_COLORS_FLOAT.put("utilities.assist", new float[]{0.82f, 0.82f, 0.82f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("utilities.organization", new float[]{0.9f, 0.9f, 0.9f, 1.0f});
-            
-            // Flora subcategories.
-            CATEGORY_COLORS_FLOAT.put("flora.algorithms", new float[]{0.3f, 0.7f, 0.3f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("flora.generators", new float[]{0.35f, 0.75f, 0.35f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("flora.materials", new float[]{0.4f, 0.8f, 0.4f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("flora.modifiers", new float[]{0.45f, 0.85f, 0.45f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("flora.output", new float[]{0.5f, 0.9f, 0.5f, 1.0f});
-            
-            // Animation subcategories.
-            CATEGORY_COLORS_FLOAT.put("animation.effects", new float[]{0.85f, 0.4f, 0.4f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("animation.interpolation", new float[]{0.9f, 0.45f, 0.45f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("animation.output", new float[]{0.95f, 0.5f, 0.5f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("animation.time", new float[]{1.0f, 0.55f, 0.55f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("animation.transforms", new float[]{1.0f, 0.6f, 0.6f, 1.0f});
-            
-            // Compatibility for older display labels.
-            CATEGORY_COLORS_FLOAT.put("Params", new float[]{0.2f, 0.5f, 0.9f, 1.0f});        // Blue
-            CATEGORY_COLORS_FLOAT.put("Maths", new float[]{0.3f, 0.8f, 0.3f, 1.0f});         // Green
-            CATEGORY_COLORS_FLOAT.put("Sets", new float[]{0.95f, 0.6f, 0.2f, 1.0f});         // Orange
-            CATEGORY_COLORS_FLOAT.put("Logic", new float[]{0.45f, 0.9f, 0.45f, 1.0f});       // Green
-            CATEGORY_COLORS_FLOAT.put("Geometry", new float[]{0.9f, 0.9f, 0.2f, 1.0f});      // Yellow
-            CATEGORY_COLORS_FLOAT.put("Minecraft", new float[]{0.2f, 0.8f, 0.8f, 1.0f});     // Cyan
-            CATEGORY_COLORS_FLOAT.put("General", DEFAULT_CATEGORY_COLOR_FLOAT);              // Fallback default color
-
-            // Convert float colors to packed ImGui colors.
-            CATEGORY_COLORS_FLOAT.put("pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
-            CATEGORY_COLORS_FLOAT.put("Pattern", new float[]{0.98f, 0.74f, 0.22f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.linear", new float[]{0.98f, 0.78f, 0.28f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.grid", new float[]{1.0f, 0.82f, 0.32f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.radial", new float[]{1.0f, 0.76f, 0.26f, 1.0f});
             CATEGORY_COLORS_FLOAT.put("pattern.surface_volume_distribution", new float[]{1.0f, 0.8f, 0.3f, 1.0f});
+
+            // Convert float colors to packed ImGui colors.
             for (Map.Entry<String, float[]> entry : CATEGORY_COLORS_FLOAT.entrySet()) {
                 float[] c = entry.getValue();
                 CATEGORY_COLORS_INT.put(entry.getKey(), ImGui.colorConvertFloat4ToU32(c[0], c[1], c[2], c[3]));
