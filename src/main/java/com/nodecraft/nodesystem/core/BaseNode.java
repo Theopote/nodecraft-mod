@@ -1,87 +1,86 @@
 package com.nodecraft.nodesystem.core;
 
+import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-
-import com.nodecraft.nodesystem.api.INode;
-import com.nodecraft.nodesystem.api.IPort;
-import com.nodecraft.nodesystem.execution.ExecutionContext;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 所有节点的基类，提供常见功能
+ * Common base class for node implementations.
  */
 public abstract class BaseNode implements INode {
-    private UUID id;
-    private String typeId;
+
+    public interface DirtyListener {
+        void onNodeDirty(BaseNode node, long dirtyVersion);
+    }
+
+    private static final List<DirtyListener> DIRTY_LISTENERS = new CopyOnWriteArrayList<>();
+
+    private final UUID id;
+    private final String typeId;
     private double positionX;
     private double positionY;
     private Object nodeState;
-    
+    private transient volatile boolean dirty = true;
+    private transient volatile long dirtyVersion = 1L;
+
     protected final List<IPort> inputPorts = new ArrayList<>();
     protected final List<IPort> outputPorts = new ArrayList<>();
-    
+
     protected final Map<String, Object> inputValues = new HashMap<>();
     protected final Map<String, Object> outputValues = new HashMap<>();
-    
+
     public BaseNode(UUID id, String typeId) {
         this.id = id;
         this.typeId = typeId;
-        this.positionX = 0;
-        this.positionY = 0;
     }
-    
+
     @Override
     public UUID getId() {
         return id;
     }
-    
+
     @Override
     public String getTypeId() {
         return typeId;
     }
-    
+
     @Override
     public double getPositionX() {
         return positionX;
     }
-    
+
     @Override
     public double getPositionY() {
         return positionY;
     }
-    
+
     @Override
     public void setPosition(double x, double y) {
         this.positionX = x;
         this.positionY = y;
     }
-    
+
     public String getDisplayName() {
-        // 如果typeId包含'.'，则提取最后一部分作为显示名称
         if (typeId != null && typeId.contains(".")) {
-            String lastPart = typeId.substring(typeId.lastIndexOf('.') + 1);
-            // 将下划线替换为空格，并进行首字母大写等格式化处理
-            return formatDisplayName(lastPart);
+            return formatDisplayName(typeId.substring(typeId.lastIndexOf('.') + 1));
         }
         return typeId;
     }
-    
-    /**
-     * 格式化显示名称，将下划线替换为空格，并进行首字母大写处理
-     */
+
     private String formatDisplayName(String name) {
         if (name == null || name.isEmpty()) {
             return name;
         }
-        
-        // 将下划线替换为空格
+
         String result = name.replace('_', ' ');
-        
-        // 首字母大写处理
-        StringBuilder formatted = new StringBuilder();
+        StringBuilder formatted = new StringBuilder(result.length());
         boolean capitalizeNext = true;
         for (char c : result.toCharArray()) {
             if (c == ' ') {
@@ -94,41 +93,33 @@ public abstract class BaseNode implements INode {
                 formatted.append(c);
             }
         }
-        
         return formatted.toString();
     }
-    
+
     @Override
     public List<IPort> getInputPorts() {
         return inputPorts;
     }
-    
+
     @Override
     public List<IPort> getOutputPorts() {
         return outputPorts;
     }
-    
+
     @Override
     public Map<String, Object> compute(Map<String, Object> inputs) {
         refreshInputValues(inputs);
-        processNode(null); // 调用无参数版本
+        processNode(null);
         syncOutputPorts();
+        clearDirty();
         return new HashMap<>(outputValues);
     }
-    
-    /**
-     * 带有执行上下文的计算方法。
-     * @param inputs 输入值 Map
-     * @param context 执行上下文
-     * @return 输出值 Map
-     */
+
     public Map<String, Object> compute(Map<String, Object> inputs, ExecutionContext context) {
         refreshInputValues(inputs);
-        // 执行计算，传递上下文
         processNode(context);
         syncOutputPorts();
-        
-        // 返回输出
+        clearDirty();
         return new HashMap<>(outputValues);
     }
 
@@ -140,94 +131,86 @@ public abstract class BaseNode implements INode {
             inputValues.putAll(inputs);
         }
     }
-    
-    /**
-     * 节点的具体计算逻辑，由子类实现 (无上下文版本，用于简单节点)。
-     * 默认实现调用带有上下文的版本 (传递 null 或空上下文)。
-     */
+
     protected void processNode() {
-        // 子类如果只需要这个无参数版本，可以覆盖它。
-        // 默认调用带上下文的版本，传递 null。这要求 processNode(context) 能处理 null。
-        processNode(null); 
+        processNode(null);
     }
 
-    /**
-     * 节点的具体计算逻辑，由子类实现 (带上下文版本)。
-     * @param context 执行上下文，可能为 null
-     */
     public abstract void processNode(ExecutionContext context);
-    
+
     @Override
     public Object getOutput(String portId) {
         return outputValues.get(portId);
     }
-    
+
     @Override
     public void setInput(String portId, Object value) {
-        // 查找端口以确保它存在
         for (IPort port : inputPorts) {
-            if (port.getId().equals(portId)) {
-                // 检查值类型是否兼容
-                if (port.getDataType().isCompatible(value)) {
-                    inputValues.put(portId, value);
-                    return;
-                }
-                break;
+            if (!port.getId().equals(portId)) {
+                continue;
             }
+            if (port.getDataType().isCompatible(value)) {
+                inputValues.put(portId, value);
+            }
+            return;
         }
     }
-    
-    /**
-     * 添加输入端口
-     * @param port 要添加的端口
-     */
+
     protected void addInputPort(IPort port) {
         inputPorts.add(port);
     }
-    
-    /**
-     * 添加输出端口
-     * @param port 要添加的端口
-     */
+
     protected void addOutputPort(IPort port) {
         outputPorts.add(port);
     }
 
-    /**
-     * Keep output port values aligned with the node's computed output map.
-     */
     protected void syncOutputPorts() {
         for (IPort port : outputPorts) {
             port.setValue(outputValues.get(port.getId()));
         }
     }
 
-    /**
-     * 获取节点的自定义状态
-     * @return 节点状态对象
-     */
     public Object getNodeState() {
         return nodeState;
     }
-    
-    /**
-     * 设置节点的自定义状态
-     * @param state 节点状态对象
-     */
+
     public void setNodeState(Object state) {
         this.nodeState = state;
     }
 
+    public boolean isDirty() {
+        return dirty;
+    }
+
+    public long getDirtyVersion() {
+        return dirtyVersion;
+    }
+
+    protected void clearDirty() {
+        dirty = false;
+    }
+
+    public static void addDirtyListener(DirtyListener listener) {
+        if (listener != null && !DIRTY_LISTENERS.contains(listener)) {
+            DIRTY_LISTENERS.add(listener);
+        }
+    }
+
+    public static void removeDirtyListener(DirtyListener listener) {
+        if (listener != null) {
+            DIRTY_LISTENERS.remove(listener);
+        }
+    }
+
     /**
-     * Marks this node as dirty, indicating its output might have changed
-     * and downstream nodes may need recomputation.
-     * TODO: Connect this to the graph execution logic.
+     * Marks this node dirty and notifies graph-level listeners.
      */
     public void markDirty() {
-        // Placeholder implementation. 
-        // Real implementation might involve:
-        // - Setting a boolean flag: this.isDirty = true;
-        // - Notifying the parent NodeGraph or ExecutionEngine.
-        com.nodecraft.core.NodeCraft.LOGGER.debug("Node {} marked dirty.", getId()); 
+        dirty = true;
+        long newDirtyVersion = ++dirtyVersion;
+        com.nodecraft.core.NodeCraft.LOGGER.debug("Node {} marked dirty (version {}).", getId(), newDirtyVersion);
+        for (DirtyListener listener : DIRTY_LISTENERS) {
+            listener.onNodeDirty(this, newDirtyVersion);
+        }
     }
-} 
+}

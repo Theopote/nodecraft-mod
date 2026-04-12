@@ -2,7 +2,6 @@ package com.nodecraft.nodesystem.nodes.output.preview;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
-import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
@@ -358,17 +357,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
     @Override
     public void markDirty() {
         super.markDirty();
-        requestEditorPreviewRefresh();
-    }
-
-    private void requestEditorPreviewRefresh() {
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null || editor.getNodeIO() == null || editor.getCurrentGraph() == null) {
-            return;
-        }
-        if (editor.getCurrentGraph().getNode(getId()) != null) {
-            editor.getNodeIO().markDirty();
-        }
     }
 
     @Override

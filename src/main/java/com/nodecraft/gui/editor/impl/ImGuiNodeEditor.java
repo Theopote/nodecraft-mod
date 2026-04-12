@@ -12,6 +12,7 @@ import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -106,6 +107,18 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         this.menus = new ImGuiNodeMenus(this, this.io);
         this.history = new ImGuiNodeHistory(this);
         this.clipboard = new ImGuiNodeClipboard(this);
+        BaseNode.addDirtyListener(this::handleNodeDirty);
+    }
+
+    private void handleNodeDirty(BaseNode node, long dirtyVersion) {
+        if (node == null || io == null || currentGraph == null) {
+            return;
+        }
+        if (currentGraph.getNode(node.getId()) == null) {
+            return;
+        }
+        io.markDirty();
+        NodeCraft.LOGGER.debug("Graph dirty version bumped from node {} dirty version {}", node.getId(), dirtyVersion);
     }
 
     /**
