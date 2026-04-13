@@ -3,14 +3,10 @@ package com.nodecraft.nodesystem.interaction;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.BlockStateData;
-import com.nodecraft.minecraft.client.MinecraftClientController;
 import com.nodecraft.client.input.NodecraftInputSystem;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.block.BlockState;
-import net.minecraft.registry.Registries;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -142,184 +138,6 @@ public class NodeEditorInteractionManager {
     }
     
     /**
-     * 方块拾取处理器
-     */
-    private class BlockPickingHandler implements InteractionModeHandler {
-        private String currentNodeId;
-        private IBlockPickerCallback currentCallback;
-
-        private void clearInternalState() {
-            currentCallback = null;
-            currentNodeId = null;
-        }
-        
-        @Override
-        public void onEnter(String nodeId, IInteractionCallback callback) {
-            if (!(callback instanceof IBlockPickerCallback)) {
-                throw new IllegalArgumentException("方块拾取模式需要IBlockPickerCallback");
-            }
-            
-            this.currentNodeId = nodeId;
-            this.currentCallback = (IBlockPickerCallback) callback;
-            
-            MinecraftClientController.getInstance().showHudMessage(getHintMessage());
-            NodeCraft.LOGGER.info("节点 {} 进入方块拾取模式，回调已设置: {}", nodeId, currentCallback != null);
-        }
-        
-        @Override
-        public void onUpdate(Coordinate hoveredBlock, BlockHitResult hitResult, 
-                           boolean isLeftMouseClicked, boolean isRightMouseClicked) {
-            // 在交互模式下会每帧调用，这里只保留 debug 级别以避免日志刷屏。
-            if (NodeCraft.LOGGER.isDebugEnabled() && (isLeftMouseClicked || isRightMouseClicked)) {
-                NodeCraft.LOGGER.debug("BlockPickingHandler.onUpdate() - 悬停方块:{} 左键:{} 右键:{}", 
-                    hoveredBlock, isLeftMouseClicked, isRightMouseClicked);
-            }
-
-            if (isRightMouseClicked) {
-                NodeCraft.LOGGER.info("方块拾取通过右键结束");
-                interactionState.clear();
-                MinecraftClientController.getInstance().clearHudMessage();
-                return;
-            }
-            
-            if (isLeftMouseClicked && hoveredBlock != null && hitResult != null) {
-                try {
-                    // 检查回调是否为空
-                    if (currentCallback == null) {
-                        NodeCraft.LOGGER.error("方块拾取处理器的回调为空！节点ID: {}", currentNodeId);
-                        onCancel();
-                        return;
-                    }
-                    
-                    MinecraftClient client = MinecraftClient.getInstance();
-                    BlockPos blockPos = hitResult.getBlockPos();
-                    BlockState blockState = null;
-                    if (client.world != null) {
-                        blockState = client.world.getBlockState(blockPos);
-                    }
-                    String blockId = null;
-                    if (blockState != null) {
-                        blockId = Registries.BLOCK.getId(blockState.getBlock()).toString();
-                    }
-                    BlockStateData stateData = createBlockStateData(blockState);
-                    
-                    NodeCraft.LOGGER.info("准备调用回调 - 节点: {} 方块: {} 位置: {}", currentNodeId, blockId, hoveredBlock);
-                    
-                    // 通知回调
-                    currentCallback.onBlockPicked(hoveredBlock, blockId, stateData);
-                    
-                    // 成功完成交互，不触发取消回调
-                    interactionState.complete();
-                    
-                    NodeCraft.LOGGER.info("方块拾取完成: {} at {}", blockId, hoveredBlock);
-                    
-                } catch (Exception e) {
-                    NodeCraft.LOGGER.error("处理方块拾取时出错", e);
-                    onCancel();
-                }
-            }
-        }
-        
-        @Override
-        public void onCancel() {
-            if (currentCallback != null) {
-                currentCallback.onPickingCancelled();
-            }
-            MinecraftClientController.getInstance().clearHudMessage();
-            NodeCraft.LOGGER.info("方块拾取已取消");
-            clearInternalState();
-        }
-
-        @Override
-        public void onComplete() {
-            MinecraftClientController.getInstance().clearHudMessage();
-            clearInternalState();
-        }
-        
-        @Override
-        public String getDisplayName() {
-            return "方块拾取";
-        }
-        
-        @Override
-        public String getHintMessage() {
-            return "请左键点击一个方块进行拾取";
-        }
-    }
-    
-    /**
-     * 实体拾取处理器
-     */
-    private class EntityPickingHandler implements InteractionModeHandler {
-        private IEntityPickerCallback currentCallback;
-        
-        @Override
-        public void onEnter(String nodeId, IInteractionCallback callback) {
-            if (!(callback instanceof IEntityPickerCallback)) {
-                throw new IllegalArgumentException("实体拾取模式需要IEntityPickerCallback");
-            }
-
-            this.currentCallback = (IEntityPickerCallback) callback;
-            
-            MinecraftClientController.getInstance().showHudMessage(getHintMessage());
-            NodeCraft.LOGGER.info("节点 {} 进入实体拾取模式", nodeId);
-        }
-        
-        @Override
-        public void onUpdate(Coordinate hoveredBlock, BlockHitResult hitResult, 
-                           boolean isLeftMouseClicked, boolean isRightMouseClicked) {
-            if (isLeftMouseClicked) {
-                // TODO: 实现实体检测逻辑
-                // 这里需要添加实体射线检测，暂时用占位符实现
-                
-                try {
-                    // 模拟实体拾取（实际实现需要实体射线检测）
-                    String entityId = "example_entity_" + System.currentTimeMillis();
-                    String entityType = "minecraft:pig";
-                    Coordinate entityPos = hoveredBlock != null ? hoveredBlock : new Coordinate(0, 0, 0);
-                    
-                    currentCallback.onEntityPicked(entityId, entityType, entityPos);
-                    
-                    // 成功完成交互，不触发取消回调
-                    interactionState.complete();
-                    
-                    NodeCraft.LOGGER.info("实体拾取完成: {} ({})", entityType, entityId);
-                    
-                } catch (Exception e) {
-                    NodeCraft.LOGGER.error("处理实体拾取时出错", e);
-                    onCancel();
-                }
-            }
-        }
-        
-        @Override
-        public void onCancel() {
-            if (currentCallback != null) {
-                currentCallback.onInteractionCancelled();
-            }
-            MinecraftClientController.getInstance().clearHudMessage();
-            NodeCraft.LOGGER.info("实体拾取已取消");
-            currentCallback = null;
-        }
-
-        @Override
-        public void onComplete() {
-            MinecraftClientController.getInstance().clearHudMessage();
-            currentCallback = null;
-        }
-        
-        @Override
-        public String getDisplayName() {
-            return "实体拾取";
-        }
-        
-        @Override
-        public String getHintMessage() {
-            return "请左键点击一个实体进行拾取";
-        }
-    }
-    
-    /**
      * 交互状态封装类
      * 集中管理交互模式、回调和节点ID，确保状态一致性
      */
@@ -431,12 +249,29 @@ public class NodeEditorInteractionManager {
      * 初始化交互模式处理器
      */
     private void initializeModeHandlers() {
-        modeHandlers.put(EditorInteractionMode.BLOCK_PICKING, new BlockPickingHandler());
+        modeHandlers.put(
+            EditorInteractionMode.BLOCK_PICKING,
+            new BlockPickingInteractionHandler(
+                () -> interactionState.clear(),
+                () -> interactionState.complete()
+            )
+        );
         modeHandlers.put(
             EditorInteractionMode.AREA_SELECTION,
-            new AreaSelectionInteractionHandler(areaPreviewStyle, OWNER_ID, () -> interactionState.complete())
+            new AreaSelectionInteractionHandler(
+                areaPreviewStyle,
+                OWNER_ID,
+                () -> interactionState.clear(),
+                () -> interactionState.complete()
+            )
         );
-        modeHandlers.put(EditorInteractionMode.ENTITY_PICKING, new EntityPickingHandler());
+        modeHandlers.put(
+            EditorInteractionMode.ENTITY_PICKING,
+            new EntityPickingInteractionHandler(
+                () -> interactionState.clear(),
+                () -> interactionState.complete()
+            )
+        );
     }
     
     /**
@@ -617,20 +452,10 @@ public class NodeEditorInteractionManager {
      */
     private void handleBlockPicking(Coordinate coordinate, BlockHitResult hitResult) {
         try {
-            MinecraftClient client = MinecraftClient.getInstance();
-            BlockPos blockPos = hitResult.getBlockPos();
-            BlockState blockState = null;
-            if (client.world != null) {
-                blockState = client.world.getBlockState(blockPos);
-            }
-            String blockId = null;
-            if (blockState != null) {
-                blockId = Registries.BLOCK.getId(blockState.getBlock()).toString();
-            }
-            BlockStateData stateData = createBlockStateData(blockState);
+            BlockSnapshot snapshot = BlockSnapshot.fromHitResult(hitResult);
             
             // 使用统一的拾取处理逻辑
-            processBlockPicking(coordinate, blockId, stateData);
+            processBlockPicking(coordinate, snapshot.blockId(), snapshot.stateData());
             
         } catch (Exception e) {
             NodeCraft.LOGGER.error("处理方块拾取时出错", e);
@@ -791,26 +616,6 @@ public class NodeEditorInteractionManager {
     
     // ================= 辅助工具方法 =================
     
-    /**
-     * 从Minecraft BlockState创建BlockStateData
-     */
-    private BlockStateData createBlockStateData(BlockState blockState) {
-        BlockStateData stateData = new BlockStateData();
-        
-        try {
-            // 遍历方块的所有属性并转换为字符串映射
-            blockState.getProperties().forEach(property -> {
-                String propertyName = property.getName();
-                Comparable<?> propertyValue = blockState.get(property);
-                stateData.put(propertyName, propertyValue.toString());
-            });
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("创建BlockStateData时出错", e);
-        }
-        
-        return stateData;
-    }
-
     /**
      * 处理方块拾取的通用逻辑
      * 统一的拾取处理方法，被新旧API共同使用
