@@ -8,7 +8,6 @@ import com.nodecraft.nodesystem.spi.INodeProvider;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -22,7 +21,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NodeRegistry {
 
     private static NodeRegistry instance;
-    private static final Map<String, String> NODE_ID_ALIASES = createNodeIdAliases();
 
     private final Map<String, NodeInfo> nodeInfoMap = new ConcurrentHashMap<>();
     private final Map<String, NodeCategory> categoryMap = new ConcurrentHashMap<>();
@@ -45,159 +43,13 @@ public class NodeRegistry {
         return instance;
     }
 
-    private static Map<String, String> createNodeIdAliases() {
-        Map<String, String> aliases = new HashMap<>();
-
-        // Output migration aliases.
-        addAlias(aliases, "visualization.preview.geometry_viewer", "output.preview.geometry_viewer");
-        addAlias(aliases, "visualization.preview.preview_geometry", "output.preview.preview_geometry");
-        addAlias(aliases, "visualization.preview.preview_blocks", "output.preview.preview_blocks");
-        addAlias(aliases, "visualization.preview.preview_points", "output.preview.preview_points");
-        addAlias(aliases, "visualization.preview.preview_vectors", "output.preview.preview_vectors");
-        addAlias(aliases, "visualization.preview.preview_plane", "output.preview.preview_plane");
-        addAlias(aliases, "visualization.preview.preview_frame", "output.preview.preview_frame");
-        addAlias(aliases, "visualization.preview.preview_paths", "output.preview.preview_curves");
-        addAlias(aliases, "visualization.preview.preview_regions", "output.preview.preview_regions");
-        addAlias(aliases, "visualization.preview.preview_labels", "output.preview.preview_labels");
-        addAlias(aliases, "visualization.preview.preview_surface_strip", "output.preview.preview_surface_strip");
-        addAlias(aliases, "visualization.preview.preview_polygon_profiles", "output.preview.preview_profiles");
-        addAlias(aliases, "visualization.preview.clear_all_previews", "output.execute.clear_preview");
-        addAlias(aliases, "visualization.execute.apply_changes", "output.execute.apply_changes");
-        addAlias(aliases, "visualization.execute.export_schematic", "output.export.export_schematic");
-        addAlias(aliases, "visualization.debugging.value_monitor", "output.debug.value_monitor");
-        addAlias(aliases, "visualization.debugging.print_to_chat", "output.debug.print_to_chat");
-        addAlias(aliases, "visualization.debugging.execution_timer", "output.debug.execution_timer");
-        addAlias(aliases, "visualization.debugging.panel", "output.debug.data_inspector");
-
-        // World and material migration aliases.
-        addAlias(aliases, "world.query.get_block", "world.read.get_block");
-        addAlias(aliases, "world.query.get_blocks_in_region", "world.read.get_blocks_in_region");
-        addAlias(aliases, "world.query.find_blocks", "world.read.find_blocks");
-        addAlias(aliases, "world.query.get_biome", "world.read.get_biome");
-        addAlias(aliases, "world.modification.set_block", "world.write.set_block");
-        addAlias(aliases, "world.modification.set_blocks", "world.write.set_blocks");
-        addAlias(aliases, "world.modification.fill_region", "world.write.fill_region");
-        addAlias(aliases, "world.modification.replace_blocks", "world.write.replace_blocks");
-        addAlias(aliases, "world.modification.clone_region", "world.write.clone_region");
-        addAlias(aliases, "world.modification.remove_blocks", "world.write.clear_region");
-        addAlias(aliases, "world.modification.material_mapper", "material.gradient_mapping.height_gradient_map");
-        addAlias(aliases, "material.basic_assignment.replace_material", "material.gradient_mapping.height_gradient_map");
-        addAlias(aliases, "world.entity.spawn_entity", "world.write.spawn_entity");
-        addAlias(aliases, "world.entity.remove_entities", "world.write.remove_entities");
-        addAlias(aliases, "world.entity.entity_teleport", "world.write.entity_teleport");
-        addAlias(aliases, "world.interaction.apply_redstone_power", "world.write.apply_redstone_power");
-        addAlias(aliases, "world.interaction.execute_command", "world.write.execute_command");
-        addAlias(aliases, "world.interaction.simulate_right_click", "world.write.simulate_right_click");
-        addAlias(aliases, "world.interaction.write_sign_text", "world.write.write_sign_text");
-        addAlias(aliases, "world.interaction.read_sign_text", "world.read.read_sign_text");
-
-        // Input and reference migration aliases.
-        addAlias(aliases, "inputs.basic.integer_input", "input.numeric.integer");
-        addAlias(aliases, "inputs.basic.float_input", "input.numeric.float");
-        addAlias(aliases, "inputs.basic.integer_slider", "input.numeric.integer_slider");
-        addAlias(aliases, "inputs.basic.float_slider", "input.numeric.float_slider");
-        addAlias(aliases, "inputs.basic.angle_slider", "input.numeric.angle");
-        addAlias(aliases, "inputs.basic.circular_angle", "input.numeric.angle_picker");
-        addAlias(aliases, "inputs.basic.boolean_toggle", "input.numeric.boolean_toggle");
-        addAlias(aliases, "inputs.basic.vector_input", "reference.vectors.vector");
-        addAlias(aliases, "inputs.basic.coordinate_input", "reference.points.point_from_coordinates");
-        addAlias(aliases, "inputs.basic.plane_selector", "reference.planes.world_plane");
-        addAlias(aliases, "inputs.minecraft.player_position", "input.context.player_position");
-        addAlias(aliases, "inputs.minecraft.player_look_at", "input.context.player_look_direction");
-        addAlias(aliases, "inputs.minecraft.selected_block", "world.selection.selected_block");
-        addAlias(aliases, "inputs.minecraft.selected_region", "world.selection.selected_region");
-        addAlias(aliases, "inputs.minecraft.biome_at_player", "world.read.biome_at_player");
-        addAlias(aliases, "inputs.minecraft.current_time", "input.context.current_time");
-        addAlias(aliases, "inputs.minecraft.dimension_info", "input.context.dimension_info");
-        addAlias(aliases, "inputs.selectors.block_type_selector", "input.type_selectors.block_type_selector");
-        addAlias(aliases, "inputs.sources.create_list", "math.list_sequence.create_list");
-
-        // Math migration aliases.
-        addAlias(aliases, "math.basic.range", "math.list_sequence.range");
-        addAlias(aliases, "math.basic.absolute", "math.scalar_math.absolute");
-        addAlias(aliases, "math.basic.addition", "math.scalar_math.addition");
-        addAlias(aliases, "math.basic.ceiling", "math.scalar_math.ceiling");
-        addAlias(aliases, "math.basic.clamp", "math.scalar_math.clamp");
-        addAlias(aliases, "math.basic.division", "math.scalar_math.division");
-        addAlias(aliases, "math.basic.floor", "math.scalar_math.floor");
-        addAlias(aliases, "math.basic.logarithm", "math.scalar_math.logarithm");
-        addAlias(aliases, "math.basic.max", "math.scalar_math.max");
-        addAlias(aliases, "math.basic.min", "math.scalar_math.min");
-        addAlias(aliases, "math.basic.modulus", "math.scalar_math.modulus");
-        addAlias(aliases, "math.basic.multiplication", "math.scalar_math.multiplication");
-        addAlias(aliases, "math.basic.power", "math.scalar_math.power");
-        addAlias(aliases, "math.basic.remap", "math.scalar_math.remap");
-        addAlias(aliases, "math.basic.round", "math.scalar_math.round");
-        addAlias(aliases, "math.basic.subtraction", "math.scalar_math.subtraction");
-        addAlias(aliases, "math.randomness.random_number", "math.random.random_number");
-        addAlias(aliases, "math.randomness.random_list_item", "math.random.random_list_item");
-        addAlias(aliases, "math.randomness.random_vector", "math.random.random_vector");
-        addAlias(aliases, "math.randomness.noise", "math.random.noise");
-        addAlias(aliases, "math.logic.equals", "math.compare.equals");
-        addAlias(aliases, "math.logic.not_equals", "math.compare.not_equals");
-        addAlias(aliases, "math.logic.less_than", "math.compare.less_than");
-        addAlias(aliases, "math.logic.less_than_or_equal", "math.compare.less_than_or_equal");
-        addAlias(aliases, "math.logic.greater_than", "math.compare.greater_than");
-        addAlias(aliases, "math.logic.greater_than_or_equal", "math.compare.greater_than_or_equal");
-        addAlias(aliases, "logic.if", "math.logic.if");
-        addAlias(aliases, "logic.select_item", "math.logic.switch");
-        addAlias(aliases, "math.trigonometry.sine", "math.trigonometry.sin");
-        addAlias(aliases, "math.trigonometry.cosine", "math.trigonometry.cos");
-        addAlias(aliases, "math.trigonometry.tangent", "math.trigonometry.tan");
-        addAlias(aliases, "math.trigonometry.arcsin", "math.trigonometry.asin");
-        addAlias(aliases, "math.trigonometry.arccos", "math.trigonometry.acos");
-        addAlias(aliases, "math.trigonometry.arctan", "math.trigonometry.atan");
-        addAlias(aliases, "math.trigonometry.degrees_to_radians", "math.trigonometry.deg_to_rad");
-        addAlias(aliases, "math.trigonometry.deg2rad", "math.trigonometry.deg_to_rad");
-        addAlias(aliases, "math.trigonometry.radians_to_degrees", "math.trigonometry.rad_to_deg");
-        addAlias(aliases, "math.trigonometry.rad2deg", "math.trigonometry.rad_to_deg");
-        addAlias(aliases, "math.vector.construct", "reference.vectors.vector");
-        addAlias(aliases, "math.vector.cross_product", "reference.vectors.cross_product");
-        addAlias(aliases, "math.vector.dot_product", "reference.vectors.dot_product");
-        addAlias(aliases, "math.vector.normalize", "reference.vectors.normalize_vector");
-        addAlias(aliases, "math.vector.normalize_vector", "reference.vectors.normalize_vector");
-        addAlias(aliases, "math.vector.length", "reference.vectors.vector_length");
-        addAlias(aliases, "math.vector.addition", "reference.vectors.vector_addition");
-        addAlias(aliases, "math.vector.subtraction", "reference.vectors.vector_subtraction");
-        addAlias(aliases, "math.vector.scalar_multiply", "reference.vectors.vector_scalar_multiply");
-        addAlias(aliases, "math.vector.scalar_divide", "reference.vectors.vector_scalar_divide");
-        addAlias(aliases, "math.vector.deconstruct", "reference.vectors.deconstruct_vector");
-        addAlias(aliases, "math.vector.construct_coordinate", "reference.points.point_from_coordinates");
-        addAlias(aliases, "math.vector.deconstruct_coordinate", "reference.points.deconstruct_point");
-        addAlias(aliases, "math.vector.midpoint", "reference.points.mid_point");
-        addAlias(aliases, "math.vector.distance", "reference.points.distance_between_points");
-        addAlias(aliases, "math.vector.construct_plane", "reference.planes.construct_plane");
-        addAlias(aliases, "math.vector.construct_plane_from_points", "reference.planes.plane_from_points");
-        addAlias(aliases, "math.vector.rotate", "transform.orientation.rotate_vector");
-        addAlias(aliases, "math.vector.rotate_vector", "transform.orientation.rotate_vector");
-
-        return Collections.unmodifiableMap(aliases);
-    }
-
-    private static void addAlias(Map<String, String> aliases, String legacyId, String canonicalId) {
-        aliases.put(legacyId, canonicalId);
-    }
-
     // addMovedNodeAlias was a no-op wrapper — callers now use addAlias directly.
 
     private String normalizeNodeId(String nodeId) {
         if (nodeId == null) {
             return null;
         }
-        String normalizedId = nodeId.toLowerCase();
-        String aliasedId = NODE_ID_ALIASES.getOrDefault(normalizedId, normalizedId);
-        return remapMigratedNodePrefixes(aliasedId);
-    }
-
-    private String remapMigratedNodePrefixes(String nodeId) {
-        if (nodeId.startsWith("inputs.basic.")) {
-            return "input.basic." + nodeId.substring("inputs.basic.".length());
-        }
-        return switch (nodeId) {
-            case "inputs.minecraft.selected_entity" -> "world.selection.selected_entity";
-            case "inputs.minecraft.selected_block_sequence" -> "world.selection.selected_block_sequence";
-            default -> nodeId;
-        };
+        return nodeId.toLowerCase();
     }
 
     public String resolveCanonicalNodeId(String nodeId) {
