@@ -87,8 +87,6 @@ public class NodeLibraryComponent implements EditorComponent {
         static {
             registerGradientCategoryColors();
 
-            // ...existing code...
-
             // Convert float colors to packed ImGui colors.
             for (Map.Entry<String, float[]> entry : CATEGORY_COLORS_FLOAT.entrySet()) {
                 float[] c = entry.getValue();
