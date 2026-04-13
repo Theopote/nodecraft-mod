@@ -32,10 +32,11 @@ public class NodeEditorInteractionManager {
     private final HoveredBlockHighlightService hoveredBlockHighlight = new HoveredBlockHighlightService(OWNER_ID);
     
     // ================= 统一的交互状态管理 =================
-    private final InteractionState interactionState = new InteractionState();
+    private final InteractionSessionState interactionState;
     
     // ================= 交互模式处理器管理 =================
     private final Map<EditorInteractionMode, InteractionModeHandler> modeHandlers = new HashMap<>();
+    private final InteractionModeRouter interactionRouter;
     
     /**
      * 编辑器交互模式枚举
@@ -137,111 +138,10 @@ public class NodeEditorInteractionManager {
         String getHintMessage();
     }
     
-    /**
-     * 交互状态封装类
-     * 集中管理交互模式、回调和节点ID，确保状态一致性
-     */
-    private class InteractionState {
-        private EditorInteractionMode mode = EditorInteractionMode.NONE;
-        private IInteractionCallback callback = null;
-        private String nodeId = null;
-
-        /**
-         * 设置交互状态
-         * @param mode 交互模式
-         * @param nodeId 节点ID
-         * @param callback 交互回调
-         */
-        void setInteraction(EditorInteractionMode mode, String nodeId, IInteractionCallback callback) {
-            // 如果已有其他交互，先清除
-            clear();
-            
-            this.mode = mode;
-            this.callback = callback;
-            this.nodeId = nodeId;
-        }
-
-        /**
-         * 清除当前交互状态
-         */
-        void clear() {
-            if (mode != EditorInteractionMode.NONE) {
-                InteractionModeHandler handler = modeHandlers.get(mode);
-                if (handler != null) {
-                    handler.onCancel();
-                }
-            }
-            
-            mode = EditorInteractionMode.NONE;
-            callback = null;
-            nodeId = null;
-        }
-
-        /**
-         * 成功完成当前交互，不触发取消回调。
-         */
-        void complete() {
-            if (mode != EditorInteractionMode.NONE) {
-                InteractionModeHandler handler = modeHandlers.get(mode);
-                if (handler != null) {
-                    handler.onComplete();
-                }
-            }
-
-            mode = EditorInteractionMode.NONE;
-            callback = null;
-            nodeId = null;
-        }
-
-        /**
-         * 获取当前交互模式
-         */
-        EditorInteractionMode getMode() {
-            return mode;
-        }
-
-        /**
-         * 获取当前回调（方块拾取类型）
-         */
-        IBlockPickerCallback getBlockPickerCallback() {
-            return callback instanceof IBlockPickerCallback ? (IBlockPickerCallback) callback : null;
-        }
-
-        /**
-         * 检查是否有待处理的方块拾取
-         */
-        boolean isPendingBlockPick() {
-            return mode == EditorInteractionMode.BLOCK_PICKING && callback != null;
-        }
-
-        /**
-         * 检查指定节点是否正在等待拾取
-         */
-        boolean isPendingBlockPick(String nodeId) {
-            return nodeId != null && nodeId.equals(this.nodeId) && 
-                   mode == EditorInteractionMode.BLOCK_PICKING;
-        }
-
-        /**
-         * 检查是否在交互模式中
-         */
-        boolean isInInteractionMode() {
-            return mode != EditorInteractionMode.NONE;
-        }
-
-        /**
-         * 检查指定节点是否是当前交互节点
-         */
-        boolean isCurrentInteractionNode(String nodeId) {
-            return nodeId != null && nodeId.equals(this.nodeId) && 
-                   mode != EditorInteractionMode.NONE;
-        }
-    }
-    
-
-    
     private NodeEditorInteractionManager() {
         // 私有构造函数，单例模式
+        interactionState = new InteractionSessionState(modeHandlers);
+        interactionRouter = new InteractionModeRouter(modeHandlers, interactionState, this::handleBlockPicking);
         initializeModeHandlers();
     }
     
@@ -252,8 +152,8 @@ public class NodeEditorInteractionManager {
         modeHandlers.put(
             EditorInteractionMode.BLOCK_PICKING,
             new BlockPickingInteractionHandler(
-                () -> interactionState.clear(),
-                () -> interactionState.complete()
+                    interactionState::clear,
+                    interactionState::complete
             )
         );
         modeHandlers.put(
@@ -261,15 +161,15 @@ public class NodeEditorInteractionManager {
             new AreaSelectionInteractionHandler(
                 areaPreviewStyle,
                 OWNER_ID,
-                () -> interactionState.clear(),
-                () -> interactionState.complete()
+                    interactionState::clear,
+                    interactionState::complete
             )
         );
         modeHandlers.put(
             EditorInteractionMode.ENTITY_PICKING,
             new EntityPickingInteractionHandler(
-                () -> interactionState.clear(),
-                () -> interactionState.complete()
+                    interactionState::clear,
+                    interactionState::complete
             )
         );
     }
@@ -339,9 +239,9 @@ public class NodeEditorInteractionManager {
     public AreaPreviewStyleSettings getAreaPreviewStyle() {
         return areaPreviewStyle;
     }
-    
+
     // ================= 鼠标射线与世界拾取（委托 {@link WorldPickingService}）=================
-    
+
     /**
      * 将屏幕上的 2D 鼠标坐标转换为 3D 世界中的射线。
      */
@@ -425,23 +325,7 @@ public class NodeEditorInteractionManager {
             if (editorModeCamera.isMiddleMouseDragging()) {
                 return;
             }
-            
-            // 检查是否点击在ImGui窗口上
-
-            // 使用处理器系统处理交互
-            if (interactionState.isInInteractionMode()) {
-                EditorInteractionMode currentMode = interactionState.getMode();
-                InteractionModeHandler handler = modeHandlers.get(currentMode);
-                
-                if (handler != null) {
-                    handler.onUpdate(hoveredBlock, hitResult, isLeftMouseClicked, isRightMouseClicked);
-                } else {
-                    // 备用处理：如果没有找到处理器，使用旧的方块拾取逻辑
-                    if (interactionState.isPendingBlockPick() && hoveredBlock != null && hitResult != null) {
-                        handleBlockPicking(hoveredBlock, hitResult);
-                    }
-                }
-            }
+            interactionRouter.route(hoveredBlock, hitResult, isLeftMouseClicked, isRightMouseClicked);
         } catch (Exception e) {
             NodeCraft.LOGGER.error("处理鼠标点击事件时出错", e);
         }
