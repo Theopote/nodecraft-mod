@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.interaction;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -12,10 +12,10 @@ import java.util.UUID;
  * Apply Redstone Power 节点: 应用红石信号。
  */
 @NodeInfo(
-    id = "world.interaction.apply_redstone_power",
+    id = "world.write.apply_redstone_power",
     displayName = "应用红石信号",
     description = "应用红石信号",
-    category = "world.interaction"
+    category = "world.write"
 )
 public class ApplyRedstonePowerNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class ApplyRedstonePowerNode extends BaseNode {
 
     // --- 构造函数 ---
     public ApplyRedstonePowerNode() {
-        super(UUID.randomUUID(), "world.interaction.apply_redstone_power");
+        super(UUID.randomUUID(), "world.write.apply_redstone_power");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", 

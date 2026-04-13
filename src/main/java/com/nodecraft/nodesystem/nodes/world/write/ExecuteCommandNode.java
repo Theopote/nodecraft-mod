@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.interaction;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -12,10 +12,10 @@ import java.util.UUID;
  * Execute Command 节点: 执行 Minecraft 命令字符串
  */
 @NodeInfo(
-    id = "world.interaction.execute_command",
+    id = "world.write.execute_command",
     displayName = "执行命令",
     description = "执行命令",
-    category = "world.interaction"
+    category = "world.write"
 )
 public class ExecuteCommandNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class ExecuteCommandNode extends BaseNode {
 
     // --- 构造函数 ---
     public ExecuteCommandNode() {
-        super(UUID.randomUUID(), "world.interaction.execute_command");
+        super(UUID.randomUUID(), "world.write.execute_command");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COMMAND_ID, "Command", 

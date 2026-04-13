@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.interaction;
+package com.nodecraft.nodesystem.nodes.world.read;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -15,10 +15,10 @@ import java.util.UUID;
  * Read Sign Text 节点: 读取告示牌文本。
  */
 @NodeInfo(
-    id = "world.interaction.read_sign_text",
+    id = "world.read.read_sign_text",
     displayName = "读取告示牌文本",
     description = "读取告示牌文本",
-    category = "world.interaction"
+    category = "world.read"
 )
 public class ReadSignTextNode extends BaseNode {
 
@@ -38,7 +38,7 @@ public class ReadSignTextNode extends BaseNode {
 
     // --- 构造函数 ---
     public ReadSignTextNode() {
-        super(UUID.randomUUID(), "world.interaction.read_sign_text");
+        super(UUID.randomUUID(), "world.read.read_sign_text");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", 

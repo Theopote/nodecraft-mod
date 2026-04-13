@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.entity;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -16,10 +16,10 @@ import java.util.UUID;
  * Entity Teleport 节点: 将实体传送到指定坐标
  */
 @NodeInfo(
-    id = "world.entity.entity_teleport",
+    id = "world.write.entity_teleport",
     displayName = "传送实体",
     description = "传送实体",
-    category = "world.entity"
+    category = "world.write"
 )
 public class EntityTeleportNode extends BaseNode {
 
@@ -47,7 +47,7 @@ public class EntityTeleportNode extends BaseNode {
 
     // --- 构造函数 ---
     public EntityTeleportNode() {
-        super(UUID.randomUUID(), "world.entity.entity_teleport");
+        super(UUID.randomUUID(), "world.write.entity_teleport");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_ENTITY_ID, "Entity", 

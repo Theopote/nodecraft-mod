@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.interaction;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -12,10 +12,10 @@ import java.util.UUID;
  * Simulate Right Click 节点: 模拟右键点击。
  */
 @NodeInfo(
-    id = "world.interaction.simulate_right_click",
+    id = "world.write.simulate_right_click",
     displayName = "模拟右键点击",
     description = "模拟右键点击",
-    category = "world.interaction"
+    category = "world.write"
 )
 public class SimulateRightClickNode extends BaseNode {
 
@@ -36,7 +36,7 @@ public class SimulateRightClickNode extends BaseNode {
 
     // --- 构造函数 ---
     public SimulateRightClickNode() {
-        super(UUID.randomUUID(), "world.interaction.simulate_right_click");
+        super(UUID.randomUUID(), "world.write.simulate_right_click");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", 

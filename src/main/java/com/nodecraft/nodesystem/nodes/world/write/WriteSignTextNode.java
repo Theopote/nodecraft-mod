@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.interaction;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import java.util.UUID;
  * Write Sign Text 节点: 设置告示牌文本
  */
 @NodeInfo(
-    id = "world.interaction.write_sign_text",
+    id = "world.write.write_sign_text",
     displayName = "写入告示牌文本",
     description = "写入告示牌文本",
-    category = "world.interaction"
+    category = "world.write"
 )
 public class WriteSignTextNode extends BaseNode {
 
@@ -44,7 +44,7 @@ public class WriteSignTextNode extends BaseNode {
 
     // --- 构造函数 ---
     public WriteSignTextNode() {
-        super(UUID.randomUUID(), "world.interaction.write_sign_text");
+        super(UUID.randomUUID(), "world.write.write_sign_text");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", 

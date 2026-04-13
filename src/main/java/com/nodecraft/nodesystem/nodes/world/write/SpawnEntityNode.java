@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.entity;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -15,10 +15,10 @@ import java.util.UUID;
  * Spawn Entity 节点: 生成实体。
  */
 @NodeInfo(
-    id = "world.entity.spawn_entity",
+    id = "world.write.spawn_entity",
     displayName = "生成实体",
     description = "生成实体",
-    category = "world.entity"
+    category = "world.write"
 )
 public class SpawnEntityNode extends BaseNode {
 
@@ -47,7 +47,7 @@ public class SpawnEntityNode extends BaseNode {
 
     // --- 构造函数 ---
     public SpawnEntityNode() {
-        super(UUID.randomUUID(), "world.entity.spawn_entity");
+        super(UUID.randomUUID(), "world.write.spawn_entity");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_POSITION_ID, "Position", 

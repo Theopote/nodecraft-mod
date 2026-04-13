@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.world.entity;
+package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -14,10 +14,10 @@ import java.util.UUID;
  * Remove Entities 节点: 移除实体。
  */
 @NodeInfo(
-    id = "world.entity.remove_entities",
+    id = "world.write.remove_entities",
     displayName = "移除实体",
     description = "移除实体",
-    category = "world.entity"
+    category = "world.write"
 )
 public class RemoveEntitiesNode extends BaseNode {
 
@@ -40,7 +40,7 @@ public class RemoveEntitiesNode extends BaseNode {
 
     // --- 构造函数 ---
     public RemoveEntitiesNode() {
-        super(UUID.randomUUID(), "world.entity.remove_entities");
+        super(UUID.randomUUID(), "world.write.remove_entities");
         
         // 创建并添加输入端口
         addInputPort(new BasePort(INPUT_ENTITY_ID, "Entity", 

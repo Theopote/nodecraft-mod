@@ -82,6 +82,14 @@ public class NodeRegistry {
         addAlias(aliases, "world.modification.remove_blocks", "world.write.clear_region");
         addAlias(aliases, "world.modification.material_mapper", "material.gradient_mapping.height_gradient_map");
         addAlias(aliases, "material.basic_assignment.replace_material", "material.gradient_mapping.height_gradient_map");
+        addAlias(aliases, "world.entity.spawn_entity", "world.write.spawn_entity");
+        addAlias(aliases, "world.entity.remove_entities", "world.write.remove_entities");
+        addAlias(aliases, "world.entity.entity_teleport", "world.write.entity_teleport");
+        addAlias(aliases, "world.interaction.apply_redstone_power", "world.write.apply_redstone_power");
+        addAlias(aliases, "world.interaction.execute_command", "world.write.execute_command");
+        addAlias(aliases, "world.interaction.simulate_right_click", "world.write.simulate_right_click");
+        addAlias(aliases, "world.interaction.write_sign_text", "world.write.write_sign_text");
+        addAlias(aliases, "world.interaction.read_sign_text", "world.read.read_sign_text");
 
         // Input and reference migration aliases.
         addAlias(aliases, "inputs.basic.integer_input", "input.numeric.integer");
