@@ -7,7 +7,6 @@ It is the source of truth for:
 - category registration
 - node documentation placement
 - node search grouping
-- migration planning
 - future node additions
 
 This document applies to the v1.0 main node system only.
@@ -330,7 +329,7 @@ If a node is easy to discover from multiple places, solve that in:
 - search keywords
 - favorites
 - quick-add menus
-- aliases
+- local editor affordances
 
 Do not solve it by giving the node multiple canonical categories.
 
@@ -352,7 +351,7 @@ Examples:
 - `pattern.grid.grid_array`
 - `world.selection.selected_region`
 
-If a node changes canonical category, its canonical node id should change as well, with alias compatibility preserved separately.
+If a node changes canonical category, its canonical node id should change as well.
 
 ## 8. Reserved and Deferred Domains
 
@@ -369,7 +368,7 @@ The following historical domains are not canonical v1.0 category ids:
 Status note (2026-04-11):
 
 - `animation.*` and `flora.*` were physically removed from source.
-- The remaining domains may still appear in old assets, source packages, or compatibility aliases during migration.
+- The remaining domains are historical only and must not be accepted as runtime category or node-id domains.
 
 They must not be used as the target category ids for new v1.0 work.
 
@@ -381,6 +380,6 @@ When adding or migrating a node, validate all of the following:
 2. Does the chosen category describe semantic responsibility rather than implementation?
 3. Could the node fit an existing category without creating taxonomy drift?
 4. Would this category still make sense if similar nodes are added later?
-5. If this node moved categories, is alias compatibility handled separately from taxonomy?
+5. If this node moved categories, were all runtime references updated to the new canonical id?
 
 If any answer is unclear, stop and resolve taxonomy first.

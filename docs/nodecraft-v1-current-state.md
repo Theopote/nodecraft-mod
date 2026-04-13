@@ -128,22 +128,13 @@ Only these editor-side utility areas should remain:
 
 They are not part of the modeling taxonomy.
 
-## Alias Policy
+## Canonical-Only Runtime
 
-Compatibility is now limited to a small set of direct old-to-new renames handled in `NodeRegistry`.
+The runtime now accepts canonical node ids only.
 
-Those aliases are intentionally conservative:
-
-- they exist only for direct renames into canonical v1 nodes
-- they do not preserve deleted source trees
-- they do not preserve removed workflow buckets
-- they do not justify keeping cross-system semantic shims alive
-
-The registry no longer acts as a broad bridge for:
-
-- `deferred.*`
-- removed legacy utility trees
-- large deleted subsystems
+- `NodeRegistry` no longer remaps old taxonomy names at runtime.
+- Save, clipboard, and history paths write canonical ids only.
+- Development-time renames should be completed in code and local test assets rather than kept alive through alias bridges.
 
 ## Practical Rule Set
 
@@ -151,8 +142,8 @@ For future work:
 
 1. If a node belongs to the v1 framework, add it directly to its canonical category.
 2. If it does not belong to the framework, do not create a new holding bucket.
-3. If you still need a rename alias, keep it narrow and explicit.
-4. Do not reintroduce migration-only domains as source structure.
+3. Do not reintroduce migration-only domains as source structure.
+4. Do not add runtime fallback logic for removed ids.
 
 ## Verification Status
 
@@ -163,7 +154,7 @@ Current verification status:
 
 ## Current Source of Truth
 
-- taxonomy and alias behavior:
+- taxonomy behavior:
   - [NodeRegistry.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/registry/NodeRegistry.java)
 - library ordering and visible categories:
   - [NodeLibraryComponent.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/gui/components/NodeLibraryComponent.java)

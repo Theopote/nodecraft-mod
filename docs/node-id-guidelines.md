@@ -8,7 +8,7 @@ This document defines the current rules for:
 
 - canonical node ids
 - canonical category placement
-- the limited alias policy that is still allowed
+- canonical-only registration and persistence behavior
 
 The system no longer keeps removed cold-storage or legacy source trees in active code.
 
@@ -48,46 +48,27 @@ These are the only top-level domains that should be used for new node work.
   - `utilities.*`
 - `utilities.assist` and `utilities.organization` are editor-side helpers, not modeling taxonomy extensions.
 
-## Alias Policy
+## Canonical-Only Rule
 
-Aliases are now intentionally narrow.
+This repository is still in pre-release development.
 
-Only direct rename aliases are allowed.
-
-Keep aliases only when all of the following are true:
-
-1. The old id was widely used during this refactor.
-2. The new target is a real canonical v1 node.
-3. The alias bridges a direct rename with the same node meaning.
-4. The alias does not recreate a removed tree, removed workflow, or removed compatibility layer.
-
-Examples of acceptable alias families:
-
-- `visualization.* -> output.*`
-- `world.query/world.modification -> world.read/world.write`
-- `inputs.basic/inputs.minecraft -> input.* / world.* / reference.*`
-- `math.basic/math.randomness/math.vector -> math.* / reference.* / transform.*`
-
-Examples that should not be reintroduced:
-
-- removed cold-storage buckets
-- removed legacy compatibility buckets
-- broad `spatial.*` compatibility nets
-- broad `utilities.*`, `data.*`, or `control.flow.*` fallback systems
-- cross-system semantic remaps where the old node meaning does not clearly match the new node
+- Do not keep old-to-new node id aliases in runtime code.
+- Do not preserve removed taxonomy names in loaders, clipboard paths, or editor fallback logic.
+- If a node is renamed or moved, update the codebase and test data directly instead of adding compatibility bridges.
+- Old ids such as `visualization.*`, `inputs.*`, `world.modification.*`, `math.basic.*`, `math.randomness.*`, and `logic.*` are not supported runtime identifiers.
 
 ## Save and Load Rules
 
 - Saving must write canonical ids.
 - Clipboard export must write canonical ids.
 - History snapshots must store canonical ids.
-- Alias resolution is only for loading or interpreting older ids that are still explicitly supported.
+- Loading should expect canonical ids only.
 
 ## Registration Rules
 
 - Annotation scanning is the primary registration path.
 - `DefaultNodeProvider` should only register real top-level and fallback canonical categories.
-- Do not keep placeholder compatibility categories alive once their source trees are gone.
+- Do not keep placeholder categories or fallback logic for removed taxonomy names.
 
 ## Migration Checklist
 
@@ -97,12 +78,12 @@ When renaming or moving a node:
 2. Update `@NodeInfo(id = ...)`.
 3. Update the `BaseNode` type id.
 4. Update `NodeLibraryComponent` ordering if the node is explicitly ordered.
-5. Add an alias only if the rename meets the narrow alias policy.
+5. Update any local test data or editor defaults that still reference the old id.
 6. Run `.\gradlew.bat compileJava --no-daemon`.
 
 ## Source of Truth
 
-- taxonomy and alias behavior:
+- taxonomy behavior:
   - [NodeRegistry.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/registry/NodeRegistry.java)
 - library ordering and category presentation:
   - [NodeLibraryComponent.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/gui/components/NodeLibraryComponent.java)
