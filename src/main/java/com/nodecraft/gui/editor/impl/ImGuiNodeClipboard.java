@@ -304,17 +304,25 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                             shortName = typeId.substring(typeId.lastIndexOf(".") + 1);
                         }
                         
-                        // 使用默认前缀尝试
-                        String[] commonPrefixes = {"data.", "logic.", "math.", "flow.", "io."};
-                        for (String prefix : commonPrefixes) {
-                            String alternativeId = prefix + shortName;
+                        String resolvedCanonicalId = registry.resolveCanonicalNodeId(typeId);
+                        if (!typeId.equals(resolvedCanonicalId)) {
+                            try {
+                                registry.createNodeInstance(resolvedCanonicalId);
+                                typeIdMap.put(typeId, resolvedCanonicalId);
+                                NodeCraft.LOGGER.info("找到显式兼容类型: {} -> {}", typeId, resolvedCanonicalId);
+                            } catch (Exception ex) {
+                                NodeCraft.LOGGER.debug("显式兼容类型不可用: {} -> {}", typeId, resolvedCanonicalId);
+                            }
+                        }
+
+                        if (typeIdMap.get(typeId).equals(typeId) && "panel".equals(shortName)) {
+                            String alternativeId = "output.debug.data_inspector";
                             try {
                                 registry.createNodeInstance(alternativeId);
                                 typeIdMap.put(typeId, alternativeId);
-                                NodeCraft.LOGGER.info("找到替代类型: {} -> {}", typeId, alternativeId);
-                                break;
+                                NodeCraft.LOGGER.info("找到面板兼容类型: {} -> {}", typeId, alternativeId);
                             } catch (Exception ex) {
-                                // 继续尝试下一个前缀
+                                NodeCraft.LOGGER.debug("面板兼容类型不可用: {}", alternativeId);
                             }
                         }
                     }
@@ -582,9 +590,9 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                 
                 // 已知类型ID映射表
                 Map<String, String> knownTypeIdMappings = new HashMap<>();
-                knownTypeIdMappings.put("visualization.debugging.panel", "panelnode");
-                knownTypeIdMappings.put("output.debug.data_inspector", "panelnode");
-                knownTypeIdMappings.put("panel", "panelnode");
+                knownTypeIdMappings.put("visualization.debugging.panel", "output.debug.data_inspector");
+                knownTypeIdMappings.put("output.debug.data_inspector", "output.debug.data_inspector");
+                knownTypeIdMappings.put("panel", "output.debug.data_inspector");
                 
                 // 检查是否有已知映射
                 if (knownTypeIdMappings.containsKey(typeId)) {

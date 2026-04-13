@@ -482,19 +482,16 @@ public class ImGuiNodeMenus {
                                     shortName = typeId.substring(typeId.lastIndexOf(".") + 1);
                                 }
                                 
-                                // 尝试不同的前缀
-                                String[] commonPrefixes = {"data.", "logic.", "math.", "flow.", "io."};
-                                for (String prefix : commonPrefixes) {
-                                    String alternativeId = prefix + shortName;
+                                String alternativeId = NodeRegistry.getInstance().resolveCanonicalNodeId(typeId);
+                                if (!typeId.equals(alternativeId)) {
                                     try {
                                         INode newNode = editor.addNode(alternativeId, newX, newY);
                                         if (newNode != null) {
-                                            NodeCraft.LOGGER.info("使用替代类型复制节点成功: {} -> {}", 
+                                            NodeCraft.LOGGER.info("使用显式兼容类型复制节点成功: {} -> {}",
                                                 typeId, alternativeId);
-                                            break;
                                         }
                                     } catch (Exception ex) {
-                                        // 继续尝试下一个前缀
+                                        NodeCraft.LOGGER.debug("使用显式兼容类型复制节点失败: {}", ex.getMessage());
                                     }
                                 }
                             } catch (Exception ex) {

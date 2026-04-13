@@ -49,21 +49,14 @@ public class NodeRenderConstants {
         // Keep category colors unified unless a distinct color is intentionally introduced.
         CATEGORY_COLORS.put("world", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("reference", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("visualization", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("utilities", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("spatial", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("geometry", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("material", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("math", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("pattern", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("input", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("inputs", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("output", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("deferred", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("transform", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("flora", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("data", DEFAULT_CATEGORY_COLOR);
-        CATEGORY_COLORS.put("animation", DEFAULT_CATEGORY_COLOR);
         CATEGORY_COLORS.put("General", DEFAULT_CATEGORY_COLOR);
     }
 
@@ -84,24 +77,23 @@ public class NodeRenderConstants {
     public static String getCategoryFromNodeTypeId(String nodeTypeId) {
         if (nodeTypeId == null || nodeTypeId.isEmpty()) return "General";
 
-        // Match the known top-level category prefixes first.
+        // Match canonical top-level prefixes first.
         if (nodeTypeId.startsWith("world.")) return "world";
         if (nodeTypeId.startsWith("reference.")) return "reference";
         if (nodeTypeId.startsWith("output.")) return "output";
-        if (nodeTypeId.startsWith("deferred.")) return "deferred";
-        if (nodeTypeId.startsWith("visualization.")) return "visualization";
         if (nodeTypeId.startsWith("utilities.")) return "utilities";
-        if (nodeTypeId.startsWith("spatial.")) return "spatial";
         if (nodeTypeId.startsWith("geometry.")) return "geometry";
         if (nodeTypeId.startsWith("material.")) return "material";
         if (nodeTypeId.startsWith("math.")) return "math";
         if (nodeTypeId.startsWith("pattern.")) return "pattern";
         if (nodeTypeId.startsWith("input.")) return "input";
-        if (nodeTypeId.startsWith("inputs.")) return "inputs";
         if (nodeTypeId.startsWith("transform.")) return "transform";
-        if (nodeTypeId.startsWith("flora.")) return "flora";
-        if (nodeTypeId.startsWith("data.")) return "data";
-        if (nodeTypeId.startsWith("animation.")) return "animation";
+
+        // Legacy IDs that still resolve through explicit registry aliases should render as their
+        // canonical top-level categories rather than reviving removed taxonomy names.
+        if (nodeTypeId.startsWith("visualization.")) return "output";
+        if (nodeTypeId.startsWith("inputs.")) return "input";
+        if (nodeTypeId.startsWith("logic.")) return "math";
 
         // Handle display labels that already contain a formatted " / " path.
         if (nodeTypeId.contains(" / ")) {
