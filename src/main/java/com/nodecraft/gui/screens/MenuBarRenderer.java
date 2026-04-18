@@ -475,12 +475,32 @@ public class MenuBarRenderer {
                 ImGui.endMenu();
             }
 
-            // 菜单栏最右侧关闭按钮
-            float closeButtonWidth = 24.0f;
+
+            // 菜单栏最右侧窗口控制按钮（最小化、最大化、关闭）
+            float buttonWidth = 24.0f;
+            float spacing = 2.0f;
             float rightEdgeX = ImGui.getWindowWidth();
-            float closeButtonPosX = rightEdgeX - closeButtonWidth;
+            float closeButtonPosX = rightEdgeX - buttonWidth;
+            float maximizeButtonPosX = rightEdgeX - buttonWidth * 2 - spacing;
+            float minimizeButtonPosX = rightEdgeX - buttonWidth * 3 - spacing * 2;
+
+            // 最小化按钮
+            ImGui.setCursorPosX(minimizeButtonPosX);
+            if (ImGui.button("_", buttonWidth, 0)) {
+                // TODO: 实现最小化窗口逻辑
+                NodeCraft.LOGGER.info("点击了最小化按钮");
+            }
+
+            // 最大化按钮
+            ImGui.setCursorPosX(maximizeButtonPosX);
+            if (ImGui.button("□", buttonWidth, 0)) {
+                // TODO: 实现最大化/还原窗口逻辑
+                NodeCraft.LOGGER.info("点击了最大化按钮");
+            }
+
+            // 关闭按钮
             ImGui.setCursorPosX(closeButtonPosX);
-            if (ImGui.button("×", closeButtonWidth, 0)) {
+            if (ImGui.button("×", buttonWidth, 0)) {
                 closeAction.run();
             }
 

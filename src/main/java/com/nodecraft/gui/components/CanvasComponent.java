@@ -8,7 +8,6 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.gui.editor.impl.NodePosition;
-import com.nodecraft.nodesystem.api.INode;
 
 import imgui.ImDrawList;
 import imgui.ImGui;

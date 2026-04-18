@@ -5,7 +5,6 @@ import com.nodecraft.gui.editor.integration.ImGuiGLStateGuard;
 import com.nodecraft.gui.editor.integration.ImGuiRenderer;
 import com.nodecraft.gui.screens.NodecraftScreen;
 import imgui.ImDrawData;
-import imgui.ImGui;
 import imgui.ImGuiIO;
 import imgui.gl3.ImGuiImplGl3;
 import net.minecraft.client.MinecraftClient;
