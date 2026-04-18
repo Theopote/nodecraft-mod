@@ -4,6 +4,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.components.CanvasComponent;
 import com.nodecraft.gui.components.EditorComponent;
 import com.nodecraft.gui.components.PropertyPanelComponent;
+import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 import com.nodecraft.gui.layout.LayoutDimensions;
 import com.nodecraft.gui.layout.LayoutManager;
 import com.nodecraft.gui.layout.LayoutConfig;
@@ -15,6 +16,7 @@ import imgui.ImGuiIO;
 import imgui.flag.ImGuiCol;
 import imgui.flag.ImGuiMouseButton;
 import imgui.flag.ImGuiMouseCursor;
+import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiWindowFlags;
 import net.minecraft.client.gui.DrawContext;
 
@@ -90,6 +92,7 @@ public class LayoutRenderer {
 
             // 调用 LayoutManager 计算布局
             layoutManager.calculateLayout(effectiveWidth, effectiveHeight, contentStartX, contentStartY, layoutConfig, showMenuBar);
+            logDetachedLayoutState("layout", contentStartX, contentStartY, effectiveWidth, effectiveHeight);
 
             // 检查组件管理器
             if (componentManager == null) {
@@ -451,6 +454,7 @@ public class LayoutRenderer {
                             continue;
                         }
 
+                        logDetachedChildState(component.getComponentId(), dims);
                         component.render(0, 0, ImGui.getContentRegionAvailX(),
                                 ImGui.getContentRegionAvailY(), 0, 0);
                     } finally {
@@ -505,6 +509,7 @@ public class LayoutRenderer {
                 }
 
                 // 使用全尺寸进行渲染
+                logDetachedChildState(canvasComponent.getComponentId(), dims);
                 canvasComponent.render(0, 0, ImGui.getContentRegionAvailX(),
                         ImGui.getContentRegionAvailY(), 0, 0);
             } finally {
@@ -566,5 +571,55 @@ public class LayoutRenderer {
      */
     public boolean isHoveringSplitter() {
         return isHoveringLeftSplitter || isHoveringRightSplitter;
+    }
+
+    private void logDetachedLayoutState(
+            String phase,
+            float contentStartX,
+            float contentStartY,
+            float effectiveWidth,
+            float effectiveHeight) {
+        if (!ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) {
+            return;
+        }
+
+        NodeCraft.LOGGER.info(
+                "Detached {}: windowPos=({}, {}), windowSize=({}, {}), contentStart=({}, {}), contentSize=({}, {}), hovered={}, anyHovered={}, anyPopupOpen={}",
+                phase,
+                ImGui.getWindowPosX(),
+                ImGui.getWindowPosY(),
+                ImGui.getWindowWidth(),
+                ImGui.getWindowHeight(),
+                contentStartX,
+                contentStartY,
+                effectiveWidth,
+                effectiveHeight,
+                ImGui.isWindowHovered(),
+                ImGui.isAnyItemHovered(),
+                ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopupId));
+    }
+
+    private void logDetachedChildState(String componentId, LayoutDimensions dims) {
+        if (!ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) {
+            return;
+        }
+
+        NodeCraft.LOGGER.info(
+                "Detached child {}: cursorPos=({}, {}), dims=({}, {}, {}, {}), childWindowPos=({}, {}), childWindowSize=({}, {}), hovered={}, anyHovered={}, anyActive={}, anyPopupOpen={}",
+                componentId,
+                ImGui.getCursorPosX(),
+                ImGui.getCursorPosY(),
+                dims.x(),
+                dims.y(),
+                dims.width(),
+                dims.height(),
+                ImGui.getWindowPosX(),
+                ImGui.getWindowPosY(),
+                ImGui.getWindowWidth(),
+                ImGui.getWindowHeight(),
+                ImGui.isWindowHovered(),
+                ImGui.isAnyItemHovered(),
+                ImGui.isAnyItemActive(),
+                ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopupId));
     }
 }

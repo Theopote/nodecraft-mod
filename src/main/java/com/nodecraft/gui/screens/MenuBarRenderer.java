@@ -2,6 +2,7 @@ package com.nodecraft.gui.screens;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.BooleanSupplier;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.components.CanvasComponent;
@@ -35,6 +36,9 @@ public class MenuBarRenderer {
 
     private final ComponentManager componentManager;
     private final Runnable closeAction;
+    private final Runnable detachEditorAction;
+    private final Runnable attachEditorAction;
+    private final BooleanSupplier detachedStateSupplier;
 
     // 文件过滤器
     private static final String NODE_GRAPH_FILTER = "节点图文件 (*.nodecraft)";
@@ -50,9 +54,15 @@ public class MenuBarRenderer {
 
     public MenuBarRenderer(
             ComponentManager componentManager,
-            Runnable closeAction) {
+            Runnable closeAction,
+            Runnable detachEditorAction,
+            Runnable attachEditorAction,
+            BooleanSupplier detachedStateSupplier) {
         this.componentManager = componentManager;
         this.closeAction = closeAction;
+        this.detachEditorAction = detachEditorAction;
+        this.attachEditorAction = attachEditorAction;
+        this.detachedStateSupplier = detachedStateSupplier;
     }
 
     /**
@@ -435,6 +445,16 @@ public class MenuBarRenderer {
                     ImGui.textDisabled("状态: 就绪");
                 }
                 
+                ImGui.endMenu();
+            }
+            if (ImGui.beginMenu("窗口")) {
+                boolean isDetached = detachedStateSupplier != null && detachedStateSupplier.getAsBoolean();
+                if (!isDetached && ImGui.menuItem("分离到独立窗口", null)) {
+                    detachEditorAction.run();
+                }
+                if (isDetached && ImGui.menuItem("收回主窗口", null)) {
+                    attachEditorAction.run();
+                }
                 ImGui.endMenu();
             }
             if (ImGui.beginMenu("帮助")) {

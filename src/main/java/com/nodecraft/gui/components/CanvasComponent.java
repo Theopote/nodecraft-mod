@@ -462,6 +462,12 @@ public class CanvasComponent implements EditorComponent {
      * 处理拖放目标
      */
     private void handleDragDropTarget(ImVec2 canvasScreenPos, ImVec2 canvasSize) {
+        Object activePayload = ImGui.getDragDropPayload(CanvasConstants.DRAG_DROP_PAYLOAD_TYPE);
+        if (activePayload == null) {
+            isNodeDragDropActive = false;
+            return;
+        }
+
         ImGui.setCursorScreenPos(canvasScreenPos.x, canvasScreenPos.y);
         ImGui.invisibleButton("##canvasDropTarget", canvasSize.x, canvasSize.y);
         

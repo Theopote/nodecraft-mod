@@ -7,6 +7,7 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.gui.components.CanvasComponent;
+import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -251,7 +252,7 @@ public class ImGuiNodeInteraction {
 
         // 此时 ImGui.isItemActive() 已经为 true，并且鼠标在节点主体上
         // 确保鼠标左键按下（因为 ImGui.isItemActive() 可能是拖动非点击）
-        if (ImGui.isMouseDown(ImGuiMouseButton.Left)) {
+        if (ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) {
             // 额外检查：即使节点主体的invisibleButton被激活，如果鼠标实际在端口区域，
             // 也不启动节点拖拽，优先处理端口连接
             ImVec2 mousePos = ImGui.getIO().getMousePos();
@@ -278,7 +279,7 @@ public class ImGuiNodeInteraction {
     public void tryStopNodeDragging() {
         if (currentState == InteractionState.DRAGGING_NODE) {
             // 只有当鼠标左键真的抬起时才停止拖拽
-            if (ImGui.isMouseReleased(ImGuiMouseButton.Left)) {
+            if (ImGuiInputAdapter.isMouseReleased(ImGuiMouseButton.Left)) {
                 currentState = InteractionState.IDLE;
                 draggingNodeId = null;
                 ImGui.getIO().setWantCaptureMouse(false); // 释放鼠标捕获
@@ -302,7 +303,7 @@ public class ImGuiNodeInteraction {
         }
 
         // 确保鼠标左键刚刚按下，且 ImGui 未被其他更高优先级元素捕获
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Left) && !ImGui.getIO().getWantCaptureMouse()) {
+        if (ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Left) && !ImGui.getIO().getWantCaptureMouse()) {
             currentState = InteractionState.PANNING_CANVAS;
             panStartMousePos.x = mousePos.x;
             panStartMousePos.y = mousePos.y;
@@ -325,7 +326,7 @@ public class ImGuiNodeInteraction {
             return;
         }
 
-        if (ImGui.isMouseDown(ImGuiMouseButton.Left)) {
+        if (ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) {
             ImVec2 currentMousePos = ImGui.getIO().getMousePos();
 
             // 计算鼠标相对于起始点的屏幕位移
@@ -366,7 +367,7 @@ public class ImGuiNodeInteraction {
                 return;
             }
 
-            if (ImGui.isMouseDown(ImGuiMouseButton.Left)) { // 鼠标左键仍按下，更新框选结束位置
+            if (ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) { // 鼠标左键仍按下，更新框选结束位置
                 boxSelectEnd.x = (mousePos.x - canvasPos.x - editor.getCanvasOffsetX()) / editor.getCanvasZoom();
                 boxSelectEnd.y = (mousePos.y - canvasPos.y - editor.getCanvasOffsetY()) / editor.getCanvasZoom();
             } else { // 鼠标左键抬起，完成框选
@@ -482,7 +483,7 @@ public class ImGuiNodeInteraction {
         }
 
         // 只有当鼠标左键刚刚点击时才尝试启动
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+        if (ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Left)) {
             // 【关键修改点：】不再检查 ImGui.getIO().getWantCaptureMouse()，
             // 因为在 renderSingleNode 中已经确保端口优先级，
             // 如果到了这里，就说明是点击了端口，应该无条件开始连接。
@@ -518,7 +519,7 @@ public class ImGuiNodeInteraction {
         }
 
         // 如果鼠标左键释放，尝试完成连接
-        if (ImGui.isMouseReleased(ImGuiMouseButton.Left)) {
+        if (ImGuiInputAdapter.isMouseReleased(ImGuiMouseButton.Left)) {
             currentState = InteractionState.IDLE; // 重置状态
             ImGui.getIO().setWantCaptureMouse(false); // 释放鼠标捕获
             float endX = ImGui.getMousePosX();
@@ -611,7 +612,7 @@ public class ImGuiNodeInteraction {
         updateHoveredConnection(ImGui.getIO().getMousePos(), portScreenPositions, graph);
 
         // 如果右键单击并且鼠标悬停在连接线上，则断开连接
-        if (isHoveringConnection && ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+        if (isHoveringConnection && ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Right)) {
             if (hoveredConnectionSourceNodeId != null && hoveredConnectionSourcePortId != null &&
                     hoveredConnectionTargetNodeId != null && hoveredConnectionTargetPortId != null) {
 

@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL; // Changed to java.net.URL for clarity
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.screens.NodecraftScreen;
+import com.nodecraft.gui.window.DetachedEditorWindow;
 import com.nodecraft.gui.window.WindowManager;
 import com.nodecraft.gui.window.ImGuiWindowHandler;
 import com.nodecraft.gui.window.ViewportCloseDetector;
@@ -12,6 +14,7 @@ import imgui.flag.ImGuiConfigFlags;
 import imgui.flag.ImGuiCol;
 import imgui.gl3.ImGuiImplGl3;
 import imgui.glfw.ImGuiImplGlfw;
+import imgui.internal.ImGuiContext;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.util.Window;
 import org.jetbrains.annotations.NotNull;
@@ -33,8 +36,11 @@ public class ImGuiRenderer {
     
     private final ImGuiImplGlfw imGuiGlfw = new ImGuiImplGlfw();
     private final ImGuiImplGl3 imGuiGl3 = new ImGuiImplGl3();
+    private final DetachedEditorWindow detachedEditorWindow = new DetachedEditorWindow();
     private boolean initialized = false;
     private boolean drawDataReady = false;
+    private ImGuiContext primaryContext;
+    private long backendWindowHandle;
     
     // 依赖的管理器实例，通常在更高层级初始化并传递，但此处保持单例获取
     private final WindowManager windowManager = WindowManager.getInstance();
@@ -102,11 +108,12 @@ public class ImGuiRenderer {
             
             // 6. 初始化 GLFW 和 OpenGL3 后端
             imGuiGlfw.init(windowHandle, true); // true表示安装回调
+            backendWindowHandle = windowHandle;
             resetPixelStoreStateForImGuiTextureUpload();
             imGuiGl3.init("#version 150"); // OpenGL 3.2+ Core Profile
             
             // 7. 设置 ImGui 样式
-            setupMinecraftStyle();
+            applyEditorStyleForCurrentContext();
             
             // 8. 初始化依赖的管理器
             windowManager.initialize();
@@ -298,16 +305,20 @@ public class ImGuiRenderer {
             Window window = client.getWindow();
 
             ImGuiIO io = ImGui.getIO();
+            if (detachedEditorWindow.isOpen()) {
+                detachedEditorWindow.prepareFrame(io);
+            } else {
                 io.setDisplaySize(window.getWidth(), window.getHeight());
                 io.setDisplayFramebufferScale(
                     Math.max(1.0f, (float) window.getFramebufferWidth() / Math.max(1.0f, window.getWidth())),
                     Math.max(1.0f, (float) window.getFramebufferHeight() / Math.max(1.0f, window.getHeight()))
                 );
 
-            DoubleBuffer xBuffer = BufferUtils.createDoubleBuffer(1);
-            DoubleBuffer yBuffer = BufferUtils.createDoubleBuffer(1);
-            GLFW.glfwGetCursorPos(window.getHandle(), xBuffer, yBuffer);
-            io.setMousePos((float) xBuffer.get(0), (float) yBuffer.get(0));
+                DoubleBuffer xBuffer = BufferUtils.createDoubleBuffer(1);
+                DoubleBuffer yBuffer = BufferUtils.createDoubleBuffer(1);
+                GLFW.glfwGetCursorPos(window.getHandle(), xBuffer, yBuffer);
+                io.setMousePos((float) xBuffer.get(0), (float) yBuffer.get(0));
+            }
 
             imGuiGlfw.newFrame();
             ImGui.newFrame();
@@ -359,7 +370,7 @@ public class ImGuiRenderer {
             com.mojang.blaze3d.systems.RenderSystem.assertOnRenderThread();
 
             MinecraftClient client = MinecraftClient.getInstance();
-            if (client != null && client.getWindow() != null) {
+            if (!detachedEditorWindow.isOpen() && client != null && client.getWindow() != null) {
                 Window window = client.getWindow();
                 GL30.glBindFramebuffer(GL30.GL_FRAMEBUFFER, 0);
                 GL11.glViewport(0, 0,
@@ -368,7 +379,7 @@ public class ImGuiRenderer {
             }
 
             imgui.ImDrawData drawData = ImGui.getDrawData();
-            if (drawData != null && drawData.getCmdListsCount() > 0) {
+            if (!detachedEditorWindow.isOpen() && drawData != null && drawData.getCmdListsCount() > 0) {
                 try (ImGuiGLStateGuard ignored = ImGuiGLStateGuard.enter()) {
                     imGuiGl3.renderDrawData(drawData);
                 }
@@ -380,6 +391,10 @@ public class ImGuiRenderer {
                 ImGui.renderPlatformWindowsDefault();
                 GLFW.glfwMakeContextCurrent(backupCurrentContext);
                 ensureWindowLayering();
+            }
+
+            if (detachedEditorWindow.isOpen()) {
+                detachedEditorWindow.renderDrawData(drawData, imGuiGl3);
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染待提交ImGui数据时出错", e);
@@ -404,6 +419,11 @@ public class ImGuiRenderer {
     /**
      * 设置 ImGui 的样式，使其更贴近 Minecraft 的视觉风格。
      */
+    public void applyEditorStyleForCurrentContext() {
+        primaryContext = ImGui.getCurrentContext();
+        setupMinecraftStyle();
+    }
+
     private void setupMinecraftStyle() {
         ImGui.styleColorsDark(); // 使用暗色主题作为基础
 
@@ -467,6 +487,7 @@ public class ImGuiRenderer {
         if (!initialized) return;
         
         try {
+            detachedEditorWindow.cleanup();
             closeDetector.cleanup();
             windowHandler.cleanup();
             windowManager.cleanup();
@@ -474,6 +495,7 @@ public class ImGuiRenderer {
             imGuiGl3.dispose();
             imGuiGlfw.dispose();
             initialized = false;
+            backendWindowHandle = 0;
             NodeCraft.LOGGER.info("ImGui Renderer 关闭成功。");
         } catch (Exception e) {
             NodeCraft.LOGGER.error("关闭ImGui时出错", e);
@@ -486,6 +508,70 @@ public class ImGuiRenderer {
      */
     public boolean isInitialized() {
         return initialized;
+    }
+
+    public void openDetachedEditorWindow(final NodecraftScreen screen) {
+        if (!initialized) {
+            return;
+        }
+        detachedEditorWindow.open(screen);
+    }
+
+    public void closeDetachedEditorWindow(final NodecraftScreen screen) {
+        detachedEditorWindow.close(screen);
+    }
+
+    public boolean isDetachedEditorOpen(final NodecraftScreen screen) {
+        return detachedEditorWindow.isDetached(screen);
+    }
+
+    public boolean isMouseClicked(final int button) {
+        if (detachedEditorWindow.isOpen()) {
+            return detachedEditorWindow.isMouseClicked(button);
+        }
+        return ImGui.isMouseClicked(button);
+    }
+
+    public boolean isMouseDown(final int button) {
+        if (detachedEditorWindow.isOpen()) {
+            return detachedEditorWindow.isMouseDown(button);
+        }
+        return ImGui.isMouseDown(button);
+    }
+
+    public boolean isMouseReleased(final int button) {
+        if (detachedEditorWindow.isOpen()) {
+            return detachedEditorWindow.isMouseReleased(button);
+        }
+        return ImGui.isMouseReleased(button);
+    }
+
+    public void bindPlatformBackendToWindow(final long windowHandle) {
+        if (!initialized || windowHandle == 0 || backendWindowHandle == windowHandle) {
+            return;
+        }
+
+        try {
+            imGuiGlfw.dispose();
+        } catch (Exception e) {
+            NodeCraft.LOGGER.debug("Rebinding ImGui GLFW backend dispose failed: {}", e.getMessage());
+        }
+
+        imGuiGlfw.init(windowHandle, true);
+        backendWindowHandle = windowHandle;
+    }
+
+    public void restorePrimaryPlatformBackend() {
+        if (!initialized) {
+            return;
+        }
+
+        final MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) {
+            return;
+        }
+
+        bindPlatformBackendToWindow(client.getWindow().getHandle());
     }
 
     /**

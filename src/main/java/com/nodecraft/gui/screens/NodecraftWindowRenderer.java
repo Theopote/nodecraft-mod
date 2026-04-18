@@ -66,10 +66,14 @@ public class NodecraftWindowRenderer {
             applyStyles();
             stylesApplied = true;
             
-            renderMainWindow(context, mouseX, mouseY, delta);
-            
-            if (!parentScreen.closeRequested) {
-                renderDialogs();
+            if (parentScreen.isEditorDetached()) {
+                renderDetachedWindow();
+            } else {
+                renderMainWindow(context, mouseX, mouseY, delta);
+
+                if (!parentScreen.closeRequested) {
+                    renderDialogs();
+                }
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染ImGui界面错误: {}", e.getMessage(), e);
@@ -194,6 +198,40 @@ public class NodecraftWindowRenderer {
                 layoutRenderer.render(context, mouseX, mouseY, delta);
             } catch (Exception e) {
                 NodeCraft.LOGGER.error("渲染布局时出错: {}", e.getMessage(), e);
+            }
+        }
+    }
+
+    public void renderDetachedWindow() {
+        boolean stylesApplied = false;
+        try {
+            applyStyles();
+            stylesApplied = true;
+
+            ImGui.setNextWindowPos(0.0f, 0.0f, ImGuiCond.Always);
+            ImGui.setNextWindowSize(ImGui.getIO().getDisplaySizeX(), ImGui.getIO().getDisplaySizeY(), ImGuiCond.Always);
+
+            final int windowFlags = ImGuiWindowFlags.MenuBar
+                | ImGuiWindowFlags.NoTitleBar
+                | ImGuiWindowFlags.NoResize
+                | ImGuiWindowFlags.NoMove
+                | ImGuiWindowFlags.NoCollapse
+                | ImGuiWindowFlags.NoSavedSettings;
+
+            if (ImGui.begin("NodeCraft Detached Editor", windowFlags)) {
+                renderWindowContent(null, 0, 0, 0.0f);
+            }
+            ImGui.end();
+
+            if (!parentScreen.closeRequested) {
+                renderDialogs();
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("娓叉煋鐙珛缂栬緫鍣ㄧ獥鍙ｆ椂鍑洪敊: {}", e.getMessage(), e);
+            parentScreen.closeRequested = true;
+        } finally {
+            if (stylesApplied) {
+                popStyles();
             }
         }
     }

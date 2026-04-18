@@ -6,6 +6,7 @@ import com.nodecraft.core.event.EditorUIEvent;
 import com.nodecraft.gui.editor.NodeEditorFactory;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.layout.StandardLayoutManager;
+import com.nodecraft.gui.window.DetachedEditorWindow;
 import com.nodecraft.gui.window.ViewportCloseDetector;
 import com.nodecraft.minecraft.client.GhostCameraManager;
 import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
@@ -166,6 +167,11 @@ public class NodecraftLifecycleManager {
         
         // 10. 发布初始化完成事件
         parentScreen.postEvent(new EditorUIEvent(EditorUIEvent.Type.LAYOUT_CHANGED, "main_screen"));
+
+        if (DetachedEditorWindow.hasMultipleMonitors()) {
+            parentScreen.detachEditorToExternalWindow();
+            NodeCraft.LOGGER.info("Detected multiple monitors, detached editor window opened automatically");
+        }
         
         NodeCraft.LOGGER.info("所有组件初始化完成");
     }
@@ -194,7 +200,10 @@ public class NodecraftLifecycleManager {
         // 创建菜单栏渲染器
         MenuBarRenderer menuBarRenderer = new MenuBarRenderer(
             componentManager,
-            () -> parentScreen.closeRequested = true
+            () -> parentScreen.closeRequested = true,
+            parentScreen::detachEditorToExternalWindow,
+            parentScreen::attachEditorToMainWindow,
+            parentScreen::isEditorDetached
         );
         parentScreen.setMenuBarRenderer(menuBarRenderer);
         

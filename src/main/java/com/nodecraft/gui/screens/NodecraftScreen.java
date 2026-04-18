@@ -341,9 +341,16 @@ public void setMenuBarRenderer(MenuBarRenderer renderer) { this.menuBarRenderer 
 public void setWindowRenderer(NodecraftWindowRenderer renderer) { this.windowRenderer = renderer; }
 
 public boolean isShowMenuBar() { return showMenuBar; }
+public boolean isEditorDetached() { return ImGuiRenderer.getInstance().isDetachedEditorOpen(this); }
+public void detachEditorToExternalWindow() { ImGuiRenderer.getInstance().openDetachedEditorWindow(this); }
+public void attachEditorToMainWindow() { ImGuiRenderer.getInstance().closeDetachedEditorWindow(this); }
 
 // 缺失的方法实现
 public boolean isMouseOverNodecraftGui(double mouseX, double mouseY) {
+    if (isEditorDetached()) {
+        return false;
+    }
+
     if (initialized && ImGui.getIO() != null) {
         // 菜单/子菜单/弹窗打开期间，始终视为鼠标在UI上，
         // 避免从一级菜单移动到二级菜单时被误判并导致菜单收起。
@@ -554,6 +561,7 @@ public boolean isImGuiWantCaptureMouse() {
             layoutManager = null;
 
             // 5. 重置窗口管理器关联（如果存在）
+            ImGuiRenderer.getInstance().closeDetachedEditorWindow(this);
             if (windowManager.isWindowAssociated()) {
                 windowManager.disassociateNodeCraftWindow();
             }

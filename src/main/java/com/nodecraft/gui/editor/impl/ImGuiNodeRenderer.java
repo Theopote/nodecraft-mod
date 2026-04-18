@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -759,7 +760,7 @@ public class ImGuiNodeRenderer {
         boolean canDragNode = isInvisibleButtonActive || (isMouseInNodeBounds && isCustomUIHoveredEmpty && !isCustomUIWidgetActive);
 
         // 检查是否是首次点击 (鼠标刚按下左键)
-        if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+        if (ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Left)) {
             // 首先检查鼠标是否在端口区域 - 如果是，优先处理端口连接
             boolean isMouseOnPort = interaction.isMouseOverAnyPortOfNode(nodeId, mousePos, editor.getPortScreenPositions());
 
@@ -800,7 +801,7 @@ public class ImGuiNodeRenderer {
         }
 
         // 额外检查：如果正在拖动节点且鼠标释放，确保停止拖动
-        if (interaction.isDraggingNode() && ImGui.isMouseReleased(ImGuiMouseButton.Left)) {
+        if (interaction.isDraggingNode() && ImGuiInputAdapter.isMouseReleased(ImGuiMouseButton.Left)) {
             interaction.tryStopNodeDragging();
         }
     }

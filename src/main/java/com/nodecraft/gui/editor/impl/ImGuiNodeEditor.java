@@ -9,6 +9,7 @@ import java.util.HashSet;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.NodeEditorFactory;
 import com.nodecraft.gui.editor.base.INodeEditor;
+import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -334,7 +335,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             interaction.handleCanvasPanning(canvasPos);
 
             // 10. 处理鼠标左键点击：节点选择、选择清除、框选启动、画布平移
-            if (ImGui.isMouseClicked(ImGuiMouseButton.Left)) {
+            if (ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Left)) {
                 NodeCraft.LOGGER.debug("左键点击检测 - 鼠标位置: ({}, {})", mousePos.x, mousePos.y);
 
                 // 检查点击是否在画布区域内
@@ -426,7 +427,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             }
 
             // 14. 处理节点右键菜单 (仅当 ImGui 没有被其他 Item 捕获时)
-            if (ImGui.isMouseClicked(ImGuiMouseButton.Right)) {
+            if (ImGuiInputAdapter.isMouseClicked(ImGuiMouseButton.Right)) {
                 // 如果 ImGui 已经捕获了鼠标，则不显示右键菜单（防止与内部控件的右键事件冲突）
                 if (!ImGui.getIO().getWantCaptureMouse()) {
                     handleNodeRightClick(mousePos.x, mousePos.y);
@@ -450,7 +451,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
      * 这样可以避免“本帧先绘制后位移”导致的节点背景与自定义UI视觉不同步。
      */
     private void applyNodeDragMovementBeforeRender() {
-        if (!interaction.isDraggingNode() || !ImGui.isMouseDown(ImGuiMouseButton.Left)) {
+        if (!interaction.isDraggingNode() || !ImGuiInputAdapter.isMouseDown(ImGuiMouseButton.Left)) {
             return;
         }
 
