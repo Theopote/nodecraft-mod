@@ -31,6 +31,12 @@ import java.nio.DoubleBuffer;
  * 负责ImGui上下文的创建、初始化、字体加载、帧生命周期管理以及与GLFW/OpenGL的集成。
  */
 public class ImGuiRenderer {
+        /**
+         * 获取分离编辑器窗口实例。
+         */
+        public DetachedEditorWindow getDetachedEditorWindow() {
+            return detachedEditorWindow;
+        }
     
     private static ImGuiRenderer INSTANCE;
     

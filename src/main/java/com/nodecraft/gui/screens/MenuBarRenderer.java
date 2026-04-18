@@ -484,18 +484,54 @@ public class MenuBarRenderer {
             float maximizeButtonPosX = rightEdgeX - buttonWidth * 2 - spacing;
             float minimizeButtonPosX = rightEdgeX - buttonWidth * 3 - spacing * 2;
 
+
+            // 获取主窗口句柄（支持分离窗口和主窗口）
+            long windowHandle = 0;
+            boolean isDetached = detachedStateSupplier != null && detachedStateSupplier.getAsBoolean();
+            try {
+                if (isDetached) {
+                    // 分离窗口
+                    com.nodecraft.gui.window.DetachedEditorWindow detached = com.nodecraft.gui.editor.integration.ImGuiRenderer.getInstance().getDetachedEditorWindow();
+                    if (detached != null && detached.isOpen()) {
+                        windowHandle = detached.getWindowHandle();
+                    }
+                } else {
+                    // 主窗口
+                    net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+                    if (client != null && client.getWindow() != null) {
+                        windowHandle = client.getWindow().getHandle();
+                    }
+                }
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("获取窗口句柄失败", e);
+            }
+
             // 最小化按钮
             ImGui.setCursorPosX(minimizeButtonPosX);
             if (ImGui.button("_", buttonWidth, 0)) {
-                // TODO: 实现最小化窗口逻辑
-                NodeCraft.LOGGER.info("点击了最小化按钮");
+                if (windowHandle != 0) {
+                    org.lwjgl.glfw.GLFW.glfwIconifyWindow(windowHandle);
+                    NodeCraft.LOGGER.info("窗口已最小化: {}", windowHandle);
+                } else {
+                    NodeCraft.LOGGER.warn("未能获取窗口句柄，无法最小化");
+                }
             }
 
             // 最大化按钮
             ImGui.setCursorPosX(maximizeButtonPosX);
             if (ImGui.button("□", buttonWidth, 0)) {
-                // TODO: 实现最大化/还原窗口逻辑
-                NodeCraft.LOGGER.info("点击了最大化按钮");
+                if (windowHandle != 0) {
+                    int maximized = org.lwjgl.glfw.GLFW.glfwGetWindowAttrib(windowHandle, org.lwjgl.glfw.GLFW.GLFW_MAXIMIZED);
+                    if (maximized == org.lwjgl.glfw.GLFW.GLFW_TRUE) {
+                        org.lwjgl.glfw.GLFW.glfwRestoreWindow(windowHandle);
+                        NodeCraft.LOGGER.info("窗口已还原: {}", windowHandle);
+                    } else {
+                        org.lwjgl.glfw.GLFW.glfwMaximizeWindow(windowHandle);
+                        NodeCraft.LOGGER.info("窗口已最大化: {}", windowHandle);
+                    }
+                } else {
+                    NodeCraft.LOGGER.warn("未能获取窗口句柄，无法最大化/还原");
+                }
             }
 
             // 关闭按钮
