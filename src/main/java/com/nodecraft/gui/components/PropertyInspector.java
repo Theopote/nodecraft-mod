@@ -71,7 +71,7 @@ final class PropertyInspector {
                 if (currentClass.isRecord()) {
                     for (RecordComponent component : currentClass.getRecordComponents()) {
                         Method accessor = component.getAccessor();
-                        if (accessor != null && !SYSTEM_DECLARING_CLASSES.contains(accessor.getDeclaringClass())) {
+                        if (!SYSTEM_DECLARING_CLASSES.contains(accessor.getDeclaringClass())) {
                             getters.putIfAbsent(component.getName(), accessor);
                         }
                     }

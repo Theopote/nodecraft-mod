@@ -3184,7 +3184,7 @@ public class PropertyPanelComponent implements EditorComponent {
         }
 
         RENDERER_REGISTRY.put(type, renderer);
-        NodeCraft.LOGGER.debug("已注册属性渲染器: " + type.getName());
+        NodeCraft.LOGGER.debug("已注册属性渲染器: {}", type.getName());
     }
 
     /**
