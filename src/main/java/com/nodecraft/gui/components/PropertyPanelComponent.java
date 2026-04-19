@@ -7,12 +7,15 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.datatypes.LSystemRule;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.BoundingBoxData;
+import com.nodecraft.nodesystem.datatypes.ColorData;
 import com.nodecraft.nodesystem.datatypes.ConeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PlantStructure;
 import com.nodecraft.nodesystem.datatypes.OctahedronGeometryData;
+import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolygonProfileData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
@@ -21,6 +24,8 @@ import com.nodecraft.nodesystem.datatypes.SquarePyramidGeometryData;
 import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.datatypes.TetrahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
+import com.nodecraft.nodesystem.datatypes.LineData;
+import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
@@ -986,6 +991,210 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
+    private static final PropertyRenderer VECTOR3D_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(宸茬鐢?");
+            return;
+        }
+
+        try {
+            Vector3d vec = (Vector3d) prop.getter.invoke(node);
+            if (vec == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+            String tempKey = panel.getTempValueKey(node, prop.name + "_vector3d");
+            float[] values = (float[]) panel.tempValues.computeIfAbsent(
+                    tempKey, k -> new float[]{(float) vec.x, (float) vec.y, (float) vec.z});
+
+            if (!panel.isPropertyBeingEdited(node, prop.name)) {
+                values[0] = (float) vec.x;
+                values[1] = (float) vec.y;
+                values[2] = (float) vec.z;
+            }
+
+            if (isReadOnly) ImGui.beginDisabled();
+            boolean changed = false;
+            float[] xValue = {values[0]};
+            float[] yValue = {values[1]};
+            float[] zValue = {values[2]};
+            changed |= ImGui.dragFloat("X##" + prop.name, xValue, 0.01f);
+            values[0] = xValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Y##" + prop.name, yValue, 0.01f);
+            values[1] = yValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Z##" + prop.name, zValue, 0.01f);
+            values[2] = zValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+            if (isReadOnly) ImGui.endDisabled();
+
+            if (!isReadOnly && changed) {
+                panel.applyPropertyValue(node, prop, new Vector3d(values[0], values[1], values[2]));
+            }
+
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer BLOCK_POS_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(宸茬鐢?");
+            return;
+        }
+
+        try {
+            BlockPos pos = (BlockPos) prop.getter.invoke(node);
+            if (pos == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+            String tempKey = panel.getTempValueKey(node, prop.name + "_blockpos");
+            int[] values = (int[]) panel.tempValues.computeIfAbsent(
+                    tempKey, k -> new int[]{pos.getX(), pos.getY(), pos.getZ()});
+
+            if (!panel.isPropertyBeingEdited(node, prop.name)) {
+                values[0] = pos.getX();
+                values[1] = pos.getY();
+                values[2] = pos.getZ();
+            }
+
+            if (isReadOnly) ImGui.beginDisabled();
+            boolean changed = false;
+            int[] xValue = {values[0]};
+            int[] yValue = {values[1]};
+            int[] zValue = {values[2]};
+            changed |= ImGui.dragInt("X##" + prop.name, xValue, 1);
+            values[0] = xValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragInt("Y##" + prop.name, yValue, 1);
+            values[1] = yValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragInt("Z##" + prop.name, zValue, 1);
+            values[2] = zValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+            if (isReadOnly) ImGui.endDisabled();
+
+            if (!isReadOnly && changed) {
+                panel.applyPropertyValue(node, prop, new BlockPos(values[0], values[1], values[2]));
+            }
+
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer COLOR_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(宸茬鐢?");
+            return;
+        }
+
+        try {
+            ColorData color = (ColorData) prop.getter.invoke(node);
+            if (color == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+            String tempKey = panel.getTempValueKey(node, prop.name + "_color");
+            float[] values = (float[]) panel.tempValues.computeIfAbsent(
+                    tempKey, k -> new float[]{color.r(), color.g(), color.b(), color.a()});
+
+            if (!panel.isPropertyBeingEdited(node, prop.name)) {
+                values[0] = color.r();
+                values[1] = color.g();
+                values[2] = color.b();
+                values[3] = color.a();
+            }
+
+            if (isReadOnly) ImGui.beginDisabled();
+            boolean changed = ImGui.colorEdit4("##" + prop.name, values);
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+            if (isReadOnly) ImGui.endDisabled();
+
+            if (!isReadOnly && changed) {
+                panel.applyPropertyValue(node, prop, new ColorData(values[0], values[1], values[2], values[3]));
+            }
+
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer POINT_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            PointData point = (PointData) prop.getter.invoke(node);
+            if (point == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Position: " + formatVector3d(point.getPosition()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer BOUNDING_BOX_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            BoundingBoxData box = (BoundingBoxData) prop.getter.invoke(node);
+            if (box == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Min: " + formatVector3d(box.getMin()));
+            ImGui.text("Max: " + formatVector3d(box.getMax()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer SPHERE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            SphereData sphere = (SphereData) prop.getter.invoke(node);
+            if (sphere == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(sphere.getCenter()));
+            ImGui.text(String.format("Radius: %.2f", sphere.getRadius()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer LINE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            LineData line = (LineData) prop.getter.invoke(node);
+            if (line == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Start: " + formatVec3d(line.getStart()));
+            ImGui.text("End: " + formatVec3d(line.getEnd()));
+            ImGui.text("Direction: " + formatVec3d(line.getDirection()));
+            ImGui.text(String.format("Length: %.2f", line.getLength()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
     // 改进的异常处理方法
     private static String formatBlockPos(BlockPos pos) {
         if (pos == null) {
@@ -995,6 +1204,13 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private static String formatVector3d(Vector3d vec) {
+        if (vec == null) {
+            return "(null)";
+        }
+        return String.format("(%.2f, %.2f, %.2f)", vec.x, vec.y, vec.z);
+    }
+
+    private static String formatVec3d(Vec3d vec) {
         if (vec == null) {
             return "(null)";
         }
@@ -2799,6 +3015,13 @@ public class PropertyPanelComponent implements EditorComponent {
         registerRenderer(EllipsoidGeometryData.class, ELLIPSOID_GEOMETRY_RENDERER);
         registerRenderer(OctahedronGeometryData.class, OCTAHEDRON_RENDERER);
         registerRenderer(TorusGeometryData.class, TORUS_GEOMETRY_RENDERER);
+        registerRenderer(Vector3d.class, VECTOR3D_RENDERER);
+        registerRenderer(BlockPos.class, BLOCK_POS_RENDERER);
+        registerRenderer(ColorData.class, COLOR_RENDERER);
+        registerRenderer(PointData.class, POINT_RENDERER);
+        registerRenderer(BoundingBoxData.class, BOUNDING_BOX_RENDERER);
+        registerRenderer(SphereData.class, SPHERE_RENDERER);
+        registerRenderer(LineData.class, LINE_RENDERER);
     }
 
     /**
