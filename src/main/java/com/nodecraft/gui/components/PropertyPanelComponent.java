@@ -4,6 +4,11 @@ import com.nodecraft.core.NodeCraft; // For logging
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.datatypes.LSystemRule;
+import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.datatypes.PlantStructure;
+import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
@@ -30,9 +35,14 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.RecordComponent;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap; // 用于多线程安全的缓存
 import java.util.stream.Collectors;
+
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import org.joml.Vector3d;
 
 public class PropertyPanelComponent implements EditorComponent {
 
@@ -40,6 +50,10 @@ public class PropertyPanelComponent implements EditorComponent {
     private static final String GET_PREFIX = "get";
     private static final String IS_PREFIX = "is";
     private static final String SET_PREFIX = "set";
+    private static final Set<Class<?>> SYSTEM_DECLARING_CLASSES = Set.of(
+            INode.class,
+            BaseNode.class
+    );
     private static final Set<String> HIDDEN_NODE_PROPERTIES = Set.of(
             "cachedHeight",
             "cachedMinWidth",
@@ -569,7 +583,198 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
+    private static final PropertyRenderer PLANE_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(宸茬鐢?");
+            return;
+        }
+
+        try {
+            PlaneData plane = (PlaneData) prop.getter.invoke(node);
+            if (plane == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+            Vector3d normal = plane.getNormal();
+            double d = -normal.dot(plane.getPoint());
+            String tempKey = panel.getTempValueKey(node, prop.name + "_plane");
+            float[] values = (float[]) panel.tempValues.computeIfAbsent(tempKey,
+                    k -> new float[]{(float) normal.x, (float) normal.y, (float) normal.z, (float) d});
+
+            if (!panel.isPropertyBeingEdited(node, prop.name)) {
+                values[0] = (float) normal.x;
+                values[1] = (float) normal.y;
+                values[2] = (float) normal.z;
+                values[3] = (float) d;
+            }
+
+            if (isReadOnly) ImGui.beginDisabled();
+            boolean changed = false;
+            float[] xValue = {values[0]};
+            float[] yValue = {values[1]};
+            float[] zValue = {values[2]};
+            float[] dValue = {values[3]};
+            changed |= ImGui.dragFloat("Normal X##" + prop.name, xValue, 0.01f);
+            values[0] = xValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Normal Y##" + prop.name, yValue, 0.01f);
+            values[1] = yValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Normal Z##" + prop.name, zValue, 0.01f);
+            values[2] = zValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Offset D##" + prop.name, dValue, 0.01f);
+            values[3] = dValue[0];
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+            if (isReadOnly) ImGui.endDisabled();
+
+            if (!isReadOnly && changed) {
+                Vector3d newNormal = new Vector3d(values[0], values[1], values[2]);
+                if (newNormal.lengthSquared() > 1.0e-8) {
+                    newNormal.normalize();
+                    double newD = values[3];
+                    Vec3d origin = new Vec3d(-newD * newNormal.x, -newD * newNormal.y, -newD * newNormal.z);
+                    Vec3d mcNormal = new Vec3d(newNormal.x, newNormal.y, newNormal.z);
+                    panel.applyPropertyValue(node, prop, new PlaneData(origin, mcNormal));
+                } else {
+                    ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "Normal cannot be zero");
+                }
+            }
+
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer L_SYSTEM_RULE_RENDERER = (panel, node, prop, isDisabled) -> {
+        if (isDisabled) {
+            ImGui.textDisabled("(宸茬鐢?");
+            return;
+        }
+
+        try {
+            LSystemRule rule = (LSystemRule) prop.getter.invoke(node);
+            if (rule == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            boolean isReadOnly = prop.setter == null;
+            String symbolKey = panel.getTempValueKey(node, prop.name + "_symbol");
+            String productionKey = panel.getTempValueKey(node, prop.name + "_production");
+            String contextKey = panel.getTempValueKey(node, prop.name + "_context");
+            String probabilityKey = panel.getTempValueKey(node, prop.name + "_probability");
+
+            ImString symbol = (ImString) panel.tempValues.computeIfAbsent(symbolKey, k -> new ImString(rule.getSymbol(), 64));
+            ImString production = (ImString) panel.tempValues.computeIfAbsent(productionKey, k -> new ImString(rule.getProduction(), 256));
+            ImString context = (ImString) panel.tempValues.computeIfAbsent(contextKey, k -> new ImString(rule.getContext() != null ? rule.getContext() : "", 128));
+            float[] probability = (float[]) panel.tempValues.computeIfAbsent(probabilityKey, k -> new float[]{rule.getProbability()});
+
+            if (!panel.isPropertyBeingEdited(node, prop.name)) {
+                symbol.set(rule.getSymbol());
+                production.set(rule.getProduction());
+                context.set(rule.getContext() != null ? rule.getContext() : "");
+                probability[0] = rule.getProbability();
+            }
+
+            if (isReadOnly) ImGui.beginDisabled();
+            boolean changed = false;
+            changed |= ImGui.inputText("Symbol##" + prop.name, symbol, ImGuiInputTextFlags.EnterReturnsTrue);
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.inputText("Production##" + prop.name, production, ImGuiInputTextFlags.EnterReturnsTrue);
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.inputText("Context##" + prop.name, context, ImGuiInputTextFlags.EnterReturnsTrue);
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            changed |= ImGui.dragFloat("Probability##" + prop.name, probability, 0.01f, 0.0f, 1.0f, "%.2f");
+            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
+            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+            if (isReadOnly) ImGui.endDisabled();
+
+            if (!isReadOnly && changed) {
+                String contextValue = context.get().trim();
+                panel.applyPropertyValue(node, prop, new LSystemRule(
+                        symbol.get(),
+                        production.get(),
+                        Math.max(0.0f, Math.min(1.0f, probability[0])),
+                        contextValue.isEmpty() ? null : contextValue
+                ));
+            }
+
+            panel.errorCounts.remove(prop.name);
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer POLYLINE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            PolylineData polyline = (PolylineData) prop.getter.invoke(node);
+            if (polyline == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Points: " + polyline.getPointCount());
+            ImGui.text("Segments: " + polyline.getSegmentCount());
+            ImGui.text(String.format("Length: %.2f", polyline.getLength()));
+            ImGui.text("Closed: " + (polyline.isClosed() ? "Yes" : "No"));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer REGION_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            RegionData region = (RegionData) prop.getter.invoke(node);
+            if (region == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Complete: " + (region.isComplete() ? "Yes" : "No"));
+            ImGui.text("Corner 1: " + formatBlockPos(region.corner1()));
+            ImGui.text("Corner 2: " + formatBlockPos(region.corner2()));
+            if (region.isComplete()) {
+                ImGui.text("Min: " + formatBlockPos(region.getMinCorner()));
+                ImGui.text("Max: " + formatBlockPos(region.getMaxCorner()));
+            }
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer PLANT_STRUCTURE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            PlantStructure structure = (PlantStructure) prop.getter.invoke(node);
+            if (structure == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Total Blocks: " + structure.getTotalBlockCount());
+            ImGui.text("Trunk: " + structure.getTrunkBlockCount());
+            ImGui.text("Branches: " + structure.getBranchBlockCount());
+            ImGui.text("Leaves: " + structure.getLeafBlockCount());
+            ImGui.text("Flowers: " + structure.getFlowerBlockCount());
+            ImGui.text("Roots: " + structure.getRootBlockCount());
+            ImGui.text("Metadata: " + structure.getMetadata().size());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
     // 改进的异常处理方法
+    private static String formatBlockPos(BlockPos pos) {
+        if (pos == null) {
+            return "(null)";
+        }
+        return String.format("(%d, %d, %d)", pos.getX(), pos.getY(), pos.getZ());
+    }
+
     private void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
         // 根据错误类型选择日志级别
         boolean isSevere = false;
@@ -2070,6 +2275,9 @@ public class PropertyPanelComponent implements EditorComponent {
                     if (method.getDeclaringClass().equals(Object.class)) {
                         continue;
                     }
+                    if (SYSTEM_DECLARING_CLASSES.contains(method.getDeclaringClass())) {
+                        continue;
+                    }
 
                     String methodName = method.getName();
                     if (method.getParameterCount() == 0) { // Potential getter
@@ -2082,6 +2290,14 @@ public class PropertyPanelComponent implements EditorComponent {
                     } else if (method.getParameterCount() == 1 && methodName.startsWith(SET_PREFIX) &&
                             method.getReturnType().equals(void.class)) { // Potential setter
                         setters.put(extractPropertyName(methodName, SET_PREFIX), method);
+                    }
+                }
+                if (currentClass.isRecord()) {
+                    for (RecordComponent component : currentClass.getRecordComponents()) {
+                        Method accessor = component.getAccessor();
+                        if (accessor != null && !SYSTEM_DECLARING_CLASSES.contains(accessor.getDeclaringClass())) {
+                            getters.putIfAbsent(component.getName(), accessor);
+                        }
                     }
                 }
                 currentClass = currentClass.getSuperclass();
@@ -2340,6 +2556,11 @@ public class PropertyPanelComponent implements EditorComponent {
         registerRenderer(double.class, DOUBLE_RENDERER);
         registerRenderer(Double.class, DOUBLE_RENDERER);
         registerRenderer(Vec3.class, VEC3_RENDERER);
+        registerRenderer(PlaneData.class, PLANE_RENDERER);
+        registerRenderer(PolylineData.class, POLYLINE_RENDERER);
+        registerRenderer(LSystemRule.class, L_SYSTEM_RULE_RENDERER);
+        registerRenderer(PlantStructure.class, PLANT_STRUCTURE_RENDERER);
+        registerRenderer(RegionData.class, REGION_RENDERER);
     }
 
     /**
