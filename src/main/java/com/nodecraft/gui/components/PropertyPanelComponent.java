@@ -7,8 +7,12 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.datatypes.LSystemRule;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
+import com.nodecraft.nodesystem.datatypes.ConeGeometryData;
+import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
+import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PlantStructure;
+import com.nodecraft.nodesystem.datatypes.OctahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.PolygonProfileData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
@@ -16,6 +20,7 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.datatypes.SquarePyramidGeometryData;
 import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.datatypes.TetrahedronGeometryData;
+import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
@@ -891,6 +896,91 @@ public class PropertyPanelComponent implements EditorComponent {
             ImGui.text(String.format("Edge Length: %.2f", tetrahedron.getEdgeLength()));
             ImGui.text(String.format("Circumradius: %.2f", tetrahedron.getCircumradius()));
             ImGui.text("Vertices: " + tetrahedron.getVertices().size());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer CONE_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            ConeGeometryData cone = (ConeGeometryData) prop.getter.invoke(node);
+            if (cone == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Base Center: " + formatVector3d(cone.getBaseCenter()));
+            ImGui.text("Apex: " + formatVector3d(cone.getApex()));
+            ImGui.text("Axis: " + formatVector3d(cone.getAxisVector()));
+            ImGui.text(String.format("Height: %.2f", cone.getHeight()));
+            ImGui.text(String.format("Base Radius: %.2f", cone.getBaseRadius()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer CYLINDER_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            CylinderGeometryData cylinder = (CylinderGeometryData) prop.getter.invoke(node);
+            if (cylinder == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            Vector3d axis = cylinder.getEnd().sub(cylinder.getStart(), new Vector3d());
+            ImGui.text("Start: " + formatVector3d(cylinder.getStart()));
+            ImGui.text("End: " + formatVector3d(cylinder.getEnd()));
+            ImGui.text("Axis: " + formatVector3d(axis));
+            ImGui.text(String.format("Length: %.2f", axis.length()));
+            ImGui.text(String.format("Radius: %.2f", cylinder.getRadius()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer ELLIPSOID_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            EllipsoidGeometryData ellipsoid = (EllipsoidGeometryData) prop.getter.invoke(node);
+            if (ellipsoid == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(ellipsoid.getCenter()));
+            ImGui.text("Radii: " + formatVector3d(ellipsoid.getRadii()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer OCTAHEDRON_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            OctahedronGeometryData octahedron = (OctahedronGeometryData) prop.getter.invoke(node);
+            if (octahedron == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(octahedron.getCenter()));
+            ImGui.text(String.format("Vertex Radius: %.2f", octahedron.getVertexRadius()));
+            ImGui.text("Vertices: " + octahedron.getVertices().size());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer TORUS_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            TorusGeometryData torus = (TorusGeometryData) prop.getter.invoke(node);
+            if (torus == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(torus.getCenter()));
+            ImGui.text("Axis: " + formatVector3d(torus.getAxis()));
+            ImGui.text(String.format("Major Radius: %.2f", torus.getMajorRadius()));
+            ImGui.text(String.format("Minor Radius: %.2f", torus.getMinorRadius()));
         } catch (Throwable e) {
             panel.handlePropertyError(prop, e);
         }
@@ -2704,6 +2794,11 @@ public class PropertyPanelComponent implements EditorComponent {
         registerRenderer(PrismGeometryData.class, PRISM_GEOMETRY_RENDERER);
         registerRenderer(SquarePyramidGeometryData.class, SQUARE_PYRAMID_RENDERER);
         registerRenderer(TetrahedronGeometryData.class, TETRAHEDRON_RENDERER);
+        registerRenderer(ConeGeometryData.class, CONE_GEOMETRY_RENDERER);
+        registerRenderer(CylinderGeometryData.class, CYLINDER_GEOMETRY_RENDERER);
+        registerRenderer(EllipsoidGeometryData.class, ELLIPSOID_GEOMETRY_RENDERER);
+        registerRenderer(OctahedronGeometryData.class, OCTAHEDRON_RENDERER);
+        registerRenderer(TorusGeometryData.class, TORUS_GEOMETRY_RENDERER);
     }
 
     /**
