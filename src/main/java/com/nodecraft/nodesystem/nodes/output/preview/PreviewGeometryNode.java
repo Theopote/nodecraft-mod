@@ -11,9 +11,12 @@ import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import com.nodecraft.nodesystem.util.Color;
+import com.nodecraft.nodesystem.util.SurfaceStripBridge;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -32,9 +35,15 @@ public class PreviewGeometryNode extends BaseNode {
     private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String INPUT_CONE_GEOMETRY_ID = "input_cone_geometry";
     private static final String INPUT_ELLIPSOID_GEOMETRY_ID = "input_ellipsoid_geometry";
+    private static final String INPUT_PRISM_GEOMETRY_ID = "input_prism_geometry";
+    private static final String INPUT_TETRAHEDRON_GEOMETRY_ID = "input_tetrahedron_geometry";
+    private static final String INPUT_OCTAHEDRON_GEOMETRY_ID = "input_octahedron_geometry";
+    private static final String INPUT_SURFACE_STRIP_ID = "input_surface_strip";
 
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_PREVIEW_ID_ID = "output_preview_id";
+    private static final String OUTPUT_PREVIEW_IDS_ID = "output_preview_ids";
+    private static final String OUTPUT_PREVIEW_COUNT_ID = "output_preview_count";
     private static final String OUTPUT_GEOMETRY_ID = "output_geometry";
 
     @NodeProperty(displayName = "Preview Enabled", category = "Preview", order = 1)
@@ -61,6 +70,12 @@ public class PreviewGeometryNode extends BaseNode {
     @NodeProperty(displayName = "Duration", category = "Preview", order = 8)
     private int duration = 30;
 
+    @NodeProperty(displayName = "Surface Strip Radius", category = "Surface Strip", order = 9)
+    private double surfaceStripRadius = 0.25d;
+
+    @NodeProperty(displayName = "Surface Strip Steps", category = "Surface Strip", order = 10)
+    private int surfaceStripSteps = 4;
+
     public PreviewGeometryNode() {
         super(UUID.randomUUID(), "output.preview.preview_geometry");
 
@@ -71,9 +86,15 @@ public class PreviewGeometryNode extends BaseNode {
         addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry data", NodeDataType.TORUS_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_CONE_GEOMETRY_ID, "Cone Geometry", "Cone geometry data", NodeDataType.CONE_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_ELLIPSOID_GEOMETRY_ID, "Ellipsoid Geometry", "Ellipsoid geometry data", NodeDataType.ELLIPSOID_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_PRISM_GEOMETRY_ID, "Prism Geometry", "Prism geometry data", NodeDataType.PRISM_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_TETRAHEDRON_GEOMETRY_ID, "Tetrahedron Geometry", "Tetrahedron geometry data", NodeDataType.TETRAHEDRON_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_OCTAHEDRON_GEOMETRY_ID, "Octahedron Geometry", "Octahedron geometry data", NodeDataType.OCTAHEDRON_GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_SURFACE_STRIP_ID, "Surface Strip", "Surface strip approximated into preview geometry", NodeDataType.SURFACE_STRIP, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether preview is active", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_PREVIEW_ID_ID, "Preview ID", "Active preview identifier", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_PREVIEW_IDS_ID, "Preview IDs", "Active preview identifiers", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_PREVIEW_COUNT_ID, "Preview Count", "Number of rendered geometry previews", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Forwarded geometry output", NodeDataType.GEOMETRY, this));
     }
 
@@ -84,13 +105,15 @@ public class PreviewGeometryNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        GeometryData geometry = resolveGeometryInput();
-        String previewId = null;
-        boolean success = false;
+        List<GeometryData> geometries = resolveGeometryInputs();
+        GeometryData geometry = geometries.isEmpty()
+            ? null
+            : (geometries.size() == 1 ? geometries.getFirst() : new CompositeGeometryData(geometries));
+        List<String> previewIds = new ArrayList<>();
 
         PreviewManager.hideNodePreviews(getId().toString());
 
-        if (previewEnabled && geometry != null) {
+        if (previewEnabled && !geometries.isEmpty()) {
             Color parsed = Color.fromHex(fillColor);
             PreviewOptions options = new PreviewOptions()
                 .setColor(parsed.getRed(), parsed.getGreen(), parsed.getBlue())
@@ -102,57 +125,82 @@ public class PreviewGeometryNode extends BaseNode {
                 .setDuration(Math.max(1, duration));
             options.particleDensity = Math.max(8, Math.min(64, quality));
 
-            previewId = PreviewRenderer.getInstance().showPreview(
-                getId().toString(),
-                "geometry_surface",
-                geometry,
-                options
-            );
-            success = previewId != null;
+            for (GeometryData previewGeometry : geometries) {
+                String previewId = PreviewRenderer.getInstance().showPreview(
+                    getId().toString(),
+                    "geometry_surface",
+                    previewGeometry,
+                    options
+                );
+                if (previewId != null) {
+                    previewIds.add(previewId);
+                }
+            }
         }
 
-        outputValues.put(OUTPUT_SUCCESS_ID, success);
-        outputValues.put(OUTPUT_PREVIEW_ID_ID, previewId);
+        outputValues.put(OUTPUT_SUCCESS_ID, !previewIds.isEmpty());
+        outputValues.put(OUTPUT_PREVIEW_ID_ID, previewIds.isEmpty() ? null : previewIds.getFirst());
+        outputValues.put(OUTPUT_PREVIEW_IDS_ID, List.copyOf(previewIds));
+        outputValues.put(OUTPUT_PREVIEW_COUNT_ID, previewIds.size());
         outputValues.put(OUTPUT_GEOMETRY_ID, geometry);
     }
 
-    private GeometryData resolveGeometryInput() {
-        Object unified = inputValues.get(INPUT_GEOMETRY_ID);
-        if (unified instanceof GeometryData geometry) {
-            return geometry;
+    private List<GeometryData> resolveGeometryInputs() {
+        List<GeometryData> geometries = new ArrayList<>();
+        collectGeometryInput(inputValues.get(INPUT_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_BOX_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_CYLINDER_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_SPHERE_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_TORUS_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_CONE_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_ELLIPSOID_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_PRISM_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_TETRAHEDRON_GEOMETRY_ID), geometries);
+        collectGeometryInput(inputValues.get(INPUT_OCTAHEDRON_GEOMETRY_ID), geometries);
+
+        Object surfaceStripObj = inputValues.get(INPUT_SURFACE_STRIP_ID);
+        if (surfaceStripObj instanceof SurfaceStripData surfaceStrip) {
+            GeometryData bridgeGeometry = SurfaceStripBridge.toGeometry(
+                surfaceStrip,
+                Math.max(1, surfaceStripSteps),
+                SurfaceStripBridge.BridgeMode.LATTICE,
+                Math.max(0.0d, surfaceStripRadius)
+            );
+            collectGeometryInput(bridgeGeometry, geometries);
         }
 
-        Object box = inputValues.get(INPUT_BOX_GEOMETRY_ID);
-        if (box instanceof BoxGeometryData data) {
-            return data;
-        }
+        return geometries;
+    }
 
-        Object cylinder = inputValues.get(INPUT_CYLINDER_GEOMETRY_ID);
-        if (cylinder instanceof CylinderGeometryData data) {
-            return data;
+    private void collectGeometryInput(@Nullable Object value, List<GeometryData> target) {
+        if (value == null) {
+            return;
         }
-
-        Object sphere = inputValues.get(INPUT_SPHERE_GEOMETRY_ID);
-        if (sphere instanceof SphereData data) {
-            return data;
+        if (value instanceof CompositeGeometryData composite) {
+            for (GeometryData child : composite.getGeometries()) {
+                collectGeometryInput(child, target);
+            }
+            return;
         }
-
-        Object torus = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
-        if (torus instanceof TorusGeometryData data) {
-            return data;
+        if (value instanceof DifferenceGeometryData difference) {
+            collectGeometryInput(difference.getMinuend(), target);
+            collectGeometryInput(difference.getSubtrahend(), target);
+            return;
         }
-
-        Object cone = inputValues.get(INPUT_CONE_GEOMETRY_ID);
-        if (cone instanceof ConeGeometryData data) {
-            return data;
+        if (value instanceof IntersectionGeometryData intersection) {
+            collectGeometryInput(intersection.getLeft(), target);
+            collectGeometryInput(intersection.getRight(), target);
+            return;
         }
-
-        Object ellipsoid = inputValues.get(INPUT_ELLIPSOID_GEOMETRY_ID);
-        if (ellipsoid instanceof EllipsoidGeometryData data) {
-            return data;
+        if (value instanceof GeometryData geometry) {
+            target.add(geometry);
+            return;
         }
-
-        return null;
+        if (value instanceof List<?> list) {
+            for (Object entry : list) {
+                collectGeometryInput(entry, target);
+            }
+        }
     }
 
     private float clamp01(float value) {
@@ -170,6 +218,8 @@ public class PreviewGeometryNode extends BaseNode {
         state.put("lineWidth", lineWidth);
         state.put("quality", quality);
         state.put("duration", duration);
+        state.put("surfaceStripRadius", surfaceStripRadius);
+        state.put("surfaceStripSteps", surfaceStripSteps);
         return state;
     }
 
@@ -202,6 +252,12 @@ public class PreviewGeometryNode extends BaseNode {
         }
         if (map.get("duration") instanceof Number value) {
             duration = Math.max(1, value.intValue());
+        }
+        if (map.get("surfaceStripRadius") instanceof Number value) {
+            surfaceStripRadius = Math.max(0.0d, value.doubleValue());
+        }
+        if (map.get("surfaceStripSteps") instanceof Number value) {
+            surfaceStripSteps = Math.max(1, value.intValue());
         }
     }
 }
