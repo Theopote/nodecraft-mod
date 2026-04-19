@@ -5,10 +5,17 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.datatypes.LSystemRule;
+import com.nodecraft.nodesystem.datatypes.BoxFaceData;
+import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PlantStructure;
+import com.nodecraft.nodesystem.datatypes.PolygonProfileData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
+import com.nodecraft.nodesystem.datatypes.SquarePyramidGeometryData;
+import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
+import com.nodecraft.nodesystem.datatypes.TetrahedronGeometryData;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
@@ -767,12 +774,141 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
+    private static final PropertyRenderer BOX_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            BoxGeometryData box = (BoxGeometryData) prop.getter.invoke(node);
+            if (box == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(box.getCenter()));
+            ImGui.text("Half Extents: " + formatVector3d(box.getHalfExtents()));
+            ImGui.text("Oriented: " + (box.isOriented() ? "Yes" : "No"));
+            ImGui.text("Corners: " + box.getCornerCount());
+            ImGui.text("Faces: " + box.getFaceCount());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer BOX_FACE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            BoxFaceData face = (BoxFaceData) prop.getter.invoke(node);
+            if (face == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Face: " + face.getName() + " (#" + face.getIndex() + ")");
+            ImGui.text("Center: " + formatVector3d(face.getCenter()));
+            ImGui.text("Normal: " + formatVector3d(face.getNormal()));
+            ImGui.text("Corners: " + face.getCorners().size());
+            ImGui.text("Edges: " + face.getEdgeCount());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer POLYGON_PROFILE_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            PolygonProfileData profile = (PolygonProfileData) prop.getter.invoke(node);
+            if (profile == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(profile.getCenter()));
+            ImGui.text("Edges: " + profile.getEdgeCount());
+            ImGui.text("Unique Points: " + profile.getUniquePoints().size());
+            ImGui.text("Plane Normal: " + formatVector3d(profile.getPlane().getNormal()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer SURFACE_STRIP_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            SurfaceStripData strip = (SurfaceStripData) prop.getter.invoke(node);
+            if (strip == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Sections: " + strip.getSectionCount());
+            ImGui.text("Points / Section: " + strip.getPointsPerSection());
+            ImGui.text("Flattened Points: " + strip.getFlattenedPoints().size());
+            ImGui.text("All Closed: " + (strip.areAllSectionsClosed() ? "Yes" : "No"));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer PRISM_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            PrismGeometryData prism = (PrismGeometryData) prop.getter.invoke(node);
+            if (prism == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Base Vertices: " + prism.getBaseVertices().size());
+            ImGui.text("Side Count: " + prism.getSideCount());
+            ImGui.text(String.format("Height: %.2f", prism.getHeight()));
+            ImGui.text("Extrusion: " + formatVector3d(prism.getExtrusionVector()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer SQUARE_PYRAMID_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            SquarePyramidGeometryData pyramid = (SquarePyramidGeometryData) prop.getter.invoke(node);
+            if (pyramid == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Base Center: " + formatVector3d(pyramid.getBaseCenter()));
+            ImGui.text("Apex: " + formatVector3d(pyramid.getApex()));
+            ImGui.text(String.format("Base Size: %.2f", pyramid.getBaseSize()));
+            ImGui.text(String.format("Height: %.2f", pyramid.getHeight()));
+            ImGui.text("Normal: " + formatVector3d(pyramid.getNormal()));
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
+    private static final PropertyRenderer TETRAHEDRON_RENDERER = (panel, node, prop, isDisabled) -> {
+        try {
+            TetrahedronGeometryData tetrahedron = (TetrahedronGeometryData) prop.getter.invoke(node);
+            if (tetrahedron == null) {
+                ImGui.textDisabled("(绌?");
+                return;
+            }
+
+            ImGui.text("Center: " + formatVector3d(tetrahedron.getCenter()));
+            ImGui.text(String.format("Edge Length: %.2f", tetrahedron.getEdgeLength()));
+            ImGui.text(String.format("Circumradius: %.2f", tetrahedron.getCircumradius()));
+            ImGui.text("Vertices: " + tetrahedron.getVertices().size());
+        } catch (Throwable e) {
+            panel.handlePropertyError(prop, e);
+        }
+    };
+
     // 改进的异常处理方法
     private static String formatBlockPos(BlockPos pos) {
         if (pos == null) {
             return "(null)";
         }
         return String.format("(%d, %d, %d)", pos.getX(), pos.getY(), pos.getZ());
+    }
+
+    private static String formatVector3d(Vector3d vec) {
+        if (vec == null) {
+            return "(null)";
+        }
+        return String.format("(%.2f, %.2f, %.2f)", vec.x, vec.y, vec.z);
     }
 
     private void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
@@ -2561,6 +2697,13 @@ public class PropertyPanelComponent implements EditorComponent {
         registerRenderer(LSystemRule.class, L_SYSTEM_RULE_RENDERER);
         registerRenderer(PlantStructure.class, PLANT_STRUCTURE_RENDERER);
         registerRenderer(RegionData.class, REGION_RENDERER);
+        registerRenderer(BoxGeometryData.class, BOX_GEOMETRY_RENDERER);
+        registerRenderer(BoxFaceData.class, BOX_FACE_RENDERER);
+        registerRenderer(PolygonProfileData.class, POLYGON_PROFILE_RENDERER);
+        registerRenderer(SurfaceStripData.class, SURFACE_STRIP_RENDERER);
+        registerRenderer(PrismGeometryData.class, PRISM_GEOMETRY_RENDERER);
+        registerRenderer(SquarePyramidGeometryData.class, SQUARE_PYRAMID_RENDERER);
+        registerRenderer(TetrahedronGeometryData.class, TETRAHEDRON_RENDERER);
     }
 
     /**
