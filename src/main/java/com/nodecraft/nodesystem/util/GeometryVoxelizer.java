@@ -7,6 +7,7 @@ import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.DifferenceGeometryData;
 import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
+import com.nodecraft.nodesystem.datatypes.IntersectionGeometryData;
 import com.nodecraft.nodesystem.datatypes.OctahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -86,6 +87,9 @@ public final class GeometryVoxelizer {
         if (geometry instanceof DifferenceGeometryData differenceGeometry) {
             return voxelizeDifference(differenceGeometry, fillSolid);
         }
+        if (geometry instanceof IntersectionGeometryData intersectionGeometry) {
+            return voxelizeIntersection(intersectionGeometry, fillSolid);
+        }
         if (geometry instanceof BoxGeometryData boxGeometry) {
             return voxelizeBox(boxGeometry, fillSolid);
         }
@@ -125,6 +129,9 @@ public final class GeometryVoxelizer {
         }
         if (geometry instanceof DifferenceGeometryData differenceGeometry) {
             return createBoundingRegion(differenceGeometry.getMinuend());
+        }
+        if (geometry instanceof IntersectionGeometryData intersectionGeometry) {
+            return createIntersectionBoundingRegion(intersectionGeometry);
         }
         if (geometry instanceof BoxGeometryData boxGeometry) {
             return boxGeometry.isOriented()
@@ -192,6 +199,24 @@ public final class GeometryVoxelizer {
         return new BlockPosList(result);
     }
 
+    public static BlockPosList voxelizeIntersection(IntersectionGeometryData geometry, boolean fillSolid) {
+        BlockPosList leftBlocks = voxelize(geometry.getLeft(), fillSolid);
+        BlockPosList rightBlocks = voxelize(geometry.getRight(), fillSolid);
+
+        Set<BlockPos> rightSet = new HashSet<>();
+        for (BlockPos pos : rightBlocks) {
+            rightSet.add(pos.toImmutable());
+        }
+
+        Set<BlockPos> result = new LinkedHashSet<>();
+        for (BlockPos pos : leftBlocks) {
+            if (rightSet.contains(pos)) {
+                result.add(pos.toImmutable());
+            }
+        }
+        return new BlockPosList(result);
+    }
+
     public static @Nullable RegionData createCompositeBoundingRegion(CompositeGeometryData geometry) {
         BlockPos minCorner = null;
         BlockPos maxCorner = null;
@@ -227,6 +252,41 @@ public final class GeometryVoxelizer {
         }
 
         return minCorner != null && maxCorner != null ? new RegionData(minCorner, maxCorner) : null;
+    }
+
+    public static @Nullable RegionData createIntersectionBoundingRegion(IntersectionGeometryData geometry) {
+        RegionData leftRegion = createBoundingRegion(geometry.getLeft());
+        RegionData rightRegion = createBoundingRegion(geometry.getRight());
+        if (leftRegion == null || rightRegion == null || !leftRegion.isComplete() || !rightRegion.isComplete()) {
+            return null;
+        }
+
+        BlockPos leftMin = leftRegion.getMinCorner();
+        BlockPos leftMax = leftRegion.getMaxCorner();
+        BlockPos rightMin = rightRegion.getMinCorner();
+        BlockPos rightMax = rightRegion.getMaxCorner();
+        if (leftMin == null || leftMax == null || rightMin == null || rightMax == null) {
+            return null;
+        }
+
+        BlockPos minCorner = new BlockPos(
+            Math.max(leftMin.getX(), rightMin.getX()),
+            Math.max(leftMin.getY(), rightMin.getY()),
+            Math.max(leftMin.getZ(), rightMin.getZ())
+        );
+        BlockPos maxCorner = new BlockPos(
+            Math.min(leftMax.getX(), rightMax.getX()),
+            Math.min(leftMax.getY(), rightMax.getY()),
+            Math.min(leftMax.getZ(), rightMax.getZ())
+        );
+
+        if (minCorner.getX() > maxCorner.getX()
+            || minCorner.getY() > maxCorner.getY()
+            || minCorner.getZ() > maxCorner.getZ()) {
+            return null;
+        }
+
+        return new RegionData(minCorner, maxCorner);
     }
 
     public static BlockPosList voxelizeBox(BoxGeometryData geometry, boolean fillSolid) {
