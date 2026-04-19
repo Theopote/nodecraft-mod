@@ -6,7 +6,6 @@ import net.minecraft.client.Keyboard;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.input.CharInput;
 import net.minecraft.client.input.KeyInput;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -49,14 +48,8 @@ public class KeyboardMixin {
                 }
 
                 // ImGui 不想捕获键盘（例如没有激活的输入框），
-                // 但鼠标在 UI 上，仍然拦截大部分按键避免误操作
-                // 快捷键（Delete/Ctrl+Z/Ctrl+Y等）由 ImGuiNodeEditor 渲染循环中
-                // 通过 GLFW 状态轮询直接处理，不依赖 Minecraft 事件链
-                // 只允许 ESC 键通过（用于关闭界面）
-                int keyCode = input.key();
-                if (keyCode != GLFW.GLFW_KEY_ESCAPE) {
-                    ci.cancel();
-                }
+                // 但鼠标在 UI 上时仍然拦截，业务级快捷键统一改由轮询路径处理。
+                ci.cancel();
             }
             // 鼠标在 UI 外：不拦截，让 Minecraft 正常处理按键
         }

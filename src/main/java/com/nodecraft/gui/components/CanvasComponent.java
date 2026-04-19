@@ -896,8 +896,7 @@ public class CanvasComponent implements EditorComponent {
         this.showNodePreviews = show;
         
         // 将预览状态传递给编辑器
-        if (nodeEditor instanceof ImGuiNodeEditor) {
-            ImGuiNodeEditor editor = (ImGuiNodeEditor) nodeEditor;
+        if (nodeEditor instanceof ImGuiNodeEditor editor) {
             editor.setShowNodePreviews(showNodePreviews);
         }
     }
@@ -924,9 +923,8 @@ public class CanvasComponent implements EditorComponent {
         if (ImGui.isMouseClicked(1) && ImGui.isWindowHovered()) {
             boolean shouldShowCanvasMenu = true; // 默认显示画布菜单
             
-            if (nodeEditor instanceof ImGuiNodeEditor) {
-                ImGuiNodeEditor editor = (ImGuiNodeEditor)nodeEditor;
-                
+            if (nodeEditor instanceof ImGuiNodeEditor editor) {
+
                 // 检查是否点击在节点上
                 boolean isOverNode = editor.isMouseOverAnyNode(ImGui.getIO().getMousePosX(), ImGui.getIO().getMousePosY(), canvasScreenPos);
                 

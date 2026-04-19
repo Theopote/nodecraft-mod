@@ -3,11 +3,9 @@ package com.nodecraft.gui.screens;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.core.event.EditorEvent;
 import com.nodecraft.core.event.EditorEventBus;
-import com.nodecraft.core.event.EditorEventListener;
 import com.nodecraft.core.event.EditorUIEvent;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.editor.integration.ImGuiRenderer;
-import com.nodecraft.gui.window.WindowManager;
 
 import com.nodecraft.gui.layout.LayoutManager;
 import com.nodecraft.gui.layout.PanelVisibilityManager;
@@ -57,8 +55,6 @@ public class NodecraftScreen extends Screen {
     private final NodecraftLifecycleManager lifecycleManager;
     private final NodecraftInputHandler inputHandler;
     
-    // 缺失的字段
-    private WindowManager windowManager = WindowManager.getInstance();
     private GhostCameraManager ghostCameraManager = GhostCameraManager.getInstance();
     
     // 配置和状态
@@ -158,6 +154,9 @@ public class NodecraftScreen extends Screen {
         
         // 更新交互管理器
         updateInteractionManager();
+
+        // 统一从当前活动 GLFW 窗口轮询业务快捷键，避免 detached 模式依赖 Screen 事件链
+        inputHandler.pollEditorShortcuts();
         
         // 渲染主窗口
         if (windowRenderer != null) {
@@ -186,7 +185,6 @@ private void renderErrorMessage(DrawContext context) {
 private void handleCloseRequest() {
     NodeCraft.LOGGER.info("检测到closeRequested标志，立即关闭Nodecraft窗口");
     MinecraftClient.getInstance().execute(() -> {
-        this.cleanup();
         MinecraftClient.getInstance().setScreen(null);
     });
 }
@@ -419,15 +417,6 @@ public boolean isImGuiWantCaptureMouse() {
         int keyCode = keyInput.key();
         int scanCode = keyInput.scancode();
         int modifiers = keyInput.modifiers();
-        // 如果渲染器未初始化，只允许 ESC 键工作
-        if (closeRequested && !initialized) {
-            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
-                this.close();
-                return true;
-            }
-            return false;
-        }
-        
         if (!initialized) {
             return super.keyPressed(keyInput);
         }
@@ -470,19 +459,11 @@ public boolean isImGuiWantCaptureMouse() {
     @Override
     public void close() {
         NodeCraft.LOGGER.info("执行Nodecraft窗口关闭操作");
-        
-        // 禁用幽灵相机模式，恢复游戏设置
-        ghostCameraManager.disable();
-        
-        // 调用清理逻辑
-        cleanup();
         super.close();
     }
 
     @Override
     public void removed() {
-        // 确保即使非正常关闭也能恢复状态
-        ghostCameraManager.disable();
         cleanup();
         super.removed();
     }
@@ -492,88 +473,17 @@ public boolean isImGuiWantCaptureMouse() {
      * 设计为幂等操作，可以被多次调用而不会产生副作用
      */
     public void cleanup() {
-        // 如果已经清理过，直接返回
         if (!initialized) {
             return;
         }
 
-        NodeCraft.LOGGER.info("开始清理NodeCraft编辑器资源...");
-
         try {
-            // 确保幽灵相机模式被禁用
-            ghostCameraManager.forceCleanup();
-            
-            // 清除射线检测缓存
-            com.nodecraft.client.input.NodecraftInputSystem.clearCache();
-            
-            // 清除所有预览渲染元素
-            com.nodecraft.nodesystem.preview.PreviewRenderer.getInstance().clearAllPreviews();
-            NodeCraft.LOGGER.info("所有预览元素已清除");
-            
-            // 退出编辑模式 - 清理方块拾取等交互状态
-            com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager interactionManager = 
-                com.nodecraft.nodesystem.interaction.NodeEditorInteractionManager.getInstance();
-            interactionManager.exitEditorMode();
-            NodeCraft.LOGGER.info("编辑器交互模式已退出");
-            
-            // 强制退出所有交互模式
-            interactionManager.forceExitAllInteractions();
-            
-            // 确保Minecraft客户端控制器状态被清理
-            com.nodecraft.minecraft.client.MinecraftClientController.getInstance().forceCleanup();
-            
-            // 发布编辑器关闭事件
-            postEvent(new EditorUIEvent(EditorUIEvent.Type.COMPONENT_HIDDEN, "editor_screen"));
-
-            // 1. 首先清理编辑器实例和事件总线
-            if (currentEditor != null) {
-                try {
-                    if (currentEditor instanceof EditorEventListener) {
-                        eventBus.unregisterListener((EditorEventListener) currentEditor);
-                    }
-                    currentEditor.close();
-                    NodeCraft.LOGGER.debug("编辑器实例已关闭");
-                } catch (Exception e) {
-                    NodeCraft.LOGGER.error("关闭编辑器实例时出错: {}", e.getMessage(), e);
-                } finally {
-                    currentEditor = null;
-                }
-            }
-
-            // 2. 清理组件管理器 (它会负责清理内部组件)
-            if (componentManager != null) {
-                try {
-                    if (componentManager instanceof EditorEventListener) {
-                        eventBus.unregisterListener((EditorEventListener) componentManager);
-                    }
-                    componentManager.cleanup();
-                    NodeCraft.LOGGER.debug("组件管理器已清理");
-                } catch (Exception e) {
-                    NodeCraft.LOGGER.error("清理组件管理器时出错: {}", e.getMessage(), e);
-                } finally {
-                    componentManager = null;
-                }
-            }
-
-            // 3. 清理渲染器相关对象
-            layoutRenderer = null;
-            menuBarRenderer = null;
-            layoutManager = null;
-
-            // 5. 重置窗口管理器关联（如果存在）
-            ImGuiRenderer.getInstance().closeDetachedEditorWindow(this);
-            if (windowManager.isWindowAssociated()) {
-                windowManager.disassociateNodeCraftWindow();
-            }
-
-            // 6. 重置内部状态
-            initialized = false;
-            closeRequested = false;
-
-            NodeCraft.LOGGER.info("NodeCraft编辑器资源清理完成");
-
+            lifecycleManager.cleanup();
         } catch (Exception e) {
             NodeCraft.LOGGER.error("清理过程中发生意外错误: {}", e.getMessage(), e);
+        } finally {
+            initialized = false;
+            closeRequested = false;
         }
     }
 

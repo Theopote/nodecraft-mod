@@ -202,11 +202,8 @@ public class NodecraftWindowRenderer {
         }
     }
 
-    public void renderDetachedWindow() {
-        boolean stylesApplied = false;
+    private void renderDetachedWindow() {
         try {
-            applyStyles();
-            stylesApplied = true;
 
             ImGui.setNextWindowPos(0.0f, 0.0f, ImGuiCond.Always);
             ImGui.setNextWindowSize(ImGui.getIO().getDisplaySizeX(), ImGui.getIO().getDisplaySizeY(), ImGuiCond.Always);
@@ -229,10 +226,6 @@ public class NodecraftWindowRenderer {
         } catch (Exception e) {
             NodeCraft.LOGGER.error("娓叉煋鐙珛缂栬緫鍣ㄧ獥鍙ｆ椂鍑洪敊: {}", e.getMessage(), e);
             parentScreen.closeRequested = true;
-        } finally {
-            if (stylesApplied) {
-                popStyles();
-            }
         }
     }
     

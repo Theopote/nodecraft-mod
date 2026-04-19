@@ -84,7 +84,7 @@ public class MenuBarRenderer {
                     saveNodeGraph(true);
                 }
                 ImGui.separator();
-                if (ImGui.menuItem("关闭编辑器", "Esc")) {
+                if (ImGui.menuItem("关闭编辑器")) {
                     closeAction.run(); // 调用关闭回调
                 }
                 ImGui.endMenu();

@@ -5,6 +5,7 @@ import com.nodecraft.core.event.EditorEventListener;
 import com.nodecraft.core.event.EditorUIEvent;
 import com.nodecraft.gui.editor.NodeEditorFactory;
 import com.nodecraft.gui.editor.base.INodeEditor;
+import com.nodecraft.gui.editor.integration.ImGuiRenderer;
 import com.nodecraft.gui.layout.StandardLayoutManager;
 import com.nodecraft.gui.window.DetachedEditorWindow;
 import com.nodecraft.gui.window.ViewportCloseDetector;
@@ -58,6 +59,9 @@ public class NodecraftLifecycleManager {
         try {
             // 确保幽灵相机模式被禁用
             ghostCameraManager.forceCleanup();
+
+            // 清除射线检测缓存，避免重新打开编辑器后沿用旧状态
+            com.nodecraft.client.input.NodecraftInputSystem.clearCache();
             
             // 清除所有预览渲染元素
             com.nodecraft.nodesystem.preview.PreviewRenderer.getInstance().clearAllPreviews();
@@ -269,6 +273,8 @@ public class NodecraftLifecycleManager {
     }
     
     private void cleanupWindowAssociation() {
+        ImGuiRenderer.getInstance().closeDetachedEditorWindow(parentScreen);
+
         com.nodecraft.gui.window.WindowManager windowManager = 
             com.nodecraft.gui.window.WindowManager.getInstance();
         if (windowManager.isWindowAssociated()) {

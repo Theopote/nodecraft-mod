@@ -20,9 +20,29 @@ import org.lwjgl.glfw.GLFW;
  * - 鼠标在UI外：键盘操作Minecraft（WASD移动等），鼠标按住中键移动视角
  */
 public class NodecraftInputHandler {
+    private static final int[] POLLED_SHORTCUT_KEYS = {
+        GLFW.GLFW_KEY_X,
+        GLFW.GLFW_KEY_C,
+        GLFW.GLFW_KEY_D,
+        GLFW.GLFW_KEY_V,
+        GLFW.GLFW_KEY_F1,
+        GLFW.GLFW_KEY_N,
+        GLFW.GLFW_KEY_O,
+        GLFW.GLFW_KEY_S,
+        GLFW.GLFW_KEY_F5,
+        GLFW.GLFW_KEY_EQUAL,
+        GLFW.GLFW_KEY_KP_ADD,
+        GLFW.GLFW_KEY_MINUS,
+        GLFW.GLFW_KEY_KP_SUBTRACT,
+        GLFW.GLFW_KEY_0,
+        GLFW.GLFW_KEY_KP_0,
+        GLFW.GLFW_KEY_HOME
+    };
+
     
     private final NodecraftScreen parentScreen;
     private final GhostCameraManager ghostCameraManager;
+    private final java.util.Map<Integer, Boolean> previousShortcutKeyStates = new java.util.HashMap<>();
     
     public NodecraftInputHandler(NodecraftScreen parentScreen, GhostCameraManager ghostCameraManager) {
         this.parentScreen = parentScreen;
@@ -116,10 +136,8 @@ public class NodecraftInputHandler {
         boolean mouseOverGui = parentScreen.isMouseOverNodecraftGui(client.mouse.getX(), client.mouse.getY());
 
         if (mouseOverGui) {
-            // 鼠标在 UI 内：所有键盘事件由 UI 处理
-            // KeyboardMixin 已经在 Keyboard 级别拦截了 Minecraft 的处理
-            // 这里处理编辑器快捷键
-            return handleEditorShortcuts(keyCode, modifiers);
+            // 鼠标在 UI 内：所有键盘事件由 UI / GLFW backend 处理。
+            return ImGui.getIO() != null && ImGui.getIO().getWantCaptureKeyboard();
         }
 
         // 鼠标在 UI 外：移动键传递给 Minecraft（但带 Ctrl 修饰符时不视为移动键，以免阻断 Ctrl+S 等快捷键）
@@ -128,8 +146,7 @@ public class NodecraftInputHandler {
             return false; // 不拦截，让 Minecraft 处理
         }
 
-        // 非移动键：处理编辑器快捷键
-        return handleEditorShortcuts(keyCode, modifiers);
+        return ImGui.getIO() != null && ImGui.getIO().getWantCaptureKeyboard();
     }
     
     /**
@@ -151,6 +168,39 @@ public class NodecraftInputHandler {
     public boolean handleCharTyped(char codePoint, int modifiers) {
         // ImGui 想要捕获键盘时拦截
         return ImGui.getIO() != null && ImGui.getIO().getWantCaptureKeyboard();
+    }
+
+    public void pollEditorShortcuts() {
+        final long windowHandle = com.nodecraft.gui.editor.integration.ImGuiRenderer.getInstance().getActiveInputWindowHandle();
+        if (windowHandle == 0L) {
+            return;
+        }
+
+        final boolean ctrlPressed =
+            GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_CONTROL) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_CONTROL) == GLFW.GLFW_PRESS;
+        final boolean shiftPressed =
+            GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS
+                || GLFW.glfwGetKey(windowHandle, GLFW.GLFW_KEY_RIGHT_SHIFT) == GLFW.GLFW_PRESS;
+
+        int modifiers = 0;
+        if (ctrlPressed) {
+            modifiers |= GLFW.GLFW_MOD_CONTROL;
+        }
+        if (shiftPressed) {
+            modifiers |= GLFW.GLFW_MOD_SHIFT;
+        }
+
+        for (int keyCode : POLLED_SHORTCUT_KEYS) {
+            final boolean isDown = GLFW.glfwGetKey(windowHandle, keyCode) == GLFW.GLFW_PRESS;
+            final boolean wasDown = previousShortcutKeyStates.getOrDefault(keyCode, false);
+
+            if (isDown && !wasDown) {
+                handleEditorShortcuts(keyCode, modifiers);
+            }
+
+            previousShortcutKeyStates.put(keyCode, isDown);
+        }
     }
 
     // ===================== 私有辅助方法 =====================

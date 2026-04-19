@@ -4,7 +4,6 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.screens.NodecraftScreen;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.Screen;
-import org.lwjgl.glfw.GLFW;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -83,16 +82,6 @@ public class MinecraftClientMixin {
         // 如果当前屏幕是NodecraftScreen，根据鼠标位置决定输入处理
         if (currentScreen instanceof NodecraftScreen screen) {
 
-            // 检查ESC键是否被按下 - ESC键始终关闭nodecraft界面
-            if (GLFW.glfwGetKey(client.getWindow().getHandle(), GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS) {
-                NodeCraft.LOGGER.info("ESC键被按下，关闭Nodecraft窗口");
-                screen.closeRequested = true;
-                screen.cleanup();
-                client.execute(() -> client.setScreen(null));
-                ci.cancel();
-                return;
-            }
-            
             // 检查鼠标是否在nodecraft窗口范围内
             boolean mouseInWindow = screen.isMouseOverNodecraftGui(
                     client.mouse.getX(), client.mouse.getY());

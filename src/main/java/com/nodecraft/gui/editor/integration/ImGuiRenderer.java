@@ -531,6 +531,18 @@ public class ImGuiRenderer {
         return detachedEditorWindow.isDetached(screen);
     }
 
+    public long getActiveInputWindowHandle() {
+        if (detachedEditorWindow.isOpen()) {
+            return detachedEditorWindow.getWindowHandle();
+        }
+
+        final MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null || client.getWindow() == null) {
+            return 0L;
+        }
+        return client.getWindow().getHandle();
+    }
+
     public boolean isMouseClicked(final int button) {
         if (detachedEditorWindow.isOpen()) {
             return detachedEditorWindow.isMouseClicked(button);
