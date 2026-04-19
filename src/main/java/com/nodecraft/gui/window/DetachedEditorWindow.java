@@ -181,7 +181,7 @@ public final class DetachedEditorWindow {
         }
 
         if (GLFW.glfwWindowShouldClose(windowHandle)) {
-            attachedScreen.closeRequested = true;
+            attachedScreen.requestClose();
             cleanup();
             return;
         }
@@ -214,7 +214,7 @@ public final class DetachedEditorWindow {
             GLFW.glfwSwapBuffers(windowHandle);
         } catch (Exception e) {
             NodeCraft.LOGGER.error("Failed to render detached editor window", e);
-            attachedScreen.closeRequested = true;
+            attachedScreen.requestClose();
             cleanup();
         } finally {
             if (previousGlContext != 0) {

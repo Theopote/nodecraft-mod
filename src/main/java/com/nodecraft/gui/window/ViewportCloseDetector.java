@@ -112,7 +112,7 @@ public class ViewportCloseDetector {
                 com.nodecraft.gui.screens.NodecraftScreen nodecraftScreen = 
                     (com.nodecraft.gui.screens.NodecraftScreen) client.currentScreen;
                 
-                if (nodecraftScreen.closeRequested) {
+                if (nodecraftScreen.isCloseRequested()) {
                     NodeCraft.LOGGER.info("检测到NodeCraft屏幕关闭请求，执行关闭");
                     onWindowCloseRequested(nodecraftScreen);
                 }
@@ -150,7 +150,7 @@ public class ViewportCloseDetector {
             MinecraftClient.getInstance().execute(() -> {
                 try {
                     MinecraftClient client = MinecraftClient.getInstance();
-                    if (client.currentScreen instanceof com.nodecraft.gui.screens.NodecraftScreen) {
+                    if (client.currentScreen instanceof com.nodecraft.gui.screens.NodecraftScreen screen) {
                         screen.requestClose();
                     }
                 } catch (Exception e) {

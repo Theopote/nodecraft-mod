@@ -204,7 +204,7 @@ public class NodecraftLifecycleManager {
         // 创建菜单栏渲染器
         MenuBarRenderer menuBarRenderer = new MenuBarRenderer(
             componentManager,
-            () -> parentScreen.closeRequested = true,
+            parentScreen::requestClose,
             parentScreen::detachEditorToExternalWindow,
             parentScreen::attachEditorToMainWindow,
             parentScreen::isEditorDetached

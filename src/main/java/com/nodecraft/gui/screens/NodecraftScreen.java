@@ -146,7 +146,7 @@ public class NodecraftScreen extends Screen {
         }
         
         // 处理关闭请求
-        if (this.closeRequested) {
+        if (consumeCloseRequest()) {
             handleCloseRequest();
             return;
         }
@@ -342,6 +342,14 @@ public boolean isEditorDetached() { return ImGuiRenderer.getInstance().isDetache
 public void detachEditorToExternalWindow() { ImGuiRenderer.getInstance().openDetachedEditorWindow(this); }
 public void attachEditorToMainWindow() { ImGuiRenderer.getInstance().closeDetachedEditorWindow(this); }
 public void requestClose() { this.closeRequested = true; }
+public boolean isCloseRequested() { return this.closeRequested; }
+public boolean consumeCloseRequest() {
+    if (!this.closeRequested) {
+        return false;
+    }
+    this.closeRequested = false;
+    return true;
+}
 
 // 缺失的方法实现
 public boolean isMouseOverNodecraftGui(double mouseX, double mouseY) {

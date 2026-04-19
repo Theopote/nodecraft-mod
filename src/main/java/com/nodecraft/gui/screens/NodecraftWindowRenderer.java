@@ -53,7 +53,7 @@ public class NodecraftWindowRenderer {
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("渲染错误: {}", e.getMessage(), e);
-            parentScreen.closeRequested = true;
+            parentScreen.requestClose();
         }
     }
     
@@ -71,7 +71,7 @@ public class NodecraftWindowRenderer {
             } else {
                 renderMainWindow(context, mouseX, mouseY, delta);
 
-                if (!parentScreen.closeRequested) {
+                if (!parentScreen.isCloseRequested()) {
                     renderDialogs();
                 }
             }
@@ -135,7 +135,7 @@ public class NodecraftWindowRenderer {
             
             // 检查窗口关闭请求
             if (viewportsEnabled && !closeDetector.getWindowOpenFlag().get()) {
-                parentScreen.closeRequested = true;
+                parentScreen.requestClose();
                 return;
             }
             
@@ -220,12 +220,12 @@ public class NodecraftWindowRenderer {
             }
             ImGui.end();
 
-            if (!parentScreen.closeRequested) {
+            if (!parentScreen.isCloseRequested()) {
                 renderDialogs();
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("娓叉煋鐙珛缂栬緫鍣ㄧ獥鍙ｆ椂鍑洪敊: {}", e.getMessage(), e);
-            parentScreen.closeRequested = true;
+            parentScreen.requestClose();
         }
     }
     
