@@ -169,7 +169,6 @@ public class LayoutRenderer {
         // 获取组件布局
         CanvasComponent canvasComponent = componentManager.getCanvasComponent();
         EditorComponent nodePanel = componentManager.getNodeLibraryComponent();
-        EditorComponent propertyPanel = componentManager.getPropertyPanelComponent();
 
         if (canvasComponent == null) return;
 
@@ -346,64 +345,6 @@ public class LayoutRenderer {
 
                 NodeCraft.LOGGER.info("开始拖拽右侧分隔线: 初始位置={}, 属性面板比例={}, 画布比例={}",
                         dragStartX, initialPropertyPanelRatio, initialCanvasRatio);
-            }
-        }
-    }
-
-    /**
-     * 渲染分隔线提示（只在鼠标悬停时显示）
-     * @param contentStartX 内容区起始X坐标
-     * @param contentStartY 内容区起始Y坐标
-     * @param contentHeight 内容区高度
-     */
-    private void renderSplitters(float contentStartX, float contentStartY, float contentHeight) {
-        // 是否显示节点库和属性面板
-        boolean showNodePanel = layoutConfig.nodePanelRatio() > 0.001f;
-        boolean showPropertyPanel = layoutConfig.propertyPanelRatio() > 0.001f;
-
-        // 获取组件布局
-        CanvasComponent canvasComponent = componentManager.getCanvasComponent();
-        EditorComponent nodePanel = componentManager.getNodeLibraryComponent();
-        EditorComponent propertyPanel = componentManager.getPropertyPanelComponent();
-
-        if (canvasComponent == null) return;
-
-        LayoutDimensions canvasDims = layoutManager.getComputedLayout(canvasComponent);
-        if (canvasDims == null) return;
-
-        float nodePanelRight = 0;
-        float canvasLeft = canvasDims.x();
-        float canvasRight = canvasLeft + canvasDims.width();
-
-        // 获取ImGui窗口位置，用于绘制分隔线
-        final float windowX = ImGui.getWindowPosX();
-        final float windowY = ImGui.getWindowPosY();
-
-        // 计算左侧分隔线位置
-        if (showNodePanel && nodePanel != null) {
-            LayoutDimensions nodePanelDims = layoutManager.getComputedLayout(nodePanel);
-            if (nodePanelDims != null) {
-
-                // 绘制左侧分隔线 - 不再绘制任何分隔线，仅在实际拖拽时设置光标样式
-                if (isDraggingLeftSplitter || isHoveringLeftSplitter) {
-                    // 不绘制任何视觉提示，仅在调试模式下记录
-                    if (debugSplitter) {
-                        NodeCraft.LOGGER.debug("左侧分隔线活跃: 拖拽={}, 悬停={}",
-                                isDraggingLeftSplitter, isHoveringLeftSplitter);
-                    }
-                }
-            }
-        }
-
-        // 绘制右侧分隔线
-        if (showPropertyPanel && propertyPanel != null) {
-            // 不再绘制任何分隔线，仅在实际拖拽时设置光标样式
-            if (isDraggingRightSplitter || isHoveringRightSplitter) {
-                // 不绘制任何视觉提示，仅在调试模式下记录
-                if (debugSplitter) {
-                    NodeCraft.LOGGER.debug("右侧分隔线活跃: 拖拽={}, 悬停={}",
-                            isDraggingRightSplitter, isHoveringRightSplitter);
-                }
             }
         }
     }
