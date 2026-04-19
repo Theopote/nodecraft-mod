@@ -344,6 +344,9 @@
 本轮继续补实并准备验证的节点如下：
 
 - `geometry.solids.shell`
+- `geometry.solids.thicken_surface`
 
 对应代码：
 - [ShellNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/solids/ShellNode.java)
+- [ThickenSurfaceNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/solids/ThickenSurfaceNode.java)
+- [SurfaceShellBuilder.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/util/SurfaceShellBuilder.java)
