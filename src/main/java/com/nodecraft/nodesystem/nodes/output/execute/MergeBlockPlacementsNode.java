@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
+import com.nodecraft.nodesystem.util.BlockStateData;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -16,6 +17,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -54,6 +56,14 @@ public class MergeBlockPlacementsNode extends BaseNode {
     )
     private boolean lastWins = true;
 
+    @NodeProperty(
+        displayName = "Merge State Data",
+        category = "Merge",
+        order = 3,
+        description = "When overwriting duplicates, merge state overrides instead of dropping earlier state data."
+    )
+    private boolean mergeStateData = true;
+
     public MergeBlockPlacementsNode() {
         super(UUID.randomUUID(), "output.execute.merge_block_placements");
         rebuildInputPorts();
@@ -61,6 +71,8 @@ public class MergeBlockPlacementsNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_POSITIONS_ID, "Positions", "Merged placement positions", NodeDataType.BLOCK_LIST, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Block ids aligned with the merged placement list", NodeDataType.BLOCK_INFO_LIST, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of merged placements", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort("output_duplicate_count", "Duplicate Count", "Number of duplicate positions encountered while merging", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort("output_conflict_count", "Conflict Count", "Number of duplicate positions whose block id or state data differed", NodeDataType.INTEGER, this));
     }
 
     @Override
@@ -70,7 +82,8 @@ public class MergeBlockPlacementsNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        List<BlockPlacementData> merged = lastWins ? mergeWithOverwrite() : mergeByConcatenation();
+        MergeResult mergeResult = lastWins ? mergeWithOverwrite() : mergeByConcatenation();
+        List<BlockPlacementData> merged = mergeResult.placements();
         BlockPosList positions = new BlockPosList();
         List<String> blockIds = new ArrayList<>(merged.size());
 
@@ -85,38 +98,63 @@ public class MergeBlockPlacementsNode extends BaseNode {
         outputValues.put(OUTPUT_POSITIONS_ID, positions);
         outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
         outputValues.put(OUTPUT_COUNT_ID, merged.size());
+        outputValues.put("output_duplicate_count", mergeResult.duplicateCount());
+        outputValues.put("output_conflict_count", mergeResult.conflictCount());
     }
 
-    private List<BlockPlacementData> mergeByConcatenation() {
+    private MergeResult mergeByConcatenation() {
         List<BlockPlacementData> merged = new ArrayList<>();
+        int duplicateCount = 0;
+        int conflictCount = 0;
+        Map<BlockPos, BlockPlacementData> seen = new HashMap<>();
         for (int i = 0; i < inputCount; i++) {
             Object value = inputValues.get(inputPortId(i));
             if (!(value instanceof List<?> list)) {
                 continue;
             }
             for (Object entry : list) {
-                if (entry instanceof BlockPlacementData placement && placement.pos() != null && placement.blockId() != null && !placement.blockId().isBlank()) {
+                if (entry instanceof BlockPlacementData placement && isValidPlacement(placement)) {
+                    BlockPlacementData existing = seen.get(placement.pos());
+                    if (existing != null) {
+                        duplicateCount++;
+                        if (isConflict(existing, placement)) {
+                            conflictCount++;
+                        }
+                    } else {
+                        seen.put(placement.pos(), placement);
+                    }
                     merged.add(placement);
                 }
             }
         }
-        return merged;
+        return new MergeResult(List.copyOf(merged), duplicateCount, conflictCount);
     }
 
-    private List<BlockPlacementData> mergeWithOverwrite() {
+    private MergeResult mergeWithOverwrite() {
         Map<BlockPos, BlockPlacementData> merged = new LinkedHashMap<>();
+        int duplicateCount = 0;
+        int conflictCount = 0;
         for (int i = 0; i < inputCount; i++) {
             Object value = inputValues.get(inputPortId(i));
             if (!(value instanceof List<?> list)) {
                 continue;
             }
             for (Object entry : list) {
-                if (entry instanceof BlockPlacementData placement && placement.pos() != null && placement.blockId() != null && !placement.blockId().isBlank()) {
-                    merged.put(placement.pos(), placement);
+                if (entry instanceof BlockPlacementData placement && isValidPlacement(placement)) {
+                    BlockPlacementData existing = merged.get(placement.pos());
+                    if (existing != null) {
+                        duplicateCount++;
+                        if (isConflict(existing, placement)) {
+                            conflictCount++;
+                        }
+                        merged.put(placement.pos(), mergeStateData ? mergePlacements(existing, placement) : placement);
+                    } else {
+                        merged.put(placement.pos(), placement);
+                    }
                 }
             }
         }
-        return new ArrayList<>(merged.values());
+        return new MergeResult(new ArrayList<>(merged.values()), duplicateCount, conflictCount);
     }
 
     private void rebuildInputPorts() {
@@ -160,11 +198,23 @@ public class MergeBlockPlacementsNode extends BaseNode {
         }
     }
 
+    public boolean isMergeStateData() {
+        return mergeStateData;
+    }
+
+    public void setMergeStateData(boolean mergeStateData) {
+        if (this.mergeStateData != mergeStateData) {
+            this.mergeStateData = mergeStateData;
+            markDirty();
+        }
+    }
+
     @Override
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
         state.put("inputCount", inputCount);
         state.put("lastWins", lastWins);
+        state.put("mergeStateData", mergeStateData);
         return state;
     }
 
@@ -179,5 +229,39 @@ public class MergeBlockPlacementsNode extends BaseNode {
         if (map.get("lastWins") instanceof Boolean value) {
             setLastWins(value);
         }
+        if (map.get("mergeStateData") instanceof Boolean value) {
+            setMergeStateData(value);
+        }
+    }
+
+    private boolean isValidPlacement(BlockPlacementData placement) {
+        return placement != null
+            && placement.pos() != null
+            && placement.blockId() != null
+            && !placement.blockId().isBlank();
+    }
+
+    private boolean isConflict(BlockPlacementData existing, BlockPlacementData incoming) {
+        return !Objects.equals(existing.blockId(), incoming.blockId())
+            || !Objects.equals(existing.stateData(), incoming.stateData());
+    }
+
+    private BlockPlacementData mergePlacements(BlockPlacementData existing, BlockPlacementData incoming) {
+        String blockId = incoming.blockId() != null && !incoming.blockId().isBlank()
+            ? incoming.blockId()
+            : existing.blockId();
+
+        BlockStateData mergedState = null;
+        if (existing.stateData() != null) {
+            mergedState = existing.stateData();
+        }
+        if (incoming.stateData() != null) {
+            mergedState = mergedState != null ? mergedState.copy() : new BlockStateData();
+            mergedState.putAll(incoming.stateData());
+        }
+        return new BlockPlacementData(incoming.pos(), blockId, mergedState);
+    }
+
+    private record MergeResult(List<BlockPlacementData> placements, int duplicateCount, int conflictCount) {
     }
 }

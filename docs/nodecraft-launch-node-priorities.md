@@ -349,6 +349,7 @@
 - `geometry.curves.arc`
 - `geometry.curves.bezier`
 - `output.preview.preview_curves` 增强
+- `output.execute.merge_block_placements` 增强
 
 对应代码：
 - [ShellNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/solids/ShellNode.java)
@@ -358,3 +359,4 @@
 - [ArcNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/curves/ArcNode.java)
 - [BezierNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/geometry/curves/BezierNode.java)
 - [PreviewPathsNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/output/preview/PreviewPathsNode.java)
+- [MergeBlockPlacementsNode.java](/f:/development/NC/nodecraft/src/main/java/com/nodecraft/nodesystem/nodes/output/execute/MergeBlockPlacementsNode.java)
