@@ -1,8 +1,8 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **270**
-- Total categories: **44**
+- Total nodes: **275**
+- Total categories: **45**
 
 ## Category Statistics
 
@@ -10,10 +10,10 @@
 |---|---:|
 | `geometry.architectural_primitives` | 1 |
 | `geometry.boolean` | 5 |
-| `geometry.curves` | 9 |
+| `geometry.curves` | 10 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 5 |
-| `geometry.solids` | 15 |
+| `geometry.solids` | 16 |
 | `input.basic` | 2 |
 | `input.context` | 4 |
 | `input.numeric` | 7 |
@@ -41,12 +41,13 @@
 | `reference.frames` | 2 |
 | `reference.planes` | 5 |
 | `reference.points` | 16 |
-| `reference.vectors` | 10 |
-| `transform.basic_transforms` | 7 |
+| `reference.vectors` | 11 |
+| `transform.basic_transforms` | 8 |
 | `transform.deformations` | 1 |
 | `transform.orientation` | 2 |
 | `utilities.assist` | 4 |
 | `utilities.fileio` | 1 |
+| `utilities.morphology` | 1 |
 | `utilities.organization` | 3 |
 | `world.query` | 7 |
 | `world.read` | 9 |
@@ -69,7 +70,7 @@
 | Difference | `geometry.boolean.difference` | Creates a voxel-evaluated difference geometry value by subtracting cutter geometry from a base geometry | `DifferenceNode` |
 | Intersection | `geometry.boolean.intersection` | Creates a voxel-evaluated intersection geometry value from two geometry inputs | `IntersectionNode` |
 
-## geometry.curves (9)
+## geometry.curves (10)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -82,6 +83,7 @@
 | Offset Polyline In Plane | `geometry.curves.offset_polyline_plane` | Offsets a polyline in a plane using parallel segments and miters (left is CCW in the plane UV basis) | `PolylineOffsetInPlaneNode` |
 | Fillet Polyline Corners | `geometry.curves.fillet_polyline_corners` | Fillets interior corners of an open polyline with circular arcs in the work plane | `PolylineCornerFilletNode` |
 | Resample Polyline By Length | `geometry.curves.resample_polyline_length` | Resamples a polyline along its arc length using spacing, or using a total point count (count wins when both are provided) | `ResamplePolylineByLengthNode` |
+| Polyline Length | `geometry.curves.polyline_length` | Computes the total length of a polyline or line segment | `PolylineLengthNode` |
 
 ## geometry.primitives (19)
 
@@ -117,7 +119,7 @@
 | Resample Polygon Profile | `geometry.profiles.resample_profile` | Resamples a polygon profile to a target edge count using perimeter-distance sampling | `ResamplePolygonProfileNode` |
 | Deconstruct Polygon Profile | `geometry.profiles.deconstruct_profile` | Extracts points, boundary, plane, center, perimeter, and area from a polygon profile | `DeconstructPolygonProfileNode` |
 
-## geometry.solids (15)
+## geometry.solids (16)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -136,6 +138,7 @@
 | Thicken Surface | `geometry.solids.thicken_surface` | Thickens a surface strip into two offset layers with optional cap strips and a reusable geometry approximation | `ThickenSurfaceNode` |
 | Prism By Base Points Vector | `geometry.solids.extrude_profile_from_points` | Constructs prism geometry from an ordered base polygon and an extrusion vector | `PrismByBasePointsVectorNode` |
 | Deconstruct Surface Strip | `geometry.solids.deconstruct_surface_strip` | Breaks a surface strip into section paths, flattened points, and rail segments | `DeconstructSurfaceStripNode` |
+| Shrinkwrap Points On Surface Strip | `geometry.solids.shrinkwrap_points_surface_strip` | Projects each query point to the closest location on the surface strip triangle mesh | `ShrinkwrapPointsOnSurfaceStripNode` |
 
 ## input.basic (2)
 
@@ -423,7 +426,7 @@
 | Deconstruct Face Edge | `reference.points.deconstruct_edge` | Extracts endpoints, midpoint, direction, vector, and length from a face edge | `DeconstructFaceEdgeNode` |
 | Project Point To Polyline | `reference.points.project_to_polyline` | Projects a point onto the closest location on a polyline or line segment | `ProjectPointToPolylineNode` |
 
-## reference.vectors (10)
+## reference.vectors (11)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -437,8 +440,9 @@
 | 向量减法 (-) | `reference.vectors.vector_subtraction` | 计算两个向量的差，输出A - B | `VectorSubtractionNode` |
 | 向量标量乘法 | `reference.vectors.vector_scalar_multiply` | 向量与标量相乘 (Vector * Scalar) | `VectorScalarMultiplyNode` |
 | 向量标量除法 | `reference.vectors.vector_scalar_divide` | 向量除以标量 (Vector / Scalar) | `VectorScalarDivideNode` |
+| Angle Between Vectors | `reference.vectors.angle_between` | Angle between two vectors in radians and degrees; optional reference vector yields a signed angle | `AngleBetweenVectorsNode` |
 
-## transform.basic_transforms (7)
+## transform.basic_transforms (8)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -449,6 +453,7 @@
 | 坐标镜像 | `transform.basic_transforms.mirror_points` | 沿指定平面镜像坐标列表 | `MirrorCoordinatesNode` |
 | Offset Box Face | `transform.basic_transforms.offset_face` | Offsets a box face along its normal without modifying the source box geometry | `OffsetBoxFaceNode` |
 | Inset Box Face | `transform.basic_transforms.inset_face` | Creates an inset or outset reference face boundary from a box face without modifying the source box | `InsetBoxFaceNode` |
+| Mirror Geometry About Plane | `transform.basic_transforms.mirror_geometry_plane` | Mirrors analytic geometry about a plane (recursive for composites and boolean geometry nodes) | `MirrorGeometryAboutPlaneNode` |
 
 ## transform.deformations (1)
 
@@ -477,6 +482,12 @@
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Read Image | `utilities.fileio.read_image` | Reads a local image file and outputs dimensions, colors, and grayscale samples | `ReadImageNode` |
+
+## utilities.morphology (1)
+
+| Node Name | Node ID | Description | Class |
+|---|---|---|---|
+| Block List Morphology | `utilities.morphology.block_list_morphology` | Dilates or erodes a block list using Manhattan-1 (6-neighbor) morphology iterations | `BlockListMorphologyNode` |
 
 ## utilities.organization (3)
 
