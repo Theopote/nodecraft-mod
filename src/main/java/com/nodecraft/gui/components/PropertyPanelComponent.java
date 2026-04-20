@@ -1438,8 +1438,6 @@ public class PropertyPanelComponent implements EditorComponent {
         clearAllTempValues();
         propertyInspector.clearCache();
         propertyCache.clear(); // 清空所有缓存
-        errorCounts.clear(); // 清空错误计数
-        propertiesBeingEdited.clear(); // 清空编辑锁
         // 移除未保存更改相关的清理
         selectedNode = null;
     }
@@ -2802,10 +2800,6 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param propName 属性名
      */
     private void markPropertyEditingFinished(INode node, String propName) {
-        if (editorState != null) {
-            editorState.markPropertyEditingFinished(node, propName);
-            return;
-        }
         editorState.markPropertyEditingFinished(node, propName);
         String key = getTempValueKey(node, propName);
         propertiesBeingEdited.remove(key);
@@ -2839,10 +2833,6 @@ public class PropertyPanelComponent implements EditorComponent {
      * 定期调用，移除所有超时的编辑锁
      */
     private void checkAndCleanExpiredEditLocks() {
-        if (editorState != null) {
-            editorState.checkAndCleanExpiredEditLocks();
-            return;
-        }
         editorState.checkAndCleanExpiredEditLocks();
         long currentTime = System.currentTimeMillis();
         // 使用迭代器安全地移除 Map 中的元素
