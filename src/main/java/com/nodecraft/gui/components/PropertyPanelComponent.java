@@ -1199,7 +1199,9 @@ public class PropertyPanelComponent implements EditorComponent {
 
             PropertyRenderer fallbackGeometryRenderer = panel.getRendererForType(GeometryData.class);
             PropertyRenderer delegate = panel.getRendererForType(value.getClass());
-            if (delegate != null && delegate != fallbackGeometryRenderer) {
+            if (delegate != null
+                    && delegate != fallbackGeometryRenderer
+                    && !isGeometryRendererSelfReference(delegate)) {
                 delegate.render(panel, node, prop, isDisabled);
                 return;
             }
@@ -1227,6 +1229,10 @@ public class PropertyPanelComponent implements EditorComponent {
             panel.handlePropertyError(prop, e);
         }
     };
+
+    private static boolean isGeometryRendererSelfReference(PropertyRenderer renderer) {
+        return renderer == GEOMETRY_RENDERER;
+    }
 
     private static final PropertyRenderer BLOCK_POS_LIST_RENDERER = (panel, node, prop, isDisabled) -> {
         try {
