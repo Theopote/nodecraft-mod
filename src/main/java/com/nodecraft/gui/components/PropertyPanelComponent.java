@@ -85,19 +85,18 @@ public class PropertyPanelComponent implements EditorComponent {
     // 错误计数器：属性名 -> 错误次数 (针对当前 selectedNode 的属性)
     private final Map<String, Integer> errorCounts = new HashMap<>(); // 每次 selectedNode 切换时重置
 
-    // 用于获取NodeGraph的接口，默认使用ImGuiNodeEditor
-    private NodeGraphProvider graphProvider = () -> {
-        try {
-            return ImGuiNodeEditor.getInstance().getCurrentGraph();
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("获取节点图失败", e);
-            return null;
-        }
-    };
+    private final NodeGraphAccess nodeGraphAccess;
 
-    // 可以提供一个接受NodeGraphProvider的构造函数，实现依赖注入
     public PropertyPanelComponent() {
         this.editorState = new PropertyEditorState(tempValues, propertiesBeingEdited, errorCounts);
+        this.nodeGraphAccess = new NodeGraphAccess(() -> {
+            try {
+                return ImGuiNodeEditor.getInstance().getCurrentGraph();
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("获取节点图失败", e);
+                return null;
+            }
+        });
         this.portDataRenderer = new PortDataRenderer(new PortDataRenderer.Actions() {
             @Override
             public void copyToClipboard(String text) {
@@ -119,7 +118,6 @@ public class PropertyPanelComponent implements EditorComponent {
                 PropertyPanelComponent.this.highlightRegion(region);
             }
         });
-        // 使用默认的graphProvider
     }
 
     private void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
@@ -1644,22 +1642,7 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private NodeGraph getNodeGraph() {
-        if (graphProvider != null) {
-            try {
-                return graphProvider.getCurrentGraph();
-            } catch (Exception e) {
-                NodeCraft.LOGGER.error("NodeGraphProvider 获取图时发生错误", e);
-                return null;
-            }
-        }
-        NodeCraft.LOGGER.warn("NodeGraphProvider 未设置, 无法获取节点图。PropertyPanelComponent 可能无法正常工作。");
-        return null;
-    }
-
-    // 函数式接口：用于从外部提供 NodeGraph 实例
-    @FunctionalInterface
-    public interface NodeGraphProvider {
-        NodeGraph getCurrentGraph();
+        return nodeGraphAccess.getCurrentGraph();
     }
 
     private void renderInputPorts() {
