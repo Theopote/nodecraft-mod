@@ -83,7 +83,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private final Map<String, Long> propertiesBeingEdited = new ConcurrentHashMap<>();
 
     // 错误计数器：属性名 -> 错误次数 (针对当前 selectedNode 的属性)
-    private final Map<String, Integer> errorCounts = new HashMap<>(); // 每次 selectedNode 切换时重置
+    private final Map<String, Integer> errorCounts = new ConcurrentHashMap<>(); // 每次 selectedNode 切换时重置
 
     private final NodeGraphAccess nodeGraphAccess;
 
@@ -1505,10 +1505,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 ImGui.tableSetupColumn("Value", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.tableHeadersRow();
 
-                List<PropertyDescriptor> sortedProps = new ArrayList<>(props);
-                sortedProps.sort(Comparator.comparingInt((PropertyDescriptor p) -> p.order).thenComparing(p -> p.displayName));
-
-                for (PropertyDescriptor prop : sortedProps) {
+                for (PropertyDescriptor prop : props) {
                     boolean isDisabled = errorCounts.getOrDefault(prop.name, 0) >= NodeConstants.ERROR_THRESHOLD;
 
                     ImGui.tableNextRow();
