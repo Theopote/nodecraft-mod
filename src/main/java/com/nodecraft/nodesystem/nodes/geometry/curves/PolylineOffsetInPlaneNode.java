@@ -1,0 +1,304 @@
+package com.nodecraft.nodesystem.nodes.geometry.curves;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.LineData;
+import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector2d;
+import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+/**
+ * Offsets a polyline (or line) within a reference plane using parallel segment offsets and miter joins.
+ */
+@NodeInfo(
+    id = "geometry.curves.offset_polyline_plane",
+    displayName = "Offset Polyline In Plane",
+    description = "Offsets a polyline in a plane using parallel segments and miters (left is CCW in the plane UV basis)",
+    category = "geometry.curves",
+    order = 10
+)
+public class PolylineOffsetInPlaneNode extends BaseNode {
+
+    private static final double EPS = 1.0e-9d;
+
+    @NodeProperty(displayName = "Miter Limit", category = "Offset", order = 1,
+        description = "Maximum miter extension factor relative to |offset| before falling back to a bevel corner")
+    private double miterLimit = 4.0d;
+
+    private static final String INPUT_POLYLINE_ID = "input_polyline";
+    private static final String INPUT_LINE_ID = "input_line";
+    private static final String INPUT_PLANE_ID = "input_plane";
+    private static final String INPUT_OFFSET_ID = "input_offset";
+
+    private static final String OUTPUT_POLYLINE_ID = "output_polyline";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+
+    public PolylineOffsetInPlaneNode() {
+        super(UUID.randomUUID(), "geometry.curves.offset_polyline_plane");
+
+        addInputPort(new BasePort(INPUT_POLYLINE_ID, "Polyline",
+            "Open or closed polyline to offset (projected into the plane)",
+            NodeDataType.POLYLINE, this));
+        addInputPort(new BasePort(INPUT_LINE_ID, "Line",
+            "Optional 2-point line when no polyline is connected",
+            NodeDataType.LINE, this));
+        addInputPort(new BasePort(INPUT_PLANE_ID, "Plane",
+            "Work plane containing the polyline",
+            NodeDataType.PLANE, this));
+        addInputPort(new BasePort(INPUT_OFFSET_ID, "Offset",
+            "Signed offset distance in the plane (positive = left of forward segments in UV)",
+            NodeDataType.DOUBLE, this));
+
+        addOutputPort(new BasePort(OUTPUT_POLYLINE_ID, "Polyline",
+            "Offset polyline in 3D (still lying in the work plane)",
+            NodeDataType.POLYLINE, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid",
+            "True when inputs resolved to a valid offset polyline",
+            NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Offset Polyline In Plane";
+    }
+
+    @Override
+    public String getDescription() {
+        return "Offsets a polyline in a plane using parallel segments and miters (left is CCW in the plane UV basis)";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object planeObj = inputValues.get(INPUT_PLANE_ID);
+        Object offsetObj = inputValues.get(INPUT_OFFSET_ID);
+        if (!(planeObj instanceof PlaneData plane) || !(offsetObj instanceof Number number)) {
+            writeInvalid();
+            return;
+        }
+        double offset = number.doubleValue();
+        if (Math.abs(offset) < EPS) {
+            writeInvalid();
+            return;
+        }
+
+        List<Vector3d> worldVerts = resolvePathVertices();
+        if (worldVerts == null || worldVerts.size() < 2) {
+            writeInvalid();
+            return;
+        }
+
+        boolean closed = isClosedPath(worldVerts);
+        List<Vector3d> unique = closed ? worldVerts.subList(0, worldVerts.size() - 1) : worldVerts;
+        if (unique.size() < 2) {
+            writeInvalid();
+            return;
+        }
+
+        PlaneAxes axes = PlaneAxes.from(plane);
+        List<Vector2d> pts2d = new ArrayList<>(unique.size());
+        for (Vector3d p : unique) {
+            Vector3d proj = plane.projectPoint(p);
+            pts2d.add(axes.to2d(proj));
+        }
+
+        List<Vector2d> offset2d = offsetPolyline2d(pts2d, closed, offset, miterLimit);
+        if (offset2d == null || offset2d.size() < 2) {
+            writeInvalid();
+            return;
+        }
+
+        List<Vec3d> outPts = new ArrayList<>(offset2d.size());
+        for (Vector2d p : offset2d) {
+            Vector3d w = axes.from2d(p);
+            outPts.add(new Vec3d(w.x, w.y, w.z));
+        }
+        if (closed) {
+            outPts.add(outPts.get(0));
+        }
+
+        try {
+            outputValues.put(OUTPUT_POLYLINE_ID, new PolylineData(outPts));
+            outputValues.put(OUTPUT_VALID_ID, true);
+        } catch (IllegalArgumentException ex) {
+            writeInvalid();
+        }
+    }
+
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_POLYLINE_ID, null);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    private List<Vector3d> resolvePathVertices() {
+        Object polyObj = inputValues.get(INPUT_POLYLINE_ID);
+        Object lineObj = inputValues.get(INPUT_LINE_ID);
+        if (polyObj instanceof PolylineData poly) {
+            List<Vec3d> pts = poly.getPoints();
+            List<Vector3d> out = new ArrayList<>(pts.size());
+            for (Vec3d v : pts) {
+                out.add(new Vector3d(v.x, v.y, v.z));
+            }
+            return out;
+        }
+        if (lineObj instanceof LineData line) {
+            Vec3d a = line.getStart();
+            Vec3d b = line.getEnd();
+            return List.of(new Vector3d(a.x, a.y, a.z), new Vector3d(b.x, b.y, b.z));
+        }
+        return null;
+    }
+
+    private static boolean isClosedPath(List<Vector3d> worldVerts) {
+        if (worldVerts.size() < 3) {
+            return false;
+        }
+        Vector3d first = worldVerts.get(0);
+        Vector3d last = worldVerts.get(worldVerts.size() - 1);
+        return first.distance(last) < 1.0e-6d;
+    }
+
+    /**
+     * Parallel offset for a 2D polyline. {@code pts} are unique vertices; {@code closed} means first/last should join.
+     */
+    private static List<Vector2d> offsetPolyline2d(List<Vector2d> pts, boolean closed, double offset, double miterLimit) {
+        int n = pts.size();
+        if (n < 2) {
+            return null;
+        }
+        int segCount = closed ? n : n - 1;
+        Vector2d[] left = new Vector2d[segCount];
+        for (int i = 0; i < segCount; i++) {
+            Vector2d a = pts.get(i);
+            Vector2d b = pts.get((i + 1) % n);
+            Vector2d d = new Vector2d(b).sub(a);
+            double len = d.length();
+            if (len < EPS) {
+                return null;
+            }
+            d.mul(1.0d / len);
+            Vector2d ln = new Vector2d(-d.y, d.x).mul(offset);
+            left[i] = ln;
+        }
+
+        List<Vector2d> out = new ArrayList<>(n);
+        if (!closed) {
+            Vector2d start = new Vector2d(pts.get(0)).add(left[0]);
+            out.add(start);
+            for (int i = 1; i < n - 1; i++) {
+                Vector2d corner = intersectOrBevel(
+                    pts.get(i - 1), pts.get(i), left[i - 1],
+                    pts.get(i), pts.get(i + 1), left[i],
+                    pts.get(i), miterLimit, offset);
+                if (corner == null) {
+                    return null;
+                }
+                out.add(corner);
+            }
+            Vector2d end = new Vector2d(pts.get(n - 1)).add(left[n - 2]);
+            out.add(end);
+            return out;
+        }
+
+        for (int i = 0; i < n; i++) {
+            int prev = (i - 1 + n) % n;
+            int self = i;
+            int next = (i + 1) % n;
+            Vector2d corner = intersectOrBevel(
+                pts.get(prev), pts.get(self), left[prev],
+                pts.get(self), pts.get(next), left[self],
+                pts.get(self), miterLimit, offset);
+            if (corner == null) {
+                return null;
+            }
+            out.add(corner);
+        }
+        return out;
+    }
+
+    private static Vector2d intersectOrBevel(Vector2d p0, Vector2d p1, Vector2d left0,
+                                             Vector2d q0, Vector2d q1, Vector2d left1,
+                                             Vector2d cornerWorld,
+                                             double miterLimit,
+                                             double offset) {
+        Vector2d l0s = new Vector2d(p0).add(left0);
+        Vector2d l0e = new Vector2d(p1).add(left0);
+        Vector2d r0 = new Vector2d(l0e).sub(l0s);
+
+        Vector2d l1s = new Vector2d(q0).add(left1);
+        Vector2d l1e = new Vector2d(q1).add(left1);
+        Vector2d r1 = new Vector2d(l1e).sub(l1s);
+
+        Vector2d hit = intersectLines(l0s, r0, l1s, r1);
+        if (hit == null) {
+            Vector2d a = new Vector2d(cornerWorld).add(left0);
+            Vector2d b = new Vector2d(cornerWorld).add(left1);
+            return new Vector2d(a).add(b).mul(0.5d);
+        }
+        double miterDist = hit.distance(cornerWorld);
+        if (miterDist > miterLimit * Math.abs(offset) + EPS) {
+            Vector2d a = new Vector2d(cornerWorld).add(left0);
+            Vector2d b = new Vector2d(cornerWorld).add(left1);
+            return new Vector2d(a).add(b).mul(0.5d);
+        }
+        return hit;
+    }
+
+    private static Vector2d intersectLines(Vector2d p, Vector2d r, Vector2d q, Vector2d s) {
+        double rxs = cross2(r, s);
+        if (Math.abs(rxs) < EPS) {
+            return null;
+        }
+        Vector2d qp = new Vector2d(q).sub(p);
+        double t = cross2(qp, s) / rxs;
+        return new Vector2d(p).add(new Vector2d(r).mul(t));
+    }
+
+    private static double cross2(Vector2d a, Vector2d b) {
+        return a.x * b.y - a.y * b.x;
+    }
+
+    public static final class PlaneAxes {
+        private final Vector3d origin;
+        private final Vector3d axisU;
+        private final Vector3d axisV;
+
+        private PlaneAxes(Vector3d origin, Vector3d axisU, Vector3d axisV) {
+            this.origin = origin;
+            this.axisU = axisU;
+            this.axisV = axisV;
+        }
+
+        public static PlaneAxes from(PlaneData plane) {
+            Vector3d n = plane.getNormal();
+            Vector3d axisU = new Vector3d(1, 0, 0);
+            if (Math.abs(axisU.dot(n)) > 0.9d) {
+                axisU.set(0, 1, 0);
+            }
+            Vector3d axisV = new Vector3d(n).cross(axisU, new Vector3d()).normalize();
+            axisU = new Vector3d(axisV).cross(n, new Vector3d()).normalize();
+            return new PlaneAxes(new Vector3d(plane.getPoint()), axisU, axisV);
+        }
+
+        public Vector2d to2d(Vector3d p) {
+            Vector3d rel = new Vector3d(p).sub(origin);
+            return new Vector2d(rel.dot(axisU), rel.dot(axisV));
+        }
+
+        public Vector3d from2d(Vector2d p) {
+            return new Vector3d(origin)
+                .add(new Vector3d(axisU).mul(p.x, new Vector3d()))
+                .add(new Vector3d(axisV).mul(p.y, new Vector3d()));
+        }
+    }
+}
