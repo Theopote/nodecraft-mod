@@ -1436,6 +1436,7 @@ public class PropertyPanelComponent implements EditorComponent {
     public void cleanup() {
         NodeCraft.LOGGER.debug("PropertyPanelComponent cleaned up");
         clearAllTempValues();
+        propertyInspector.clearCache();
         propertyCache.clear(); // 清空所有缓存
         errorCounts.clear(); // 清空错误计数
         propertiesBeingEdited.clear(); // 清空编辑锁
@@ -1926,6 +1927,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * 清理当前选中节点的临时值
      */
     private void clearCurrentNodeTempValues() {
+        editorState.clearForNode(selectedNode);
         if (selectedNode == null) return;
 
         // 只清理当前选中节点的临时值
@@ -1942,8 +1944,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * 清理所有临时值
      */
     private void clearAllTempValues() {
-        tempValues.clear();
-        propertiesBeingEdited.clear();
+        editorState.clearAll();
         errorCounts.clear(); // 清空所有错误计数
     }
 
@@ -2781,6 +2782,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param propName 属性名
      */
     private void markPropertyBeingEdited(INode node, String propName) {
+        editorState.markPropertyBeingEdited(node, propName);
         String key = getTempValueKey(node, propName);
         propertiesBeingEdited.put(key, System.currentTimeMillis());
         NodeCraft.LOGGER.trace("属性 {} 标记为正在编辑。", key);
@@ -2792,6 +2794,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param propName 属性名
      */
     private void markPropertyEditingFinished(INode node, String propName) {
+        editorState.markPropertyEditingFinished(node, propName);
         String key = getTempValueKey(node, propName);
         propertiesBeingEdited.remove(key);
         NodeCraft.LOGGER.trace("属性 {} 标记为编辑完成。", key);
@@ -2823,6 +2826,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * 定期调用，移除所有超时的编辑锁
      */
     private void checkAndCleanExpiredEditLocks() {
+        editorState.checkAndCleanExpiredEditLocks();
         long currentTime = System.currentTimeMillis();
         // 使用迭代器安全地移除 Map 中的元素
         propertiesBeingEdited.entrySet().removeIf(entry -> {
