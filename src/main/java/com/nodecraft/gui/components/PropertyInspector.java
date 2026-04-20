@@ -41,28 +41,32 @@ final class PropertyInspector {
 
             Class<?> currentClass = clazz;
             while (currentClass != null && !currentClass.equals(Object.class)) {
-                for (Method method : currentClass.getMethods()) {
+                for (Method method : currentClass.getDeclaredMethods()) {
                     if (method.getDeclaringClass().equals(Object.class)) {
                         continue;
                     }
                     if (SYSTEM_DECLARING_CLASSES.contains(method.getDeclaringClass())) {
                         continue;
                     }
+                    int modifiers = method.getModifiers();
+                    if (!Modifier.isPublic(modifiers) || Modifier.isStatic(modifiers)) {
+                        continue;
+                    }
 
                     String methodName = method.getName();
                     if (method.getParameterCount() == 0) {
                         if (methodName.startsWith(GET_PREFIX) && methodName.length() > GET_PREFIX.length()) {
-                            getters.put(extractPropertyName(methodName, GET_PREFIX), method);
+                            getters.putIfAbsent(extractPropertyName(methodName, GET_PREFIX), method);
                         } else if (methodName.startsWith(IS_PREFIX)
                                 && methodName.length() > IS_PREFIX.length()
                                 && (method.getReturnType().equals(boolean.class)
                                 || method.getReturnType().equals(Boolean.class))) {
-                            getters.put(extractPropertyName(methodName, IS_PREFIX), method);
+                            getters.putIfAbsent(extractPropertyName(methodName, IS_PREFIX), method);
                         }
                     } else if (method.getParameterCount() == 1
                             && methodName.startsWith(SET_PREFIX)
                             && method.getReturnType().equals(void.class)) {
-                        setters.put(extractPropertyName(methodName, SET_PREFIX), method);
+                        setters.putIfAbsent(extractPropertyName(methodName, SET_PREFIX), method);
                     }
                 }
 
@@ -192,6 +196,7 @@ final class PropertyInspector {
                 }
 
                 String propertyName;
+                boolean standardGetterNaming = true;
                 if (methodName.startsWith(GET_PREFIX) && methodName.length() > GET_PREFIX.length()) {
                     propertyName = extractPropertyName(methodName, GET_PREFIX);
                 } else if (methodName.startsWith(IS_PREFIX)
@@ -200,6 +205,7 @@ final class PropertyInspector {
                         || method.getReturnType().equals(Boolean.class))) {
                     propertyName = extractPropertyName(methodName, IS_PREFIX);
                 } else {
+                    standardGetterNaming = false;
                     propertyName = methodName;
                     NodeCraft.LOGGER.warn("方法 '{}' 使用 @NodeProperty 但不遵循标准 getter 命名，使用方法名作为属性名", methodName);
                 }
@@ -210,20 +216,25 @@ final class PropertyInspector {
 
                 Method setterMethod = null;
                 if (!annotation.readOnly()) {
-                    String setterName = SET_PREFIX + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
-                    try {
-                        setterMethod = currentClass.getMethod(setterName, method.getReturnType());
-                        if (Modifier.isStatic(setterMethod.getModifiers())
-                                || !Modifier.isPublic(setterMethod.getModifiers())
-                                || setterMethod.getParameterTypes().length != 1
-                                || !setterMethod.getParameterTypes()[0].equals(method.getReturnType())) {
-                            NodeCraft.LOGGER.warn("属性 '{}' 的 setter 方法 '{}' 类型或修饰符不匹配，将视为只读",
+                    if (standardGetterNaming) {
+                        String setterName = SET_PREFIX + Character.toUpperCase(propertyName.charAt(0)) + propertyName.substring(1);
+                        try {
+                            setterMethod = currentClass.getMethod(setterName, method.getReturnType());
+                            if (Modifier.isStatic(setterMethod.getModifiers())
+                                    || !Modifier.isPublic(setterMethod.getModifiers())
+                                    || setterMethod.getParameterTypes().length != 1
+                                    || !setterMethod.getParameterTypes()[0].equals(method.getReturnType())) {
+                                NodeCraft.LOGGER.warn("属性 '{}' 的 setter 方法 '{}' 类型或修饰符不匹配，将视为只读",
+                                        propertyName, setterName);
+                                setterMethod = null;
+                            }
+                        } catch (NoSuchMethodException e) {
+                            NodeCraft.LOGGER.debug("属性 '{}' 未找到对应的 setter 方法 '{}'，将作为只读属性处理",
                                     propertyName, setterName);
-                            setterMethod = null;
                         }
-                    } catch (NoSuchMethodException e) {
-                        NodeCraft.LOGGER.debug("属性 '{}' 未找到对应的 setter 方法 '{}'，将作为只读属性处理",
-                                propertyName, setterName);
+                    } else {
+                        NodeCraft.LOGGER.debug("属性 '{}' 使用非标准 getter 命名，跳过自动 setter 推断并按只读处理",
+                                propertyName);
                     }
                 }
 
