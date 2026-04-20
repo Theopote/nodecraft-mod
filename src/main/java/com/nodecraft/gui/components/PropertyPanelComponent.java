@@ -104,8 +104,6 @@ public class PropertyPanelComponent implements EditorComponent {
     // 正在编辑的属性集合：Key: nodeId_propertyName -> 最后活跃时间戳
     // 用于防止节点计算覆盖用户正在输入的值，并支持精确的超时清理
     private final Map<String, Long> propertiesBeingEdited = new ConcurrentHashMap<>(); // 使用ConcurrentHashMap
-    // 编辑锁定超时（毫秒），超过此时间没有新输入则自动释放锁
-    private static final long EDIT_LOCK_TIMEOUT = 2000; // 2秒
 
     // 错误计数器：属性名 -> 错误次数 (针对当前 selectedNode 的属性)
     private final Map<String, Integer> errorCounts = new HashMap<>(); // 每次 selectedNode 切换时重置
@@ -1669,7 +1667,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
         renderAssistNodeControls();
 
-        List<PropertyDescriptor> properties = propertyInspector.getPropertiesForNode(selectedNode.getClass()).stream()
+        List<PropertyDescriptor> properties = getPropertiesForNode(selectedNode.getClass()).stream()
                 .filter(prop -> !HIDDEN_NODE_PROPERTIES.contains(prop.name))
                 .toList();
         if (properties.isEmpty()) {
@@ -1678,7 +1676,7 @@ public class PropertyPanelComponent implements EditorComponent {
         }
 
         Map<String, List<PropertyDescriptor>> groupedProperties = properties.stream()
-                .collect(Collectors.groupingBy(prop -> normalizePropertyCategory(prop.category)));
+                .collect(Collectors.groupingBy(prop -> PropertyCategoryFormatter.normalize(prop.category)));
 
         if (groupedProperties.containsKey("")) {
             List<PropertyDescriptor> uncategorizedProps = groupedProperties.remove("");
@@ -1689,7 +1687,7 @@ public class PropertyPanelComponent implements EditorComponent {
         categories.sort(Comparator.naturalOrder());
 
         for (String category : categories) {
-            String formattedCategory = formatPropertyCategory(category);
+            String formattedCategory = PropertyCategoryFormatter.format(category);
             if (!formattedCategory.isEmpty()) {
                 ImGui.pushStyleColor(ImGuiCol.Text, 0.72f, 0.76f, 0.82f, 1.0f);
                 boolean open = ImGui.collapsingHeader(formattedCategory, ImGuiTreeNodeFlags.DefaultOpen);
