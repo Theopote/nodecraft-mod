@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**292**
+- **节点总数**：**295**
 - **分类总数**：**46**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -45,7 +45,7 @@
 | `reference.points` | 16 |
 | `reference.vectors` | 11 |
 | `transform.basic_transforms` | 9 |
-| `transform.deformations` | 1 |
+| `transform.deformations` | 4 |
 | `transform.orientation` | 2 |
 | `utilities.assist` | 4 |
 | `utilities.fileio` | 1 |
@@ -479,11 +479,14 @@
 | Mirror Geometry About Plane | `transform.basic_transforms.mirror_geometry_plane` | Mirrors analytic geometry about a plane (recursive for composites and boolean geometry nodes) | `MirrorGeometryAboutPlaneNode` |
 | Mirror Vector List About Plane | `transform.basic_transforms.mirror_vector_list_plane` | Mirrors each point in a list about a plane and outputs Vector3d positions | `MirrorVectorListAboutPlaneNode` |
 
-## transform.deformations（1）
+## transform.deformations（4）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
 | Twist Point List | `transform.deformations.twist` | Twists a point list around an axis by distributing rotation along a specified axial length | `TwistPointListNode` |
+| Bend Point List | `transform.deformations.bend` | Bends a point list into an arc along an axis over a configurable bend length, with explicit bend-plane control (AUTO/XY/XZ/YZ/CUSTOM) | `BendPointListNode` |
+| Taper Point List | `transform.deformations.taper` | Scales radial distance along an axis to create tapered forms, with a minimum-scale clamp to prevent collapse | `TaperPointListNode` |
+| Noise Displace Point List | `transform.deformations.noise_displace` | Applies deterministic pseudo-noise displacement to a point list, with per-axis weights and XYZ noise offset controls | `NoiseDisplacePointListNode` |
 
 ## transform.orientation（2）
 
