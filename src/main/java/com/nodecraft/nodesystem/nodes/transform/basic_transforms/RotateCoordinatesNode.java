@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "transform.basic_transforms.rotate_points",
-    displayName = "坐标旋转",
+    displayName = "Rotate Coordinates",
     description = "绕指定轴和中心点旋转坐标列表",
     category = "transform.basic_transforms",
     order = 2

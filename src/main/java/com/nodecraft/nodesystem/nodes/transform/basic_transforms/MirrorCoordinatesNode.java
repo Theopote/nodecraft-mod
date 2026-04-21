@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "transform.basic_transforms.mirror_points",
-    displayName = "坐标镜像",
+    displayName = "Mirror Coordinates",
     description = "沿指定平面镜像坐标列表",
     category = "transform.basic_transforms",
     order = 4

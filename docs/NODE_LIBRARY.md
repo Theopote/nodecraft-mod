@@ -250,7 +250,7 @@
 | Remove Item | `math.list_sequence.remove_item` | Removes an item from a list by index or value | `RemoveItemNode` |
 | Repeat | `math.list_sequence.repeat` | Repeats a single data item or list multiple times | `RepeatNode` |
 | Reverse List | `math.list_sequence.reverse_list` | Reverses the order of elements in a list. | `ReverseListNode` |
-| Sequence Range | `math.list_sequence.range` | Generates a sequence of numbers within a specified range | `SequenceRangeNode` |
+| Sequence Range (Legacy) | `math.list_sequence.range_legacy` | [Deprecated] Legacy duplicate of Range; use `math.list_sequence.range`. | `SequenceRangeNode` |
 | Set Item | `math.list_sequence.set_item` | Sets an item in a list at a specified index | `SetItemNode` |
 | Shuffle List | `math.list_sequence.shuffle_list` | Randomly reorders elements in a list | `ShuffleListNode` |
 | Sort List | `math.list_sequence.sort_list` | Sorts elements of a list | `SortListNode` |
@@ -452,10 +452,10 @@
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Offset Coordinate | `transform.basic_transforms.move_point` | Offsets a single block coordinate by integer X, Y, Z amounts | `OffsetCoordinateNode` |
-| 坐标偏移 | `transform.basic_transforms.move_points` | 对坐标列表中的每个坐标应用偏移量 | `OffsetCoordinatesNode` |
-| 坐标旋转 | `transform.basic_transforms.rotate_points` | 绕指定轴和中心点旋转坐标列表 | `RotateCoordinatesNode` |
-| 坐标缩放 | `transform.basic_transforms.scale_points` | 以指定中心点为基准缩放坐标列表 | `ScaleCoordinatesNode` |
-| 坐标镜像 | `transform.basic_transforms.mirror_points` | 沿指定平面镜像坐标列表 | `MirrorCoordinatesNode` |
+| Offset Coordinates | `transform.basic_transforms.move_points` | 对坐标列表中的每个坐标应用偏移量 | `OffsetCoordinatesNode` |
+| Rotate Coordinates | `transform.basic_transforms.rotate_points` | 绕指定轴和中心点旋转坐标列表 | `RotateCoordinatesNode` |
+| Scale Coordinates | `transform.basic_transforms.scale_points` | 以指定中心点为基准缩放坐标列表 | `ScaleCoordinatesNode` |
+| Mirror Coordinates | `transform.basic_transforms.mirror_points` | 沿指定平面镜像坐标列表 | `MirrorCoordinatesNode` |
 | Offset Box Face | `transform.basic_transforms.offset_face` | Offsets a box face along its normal without modifying the source box geometry | `OffsetBoxFaceNode` |
 | Inset Box Face | `transform.basic_transforms.inset_face` | Creates an inset or outset reference face boundary from a box face without modifying the source box | `InsetBoxFaceNode` |
 | Mirror Geometry About Plane | `transform.basic_transforms.mirror_geometry_plane` | Mirrors analytic geometry about a plane (recursive for composites and boolean geometry nodes) | `MirrorGeometryAboutPlaneNode` |

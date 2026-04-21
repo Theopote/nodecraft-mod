@@ -16,11 +16,13 @@ import java.util.UUID;
  *                                                                        ?
  */
 @NodeInfo(
-    id = "math.list_sequence.range",
-    displayName = "Sequence Range",
-    description = "Generates a sequence of numbers within a specified range",
-    category = "math.list_sequence"
+    id = "math.list_sequence.range_legacy",
+    displayName = "Sequence Range (Legacy)",
+    description = "Deprecated legacy range node. Use Range (math.list_sequence.range) instead.",
+    category = "math.list_sequence",
+    order = 999
 )
+@Deprecated
 public class SequenceRangeNode extends BaseNode {
     
     // ---              ?---
@@ -40,7 +42,7 @@ public class SequenceRangeNode extends BaseNode {
      */
     public SequenceRangeNode() {
         //                                        UID.randomUUID()              D
-        super(UUID.randomUUID(), "math.list_sequence.range");
+        super(UUID.randomUUID(), "math.list_sequence.range_legacy");
         
         //                    ?
         this.description = "Generates a sequence of numbers within a specified range";

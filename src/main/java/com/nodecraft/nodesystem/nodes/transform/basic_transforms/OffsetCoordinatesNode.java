@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "transform.basic_transforms.move_points",
-    displayName = "坐标偏移",
+    displayName = "Offset Coordinates",
     description = "对坐标列表中的每个坐标应用偏移量",
     category = "transform.basic_transforms",
     order = 1
