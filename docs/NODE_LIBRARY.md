@@ -2,7 +2,7 @@
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
 - Total nodes: **281**
-- Total categories: **45**
+- Total categories: **46**
 
 ## Category Statistics
 
@@ -25,7 +25,8 @@
 | `material.pattern_mapping` | 1 |
 | `material.surface_aging` | 1 |
 | `math.compare` | 7 |
-| `math.list_sequence` | 19 |
+| `math.sequence` | 3 |
+| `math.list` | 16 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
 | `math.scalar_math` | 15 |
@@ -232,29 +233,34 @@
 | Greater Than (>) | `math.compare.greater_than` | Returns true when A is greater than B. | `GreaterThanNode` |
 | Greater Than or Equal (>=) | `math.compare.greater_than_or_equal` | Returns true when A is greater than or equal to B. | `GreaterThanOrEqualNode` |
 
-## math.list_sequence (19)
+## math.sequence (3)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
-| Create List | `math.list_sequence.create_list` | Packs multiple input items into a single list. | `CreateListNode` |
-| Range | `math.list_sequence.range` | Generates a numeric sequence from Start to End using Step. | `MathRangeNode` |
-| Combine Lists | `math.list_sequence.combine_lists` | Combines multiple lists into a single list by index. | `CombineListsNode` |
-| Data Series | `math.list_sequence.series` | Generates a series of numbers with constant increment | `DataSeriesNode` |
-| Dispatch List | `math.list_sequence.dispatch_list` | Splits a list into two based on boolean conditions | `DispatchListNode` |
-| Filter List | `math.list_sequence.filter_list` | Filters a list based on boolean conditions | `FilterListNode` |
-| Flatten List | `math.list_sequence.flatten_list` | Flattens a nested list structure into a single-level list | `FlattenListNode` |
-| Get Item | `math.list_sequence.get_item` | Gets an item from a list at a specified index. | `GetItemNode` |
-| Group List | `math.list_sequence.group_list` | Groups items in a list based on a key list | `GroupListNode` |
-| Insert Item | `math.list_sequence.insert_item` | Inserts an item into a list at a specified index | `InsertItemNode` |
-| List Length | `math.list_sequence.list_length` | Returns the number of items in a list. | `ListLengthNode` |
-| Remove Item | `math.list_sequence.remove_item` | Removes an item from a list by index or value | `RemoveItemNode` |
-| Repeat | `math.list_sequence.repeat` | Repeats a single data item or list multiple times | `RepeatNode` |
-| Reverse List | `math.list_sequence.reverse_list` | Reverses the order of elements in a list. | `ReverseListNode` |
-| Sequence Range (Legacy) | `math.list_sequence.range_legacy` | [Deprecated] Legacy duplicate of Range; use `math.list_sequence.range`. | `SequenceRangeNode` |
-| Set Item | `math.list_sequence.set_item` | Sets an item in a list at a specified index | `SetItemNode` |
-| Shuffle List | `math.list_sequence.shuffle_list` | Randomly reorders elements in a list | `ShuffleListNode` |
-| Sort List | `math.list_sequence.sort_list` | Sorts elements of a list | `SortListNode` |
-| Sub List | `math.list_sequence.sub_list` | Gets a portion of a list between start and end indexes. | `SubListNode` |
+| Range | `math.sequence.range` | Generates a numeric sequence from Start to End using Step. | `MathRangeNode` |
+| Data Series | `math.sequence.series` | Generates a series of numbers with constant increment | `DataSeriesNode` |
+| Repeat | `math.sequence.repeat` | Repeats a single data item or list multiple times | `RepeatNode` |
+ 
+## math.list (16)
+ 
+| Node Name | Node ID | Description | Class |
+|---|---|---|---|
+| Create List | `math.list.create_list` | Packs multiple input items into a single list. | `CreateListNode` |
+| Combine Lists | `math.list.combine_lists` | Combines multiple lists into a single list by index. | `CombineListsNode` |
+| Dispatch List | `math.list.dispatch_list` | Splits a list into two based on boolean conditions | `DispatchListNode` |
+| Filter List | `math.list.filter_list` | Filters a list based on boolean conditions | `FilterListNode` |
+| Flatten List | `math.list.flatten_list` | Flattens a nested list structure into a single-level list | `FlattenListNode` |
+| Get Item | `math.list.get_item` | Gets an item from a list at a specified index. | `GetItemNode` |
+| Group List | `math.list.group_list` | Groups items in a list based on a key list | `GroupListNode` |
+| Insert Item | `math.list.insert_item` | Inserts an item into a list at a specified index | `InsertItemNode` |
+| List Length | `math.list.list_length` | Returns the number of items in a list. | `ListLengthNode` |
+| Remove Item | `math.list.remove_item` | Removes an item from a list by index or value | `RemoveItemNode` |
+| Reverse List | `math.list.reverse_list` | Reverses the order of elements in a list. | `ReverseListNode` |
+| Sequence Range (Legacy) | `math.list.range_legacy` | [Deprecated] Legacy duplicate of Range; use `math.sequence.range`. | `SequenceRangeNode` |
+| Set Item | `math.list.set_item` | Sets an item in a list at a specified index | `SetItemNode` |
+| Shuffle List | `math.list.shuffle_list` | Randomly reorders elements in a list | `ShuffleListNode` |
+| Sort List | `math.list.sort_list` | Sorts elements of a list | `SortListNode` |
+| Sub List | `math.list.sub_list` | Gets a portion of a list between start and end indexes. | `SubListNode` |
 
 ## math.logic (6)
 

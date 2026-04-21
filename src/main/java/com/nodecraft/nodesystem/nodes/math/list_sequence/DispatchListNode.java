@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.dispatch_list",
     displayName = "Dispatch List",
     description = "Splits a list into two based on boolean conditions",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class DispatchListNode extends BaseNode {
     

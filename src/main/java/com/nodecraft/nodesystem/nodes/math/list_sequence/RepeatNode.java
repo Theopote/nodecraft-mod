@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.repeat",
     displayName = "Repeat",
     description = "Repeats a single data item or list multiple times",
-    category = "math.list_sequence"
+    category = "math.sequence"
 )
 public class RepeatNode extends BaseNode {
     

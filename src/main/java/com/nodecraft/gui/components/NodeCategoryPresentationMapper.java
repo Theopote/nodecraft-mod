@@ -35,7 +35,7 @@ public final class NodeCategoryPresentationMapper {
         "geometry.boolean", "geometry.curves", "geometry.primitives", "geometry.profiles", "geometry.solids", "geometry.architectural_primitives",
         "pattern.linear", "pattern.grid", "pattern.radial", "pattern.surface_volume_distribution",
         "transform.basic_transforms", "transform.deformations", "transform.orientation",
-        "math.scalar_math", "math.compare", "math.logic", "math.random", "math.trigonometry", "math.list_sequence",
+        "math.scalar_math", "math.compare", "math.logic", "math.random", "math.trigonometry", "math.sequence", "math.list",
         "output.preview", "output.execute", "output.export", "output.debug",
         "utilities.organization", "utilities.assist",
         "material.basic_assignment", "material.gradient_mapping", "material.directional_mapping",

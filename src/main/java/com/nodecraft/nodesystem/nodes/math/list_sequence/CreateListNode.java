@@ -27,7 +27,7 @@ import java.util.UUID;
     id = "math.list_sequence.create_list",
     displayName = "Create List",
     description = "Packs multiple input items into a single list.",
-    category = "math.list_sequence",
+    category = "math.list",
     order = 0
 )
 public class CreateListNode extends BaseCustomUINode {

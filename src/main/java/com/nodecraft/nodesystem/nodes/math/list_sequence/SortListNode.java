@@ -21,7 +21,7 @@ import java.util.UUID;
     id = "math.list_sequence.sort_list",
     displayName = "Sort List",
     description = "Sorts elements of a list",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class SortListNode extends BaseNode {
     

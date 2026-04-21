@@ -21,7 +21,7 @@ import java.util.UUID;
     id = "math.list_sequence.shuffle_list",
     displayName = "Shuffle List",
     description = "Randomly reorders elements in a list",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class ShuffleListNode extends BaseNode {
     

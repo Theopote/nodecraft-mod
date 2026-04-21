@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "math.list_sequence.reverse_list",
     displayName = "Reverse List",
     description = "Reverses the order of elements in a list.",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class ReverseListNode extends BaseNode {
     

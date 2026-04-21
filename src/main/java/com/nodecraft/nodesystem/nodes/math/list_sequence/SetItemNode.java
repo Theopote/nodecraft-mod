@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.set_item",
     displayName = "Set Item",
     description = "Sets an item in a list at a specified index",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class SetItemNode extends BaseNode {
     

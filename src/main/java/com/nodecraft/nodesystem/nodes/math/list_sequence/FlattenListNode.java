@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.flatten_list",
     displayName = "Flatten List",
     description = "Flattens a nested list structure into a single-level list",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class FlattenListNode extends BaseNode {
     

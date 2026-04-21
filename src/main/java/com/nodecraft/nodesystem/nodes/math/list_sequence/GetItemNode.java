@@ -18,7 +18,7 @@ import java.util.UUID;
     id = "math.list_sequence.get_item",
     displayName = "Get Item",
     description = "Gets an item from a list at a specified index.",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class GetItemNode extends BaseNode {
     

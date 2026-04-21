@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.range_legacy",
     displayName = "Sequence Range (Legacy)",
     description = "Deprecated legacy range node. Use Range (math.list_sequence.range) instead.",
-    category = "math.list_sequence",
+    category = "math.list",
     order = 999
 )
 @Deprecated

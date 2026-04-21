@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.combine_lists",
     displayName = "Combine Lists",
     description = "Combines multiple lists into a single list by index.",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class CombineListsNode extends BaseNode {
     

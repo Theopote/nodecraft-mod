@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.range",
     displayName = "Range",
     description = "Generates a numeric sequence from Start to End using Step.",
-    category = "math.list_sequence",
+    category = "math.sequence",
     order = 1
 )
 public class MathRangeNode extends BaseNode {

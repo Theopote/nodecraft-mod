@@ -21,7 +21,7 @@ import java.util.UUID;
     id = "math.list_sequence.group_list",
     displayName = "Group List",
     description = "Groups items in a list based on a key list",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class GroupListNode extends BaseNode {
     

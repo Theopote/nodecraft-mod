@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.sub_list",
     displayName = "Sub List",
     description = "Gets a portion of a list between start and end indexes.",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class SubListNode extends BaseNode {
     

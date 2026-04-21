@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.filter_list",
     displayName = "Filter List",
     description = "Filters a list based on boolean conditions",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class FilterListNode extends BaseNode {
     

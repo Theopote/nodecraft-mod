@@ -19,7 +19,7 @@ import java.util.UUID;
     id = "math.list_sequence.series",
     displayName = "Data Series",
     description = "Generates a series of numbers with constant increment",
-    category = "math.list_sequence"
+    category = "math.sequence"
 )
 public class DataSeriesNode extends BaseNode {
     

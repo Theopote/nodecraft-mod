@@ -20,7 +20,7 @@ import java.util.UUID;
     id = "math.list_sequence.remove_item",
     displayName = "Remove Item",
     description = "Removes an item from a list by index or value",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class RemoveItemNode extends BaseNode {
     

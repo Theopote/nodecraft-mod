@@ -60,6 +60,11 @@ public class GraphSerializer {
         "input_tetrahedron_geometry", GEOMETRY_INPUT_PORT_ID,
         "input_torus_geometry", GEOMETRY_INPUT_PORT_ID
     );
+    private static final Set<String> LEGACY_MATH_SEQUENCE_NODE_TYPE_IDS = Set.of(
+        "math.list_sequence.range",
+        "math.list_sequence.series",
+        "math.list_sequence.repeat"
+    );
     
     private GraphSerializer() {
         // 工具类，不允许实例化
@@ -157,12 +162,11 @@ public class GraphSerializer {
     public static NodeGraph fromSavedGraph(SavedGraph savedGraph) {
         if (savedGraph == null) return null;
 
-        MigrationReport migrationReport = migrateDeprecatedBakeNodes(savedGraph);
+        MigrationReport migrationReport = migrateCompatibilityNodes(savedGraph);
         if (migrationReport.hasChanges()) {
             LOGGER.warn(
-                "加载时已迁移 {} 个已弃用 Bake 节点到 {}，类型: {}",
+                "加载时已迁移 {} 个兼容节点到新结构，涉及类型: {}",
                 migrationReport.migratedNodeCount(),
-                GEOMETRY_BAKE_TYPE_ID,
                 migrationReport.migratedTypeIds()
             );
             for (String note : migrationReport.notes()) {
@@ -288,6 +292,70 @@ public class GraphSerializer {
         }
 
         return new MigrationReport(migratedNodeCount, List.copyOf(migratedTypeIds), List.copyOf(notes));
+    }
+
+    /**
+     * 汇总兼容迁移：Bake 节点收敛 + math.list_sequence 分类拆分后的旧 ID 映射。
+     */
+    public static MigrationReport migrateCompatibilityNodes(SavedGraph savedGraph) {
+        MigrationReport bakeReport = migrateDeprecatedBakeNodes(savedGraph);
+        MigrationReport mathReport = migrateLegacyMathListSequenceNodes(savedGraph);
+        if (!bakeReport.hasChanges() && !mathReport.hasChanges()) {
+            return MigrationReport.empty();
+        }
+
+        Set<String> mergedTypes = new LinkedHashSet<>();
+        mergedTypes.addAll(bakeReport.migratedTypeIds());
+        mergedTypes.addAll(mathReport.migratedTypeIds());
+
+        List<String> mergedNotes = new ArrayList<>();
+        mergedNotes.addAll(bakeReport.notes());
+        mergedNotes.addAll(mathReport.notes());
+
+        return new MigrationReport(
+            bakeReport.migratedNodeCount() + mathReport.migratedNodeCount(),
+            List.copyOf(mergedTypes),
+            List.copyOf(mergedNotes)
+        );
+    }
+
+    /**
+     * 将旧的 math.list_sequence.* 节点 ID 映射到拆分后的 math.sequence.* 或 math.list.*。
+     */
+    public static MigrationReport migrateLegacyMathListSequenceNodes(SavedGraph savedGraph) {
+        if (savedGraph == null || savedGraph.nodes == null || savedGraph.nodes.isEmpty()) {
+            return MigrationReport.empty();
+        }
+
+        int migratedNodeCount = 0;
+        Set<String> migratedTypeIds = new LinkedHashSet<>();
+        List<String> notes = new ArrayList<>();
+
+        for (SavedNode savedNode : savedGraph.nodes) {
+            if (savedNode == null || savedNode.typeId == null) {
+                continue;
+            }
+            String remappedTypeId = remapLegacyMathListSequenceNodeTypeId(savedNode.typeId);
+            if (!savedNode.typeId.equals(remappedTypeId)) {
+                migratedTypeIds.add(savedNode.typeId);
+                notes.add("节点 " + savedNode.nodeId + " 类型 " + savedNode.typeId + " 已迁移为 " + remappedTypeId + "。");
+                savedNode.typeId = remappedTypeId;
+                migratedNodeCount++;
+            }
+        }
+
+        return migratedNodeCount == 0
+            ? MigrationReport.empty()
+            : new MigrationReport(migratedNodeCount, List.copyOf(migratedTypeIds), List.copyOf(notes));
+    }
+
+    private static String remapLegacyMathListSequenceNodeTypeId(String oldTypeId) {
+        if (!oldTypeId.startsWith("math.list_sequence.")) {
+            return oldTypeId;
+        }
+        return LEGACY_MATH_SEQUENCE_NODE_TYPE_IDS.contains(oldTypeId)
+            ? oldTypeId.replace("math.list_sequence.", "math.sequence.")
+            : oldTypeId.replace("math.list_sequence.", "math.list.");
     }
 
     private static Object migrateBakeNodeState(String originalTypeId, Object state, List<String> notes) {

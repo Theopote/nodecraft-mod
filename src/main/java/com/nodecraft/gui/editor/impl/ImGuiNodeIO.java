@@ -189,7 +189,7 @@ public class ImGuiNodeIO {
                 savedGraph.connections = new ArrayList<>();
             }
 
-            GraphSerializer.MigrationReport migrationReport = GraphSerializer.migrateDeprecatedBakeNodes(savedGraph);
+            GraphSerializer.MigrationReport migrationReport = GraphSerializer.migrateCompatibilityNodes(savedGraph);
             if (migrationReport.hasChanges()) {
                 NodeCraft.LOGGER.warn(
                     "加载图时已自动迁移 {} 个已弃用 Bake 节点到 output.execute.bake_geometry_to_blocks，类型: {}",

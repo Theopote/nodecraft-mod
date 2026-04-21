@@ -18,7 +18,7 @@ import java.util.UUID;
     id = "math.list_sequence.list_length",
     displayName = "List Length",
     description = "Returns the number of items in a list.",
-    category = "math.list_sequence"
+    category = "math.list"
 )
 public class ListLengthNode extends BaseNode {
     
