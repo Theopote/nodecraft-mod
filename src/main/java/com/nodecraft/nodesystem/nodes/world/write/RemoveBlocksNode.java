@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -41,6 +42,8 @@ public class RemoveBlocksNode extends BaseNode {
     private boolean notifyUpdate = true;
     private boolean spawnDrops = true;
     private int maxBlocks = 32768;
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     public RemoveBlocksNode() {
         super(UUID.randomUUID(), "world.write.clear_region");
@@ -86,6 +89,7 @@ public class RemoveBlocksNode extends BaseNode {
 
             BlockState airState = Blocks.AIR.getDefaultState();
             int flags = notify ? Block.NOTIFY_ALL : Block.FORCE_STATE;
+            WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
 
             for (BlockPos pos : coordinates) {
                 totalCount++;
@@ -108,10 +112,16 @@ public class RemoveBlocksNode extends BaseNode {
                     if (success) {
                         successCount++;
                         removedBlocks++;
+                        if (undoRecord != null) {
+                            undoRecord.add(pos, currentState);
+                        }
                     }
                 } catch (Exception ignored) {
                     // Keep processing the remaining coordinates.
                 }
+            }
+            if (undoRecord != null) {
+                WorldWriteHistoryService.getInstance().push(undoRecord);
             }
         }
 
@@ -151,6 +161,17 @@ public class RemoveBlocksNode extends BaseNode {
         int resolved = Math.max(1, maxBlocks);
         if (this.maxBlocks != resolved) {
             this.maxBlocks = resolved;
+            markDirty();
+        }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        if (this.recordUndo != recordUndo) {
+            this.recordUndo = recordUndo;
             markDirty();
         }
     }

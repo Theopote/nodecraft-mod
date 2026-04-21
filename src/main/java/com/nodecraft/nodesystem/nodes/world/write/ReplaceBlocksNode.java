@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -35,6 +36,8 @@ public class ReplaceBlocksNode extends BaseNode {
     private boolean batchUpdates = true; // 是否批量更新，提高性能
     private boolean exactMatch = false; // 是否要求方块状态完全匹配
     private int maxBlocks = 32768; // 最大操作方块数（防止过大区域导致性能问题）
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     // --- 输入端口 IDs ---
     private static final String INPUT_REGION_ID = "input_region";
@@ -216,6 +219,7 @@ public class ReplaceBlocksNode extends BaseNode {
                 }
                 
                 try {
+                    WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
                     // 遍历所有坐标
                     for (BlockPos pos : positionsToProcess) {
                         checkedBlocks++;
@@ -246,7 +250,7 @@ public class ReplaceBlocksNode extends BaseNode {
                             
                             // 如果符合替换条件
                             if (shouldReplace) {
-                                int flags = Block.NOTIFY_ALL;
+                                int flags = notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE;
                                 if (spawnDropsValue) {
                                     context.getWorld().breakBlock(pos, true);
                                 }
@@ -256,12 +260,18 @@ public class ReplaceBlocksNode extends BaseNode {
                                     successCount++;
                                     replacedBlocks++;
                                     affectedCoordinates.add(pos);
+                                    if (undoRecord != null) {
+                                        undoRecord.add(pos, currentState);
+                                    }
                                 }
                             }
                         } catch (Exception e) {
                             // 记录单个方块替换错误但继续执行
                             System.err.println("Error replacing block at " + pos + ": " + e.getMessage());
                         }
+                    }
+                    if (undoRecord != null) {
+                        WorldWriteHistoryService.getInstance().push(undoRecord);
                     }
                 } finally {
                     // 完成批量更新（如果启用）
@@ -349,6 +359,15 @@ public class ReplaceBlocksNode extends BaseNode {
             this.maxBlocks = maxBlocks;
             markDirty();
         }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        this.recordUndo = recordUndo;
+        markDirty();
     }
     
     /**

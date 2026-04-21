@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -36,6 +37,8 @@ public class FillRegionNode extends BaseNode {
     private boolean excludeAir = false; // 是否排除已存在的空气方块（只替换非空气方块）
     private boolean hollow = false; // 是否创建中空结构（仅边界有方块）
     private int maxBlocks = 32768; // 最大操作方块数（防止过大区域导致性能问题）
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     // --- 输入端口 IDs ---
     private static final String INPUT_REGION_ID = "input_region";
@@ -172,6 +175,7 @@ public class FillRegionNode extends BaseNode {
                 }
                 
                 try {
+                    WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
                     // 遍历区域内的所有方块
                     if (minCorner != null) {
                         if (maxCorner != null) {
@@ -209,8 +213,9 @@ public class FillRegionNode extends BaseNode {
                                         System.err.println("FillRegionNode: Cannot resolve block state from input");
                                         continue;
                                     }
+                                    BlockState previousState = context.getWorld().getBlockState(immutablePos);
 
-                                    int flags = Block.NOTIFY_ALL;
+                                    int flags = notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE;
                                     if (spawnDropsValue) {
                                         context.getWorld().breakBlock(immutablePos, true);
                                     }
@@ -220,6 +225,9 @@ public class FillRegionNode extends BaseNode {
                                         successCount++;
                                         filledBlocks++;
                                         coordinates.add(immutablePos);
+                                        if (undoRecord != null) {
+                                            undoRecord.add(immutablePos, previousState);
+                                        }
                                     }
                                 } catch (Exception e) {
                                     // 记录单个方块放置错误但继续执行
@@ -227,6 +235,9 @@ public class FillRegionNode extends BaseNode {
                                 }
                             }
                         }
+                    }
+                    if (undoRecord != null) {
+                        WorldWriteHistoryService.getInstance().push(undoRecord);
                     }
                 } finally {
                     // 完成批量更新（如果启用）
@@ -324,6 +335,15 @@ public class FillRegionNode extends BaseNode {
             this.maxBlocks = maxBlocks;
             markDirty();
         }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        this.recordUndo = recordUndo;
+        markDirty();
     }
     
     /**

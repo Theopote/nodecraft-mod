@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.RegionData;
@@ -37,6 +38,8 @@ public class CloneRegionNode extends BaseNode {
     private boolean batchUpdates = true; // 是否批量更新，提高性能
     private CloneMode cloneMode = CloneMode.NORMAL; // 克隆模式
     private int maxBlocks = 32768; // 最大操作方块数（防止过大区域导致性能问题）
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     // --- 克隆模式枚举 ---
     public enum CloneMode {
@@ -232,6 +235,7 @@ public class CloneRegionNode extends BaseNode {
                 try {
                     // 记录源区域中的所有方块和实体
                     Map<BlockPos, BlockState> blocksToCopy = new HashMap<>();
+                    WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
                     
                     // 遍历源区域内的所有方块
                     if (sourceMinCorner != null) {
@@ -283,12 +287,16 @@ public class CloneRegionNode extends BaseNode {
                         BlockState blockState = entry.getValue();
                         
                         try {
-                            int flags = Block.NOTIFY_ALL;
+                            BlockState previousState = context.getWorld().getBlockState(pos);
+                            int flags = notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE;
                             boolean blockSuccess = context.getWorld().setBlockState(pos, blockState, flags);
                             
                             if (blockSuccess) {
                                 successCount++;
                                 clonedBlocks++;
+                                if (undoRecord != null) {
+                                    undoRecord.add(pos, previousState);
+                                }
                             }
                         } catch (Exception e) {
                             // 记录单个方块放置错误但继续执行
@@ -305,7 +313,16 @@ public class CloneRegionNode extends BaseNode {
                             if (sourceMaxCorner != null) {
                                 for (BlockPos pos : BlockPos.iterate(sourceMinCorner, sourceMaxCorner)) {
                                     try {
-                                        context.getWorld().setBlockState(pos.toImmutable(), airState, Block.NOTIFY_ALL);
+                                        BlockPos immutablePos = pos.toImmutable();
+                                        BlockState previousState = context.getWorld().getBlockState(immutablePos);
+                                        boolean clearSuccess = context.getWorld().setBlockState(
+                                            immutablePos,
+                                            airState,
+                                            notifyUpdateValue ? Block.NOTIFY_ALL : Block.FORCE_STATE
+                                        );
+                                        if (clearSuccess && undoRecord != null) {
+                                            undoRecord.add(immutablePos, previousState);
+                                        }
                                     } catch (Exception e) {
                                         System.err.println("Error clearing block at " + pos + ": " + e.getMessage());
                                     }
@@ -323,6 +340,9 @@ public class CloneRegionNode extends BaseNode {
                     
                     // 操作完成
                     success = true;
+                    if (undoRecord != null) {
+                        WorldWriteHistoryService.getInstance().push(undoRecord);
+                    }
                     
                 } finally {
                     // 完成批量更新（如果启用）
@@ -419,5 +439,14 @@ public class CloneRegionNode extends BaseNode {
             this.maxBlocks = maxBlocks;
             markDirty();
         }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        this.recordUndo = recordUndo;
+        markDirty();
     }
 } 

@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -34,6 +35,8 @@ public class SetBlocksNode extends BaseNode {
     private boolean notifyUpdate = true; // 是否通知更新（触发更新事件）
     private boolean spawnDrops = false; // 放置方块时是否生成掉落物
     private boolean batchUpdates = true; // 是否批量更新，提高性能
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     // --- 输入端口 IDs ---
     private static final String INPUT_COORDINATES_ID = "input_coordinates";
@@ -101,6 +104,7 @@ public class SetBlocksNode extends BaseNode {
         if (context != null && context.getWorld() != null && 
                 coordinatesObj instanceof BlockPosList) {
             BlockPosList coordinates = (BlockPosList) coordinatesObj;
+            WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
             
             List<?> blockInfoList = null;
             if (blockInfoListObj instanceof List) { blockInfoList = (List<?>) blockInfoListObj; }
@@ -114,11 +118,17 @@ public class SetBlocksNode extends BaseNode {
                     for (BlockPos pos : coordinates) {
                         totalCount++;
                         try {
+                            BlockState previousState = context.getWorld().getBlockState(pos);
                             if (spawnDropsValue && !context.getWorld().isAir(pos)) {
                                 context.getWorld().breakBlock(pos, true);
                             }
                             boolean success = context.getWorld().setBlockState(pos, targetState, flags);
-                            if (success) { successCount++; } else { allSuccess = false; }
+                            if (success) {
+                                successCount++;
+                                if (undoRecord != null) {
+                                    undoRecord.add(pos, previousState);
+                                }
+                            } else { allSuccess = false; }
                         } catch (Exception e) {
                             System.err.println("Error setting block at " + pos + ": " + e.getMessage());
                             allSuccess = false;
@@ -134,6 +144,7 @@ public class SetBlocksNode extends BaseNode {
                 for (BlockPos pos : coordinates) {
                     totalCount++;
                     try {
+                        BlockState previousState = context.getWorld().getBlockState(pos);
                         Object currentBlockInfo = oneToOne ? blockInfoList.get(i) : blockInfoList.get(i % infoListSize);
                         i++;
                         BlockState targetState = resolveBlockState(currentBlockInfo);
@@ -142,13 +153,21 @@ public class SetBlocksNode extends BaseNode {
                                 context.getWorld().breakBlock(pos, true);
                             }
                             boolean success = context.getWorld().setBlockState(pos, targetState, flags);
-                            if (success) { successCount++; } else { allSuccess = false; }
+                            if (success) {
+                                successCount++;
+                                if (undoRecord != null) {
+                                    undoRecord.add(pos, previousState);
+                                }
+                            } else { allSuccess = false; }
                         } else { allSuccess = false; }
                     } catch (Exception e) {
                         System.err.println("Error setting block at " + pos + ": " + e.getMessage());
                         allSuccess = false;
                     }
                 }
+            }
+            if (undoRecord != null) {
+                WorldWriteHistoryService.getInstance().push(undoRecord);
             }
         }
         
@@ -205,6 +224,15 @@ public class SetBlocksNode extends BaseNode {
     
     public void setBatchUpdates(boolean batchUpdates) {
         this.batchUpdates = batchUpdates;
+        markDirty();
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        this.recordUndo = recordUndo;
         markDirty();
     }
 } 

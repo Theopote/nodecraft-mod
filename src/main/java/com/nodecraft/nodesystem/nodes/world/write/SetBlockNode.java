@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.world.write;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -36,6 +37,8 @@ public class SetBlockNode extends BaseNode {
 
     private boolean notifyUpdate = true;
     private boolean spawnDrops = false;
+    @NodeProperty(displayName = "Record Undo", category = "Execution", order = 1)
+    private boolean recordUndo = true;
 
     public SetBlockNode() {
         super(UUID.randomUUID(), "world.write.set_block");
@@ -77,6 +80,11 @@ public class SetBlockNode extends BaseNode {
                         context.getWorld().breakBlock(pos, true);
                     }
                     success = context.getWorld().setBlockState(pos, targetState, flags);
+                    if (success && recordUndo && previousBlock instanceof BlockState previousState) {
+                        WorldWriteHistoryService.UndoRecord record = new WorldWriteHistoryService.UndoRecord();
+                        record.add(pos, previousState);
+                        WorldWriteHistoryService.getInstance().push(record);
+                    }
                 }
             } catch (Exception e) {
                 success = false;
@@ -105,6 +113,17 @@ public class SetBlockNode extends BaseNode {
     public void setSpawnDrops(boolean spawnDrops) {
         if (this.spawnDrops != spawnDrops) {
             this.spawnDrops = spawnDrops;
+            markDirty();
+        }
+    }
+
+    public boolean isRecordUndo() {
+        return recordUndo;
+    }
+
+    public void setRecordUndo(boolean recordUndo) {
+        if (this.recordUndo != recordUndo) {
+            this.recordUndo = recordUndo;
             markDirty();
         }
     }

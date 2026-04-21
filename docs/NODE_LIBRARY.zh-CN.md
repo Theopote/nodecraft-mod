@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**299**
+- **节点总数**：**301**
 - **分类总数**：**46**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -52,9 +52,9 @@
 | `utilities.morphology` | 1 |
 | `utilities.organization` | 3 |
 | `world.query` | 7 |
-| `world.read` | 9 |
+| `world.read` | 10 |
 | `world.selection` | 8 |
-| `world.write` | 13 |
+| `world.write` | 14 |
 
 ## geometry.architectural_primitives（1）
 
@@ -540,7 +540,7 @@
 | Get Entities In Region | `world.query.get_entities_in_region` | Gets entities inside a region with optional filtering | `GetEntitiesInRegionNode` |
 | 获取实体 | `world.query.get_entity` | 根据实体ID或选择器获取实体信息 | `GetEntityNode` |
 
-## world.read（9）
+## world.read（10）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -553,6 +553,7 @@
 | Get Heightmap | `world.read.get_heightmap` | Reads the top Y value for each X/Z column inside a region | `GetHeightmapNode` |
 | Get Surface Blocks | `world.read.get_surface_blocks` | Gets the top visible block for each X/Z column inside a region | `GetSurfaceBlocksNode` |
 | Read Sign Text | `world.read.read_sign_text` | Reads text from a sign block entity | `ReadSignTextNode` |
+| Scan Region By Type | `world.read.scan_region_by_type` | Scans a region and returns per-block-type counts for analysis and conditional building | `ScanRegionByTypeNode` |
 
 ## world.selection（8）
 
@@ -567,16 +568,16 @@
 | Selected Block Sequence | `world.selection.selected_block_sequence` | Collects multiple picked blocks in click order and outputs an ordered block sequence | `SelectedBlockSequenceNode` |
 | Selected Entity | `world.selection.selected_entity` | Gets information about the entity selected by the player. | `SelectedEntityNode` |
 
-## world.write（13）
+## world.write（14）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
-| Set Block | `world.write.set_block` | Places one block at one block position | `SetBlockNode` |
-| 设置方块 | `world.write.set_blocks` | 在坐标列表上批量放置方块 | `SetBlocksNode` |
-| 填充区域 | `world.write.fill_region` | 用指定方块填充区域 | `FillRegionNode` |
-| 替换方块 | `world.write.replace_blocks` | 在区域或坐标列表中替换指定方块 | `ReplaceBlocksNode` |
-| 复制区域 | `world.write.clone_region` | 复制区域到另一个位置 | `CloneRegionNode` |
-| Clear Blocks | `world.write.clear_region` | Clears blocks at explicit coordinates by replacing them with air | `RemoveBlocksNode` |
+| Set Block | `world.write.set_block` | Places one block at one block position with optional undo recording | `SetBlockNode` |
+| 设置方块 | `world.write.set_blocks` | 在坐标列表上批量放置方块，并支持撤销记录 | `SetBlocksNode` |
+| 填充区域 | `world.write.fill_region` | 用指定方块填充区域，并支持撤销记录 | `FillRegionNode` |
+| 替换方块 | `world.write.replace_blocks` | 在区域或坐标列表中替换指定方块，并支持撤销记录 | `ReplaceBlocksNode` |
+| 复制区域 | `world.write.clone_region` | 复制区域到另一个位置，并支持撤销记录 | `CloneRegionNode` |
+| Clear Blocks | `world.write.clear_region` | Clears blocks at explicit coordinates by replacing them with air, with optional undo recording | `RemoveBlocksNode` |
 | Apply Redstone Power | `world.write.apply_redstone_power` | Places a temporary redstone power source next to a target block | `ApplyRedstonePowerNode` |
 | Execute Command | `world.write.execute_command` | Executes a Minecraft command on the server | `ExecuteCommandNode` |
 | Simulate Right Click | `world.write.simulate_right_click` | Simulates a server-side right click on a block | `SimulateRightClickNode` |
@@ -584,6 +585,7 @@
 | Write Sign Text | `world.write.write_sign_text` | Writes text to a sign block entity | `WriteSignTextNode` |
 | 传送实体 | `world.write.entity_teleport` | 传送实体 | `EntityTeleportNode` |
 | 移除实体 | `world.write.remove_entities` | 移除实体 | `RemoveEntitiesNode` |
+| Undo Last World Write | `world.write.undo_last_write` | Reverts the most recent recorded world.write block placement operation | `UndoLastWorldWriteNode` |
 
 ## 文档生成说明
 
