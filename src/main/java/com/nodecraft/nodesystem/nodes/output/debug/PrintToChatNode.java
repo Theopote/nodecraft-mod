@@ -21,7 +21,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.debug.print_to_chat",
-    displayName = "打印到聊天",
+    displayName = "Print To Chat",
     description = "将输入数据显示到游戏聊天框",
     category = "output.debug",
     order = 1

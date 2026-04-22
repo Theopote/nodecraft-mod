@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.read.get_points_in_region",
-    displayName = "获取区域内点",
+    displayName = "Get Points In Region",
     description = "获取区域内的所有坐标点",
     category = "world.read",
     order = 5

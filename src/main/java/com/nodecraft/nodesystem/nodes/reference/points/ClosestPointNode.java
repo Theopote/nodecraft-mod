@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.points.closest_point",
-    displayName = "最近点",
+    displayName = "Closest Point",
     description = "在坐标列表中找到距离指定点最近的点",
     category = "reference.points",
     order = 7

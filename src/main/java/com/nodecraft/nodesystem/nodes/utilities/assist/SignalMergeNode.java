@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.assist.signal_merge",
-    displayName = "汇线节点",
+    displayName = "Signal Merge",
     description = "将两路输入按优先级汇聚为一路输出",
     category = "utilities.assist"
 )

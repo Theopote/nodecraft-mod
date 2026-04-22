@@ -23,7 +23,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.debug.data_inspector",
-    displayName = "面板",
+    displayName = "Panel",
     description = "显示连接到其输入端口的原始数据（文本形式）",
     category = "output.debug",
     order = 3

@@ -15,7 +15,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.assist.reroute",
-    displayName = "中继节点",
+    displayName = "Reroute",
     description = "用于整理连线的中继节点，仅透传输入到输出",
     category = "utilities.assist"
 )

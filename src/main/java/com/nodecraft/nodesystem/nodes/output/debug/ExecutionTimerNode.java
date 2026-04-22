@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "output.debug.execution_timer",
-    displayName = "执行计时器",
+    displayName = "Execution Timer",
     description = "测量连接到此节点的计算分支所花费的时间",
     category = "output.debug",
     order = 2

@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.organization.align_nodes",
-    displayName = "节点对齐",
+    displayName = "Align Nodes",
     description = "对齐选中的节点",
     category = "utilities.organization"
 )

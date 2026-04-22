@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.organization.group",
-    displayName = "节点分组",
+    displayName = "Group",
     description = "将选中的节点打包成一个可视化组",
     category = "utilities.organization"
 )

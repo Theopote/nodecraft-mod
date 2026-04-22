@@ -44,7 +44,7 @@ import org.joml.Vector3d;
  */
 @NodeInfo(
     id = "world.selection.selected_block",
-    displayName = "选定方块",
+    displayName = "Selected Block",
     description = "获取方块信息，支持交互拾取或坐标输入",
     category = "world.selection",
     order = 0

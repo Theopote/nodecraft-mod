@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.query.get_entity",
-    displayName = "获取实体",
+    displayName = "Get Entity",
     description = "根据实体ID或选择器获取实体信息",
     category = "world.query"
 )

@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.read.get_block",
-    displayName = "获取方块",
+    displayName = "Get Block",
     description = "获取指定坐标的方块信息",
     category = "world.read",
     order = 0

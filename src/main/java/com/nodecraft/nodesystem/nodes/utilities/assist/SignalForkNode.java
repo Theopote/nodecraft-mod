@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.assist.signal_fork",
-    displayName = "分线节点",
+    displayName = "Signal Fork",
     description = "将一路输入透传到两路输出，便于连线分流",
     category = "utilities.assist"
 )

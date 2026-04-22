@@ -16,7 +16,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.assist.tag_relay",
-    displayName = "标签中继",
+    displayName = "Tag Relay",
     description = "用于标注语义的中继节点，输入输出保持透传",
     category = "utilities.assist"
 )

@@ -18,7 +18,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "transform.orientation.rotate_vector",
-    displayName = "旋转向量",
+    displayName = "Rotate Vector",
     description = "绕指定轴旋转向量",
     category = "transform.orientation",
     order = 1

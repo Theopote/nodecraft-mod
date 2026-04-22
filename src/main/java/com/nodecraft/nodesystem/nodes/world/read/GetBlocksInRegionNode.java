@@ -20,7 +20,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.read.get_blocks_in_region",
-    displayName = "获取区域内方块",
+    displayName = "Get Blocks In Region",
     description = "获取区域内所有方块的列表",
     category = "world.read",
     order = 1

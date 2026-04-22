@@ -12,7 +12,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "utilities.organization.comment",
-    displayName = "注释节点",
+    displayName = "Comment",
     description = "在画布上添加文本注释",
     category = "utilities.organization"
 )

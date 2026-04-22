@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.read.find_blocks",
-    displayName = "查找方块",
+    displayName = "Find Blocks",
     description = "在区域内按方块类型查找坐标列表",
     category = "world.read",
     order = 2
