@@ -607,3 +607,10 @@
   - optional: `reference.vectors.vector` -> `transform_frame.input_translation`
   - optional: angle nodes -> `transform_frame.input_rotation_x/y/z`
   - `transform_frame.output_plane` -> `output.preview.preview_frame.input_plane` (or any frame/plane consumer)
+
+- Unified Geometry Preview Workflow
+  - Goal: preview any geometry before voxelization, then preview voxel blocks only when needed.
+  - analytic preview: `geometry.*.output_geometry` -> `output.preview.preview_geometry.input_geometry`
+  - voxel conversion (optional): `output_geometry` -> `output.execute.bake_geometry_to_blocks.input_geometry`
+  - block preview (optional): `bake_geometry_to_blocks.output_blocks` -> `output.preview.preview_blocks.input_blocks`
+  - execution (optional): block outputs or placements -> `output.execute.apply_changes`
