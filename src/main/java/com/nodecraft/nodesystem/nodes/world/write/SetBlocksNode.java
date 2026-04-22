@@ -23,7 +23,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.set_blocks",
-    displayName = "设置方块",
+    displayName = "Set Blocks",
     description = "在坐标列表上批量放置方块",
     category = "world.write",
     order = 1

@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "pattern.grid.grid_array",
-    displayName = "网格阵列",
+    displayName = "Grid Array",
     description = "在平面或三维网格上重复坐标列表",
     category = "pattern.grid",
     order = 0

@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.atan",
-    displayName = "反正切函数 (ArcTan)",
+    displayName = "Arctangent (ArcTan)",
     description = "计算输入值的反正切值（结果以弧度为单位）",
     category = "math.trigonometry",
     order = 7

@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.normalize_vector",
-    displayName = "向量归一化",
+    displayName = "Normalize Vector",
     description = "将向量归一化为单位长度",
     category = "reference.vectors",
     order = 2

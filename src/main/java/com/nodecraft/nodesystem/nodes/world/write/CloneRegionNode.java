@@ -23,7 +23,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.clone_region",
-    displayName = "复制区域",
+    displayName = "Clone Region",
     description = "复制区域到另一个位置",
     category = "world.write",
     order = 4

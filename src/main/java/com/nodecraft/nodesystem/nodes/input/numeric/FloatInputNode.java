@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "input.numeric.float",
-    displayName = "浮点数输入",
+    displayName = "Float Input",
     description = "允许用户手动输入浮点数值",
     category = "input.numeric",
     order = 1

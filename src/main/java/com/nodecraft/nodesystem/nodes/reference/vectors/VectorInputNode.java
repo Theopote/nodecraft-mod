@@ -18,7 +18,7 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "reference.vectors.vector",
-    displayName = "向量输入",
+    displayName = "Vector Input",
     description = "输入一个三维向量，并同时输出 X / Y / Z 分量",
     category = "reference.vectors",
     order = 0

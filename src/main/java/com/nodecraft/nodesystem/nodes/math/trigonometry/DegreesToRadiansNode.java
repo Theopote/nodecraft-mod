@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.deg_to_rad",
-    displayName = "角度转弧度",
+    displayName = "Degrees To Radians",
     description = "将角度从度数转换为弧度",
     category = "math.trigonometry",
     order = 3

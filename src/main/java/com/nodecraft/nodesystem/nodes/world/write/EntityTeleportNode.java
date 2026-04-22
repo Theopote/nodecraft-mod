@@ -17,7 +17,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.entity_teleport",
-    displayName = "传送实体",
+    displayName = "Teleport Entity",
     description = "传送实体",
     category = "world.write"
 )

@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.dot_product",
-    displayName = "点积",
+    displayName = "Dot Product",
     description = "计算两个向量的点积（A · B）",
     category = "reference.vectors",
     order = 4

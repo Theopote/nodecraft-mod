@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.pi",
-    displayName = "圆周率",
+    displayName = "Pi",
     description = "输出数学常数π的值",
     category = "math.trigonometry",
     order = 8

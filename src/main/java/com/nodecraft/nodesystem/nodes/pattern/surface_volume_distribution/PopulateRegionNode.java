@@ -19,7 +19,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "pattern.surface_volume_distribution.populate_region",
-    displayName = "区域填充",
+    displayName = "Populate Region",
     description = "在指定区域内随机或均匀生成坐标列表",
     category = "pattern.surface_volume_distribution",
     order = 0

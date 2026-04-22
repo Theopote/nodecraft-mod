@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.vector_addition",
-    displayName = "向量加法 (+)",
+    displayName = "Vector Addition (+)",
     description = "计算两个向量的和，输出A + B",
     category = "reference.vectors",
     order = 6

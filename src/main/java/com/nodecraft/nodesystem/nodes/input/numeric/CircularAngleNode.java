@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "input.numeric.angle_picker",
-    displayName = "圆形角度选择器",
+    displayName = "Circular Angle Picker",
     description = "通过圆形表盘选择角度，同时输出度和弧度。",
     category = "input.numeric",
     order = 5

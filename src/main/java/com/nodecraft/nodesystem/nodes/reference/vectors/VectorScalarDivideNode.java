@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.vector_scalar_divide",
-    displayName = "向量标量除法",
+    displayName = "Vector Scalar Divide",
     description = "向量除以标量 (Vector / Scalar)",
     category = "reference.vectors",
     order = 9

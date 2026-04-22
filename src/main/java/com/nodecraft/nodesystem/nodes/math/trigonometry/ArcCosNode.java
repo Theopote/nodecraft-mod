@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.acos",
-    displayName = "反余弦函数 (ArcCos)",
+    displayName = "Arccosine (ArcCos)",
     description = "计算输入值的反余弦值（结果以弧度为单位）",
     category = "math.trigonometry",
     order = 6

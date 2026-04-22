@@ -14,7 +14,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
  */
 @NodeInfo(
     id = "reference.vectors.vector_length",
-    displayName = "向量长度",
+    displayName = "Vector Length",
     description = "计算向量的长度（模长）",
     category = "reference.vectors",
     order = 5

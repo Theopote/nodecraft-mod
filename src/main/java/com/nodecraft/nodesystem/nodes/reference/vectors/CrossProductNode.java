@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.cross_product",
-    displayName = "叉积",
+    displayName = "Cross Product",
     description = "计算两个向量的叉积（A × B）",
     category = "reference.vectors",
     order = 3

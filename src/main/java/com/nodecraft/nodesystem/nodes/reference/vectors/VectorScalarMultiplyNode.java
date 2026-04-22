@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.vector_scalar_multiply",
-    displayName = "向量标量乘法",
+    displayName = "Vector Scalar Multiply",
     description = "向量与标量相乘 (Vector * Scalar)",
     category = "reference.vectors",
     order = 8

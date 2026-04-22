@@ -14,7 +14,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "reference.vectors.deconstruct_vector",
-    displayName = "解构向量",
+    displayName = "Deconstruct Vector",
     description = "输出向量的X、Y、Z分量",
     category = "reference.vectors",
     order = 1

@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "input.numeric.integer_slider",
-    displayName = "整数滑动条",
+    displayName = "Integer Slider",
     description = "输出一个可通过滑动条调节的整数值",
     category = "input.numeric",
     order = 2

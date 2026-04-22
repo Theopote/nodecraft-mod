@@ -17,7 +17,7 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "input.numeric.float_slider",
-    displayName = "浮点数滑动条",
+    displayName = "Float Slider",
     description = "输出一个可通过滑动条调节的浮点数。",
     category = "input.numeric",
     order = 3

@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.fill_region",
-    displayName = "填充区域",
+    displayName = "Fill Region",
     description = "用指定方块填充区域",
     category = "world.write",
     order = 2

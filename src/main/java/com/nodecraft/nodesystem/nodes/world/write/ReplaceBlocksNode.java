@@ -22,7 +22,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.replace_blocks",
-    displayName = "替换方块",
+    displayName = "Replace Blocks",
     description = "在区域或坐标列表中替换指定方块",
     category = "world.write",
     order = 3

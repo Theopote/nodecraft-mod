@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.sin",
-    displayName = "正弦函数 (Sin)",
+    displayName = "Sine (Sin)",
     description = "计算角度的正弦值（输入为弧度）",
     category = "math.trigonometry",
     order = 0

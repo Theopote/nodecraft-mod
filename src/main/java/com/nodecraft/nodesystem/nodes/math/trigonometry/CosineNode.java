@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.cos",
-    displayName = "余弦函数 (Cos)",
+    displayName = "Cosine (Cos)",
     description = "计算角度的余弦值（输入为弧度）",
     category = "math.trigonometry",
     order = 1

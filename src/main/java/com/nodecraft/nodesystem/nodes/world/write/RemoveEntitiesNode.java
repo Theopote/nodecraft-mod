@@ -15,7 +15,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "world.write.remove_entities",
-    displayName = "移除实体",
+    displayName = "Remove Entities",
     description = "移除实体",
     category = "world.write"
 )

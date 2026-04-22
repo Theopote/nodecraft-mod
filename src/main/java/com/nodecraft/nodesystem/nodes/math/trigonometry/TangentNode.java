@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.tan",
-    displayName = "正切函数 (Tan)",
+    displayName = "Tangent (Tan)",
     description = "计算角度的正切值（输入为弧度）",
     category = "math.trigonometry",
     order = 2

@@ -13,7 +13,7 @@ import java.util.UUID;
  */
 @NodeInfo(
     id = "math.trigonometry.asin",
-    displayName = "反正弦函数 (ArcSin)",
+    displayName = "Arcsine (ArcSin)",
     description = "计算输入值的反正弦值（结果以弧度为单位）",
     category = "math.trigonometry",
     order = 5
