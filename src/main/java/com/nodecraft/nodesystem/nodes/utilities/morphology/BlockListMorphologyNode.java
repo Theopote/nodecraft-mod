@@ -22,7 +22,7 @@ import java.util.UUID;
     id = "utilities.morphology.block_list_morphology",
     displayName = "Block List Morphology",
     description = "Dilates or erodes a block list using 6- or 26-neighbor morphology iterations (Connectivity property)",
-    category = "utilities.morphology",
+    category = "utilities.assist",
     order = 0
 )
 public class BlockListMorphologyNode extends BaseNode {

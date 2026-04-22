@@ -2,17 +2,16 @@
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
 - Total nodes: **303**
-- Total categories: **46**
+- Total categories: **43**
 
 ## Category Statistics
 
 | Category ID | Node Count |
 |---|---:|
-| `geometry.architectural_primitives` | 1 |
 | `geometry.boolean` | 5 |
 | `geometry.curves` | 10 |
 | `geometry.primitives` | 19 |
-| `geometry.profiles` | 8 |
+| `geometry.profiles` | 9 |
 | `geometry.solids` | 17 |
 | `input.basic` | 3 |
 | `input.context` | 4 |
@@ -46,20 +45,12 @@
 | `transform.basic_transforms` | 9 |
 | `transform.deformations` | 4 |
 | `transform.orientation` | 2 |
-| `utilities.assist` | 4 |
-| `utilities.fileio` | 1 |
-| `utilities.morphology` | 1 |
-| `utilities.organization` | 3 |
+| `utilities.assist` | 5 |
+| `utilities.organization` | 4 |
 | `world.query` | 7 |
 | `world.read` | 10 |
 | `world.selection` | 8 |
 | `world.write` | 16 |
-
-## geometry.architectural_primitives (1)
-
-| Node Name | Node ID | Description | Class |
-|---|---|---|---|
-| Window Array | `geometry.architectural_primitives.window_array` | Generates a rectangular array of inset window opening boxes on a box face | `WindowArrayNode` |
 
 ## geometry.boolean (5)
 
@@ -110,7 +101,7 @@
 | Deconstruct Tetrahedron | `geometry.primitives.deconstruct_tetrahedron` | Extracts center, edge length, vertices, bounds, and analytical values from tetrahedron geometry | `DeconstructTetrahedronNode` |
 | Deconstruct Prism | `geometry.primitives.deconstruct_prism` | Extracts base polygon, top polygon, extrusion, side surface strip, and bounds from prism geometry | `DeconstructPrismNode` |
 
-## geometry.profiles (8)
+## geometry.profiles (9)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -122,6 +113,7 @@
 | Convex Hull 2D On Plane | `geometry.profiles.convex_hull_plane` | Projects points into a plane, computes their 2D convex hull, and outputs a closed polygon profile | `ConvexHull2DOnPlaneNode` |
 | Voronoi Cells 2D On Plane | `geometry.profiles.voronoi_cells_plane` | Projects sites into a plane, builds a clipped planar Voronoi diagram (JTS), and outputs each cell as a polygon profile on the plane | `VoronoiCells2DOnPlaneNode` |
 | Convex Hull 3D From Points | `geometry.profiles.convex_hull_3d_points` | Builds a 3D convex hull (triangle facets) from points; intended for small clouds due to brute-force enumeration; coplanar / collinear inputs yield no facets | `ConvexHull3DFromPointsNode` |
+| Window Array | `geometry.architectural_primitives.window_array` | Generates a rectangular array of inset window opening boxes on a box face | `WindowArrayNode` |
 
 ## geometry.solids (17)
 
@@ -498,7 +490,7 @@
 | Project Point To Plane | `transform.orientation.project_to_plane` | Projects a geometric point onto a plane and reports the projection distance | `ProjectPointToPlaneNode` |
 | 旋转向量 | `transform.orientation.rotate_vector` | 绕指定轴旋转向量 | `RotateVectorNode` |
 
-## utilities.assist (4)
+## utilities.assist (5)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -506,26 +498,16 @@
 | 分线节点 | `utilities.assist.signal_fork` | 将一路输入透传到两路输出，便于连线分流 | `SignalForkNode` |
 | 标签中继 | `utilities.assist.tag_relay` | 用于标注语义的中继节点，输入输出保持透传 | `TagRelayNode` |
 | 汇线节点 | `utilities.assist.signal_merge` | 将两路输入按优先级汇聚为一路输出 | `SignalMergeNode` |
-
-## utilities.fileio (1)
-
-| Node Name | Node ID | Description | Class |
-|---|---|---|---|
-| Read Image | `utilities.fileio.read_image` | Reads a local image file and outputs dimensions, colors, and grayscale samples | `ReadImageNode` |
-
-## utilities.morphology (1)
-
-| Node Name | Node ID | Description | Class |
-|---|---|---|---|
 | Block List Morphology | `utilities.morphology.block_list_morphology` | Dilates or erodes a block list using 6- or 26-neighbor morphology iterations (Connectivity property) | `BlockListMorphologyNode` |
 
-## utilities.organization (3)
+## utilities.organization (4)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | 注释节点 | `utilities.organization.comment` | 在画布上添加文本注释 | `CommentNode` |
 | 节点分组 | `utilities.organization.group` | 将选中的节点打包成一个可视化组 | `GroupNode` |
 | 节点对齐 | `utilities.organization.align_nodes` | 对齐选中的节点 | `AlignNodesNode` |
+| Read Image | `utilities.fileio.read_image` | Reads a local image file and outputs dimensions, colors, and grayscale samples | `ReadImageNode` |
 
 ## world.query (7)
 

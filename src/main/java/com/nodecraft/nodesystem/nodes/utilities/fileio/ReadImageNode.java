@@ -23,7 +23,7 @@ import java.util.UUID;
     id = "utilities.fileio.read_image",
     displayName = "Read Image",
     description = "Reads a local image file and outputs dimensions, colors, and grayscale samples",
-    category = "utilities.fileio",
+    category = "utilities.organization",
     order = 0
 )
 public class ReadImageNode extends BaseNode {
