@@ -291,9 +291,9 @@ public class ImGuiNodeIO {
                 NodeCraft.LOGGER.warn("{}", lastOperationError);
             }
             if (migrationReport.hasChanges()) {
-                String deprecatedSummary = String.join(", ", migrationReport.migratedTypeIds());
+                String migratedSummary = String.join(", ", migrationReport.migratedTypeIds());
                 String deprecatedWarning = "已自动迁移 " + migrationReport.migratedNodeCount()
-                    + " 个已弃用 Bake 节点到 output.execute.bake_geometry_to_blocks（类型: " + deprecatedSummary + "）。请保存以写回新格式。";
+                    + " 个旧节点类型（类型: " + migratedSummary + "）。请保存以写回新格式。";
                 if (!migrationReport.notes().isEmpty()) {
                     deprecatedWarning = deprecatedWarning + " 注意: " + String.join(" | ", migrationReport.notes());
                 }

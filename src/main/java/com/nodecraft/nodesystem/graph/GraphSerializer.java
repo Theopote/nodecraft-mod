@@ -300,28 +300,14 @@ public class GraphSerializer {
     }
 
     /**
-     * 汇总兼容迁移：Bake 节点收敛 + math.list_sequence 分类拆分后的旧 ID 映射。
+     * 汇总兼容迁移：当前仅处理 math.list_sequence 分类拆分后的旧 ID 映射。
      */
     public static MigrationReport migrateCompatibilityNodes(SavedGraph savedGraph) {
-        MigrationReport bakeReport = migrateDeprecatedBakeNodes(savedGraph);
         MigrationReport mathReport = migrateLegacyMathListSequenceNodes(savedGraph);
-        if (!bakeReport.hasChanges() && !mathReport.hasChanges()) {
+        if (!mathReport.hasChanges()) {
             return MigrationReport.empty();
         }
-
-        Set<String> mergedTypes = new LinkedHashSet<>();
-        mergedTypes.addAll(bakeReport.migratedTypeIds());
-        mergedTypes.addAll(mathReport.migratedTypeIds());
-
-        List<String> mergedNotes = new ArrayList<>();
-        mergedNotes.addAll(bakeReport.notes());
-        mergedNotes.addAll(mathReport.notes());
-
-        return new MigrationReport(
-            bakeReport.migratedNodeCount() + mathReport.migratedNodeCount(),
-            List.copyOf(mergedTypes),
-            List.copyOf(mergedNotes)
-        );
+        return mathReport;
     }
 
     /**
