@@ -30,6 +30,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+/**
+ * 几何预览：GHOST / TRACKED_WORLD 共用 {@link com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload}，
+ * 通过 {@link com.nodecraft.nodesystem.preview.PreviewManager#showPreview} 下发。
+ * 不要在此构造渲染器内部类型或已废弃的 placement DTO 作为跨层协议（v1.1 清单）。
+ */
 @NodeInfo(
     id = "output.preview.geometry_viewer",
     displayName = "Geometry Viewer",

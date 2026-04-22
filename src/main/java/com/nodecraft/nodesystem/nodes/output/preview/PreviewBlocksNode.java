@@ -6,17 +6,15 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import com.nodecraft.nodesystem.preview.GhostBlockPlacement;
 import com.nodecraft.nodesystem.preview.PreviewBackend;
 import com.nodecraft.nodesystem.preview.PreviewManager;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
-import com.nodecraft.nodesystem.preview.protocol.PreviewPayloadAdapters;
 import com.nodecraft.nodesystem.preview.protocol.PreviewRequest;
 import com.nodecraft.nodesystem.preview.protocol.PreviewStyle;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -25,6 +23,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * Block ghost 预览节点：节点层只应产出 {@link PreviewBlock}/{@link PreviewBlocksPayload}，
+ * 不要再把渲染器侧类型（或中间 DTO）当作跨层协议（见 v1.1 类级改造清单）。
+ */
 @NodeInfo(
     id = "output.preview.preview_blocks",
     displayName = "Preview Blocks",
@@ -89,14 +91,14 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         if (!previewEnabled) {
             PreviewManager.hideNodePreviews(getId().toString());
         } else {
-            List<GhostBlockPlacement> placements = new ArrayList<>();
-            collectPlacements(blocksObj, effectiveBlockType, placements);
-            collectPlacements(coordsObj, effectiveBlockType, placements);
+            List<PreviewBlock> previewBlocks = new ArrayList<>();
+            collectPreviewBlocks(blocksObj, effectiveBlockType, previewBlocks);
+            collectPreviewBlocks(coordsObj, effectiveBlockType, previewBlocks);
 
-            blockCount = placements.size();
+            blockCount = previewBlocks.size();
 
-            if (!placements.isEmpty()) {
-                PreviewBlocksPayload payload = PreviewPayloadAdapters.fromGhostBlockPlacements(placements);
+            if (!previewBlocks.isEmpty()) {
+                PreviewBlocksPayload payload = new PreviewBlocksPayload(previewBlocks);
                 PreviewStyle style = PreviewStyle.forGhostBlocks(
                         1.0f,
                         1.0f,
@@ -125,48 +127,38 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_BLOCK_COUNT_ID, blockCount);
     }
 
-    private void collectPlacements(Object source, String effectiveBlockType, List<GhostBlockPlacement> out) {
+    private void collectPreviewBlocks(Object source, String effectiveBlockType, List<PreviewBlock> out) {
         if (source instanceof BlockPosList blockPosList) {
             for (BlockPos pos : blockPosList.getPositions()) {
-                out.add(new GhostBlockPlacement(
-                        new Vec3d(pos.getX(), pos.getY(), pos.getZ()),
-                        effectiveBlockType,
-                        transparency
-                ));
+                if (pos != null) {
+                    out.add(new PreviewBlock(pos.getX(), pos.getY(), pos.getZ(), effectiveBlockType));
+                }
             }
             return;
         }
 
         if (source instanceof List<?> list) {
             for (Object item : list) {
-                GhostBlockPlacement placement = toPlacement(item, effectiveBlockType);
-                if (placement != null) {
-                    out.add(placement);
+                PreviewBlock block = toPreviewBlock(item, effectiveBlockType);
+                if (block != null) {
+                    out.add(block);
                 }
             }
             return;
         }
 
-        GhostBlockPlacement placement = toPlacement(source, effectiveBlockType);
-        if (placement != null) {
-            out.add(placement);
+        PreviewBlock block = toPreviewBlock(source, effectiveBlockType);
+        if (block != null) {
+            out.add(block);
         }
     }
 
-    private GhostBlockPlacement toPlacement(Object value, String effectiveBlockType) {
+    private @Nullable PreviewBlock toPreviewBlock(Object value, String effectiveBlockType) {
         if (value instanceof Coordinate coordinate) {
-            return new GhostBlockPlacement(
-                    new Vec3d(coordinate.getX(), coordinate.getY(), coordinate.getZ()),
-                    effectiveBlockType,
-                    transparency
-            );
+            return new PreviewBlock(coordinate.getX(), coordinate.getY(), coordinate.getZ(), effectiveBlockType);
         }
         if (value instanceof BlockPos pos) {
-            return new GhostBlockPlacement(
-                    new Vec3d(pos.getX(), pos.getY(), pos.getZ()),
-                    effectiveBlockType,
-                    transparency
-            );
+            return new PreviewBlock(pos.getX(), pos.getY(), pos.getZ(), effectiveBlockType);
         }
         return null;
     }

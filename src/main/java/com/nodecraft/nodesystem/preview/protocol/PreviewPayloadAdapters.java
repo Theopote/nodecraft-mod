@@ -14,7 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Phase A compatibility: centralize conversions from legacy shapes to v1 payloads.
+ * Phase A 兼容层：把旧输入集中转换为 v1 {@link PreviewPayload}，避免在 {@code GhostBlockElement} 等处散落猜类型逻辑。
+ * <p><b>注意：</b>不是第二套永久协议——新节点应直接产出协议类型；此处仅服务迁移与外部旧调用，后续应逐步收缩。
  */
 public final class PreviewPayloadAdapters {
 

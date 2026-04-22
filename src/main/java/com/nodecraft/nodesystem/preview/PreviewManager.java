@@ -32,6 +32,8 @@ import java.util.List;
 
 /**
  * High-level helper API for preview rendering.
+ * <p>统一入口为 {@link #showPreview(PreviewRequest)}；{@code showGhostBlockPlacements}、{@code showPaths} 等旧 API
+ * 为兼容层，内部尽量转调协议类型（v1.1 清单 §11）。新节点请直接构造 {@link com.nodecraft.nodesystem.preview.protocol.PreviewRequest}。
  */
 public final class PreviewManager {
 

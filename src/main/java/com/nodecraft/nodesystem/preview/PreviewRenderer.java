@@ -474,7 +474,8 @@ public class PreviewRenderer {
     // ================= SelectedBlockNode 兼容方法 =================
     
     /**
-     * 显示幽灵方块预览 - 为了兼容 SelectedBlockNode
+     * 显示幽灵方块预览（SelectedBlockNode 等）：数据层已使用 {@link com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload}，
+     * 避免把 Map 等隐式协议塞进 {@code GhostBlockElement}（v1.1 回归组 D）。
      */
     public String showGhostBlock(String nodeId, com.nodecraft.nodesystem.util.Coordinate position, String blockId, float opacity) {
         PreviewBlocksPayload payload = new PreviewBlocksPayload(List.of(

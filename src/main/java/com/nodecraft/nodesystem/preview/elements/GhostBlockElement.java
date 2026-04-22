@@ -31,6 +31,13 @@ import java.util.Map;
 /**
  * 幽灵方块预览元素 (完善版)
  * 用于显示半透明的方块预览，支持原始纹理渲染
+ * <p><b>Preview 协议 v1.1（方块）</b>
+ * <ul>
+ *   <li><b>Phase A（当前）</b>：优先消费 {@link com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload}；
+ *       仍保留 Coordinate / Map / {@link com.nodecraft.nodesystem.preview.GhostBlockPlacement} / 反射等兼容路径，
+ *       仅供旧调用方与 {@link com.nodecraft.nodesystem.preview.PreviewRenderer} 直传数据过渡，新代码一律走协议。</li>
+ *   <li><b>Phase B（计划）</b>：在主要调用方全部迁移后，删除猜类型与反射分支，仅保留 {@code PreviewBlocksPayload}。</li>
+ * </ul>
  * <p>
  * 性能优化：
  * - 避免在渲染循环中重复获取设置，将 maxRenderDistance 在循环外获取一次
@@ -101,6 +108,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             return;
         }
 
+        // --- COMPAT: 旧式输入（非 PreviewBlocksPayload）。新节点禁止依赖此路径；见类头 Phase A/B 说明。 ---
         List<BlockData> nextBlocks = new ArrayList<>();
         
         if (data instanceof List<?> list) {
