@@ -2,10 +2,12 @@ package com.nodecraft.nodesystem.preview;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.bake.PlacementMode;
+import com.nodecraft.nodesystem.datatypes.GeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewCurvePayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewGeometryPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewKind;
 import com.nodecraft.nodesystem.preview.protocol.PreviewRegionPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewPayload;
@@ -96,7 +98,8 @@ public final class PreviewManager {
     /**
      * v1 unified entry: dispatches on {@link PreviewKind} and {@link PreviewBackend}.
      * Implements {@link PreviewKind#BLOCKS} (GHOST + TRACKED_WORLD), {@link PreviewKind#POINTS},
-     * {@link PreviewKind#VECTORS}, {@link PreviewKind#REGIONS}, {@link PreviewKind#CURVES} (GHOST only).
+     * {@link PreviewKind#VECTORS}, {@link PreviewKind#REGIONS}, {@link PreviewKind#CURVES},
+     * {@link PreviewKind#GEOMETRY} (GHOST only).
      */
     @Nullable
     public static String showPreview(PreviewRequest request) {
@@ -123,6 +126,7 @@ public final class PreviewManager {
                 case VECTORS -> showPreviewVectors(nodeId, payload, opts);
                 case REGIONS -> showPreviewRegions(nodeId, payload, opts);
                 case CURVES -> showPreviewCurves(nodeId, payload, opts);
+                case GEOMETRY -> showPreviewGeometry(nodeId, payload, opts);
                 default -> {
                     NodeCraft.LOGGER.warn(
                         "PreviewManager.showPreview: unsupported payload kind={} type={}",
@@ -251,6 +255,43 @@ public final class PreviewManager {
         }
         PreviewStyle style = PreviewStyle.fromLegacyPathOptions(options);
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
+    }
+
+    /**
+     * Multiple geometry-surface previews for one node: clears node previews once, then registers each payload.
+     */
+    public static List<String> showGeometrySurfaces(String nodeId, List<GeometryData> geometries, PreviewOptions options) {
+        if (geometries == null || geometries.isEmpty()) {
+            hideNodePreviews(nodeId);
+            return List.of();
+        }
+        hideNodePreviews(nodeId);
+        PreviewStyle style = PreviewStyle.fromLegacyGeometryOptions(options);
+        PreviewOptions opts = style.toPreviewOptions(PreviewKind.GEOMETRY);
+        List<String> ids = new ArrayList<>();
+        for (GeometryData g : geometries) {
+            if (g == null) {
+                continue;
+            }
+            String id = RENDERER.showPreview(nodeId, "geometry_surface", new PreviewGeometryPayload(g), opts);
+            if (id != null) {
+                ids.add(id);
+            }
+        }
+        return ids;
+    }
+
+    @Nullable
+    private static String showPreviewGeometry(String nodeId, PreviewPayload payload, PreviewOptions opts) {
+        if (!(payload instanceof PreviewGeometryPayload geometryPayload)) {
+            return null;
+        }
+        if (geometryPayload.getGeometry() == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        hideNodePreviews(nodeId);
+        return RENDERER.showPreview(nodeId, "geometry_surface", geometryPayload, opts);
     }
 
     @Nullable

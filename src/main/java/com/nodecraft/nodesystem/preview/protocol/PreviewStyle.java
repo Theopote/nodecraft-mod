@@ -199,6 +199,44 @@ public final class PreviewStyle {
         return new PreviewStyle(r, g, b, r, g, b, opacity, showDir, tex, lw, ps, ticks);
     }
 
+    /**
+     * Analytic geometry surface preview. Fill RGB in {@code red/green/blue}, line RGB in {@code fill*}.
+     * Mesh quality is encoded in {@code textureMode} as {@code geom_quality:} plus an integer (clamped 8–64).
+     * {@code pointSize ≥ 0.5} means show fill.
+     */
+    public static PreviewStyle fromLegacyGeometryOptions(PreviewOptions options) {
+        float r = 0.30f;
+        float g = 0.84f;
+        float b = 1.0f;
+        if (options.color != null) {
+            Vector3f c = options.color;
+            r = c.x;
+            g = c.y;
+            b = c.z;
+        }
+        float fr = Math.max(0.0f, r * 0.25f);
+        float fg = Math.max(0.0f, g * 0.25f);
+        float fb = Math.max(0.0f, b * 0.25f);
+        if (options.tintColor != null) {
+            Vector3f t = options.tintColor;
+            fr = t.x;
+            fg = t.y;
+            fb = t.z;
+        }
+        float opacity = options.opacity != null ? options.opacity : 1.0f;
+        boolean outline = options.showOutline == null || options.showOutline;
+        boolean fillOn = options.showFill == null || options.showFill;
+        int q = options.particleDensity != null ? options.particleDensity : 20;
+        String tex = "geom_quality:" + q;
+        float lw = options.lineWidth != null ? options.lineWidth : 1.6f;
+        float ps = fillOn ? 1.0f : 0.0f;
+        int ticks = 0;
+        if (options.duration != null && options.duration > 0) {
+            ticks = options.duration * 20;
+        }
+        return new PreviewStyle(r, g, b, fr, fg, fb, opacity, outline, tex, lw, ps, ticks);
+    }
+
     /** Prefer {@link #toPreviewOptions(PreviewKind)}; this overload assumes block ghost styling. */
     @Deprecated
     public PreviewOptions toPreviewOptions() {
@@ -212,6 +250,7 @@ public final class PreviewStyle {
             case VECTORS -> toVectorsPreviewOptions();
             case REGIONS -> toRegionPreviewOptions();
             case CURVES -> toCurvesPreviewOptions();
+            case GEOMETRY -> toGeometryPreviewOptions();
             default -> new PreviewOptions().setColor(red, green, blue).setOpacity(opacity);
         };
     }
@@ -291,6 +330,30 @@ public final class PreviewStyle {
         o.showArrows = showOutline;
         o.arrowSize = pointSize > 0.0f ? pointSize : 0.25f;
         o.smoothCurves = "curve_smooth".equals(textureMode);
+        if (durationTicks > 0) {
+            o.setDuration(Math.max(1, (durationTicks + 19) / 20));
+        }
+        return o;
+    }
+
+    private PreviewOptions toGeometryPreviewOptions() {
+        PreviewOptions o = new PreviewOptions();
+        o.setColor(red, green, blue);
+        o.setTintColor(fillRed, fillGreen, fillBlue);
+        o.setOpacity(opacity);
+        o.showFill = pointSize >= 0.5f;
+        o.setShowOutline(showOutline);
+        o.setLineWidth(lineWidth > 0.0f ? lineWidth : 1.6f);
+        if (textureMode != null && textureMode.startsWith("geom_quality:")) {
+            try {
+                int q = Integer.parseInt(textureMode.substring("geom_quality:".length()));
+                o.particleDensity = Math.max(8, Math.min(64, q));
+            } catch (NumberFormatException ignored) {
+                o.particleDensity = 20;
+            }
+        } else {
+            o.particleDensity = 20;
+        }
         if (durationTicks > 0) {
             o.setDuration(Math.max(1, (durationTicks + 19) / 20));
         }
