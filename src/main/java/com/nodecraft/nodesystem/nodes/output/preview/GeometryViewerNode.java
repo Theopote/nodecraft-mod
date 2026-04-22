@@ -9,8 +9,10 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewBackend;
 import com.nodecraft.nodesystem.preview.PreviewManager;
-import com.nodecraft.nodesystem.preview.GhostBlockPlacement;
-import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPayloadAdapters;
+import com.nodecraft.nodesystem.preview.protocol.PreviewRequest;
+import com.nodecraft.nodesystem.preview.protocol.PreviewStyle;
 import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -21,12 +23,9 @@ import net.minecraft.block.BlockState;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -177,80 +176,69 @@ public class GeometryViewerNode extends BaseCustomUINode {
         String effectiveBlockType,
         float trans
     ) {
-        return previewBackend == PreviewBackend.TRACKED_WORLD
-            ? refreshTrackedPreview(context, blocksList, effectiveBlockType)
-            : refreshGhostPreview(context, blocksList, effectiveBlockType, trans);
-    }
-
-    private boolean refreshTrackedPreview(@Nullable ExecutionContext context, BlockPosList blocksList, String effectiveBlockType) {
-        PreviewManager.hideNodePreviews(getId().toString());
-
-        if (context == null || context.getWorld() == null) {
-            statusMessage = "Preview waiting for execution context";
-            NodeCraft.LOGGER.debug("GeometryViewerNode[{}] tracked preview deferred: missing world context", getId());
-            return false;
+        if (previewBackend == PreviewBackend.TRACKED_WORLD) {
+            BlockState trackedState = resolveBlockState(effectiveBlockType);
+            if (trackedState == null) {
+                statusMessage = "Invalid block type: " + effectiveBlockType;
+                NodeCraft.LOGGER.warn("GeometryViewerNode[{}] tracked preview skipped: invalid block type {}", getId(), effectiveBlockType);
+                return false;
+            }
         }
 
-        BlockState trackedState = resolveBlockState(effectiveBlockType);
-        if (trackedState == null) {
-            statusMessage = "Invalid block type: " + effectiveBlockType;
-            NodeCraft.LOGGER.warn("GeometryViewerNode[{}] tracked preview skipped: invalid block type {}", getId(), effectiveBlockType);
-            return false;
-        }
-
-        int trackedCount = TrackedPreviewPlacementService.getInstance().updateTrackedPreview(
-            context.getWorld(),
-            getId().toString(),
-            new ArrayList<>(blocksList.getPositions()),
-            trackedState,
-            com.nodecraft.nodesystem.bake.PlacementMode.OVERWRITE
-        );
-        statusMessage = "Previewing " + trackedCount + " tracked blocks";
-        return true;
-    }
-
-    private boolean refreshGhostPreview(
-        @Nullable ExecutionContext context,
-        BlockPosList blocksList,
-        String effectiveBlockType,
-        float trans
-    ) {
-        if (context != null && context.getWorld() != null) {
-            TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
-        }
-
-        PreviewManager.hideNodePreviews(getId().toString());
-        List<GhostBlockPlacement> placements = new ArrayList<>(blocksList.size());
-        for (BlockPos pos : blocksList.getPositions()) {
-            placements.add(new GhostBlockPlacement(Vec3d.of(pos), effectiveBlockType, trans));
-        }
-
-        if (placements.isEmpty()) {
+        PreviewBlocksPayload payload = PreviewPayloadAdapters.fromBlockPosList(blocksList, effectiveBlockType);
+        if (payload.getBlocks().isEmpty()) {
             statusMessage = "Waiting for input...";
             return false;
         }
 
-        PreviewOptions options = new PreviewOptions()
-            .ghostBlockMode()
-            .setOpacity(trans);
-        // Use solid-color ghost rendering for reliable visibility in world preview.
-        options.textureMode = "solid_color";
         Color parsedColor = Color.fromHex(cachedColor != null ? cachedColor : previewColor);
-        options.setColor(parsedColor.getRed(), parsedColor.getGreen(), parsedColor.getBlue());
-        options.showOutline = showOutline;
+        PreviewStyle style = PreviewStyle.forGhostBlocks(
+            parsedColor.getRed(),
+            parsedColor.getGreen(),
+            parsedColor.getBlue(),
+            trans,
+            showOutline,
+            "solid_color",
+            2.0f,
+            0.1f,
+            0
+        );
 
-        NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost request: placements={}, blockType={}, opacity={}, outline={}",
-            getId(), placements.size(), effectiveBlockType, trans, showOutline);
+        if (previewBackend == PreviewBackend.GHOST) {
+            NodeCraft.LOGGER.info(
+                "GeometryViewerNode[{}] ghost request: blocks={}, blockType={}, opacity={}, outline={}",
+                getId(),
+                payload.getBlocks().size(),
+                effectiveBlockType,
+                trans,
+                showOutline
+            );
+        }
 
-        String previewId = PreviewManager.showGhostBlockPlacements(getId().toString(), placements, options);
+        String previewId = PreviewManager.showPreview(
+            new PreviewRequest(getId().toString(), payload, style, previewBackend, context)
+        );
         if (previewId == null) {
-            statusMessage = "Ghost preview failed";
-            NodeCraft.LOGGER.warn("GeometryViewerNode[{}] ghost preview failed: renderer returned null", getId());
+            if (previewBackend == PreviewBackend.TRACKED_WORLD) {
+                statusMessage = context == null || context.getWorld() == null
+                    ? "Preview waiting for execution context"
+                    : "Tracked preview failed";
+            } else {
+                statusMessage = "Ghost preview failed";
+                NodeCraft.LOGGER.warn("GeometryViewerNode[{}] ghost preview failed: renderer returned null", getId());
+            }
             return false;
         }
 
-        NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost preview created: previewId={}", getId(), previewId);
-        statusMessage = "Previewing " + placements.size() + " ghost blocks";
+        if (previewBackend == PreviewBackend.GHOST) {
+            NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost preview created: previewId={}", getId(), previewId);
+            statusMessage = "Previewing " + payload.getBlocks().size() + " ghost blocks";
+        } else {
+            int trackedCount = context != null && context.getWorld() != null
+                ? TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
+                : 0;
+            statusMessage = "Previewing " + trackedCount + " tracked blocks";
+        }
         return true;
     }
 
@@ -320,7 +308,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         try {
             Identifier id = Identifier.of(blockId);
             var block = Registries.BLOCK.get(id);
-            return block != null ? block.getDefaultState() : null;
+            return block.getDefaultState();
         } catch (Exception e) {
             return null;
         }

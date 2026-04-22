@@ -1,9 +1,24 @@
 package com.nodecraft.nodesystem.preview;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.nodesystem.bake.PlacementMode;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewKind;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPayloadAdapters;
+import com.nodecraft.nodesystem.preview.protocol.PreviewRequest;
+import com.nodecraft.nodesystem.preview.protocol.PreviewStyle;
 import com.nodecraft.nodesystem.util.Coordinate;
+import net.minecraft.block.BlockState;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -58,7 +73,92 @@ public final class PreviewManager {
             List<GhostBlockPlacement> placements,
             PreviewOptions options
     ) {
-        return RENDERER.showPreview(nodeId, "ghost_block", placements, options);
+        if (placements == null || placements.isEmpty()) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        PreviewBlocksPayload payload = PreviewPayloadAdapters.fromGhostBlockPlacements(placements);
+        float fallbackOpacity = placements.get(0).opacity();
+        PreviewStyle style = PreviewStyle.fromLegacyGhostOptions(options, fallbackOpacity);
+        return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
+    }
+
+    /**
+     * v1 unified entry: dispatches on {@link PreviewKind} and {@link PreviewBackend}.
+     * Currently implements {@link PreviewKind#BLOCKS} for GHOST and TRACKED_WORLD.
+     */
+    @Nullable
+    public static String showPreview(PreviewRequest request) {
+        try {
+            String nodeId = request.ownerNodeId();
+            PreviewPayload payload = request.payload();
+            PreviewOptions opts = request.style().toPreviewOptions();
+
+            if (payload.getKind() != PreviewKind.BLOCKS || !(payload instanceof PreviewBlocksPayload blocksPayload)) {
+                NodeCraft.LOGGER.warn(
+                    "PreviewManager.showPreview: unsupported payload kind={} type={}",
+                    payload.getKind(),
+                    payload.getClass().getName()
+                );
+                return null;
+            }
+
+            hideNodePreviews(nodeId);
+            ExecutionContext ctx = request.executionContext();
+
+            if (request.backend() == PreviewBackend.GHOST) {
+                if (ctx != null && ctx.getWorld() != null) {
+                    TrackedPreviewPlacementService.getInstance().clearTrackedPreview(ctx.getWorld(), nodeId);
+                }
+                return RENDERER.showPreview(nodeId, "ghost_block", blocksPayload, opts);
+            }
+
+            if (request.backend() == PreviewBackend.TRACKED_WORLD) {
+                if (ctx == null || ctx.getWorld() == null) {
+                    NodeCraft.LOGGER.warn("PreviewManager.showPreview TRACKED_WORLD: missing execution context / world");
+                    return null;
+                }
+                List<PreviewBlock> cells = blocksPayload.getBlocks();
+                if (cells.isEmpty()) {
+                    TrackedPreviewPlacementService.getInstance().clearTrackedPreview(ctx.getWorld(), nodeId);
+                    return nodeId + ":tracked:cleared";
+                }
+                BlockState state = resolveBlockStateForPreview(cells.get(0).blockId());
+                if (state == null) {
+                    NodeCraft.LOGGER.warn("PreviewManager.showPreview TRACKED_WORLD: invalid block id {}", cells.get(0).blockId());
+                    return null;
+                }
+                List<BlockPos> positions = PreviewPayloadAdapters.toBlockPosList(blocksPayload);
+                int placed = TrackedPreviewPlacementService.getInstance().updateTrackedPreview(
+                    ctx.getWorld(),
+                    nodeId,
+                    new ArrayList<>(positions),
+                    state,
+                    PlacementMode.OVERWRITE
+                );
+                return nodeId + ":tracked:" + placed;
+            }
+
+            NodeCraft.LOGGER.warn("PreviewManager.showPreview: unsupported backend {}", request.backend());
+            return null;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("PreviewManager.showPreview failed: nodeId={}", request.ownerNodeId(), e);
+            return null;
+        }
+    }
+
+    @Nullable
+    private static BlockState resolveBlockStateForPreview(String blockId) {
+        if (blockId == null || blockId.isEmpty()) {
+            return null;
+        }
+        try {
+            Identifier id = Identifier.of(blockId);
+            var block = Registries.BLOCK.get(id);
+            return block != null ? block.getDefaultState() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // Region box

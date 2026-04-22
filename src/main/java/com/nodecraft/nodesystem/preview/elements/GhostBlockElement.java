@@ -4,6 +4,8 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.GhostBlockPlacement;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
+import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.block.Block;
@@ -86,10 +88,19 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     /**
      * 处理输入数据，支持单个对象或对象列表
-     * 支持的数据类型：{@link GhostBlockPlacement}, Coordinate, BlockData, Map；未知布局时尝试反射字段 {@code position}/{@code blockId}。
+     * 支持的数据类型：{@link PreviewBlocksPayload}（v1 首选）、{@link GhostBlockPlacement}、Coordinate、BlockData、Map；未知布局时尝试反射字段 {@code position}/{@code blockId}。
      */
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewBlocksPayload payload) {
+            List<BlockData> nextBlocks = new ArrayList<>(payload.getBlocks().size());
+            for (PreviewBlock b : payload.getBlocks()) {
+                nextBlocks.add(new BlockData(new Vec3d(b.x(), b.y(), b.z()), b.blockId()));
+            }
+            blocks = nextBlocks;
+            return;
+        }
+
         List<BlockData> nextBlocks = new ArrayList<>();
         
         if (data instanceof List<?> list) {
@@ -98,7 +109,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
                 processDataItem(nextBlocks, item);
             }
             if (nextBlocks.isEmpty() && !list.isEmpty()) {
-                Object first = list.get(0);
+                Object first = list.getFirst();
                 NodeCraft.LOGGER.info(
                     "GhostBlockElement processData: list had {} items but none became BlockData; firstType={}",
                     list.size(),
@@ -601,7 +612,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         }
         lastShouldRenderSkipLogMs = now;
         Vec3d cam = camera.getCameraPos();
-        BlockData sample = blocks.isEmpty() ? null : blocks.get(0);
+        BlockData sample = blocks.isEmpty() ? null : blocks.getFirst();
         if ("beyond_max_distance".equals(reason) && sample != null) {
             NodeCraft.LOGGER.info(
                 "GhostBlockElement shouldRender=false: ownerNode={}, reason={}, blockCount={}, maxDistance={}, nearest={}, cam=({},{},{}), samplePos=({},{},{})",
