@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
+import com.nodecraft.nodesystem.preview.protocol.PreviewRegionPayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.LightmapTextureManager;
@@ -86,6 +87,14 @@ public class RegionBoxElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewRegionPayload pr) {
+            regions = List.of(new BoundingBox(
+                new Vec3d(pr.minX(), pr.minY(), pr.minZ()),
+                new Vec3d(pr.maxX() + 1.0d, pr.maxY() + 1.0d, pr.maxZ() + 1.0d)
+            ));
+            return;
+        }
+
         List<BoundingBox> nextRegions = new ArrayList<>();
 
         if (data instanceof List<?> list) {
@@ -101,7 +110,12 @@ public class RegionBoxElement extends AbstractPreviewElement {
     }
 
     private void processItem(List<BoundingBox> target, Object item) {
-        if (item instanceof BoundingBox box) {
+        if (item instanceof PreviewRegionPayload pr) {
+            target.add(new BoundingBox(
+                new Vec3d(pr.minX(), pr.minY(), pr.minZ()),
+                new Vec3d(pr.maxX() + 1.0d, pr.maxY() + 1.0d, pr.maxZ() + 1.0d)
+            ));
+        } else if (item instanceof BoundingBox box) {
             target.add(box);
         } else if (item instanceof RegionData region && region.isComplete()) {
             BlockPos min = region.getMinCorner();

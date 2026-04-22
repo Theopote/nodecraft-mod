@@ -5,6 +5,8 @@ import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
+import com.nodecraft.nodesystem.preview.protocol.PreviewCurvePayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPoint;
 import com.nodecraft.nodesystem.util.Curve;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
@@ -50,6 +52,18 @@ public class LinesElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewCurvePayload curve) {
+            List<Vec3d> nextPoints = new ArrayList<>(curve.getPoints().size() + 1);
+            for (PreviewPoint p : curve.getPoints()) {
+                nextPoints.add(new Vec3d(p.x(), p.y(), p.z()));
+            }
+            if (curve.closed() && !nextPoints.isEmpty()) {
+                nextPoints.add(nextPoints.get(0));
+            }
+            points = nextPoints;
+            return;
+        }
+
         List<Vec3d> nextPoints = new ArrayList<>();
 
         if (data instanceof LineData line) {
