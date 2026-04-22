@@ -237,6 +237,66 @@ public final class PreviewStyle {
         return new PreviewStyle(r, g, b, fr, fg, fb, opacity, outline, tex, lw, ps, ticks);
     }
 
+    public static PreviewStyle fromLegacyPlaneGridOptions(PreviewOptions options) {
+        float r = 0.35f;
+        float g = 0.75f;
+        float b = 1.0f;
+        if (options.color != null) {
+            Vector3f c = options.color;
+            r = c.x;
+            g = c.y;
+            b = c.z;
+        }
+        float opacity = options.opacity != null ? options.opacity : 1.0f;
+        boolean pulse = Boolean.TRUE.equals(options.pulseAnimation);
+        String tex = pulse ? "plane_pulse" : "plane_still";
+        float lw = options.lineWidth != null ? options.lineWidth : 1.5f;
+        int ticks = 0;
+        if (options.duration != null && options.duration > 0) {
+            ticks = options.duration * 20;
+        }
+        return new PreviewStyle(r, g, b, r, g, b, opacity, true, tex, lw, 0.0f, ticks);
+    }
+
+    public static PreviewStyle fromLegacyFrameAxesOptions(PreviewOptions options) {
+        float r = 1.0f;
+        float g = 1.0f;
+        float b = 1.0f;
+        if (options.color != null) {
+            Vector3f c = options.color;
+            r = c.x;
+            g = c.y;
+            b = c.z;
+        }
+        float opacity = options.opacity != null ? options.opacity : 1.0f;
+        float lw = options.lineWidth != null ? options.lineWidth : 1.5f;
+        int ticks = 0;
+        if (options.duration != null && options.duration > 0) {
+            ticks = options.duration * 20;
+        }
+        return new PreviewStyle(r, g, b, r, g, b, opacity, true, "frame", lw, 0.0f, ticks);
+    }
+
+    public static PreviewStyle fromLegacyLabelsOptions(PreviewOptions options) {
+        float r = 1.0f;
+        float g = 1.0f;
+        float b = 1.0f;
+        if (options.color != null) {
+            Vector3f c = options.color;
+            r = c.x;
+            g = c.y;
+            b = c.z;
+        }
+        float opacity = options.opacity != null ? options.opacity : 1.0f;
+        boolean showBg = options.showBackground == null || options.showBackground;
+        float fs = options.fontSize != null ? options.fontSize : 0.025f;
+        int ticks = 0;
+        if (options.duration != null && options.duration > 0) {
+            ticks = options.duration * 20;
+        }
+        return new PreviewStyle(r, g, b, r, g, b, opacity, showBg, "labels", 1.5f, fs, ticks);
+    }
+
     /** Prefer {@link #toPreviewOptions(PreviewKind)}; this overload assumes block ghost styling. */
     @Deprecated
     public PreviewOptions toPreviewOptions() {
@@ -251,6 +311,9 @@ public final class PreviewStyle {
             case REGIONS -> toRegionPreviewOptions();
             case CURVES -> toCurvesPreviewOptions();
             case GEOMETRY -> toGeometryPreviewOptions();
+            case PLANE -> toPlaneGridPreviewOptions();
+            case FRAME -> toFrameAxesPreviewOptions();
+            case LABELS -> toLabelsPreviewOptions();
             default -> new PreviewOptions().setColor(red, green, blue).setOpacity(opacity);
         };
     }
@@ -354,6 +417,47 @@ public final class PreviewStyle {
         } else {
             o.particleDensity = 20;
         }
+        if (durationTicks > 0) {
+            o.setDuration(Math.max(1, (durationTicks + 19) / 20));
+        }
+        return o;
+    }
+
+    private PreviewOptions toPlaneGridPreviewOptions() {
+        PreviewOptions o = new PreviewOptions();
+        o.setColor(red, green, blue);
+        o.setOpacity(opacity);
+        o.setLineWidth(lineWidth > 0.0f ? lineWidth : 1.5f);
+        if (durationTicks > 0) {
+            o.setDuration(Math.max(1, (durationTicks + 19) / 20));
+        }
+        if ("plane_pulse".equals(textureMode)) {
+            o.pulseAnimation = true;
+            o.enableAnimation = true;
+        } else {
+            o.pulseAnimation = false;
+            o.enableAnimation = false;
+        }
+        return o;
+    }
+
+    private PreviewOptions toFrameAxesPreviewOptions() {
+        PreviewOptions o = new PreviewOptions();
+        o.setColor(red, green, blue);
+        o.setOpacity(opacity);
+        o.setLineWidth(lineWidth > 0.0f ? lineWidth : 1.5f);
+        if (durationTicks > 0) {
+            o.setDuration(Math.max(1, (durationTicks + 19) / 20));
+        }
+        return o;
+    }
+
+    private PreviewOptions toLabelsPreviewOptions() {
+        PreviewOptions o = new PreviewOptions();
+        o.setColor(red, green, blue);
+        o.setOpacity(opacity);
+        o.fontSize = pointSize > 0.0f ? pointSize : 0.025f;
+        o.showBackground = showOutline;
         if (durationTicks > 0) {
             o.setDuration(Math.max(1, (durationTicks + 19) / 20));
         }

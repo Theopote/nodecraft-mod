@@ -7,8 +7,11 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewCurvePayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewFramePayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewGeometryPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewKind;
+import com.nodecraft.nodesystem.preview.protocol.PreviewLabelsPayload;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPlanePayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewRegionPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewPayloadAdapters;
@@ -99,7 +102,8 @@ public final class PreviewManager {
      * v1 unified entry: dispatches on {@link PreviewKind} and {@link PreviewBackend}.
      * Implements {@link PreviewKind#BLOCKS} (GHOST + TRACKED_WORLD), {@link PreviewKind#POINTS},
      * {@link PreviewKind#VECTORS}, {@link PreviewKind#REGIONS}, {@link PreviewKind#CURVES},
-     * {@link PreviewKind#GEOMETRY} (GHOST only).
+     * {@link PreviewKind#GEOMETRY}, {@link PreviewKind#PLANE}, {@link PreviewKind#FRAME},
+     * {@link PreviewKind#LABELS} (GHOST only).
      */
     @Nullable
     public static String showPreview(PreviewRequest request) {
@@ -127,6 +131,9 @@ public final class PreviewManager {
                 case REGIONS -> showPreviewRegions(nodeId, payload, opts);
                 case CURVES -> showPreviewCurves(nodeId, payload, opts);
                 case GEOMETRY -> showPreviewGeometry(nodeId, payload, opts);
+                case PLANE -> showPreviewPlaneGrid(nodeId, payload, opts);
+                case FRAME -> showPreviewFrameAxes(nodeId, payload, opts);
+                case LABELS -> showPreviewTextLabels(nodeId, payload, opts);
                 default -> {
                     NodeCraft.LOGGER.warn(
                         "PreviewManager.showPreview: unsupported payload kind={} type={}",
@@ -320,6 +327,45 @@ public final class PreviewManager {
     }
 
     @Nullable
+    private static String showPreviewPlaneGrid(String nodeId, PreviewPayload payload, PreviewOptions opts) {
+        if (!(payload instanceof PreviewPlanePayload planePayload)) {
+            return null;
+        }
+        if (planePayload.getPlaneGridData() == null || planePayload.getPlaneGridData().getPlane() == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        hideNodePreviews(nodeId);
+        return RENDERER.showPreview(nodeId, "plane_grid", planePayload, opts);
+    }
+
+    @Nullable
+    private static String showPreviewFrameAxes(String nodeId, PreviewPayload payload, PreviewOptions opts) {
+        if (!(payload instanceof PreviewFramePayload framePayload)) {
+            return null;
+        }
+        if (framePayload.getFrameData() == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        hideNodePreviews(nodeId);
+        return RENDERER.showPreview(nodeId, "frame_axes", framePayload, opts);
+    }
+
+    @Nullable
+    private static String showPreviewTextLabels(String nodeId, PreviewPayload payload, PreviewOptions opts) {
+        if (!(payload instanceof PreviewLabelsPayload labelsPayload)) {
+            return null;
+        }
+        if (labelsPayload.getLabelData() == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        hideNodePreviews(nodeId);
+        return RENDERER.showPreview(nodeId, "text_labels", labelsPayload, opts);
+    }
+
+    @Nullable
     private static BlockState resolveBlockStateForPreview(String blockId) {
         if (blockId == null || blockId.isEmpty()) {
             return null;
@@ -385,11 +431,23 @@ public final class PreviewManager {
     // Plane / frame / path / labels
 
     public static String showPlaneGrid(String nodeId, PlaneGridPreviewData planeGridData, PreviewOptions options) {
-        return RENDERER.showPreview(nodeId, "plane_grid", planeGridData, options);
+        if (planeGridData == null || planeGridData.getPlane() == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        PreviewPlanePayload payload = new PreviewPlanePayload(planeGridData);
+        PreviewStyle style = PreviewStyle.fromLegacyPlaneGridOptions(options);
+        return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }
 
     public static String showFrameAxes(String nodeId, FrameAxesPreviewData frameAxesData, PreviewOptions options) {
-        return RENDERER.showPreview(nodeId, "frame_axes", frameAxesData, options);
+        if (frameAxesData == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        PreviewFramePayload payload = new PreviewFramePayload(frameAxesData);
+        PreviewStyle style = PreviewStyle.fromLegacyFrameAxesOptions(options);
+        return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }
 
     public static String showPaths(String nodeId, Object pathData, PreviewOptions options) {
@@ -397,7 +455,13 @@ public final class PreviewManager {
     }
 
     public static String showTextLabels(String nodeId, Object labelData, PreviewOptions options) {
-        return RENDERER.showPreview(nodeId, "text_labels", labelData, options);
+        if (labelData == null) {
+            hideNodePreviews(nodeId);
+            return null;
+        }
+        PreviewLabelsPayload payload = new PreviewLabelsPayload(labelData);
+        PreviewStyle style = PreviewStyle.fromLegacyLabelsOptions(options);
+        return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }
 
     // Transform gizmo

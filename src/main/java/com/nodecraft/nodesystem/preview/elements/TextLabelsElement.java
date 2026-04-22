@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import com.nodecraft.nodesystem.preview.TextLabelPreviewData;
+import com.nodecraft.nodesystem.preview.protocol.PreviewLabelsPayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.render.Camera;
@@ -42,6 +43,11 @@ public class TextLabelsElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewLabelsPayload payload) {
+            processData(payload.getLabelData());
+            return;
+        }
+
         List<TextLabelPreviewData> nextLabels = new ArrayList<>();
 
         if (data instanceof TextLabelPreviewData label) {

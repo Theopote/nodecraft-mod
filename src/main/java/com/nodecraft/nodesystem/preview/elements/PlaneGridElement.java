@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.PlaneGridPreviewData;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
+import com.nodecraft.nodesystem.preview.protocol.PreviewPlanePayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.RenderLayers;
@@ -36,6 +37,10 @@ public class PlaneGridElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewPlanePayload payload) {
+            this.planeGridData = payload.getPlaneGridData();
+            return;
+        }
         this.planeGridData = data instanceof PlaneGridPreviewData previewData ? previewData : null;
     }
 

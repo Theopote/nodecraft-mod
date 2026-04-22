@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.FrameAxesPreviewData;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.PreviewRenderer;
+import com.nodecraft.nodesystem.preview.protocol.PreviewFramePayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
 import net.minecraft.client.render.RenderLayers;
@@ -25,6 +26,10 @@ public class FrameAxesElement extends AbstractPreviewElement {
 
     @Override
     protected void processData(Object data) {
+        if (data instanceof PreviewFramePayload payload) {
+            this.frameData = payload.getFrameData();
+            return;
+        }
         this.frameData = data instanceof FrameAxesPreviewData previewData ? previewData : null;
     }
 
