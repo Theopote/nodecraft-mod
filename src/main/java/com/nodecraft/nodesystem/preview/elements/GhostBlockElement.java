@@ -10,7 +10,6 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.*;
-import net.minecraft.client.render.block.BlockRenderManager;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
@@ -186,12 +185,11 @@ public class GhostBlockElement extends AbstractPreviewElement {
                                        List<BlockData> blocksSnapshot,
                                        float maxRenderDistance) {
         MinecraftClient client = MinecraftClient.getInstance();
-        BlockRenderManager blockRenderManager = client.getBlockRenderManager();
         Vec3d cameraPos = camera.getBlockPos().toCenterPos();
         
         // 使用简化的渲染方法，直接使用 Tessellator
         // 注意：不需要设置渲染状态，因为通用状态已由 PreviewRenderer 设置
-        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumerProvider vertexConsumers = resolveVertexConsumers(client);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.debugFilledBox());
         
         for (BlockData blockData : blocksSnapshot) {
@@ -245,7 +243,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             
             matrices.pop();
         }
-        vertexConsumers.draw();
+        flushIfImmediate(vertexConsumers);
         
         // 渲染完成，无需额外的绘制命令
         // 注意：不需要恢复渲染状态，因为没有修改任何特有状态
@@ -268,7 +266,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         // 设置此方法特有的渲染状态
         
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumerProvider vertexConsumers = resolveVertexConsumers(client);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.debugFilledBox());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
@@ -298,7 +296,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             renderCubeFaces(vertexConsumer, matrix, renderX, renderY, renderZ, r, g, b, opacity);
         }
         
-        vertexConsumers.draw();
+        flushIfImmediate(vertexConsumers);
     }
     
     /**
@@ -318,7 +316,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
         // 设置此方法特有的渲染状态
         
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate vertexConsumers = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumerProvider vertexConsumers = resolveVertexConsumers(client);
         VertexConsumer vertexConsumer = vertexConsumers.getBuffer(RenderLayers.lines());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         
@@ -373,7 +371,21 @@ public class GhostBlockElement extends AbstractPreviewElement {
             }
         }
         
-        vertexConsumers.draw();
+        flushIfImmediate(vertexConsumers);
+    }
+
+    private VertexConsumerProvider resolveVertexConsumers(MinecraftClient client) {
+        VertexConsumerProvider active = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        if (active != null) {
+            return active;
+        }
+        return client.getBufferBuilders().getEntityVertexConsumers();
+    }
+
+    private void flushIfImmediate(VertexConsumerProvider provider) {
+        if (provider instanceof VertexConsumerProvider.Immediate immediate) {
+            immediate.draw();
+        }
     }
     
 

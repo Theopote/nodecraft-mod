@@ -12,6 +12,7 @@ import com.nodecraft.nodesystem.preview.PreviewManager;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
 import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import com.nodecraft.nodesystem.preview.elements.GhostBlockElement;
+import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
 import imgui.ImGui;
@@ -84,8 +85,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
     public GeometryViewerNode() {
         super(UUID.randomUUID(), "output.preview.geometry_viewer");
 
-        addInputPort(new BasePort(INPUT_BLOCKS_ID, "Geometry", "Geometry block list", NodeDataType.BLOCK_LIST, this));
-        addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry Input", "Unified abstract geometry input", NodeDataType.GEOMETRY, this));
+        addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block list input (already voxelized)", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified abstract geometry input (auto-voxelized for preview)", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data", NodeDataType.BOX_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_CYLINDER_GEOMETRY_ID, "Cylinder Geometry", "Cylinder geometry data", NodeDataType.CYLINDER_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_SPHERE_GEOMETRY_ID, "Sphere Geometry", "Sphere geometry data", NodeDataType.SPHERE, this));
@@ -230,6 +231,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
         PreviewOptions options = new PreviewOptions()
             .ghostBlockMode()
             .setOpacity(trans);
+        // Use solid-color ghost rendering for reliable visibility in world preview.
+        options.textureMode = "solid_color";
+        Color parsedColor = Color.fromHex(cachedColor != null ? cachedColor : previewColor);
+        options.setColor(parsedColor.getRed(), parsedColor.getGreen(), parsedColor.getBlue());
         options.showOutline = showOutline;
 
         String previewId = PreviewManager.showGhostBlockPlacements(getId().toString(), placements, options);
