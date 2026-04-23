@@ -52,28 +52,31 @@ public class PreviewGeometryNode extends BaseNode {
     @NodeProperty(displayName = "Fill Color", category = "Preview", order = 2)
     private String fillColor = "#53D6FF";
 
-    @NodeProperty(displayName = "Show Fill", category = "Preview", order = 3)
+    @NodeProperty(displayName = "Outline Color", category = "Preview", order = 3)
+    private String outlineColor = "#102B33";
+
+    @NodeProperty(displayName = "Show Fill", category = "Preview", order = 4)
     private boolean showFill = true;
 
-    @NodeProperty(displayName = "Show Outline", category = "Preview", order = 4)
+    @NodeProperty(displayName = "Show Outline", category = "Preview", order = 5)
     private boolean showOutline = true;
 
-    @NodeProperty(displayName = "Transparency", category = "Preview", order = 5)
+    @NodeProperty(displayName = "Transparency", category = "Preview", order = 6)
     private float transparency = 0.35f;
 
-    @NodeProperty(displayName = "Line Width", category = "Preview", order = 6)
+    @NodeProperty(displayName = "Line Width", category = "Preview", order = 7)
     private float lineWidth = 1.6f;
 
-    @NodeProperty(displayName = "Quality", category = "Preview", order = 7)
+    @NodeProperty(displayName = "Quality", category = "Preview", order = 8)
     private int quality = 20;
 
-    @NodeProperty(displayName = "Duration", category = "Preview", order = 8)
+    @NodeProperty(displayName = "Duration", category = "Preview", order = 9)
     private int duration = 30;
 
-    @NodeProperty(displayName = "Surface Strip Radius", category = "Surface Strip", order = 9)
+    @NodeProperty(displayName = "Surface Strip Radius", category = "Surface Strip", order = 10)
     private double surfaceStripRadius = 0.25d;
 
-    @NodeProperty(displayName = "Surface Strip Steps", category = "Surface Strip", order = 10)
+    @NodeProperty(displayName = "Surface Strip Steps", category = "Surface Strip", order = 11)
     private int surfaceStripSteps = 4;
 
     private volatile int cachedGeometrySignature = 0;
@@ -127,9 +130,10 @@ public class PreviewGeometryNode extends BaseNode {
                 || previewIds.isEmpty();
 
             Color parsed = Color.fromHex(fillColor);
+            Color outlineParsed = Color.fromHex(outlineColor);
             PreviewOptions options = new PreviewOptions()
                 .setColor(parsed.getRed(), parsed.getGreen(), parsed.getBlue())
-                .setTintColor(Math.max(0.0f, parsed.getRed() * 0.2f), Math.max(0.0f, parsed.getGreen() * 0.2f), Math.max(0.0f, parsed.getBlue() * 0.2f))
+                .setTintColor(outlineParsed.getRed(), outlineParsed.getGreen(), outlineParsed.getBlue())
                 .setOpacity(clamp01(transparency))
                 .setShowFill(showFill)
                 .setShowOutline(showOutline)
@@ -182,6 +186,7 @@ public class PreviewGeometryNode extends BaseNode {
         int hash = 17;
         hash = 31 * hash + Boolean.hashCode(previewEnabled);
         hash = 31 * hash + (fillColor != null ? fillColor.hashCode() : 0);
+        hash = 31 * hash + (outlineColor != null ? outlineColor.hashCode() : 0);
         hash = 31 * hash + Boolean.hashCode(showFill);
         hash = 31 * hash + Boolean.hashCode(showOutline);
         hash = 31 * hash + Float.floatToIntBits(transparency);
@@ -266,6 +271,7 @@ public class PreviewGeometryNode extends BaseNode {
         Map<String, Object> state = new HashMap<>();
         state.put("previewEnabled", previewEnabled);
         state.put("fillColor", fillColor);
+        state.put("outlineColor", outlineColor);
         state.put("showFill", showFill);
         state.put("showOutline", showOutline);
         state.put("transparency", transparency);
@@ -288,6 +294,9 @@ public class PreviewGeometryNode extends BaseNode {
         }
         if (map.get("fillColor") instanceof String value) {
             fillColor = value;
+        }
+        if (map.get("outlineColor") instanceof String value) {
+            outlineColor = value;
         }
         if (map.get("showFill") instanceof Boolean value) {
             showFill = value;

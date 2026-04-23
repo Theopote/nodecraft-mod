@@ -3,9 +3,13 @@ package com.nodecraft.gui.components;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.nodes.output.execute.ApplyChangesNode;
+import com.nodecraft.nodesystem.nodes.output.preview.GeometryViewerNode;
+import com.nodecraft.nodesystem.nodes.output.preview.PreviewGeometryNode;
 import imgui.ImGui;
 import imgui.flag.ImGuiTableColumnFlags;
 import imgui.flag.ImGuiTableFlags;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 
@@ -19,7 +23,7 @@ final class PortTableRenderer {
             return;
         }
 
-        java.util.List<IPort> inputPorts = selectedNode.getInputPorts();
+        java.util.List<IPort> inputPorts = filterViewerPorts(selectedNode.getInputPorts(), selectedNode);
         if (inputPorts.isEmpty()) {
             ImGui.textDisabled("No input ports");
             return;
@@ -81,7 +85,7 @@ final class PortTableRenderer {
             return;
         }
 
-        java.util.List<IPort> outputPorts = selectedNode.getOutputPorts();
+        java.util.List<IPort> outputPorts = filterViewerPorts(selectedNode.getOutputPorts(), selectedNode);
         if (outputPorts.isEmpty()) {
             ImGui.textDisabled("No output ports");
             return;
@@ -147,5 +151,59 @@ final class PortTableRenderer {
             }
             ImGui.endTable();
         }
+    }
+
+    private static java.util.List<IPort> filterViewerPorts(java.util.List<IPort> ports, INode node) {
+        if (ports == null || ports.isEmpty()) {
+            return ports;
+        }
+
+        java.util.List<IPort> visiblePorts = new ArrayList<>();
+        for (IPort port : ports) {
+            if (port == null) {
+                continue;
+            }
+
+            String portId = port.getId();
+            boolean isLegacyInput;
+
+            if (node instanceof GeometryViewerNode) {
+                isLegacyInput =
+                        "input_box_geometry".equals(portId) ||
+                        "input_cylinder_geometry".equals(portId) ||
+                        "input_sphere_geometry".equals(portId) ||
+                        "input_torus_geometry".equals(portId) ||
+                        "input_color".equals(portId) ||
+                        "input_transparency".equals(portId);
+            } else if (node instanceof PreviewGeometryNode) {
+                isLegacyInput =
+                        "input_box_geometry".equals(portId) ||
+                        "input_cylinder_geometry".equals(portId) ||
+                        "input_sphere_geometry".equals(portId) ||
+                        "input_torus_geometry".equals(portId) ||
+                        "input_cone_geometry".equals(portId) ||
+                        "input_ellipsoid_geometry".equals(portId) ||
+                        "input_prism_geometry".equals(portId) ||
+                        "input_tetrahedron_geometry".equals(portId) ||
+                        "input_octahedron_geometry".equals(portId);
+            } else if (node instanceof ApplyChangesNode) {
+                isLegacyInput =
+                        "input_box_geometry".equals(portId) ||
+                        "input_cylinder_geometry".equals(portId) ||
+                        "input_sphere_geometry".equals(portId) ||
+                        "input_torus_geometry".equals(portId) ||
+                        "input_preview_ids".equals(portId) ||
+                        "input_notify".equals(portId);
+            } else {
+                return ports;
+            }
+
+            if (isLegacyInput && !port.isConnected()) {
+                continue;
+            }
+
+            visiblePorts.add(port);
+        }
+        return visiblePorts;
     }
 }

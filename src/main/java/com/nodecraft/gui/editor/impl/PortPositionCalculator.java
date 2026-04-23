@@ -10,6 +10,7 @@ import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.output.execute.ApplyChangesNode;
 import com.nodecraft.nodesystem.nodes.output.preview.GeometryViewerNode;
+import com.nodecraft.nodesystem.nodes.output.preview.PreviewGeometryNode;
 import imgui.ImGui;
 import imgui.ImVec2;
 
@@ -329,6 +330,17 @@ public class PortPositionCalculator {
                         "input_torus_geometry".equals(portId) ||
                         "input_color".equals(portId) ||
                         "input_transparency".equals(portId);
+            } else if (node instanceof PreviewGeometryNode) {
+                isLegacyInput =
+                        "input_box_geometry".equals(portId) ||
+                        "input_cylinder_geometry".equals(portId) ||
+                        "input_sphere_geometry".equals(portId) ||
+                        "input_torus_geometry".equals(portId) ||
+                        "input_cone_geometry".equals(portId) ||
+                        "input_ellipsoid_geometry".equals(portId) ||
+                        "input_prism_geometry".equals(portId) ||
+                        "input_tetrahedron_geometry".equals(portId) ||
+                        "input_octahedron_geometry".equals(portId);
             } else if (node instanceof ApplyChangesNode) {
                 isLegacyInput =
                         "input_box_geometry".equals(portId) ||
