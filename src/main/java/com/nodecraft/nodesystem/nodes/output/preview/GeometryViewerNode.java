@@ -43,6 +43,30 @@ import java.util.UUID;
     order = 0
 )
 public class GeometryViewerNode extends BaseCustomUINode {
+    public enum GhostRenderMode {
+        ORIGINAL("original"),
+        SOLID_COLOR("solid_color"),
+        WIREFRAME("wireframe");
+
+        private final String textureMode;
+
+        GhostRenderMode(String textureMode) {
+            this.textureMode = textureMode;
+        }
+
+        public String textureMode() {
+            return textureMode;
+        }
+
+        public static GhostRenderMode fromState(@Nullable String value) {
+            String mode = value != null ? value.trim().toLowerCase() : "";
+            return switch (mode) {
+                case "solid_color" -> SOLID_COLOR;
+                case "wireframe" -> WIREFRAME;
+                default -> ORIGINAL;
+            };
+        }
+    }
 
     @NodeProperty(displayName = "Preview Color", category = "Display", order = 1)
     private String previewColor = "#4CAF50";
@@ -65,6 +89,9 @@ public class GeometryViewerNode extends BaseCustomUINode {
     @NodeProperty(displayName = "Solid Geometry", category = "Display", order = 7)
     private boolean previewSolidGeometry = true;
 
+    @NodeProperty(displayName = "Ghost Render Mode", category = "Display", order = 8)
+    private GhostRenderMode ghostRenderMode = GhostRenderMode.ORIGINAL;
+
     private volatile int lastBlockCount = 0;
     private volatile String statusMessage = "Waiting for input...";
 
@@ -73,6 +100,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private volatile String cachedColor = null;
     private volatile String cachedBlockType = null;
     private volatile PreviewBackend cachedPreviewBackend = null;
+    private volatile GhostRenderMode cachedGhostRenderMode = null;
 
     private static final String INPUT_BLOCKS_ID = "input_blocks";
     private static final String INPUT_GEOMETRY_ID = "input_geometry";
@@ -143,7 +171,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
             || trans != cachedTransparency
             || !Objects.equals(color, cachedColor)
             || !Objects.equals(effectiveBlockType, cachedBlockType)
-            || cachedPreviewBackend != previewBackend;
+            || cachedPreviewBackend != previewBackend
+            || cachedGhostRenderMode != ghostRenderMode;
 
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
             if (previewDirty) {
@@ -159,9 +188,16 @@ public class GeometryViewerNode extends BaseCustomUINode {
                     ? "Preview waiting for execution context"
                     : "Previewing " + blockCount + " ghost blocks";
             }
-        } else {
+        } else if (!previewEnabled) {
             clearAllPreviewState(context);
-            statusMessage = previewEnabled ? "Waiting for input..." : "Preview disabled";
+            statusMessage = "Preview disabled";
+        } else {
+            // Property-panel graph evaluation can run without execution context and intermittent empty inputs.
+            // Avoid wiping an active ghost preview in that path.
+            if (!(previewBackend == PreviewBackend.GHOST && context == null)) {
+                clearAllPreviewState(context);
+            }
+            statusMessage = "Waiting for input...";
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocksList);
@@ -174,6 +210,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedColor = color;
         cachedBlockType = effectiveBlockType;
         cachedPreviewBackend = previewBackend;
+        cachedGhostRenderMode = ghostRenderMode;
     }
 
     private boolean refreshPreview(
@@ -209,7 +246,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             parsedColor.getBlue(),
             trans,
             showOutline,
-            "original",
+            ghostRenderMode.textureMode(),
             2.0f,
             0.1f,
             0
@@ -294,6 +331,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedColor = null;
         cachedBlockType = null;
         cachedPreviewBackend = null;
+        cachedGhostRenderMode = null;
         PreviewManager.hideNodePreviews(getId().toString());
         if (context != null && context.getWorld() != null) {
             TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
@@ -469,6 +507,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         state.put("previewEnabled", previewEnabled);
         state.put("previewBackend", previewBackend.name());
         state.put("previewSolidGeometry", previewSolidGeometry);
+        state.put("ghostRenderMode", ghostRenderMode.name());
         return state;
     }
 
@@ -501,6 +540,21 @@ public class GeometryViewerNode extends BaseCustomUINode {
         }
         if (map.get("previewSolidGeometry") instanceof Boolean value) {
             setPreviewSolidGeometry(value);
+        }
+        if (map.get("ghostRenderMode") instanceof String value) {
+            setGhostRenderMode(GhostRenderMode.fromState(value));
+        }
+    }
+
+    public GhostRenderMode getGhostRenderMode() {
+        return ghostRenderMode;
+    }
+
+    public void setGhostRenderMode(GhostRenderMode value) {
+        GhostRenderMode sanitized = value != null ? value : GhostRenderMode.ORIGINAL;
+        if (ghostRenderMode != sanitized) {
+            ghostRenderMode = sanitized;
+            markDirty();
         }
     }
 }
