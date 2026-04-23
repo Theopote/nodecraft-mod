@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.output.preview;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
@@ -75,6 +76,10 @@ public class PreviewGeometryNode extends BaseNode {
     @NodeProperty(displayName = "Surface Strip Steps", category = "Surface Strip", order = 10)
     private int surfaceStripSteps = 4;
 
+    private volatile int cachedGeometrySignature = 0;
+    private volatile int cachedOptionsSignature = 0;
+    private volatile List<String> cachedPreviewIds = List.of();
+
     public PreviewGeometryNode() {
         super(UUID.randomUUID(), "output.preview.preview_geometry");
 
@@ -108,11 +113,19 @@ public class PreviewGeometryNode extends BaseNode {
         GeometryData geometry = geometries.isEmpty()
             ? null
             : (geometries.size() == 1 ? geometries.getFirst() : new CompositeGeometryData(geometries));
-        List<String> previewIds = new ArrayList<>();
+        List<String> previewIds = cachedPreviewIds;
 
         if (!previewEnabled) {
             PreviewManager.hideNodePreviews(getId().toString());
+            clearPreviewCache();
+            previewIds = List.of();
         } else if (!geometries.isEmpty()) {
+            int geometrySignature = computeGeometrySignature(geometries);
+            int optionsSignature = computeOptionsSignature();
+            boolean previewDirty = geometrySignature != cachedGeometrySignature
+                || optionsSignature != cachedOptionsSignature
+                || previewIds.isEmpty();
+
             Color parsed = Color.fromHex(fillColor);
             PreviewOptions options = new PreviewOptions()
                 .setColor(parsed.getRed(), parsed.getGreen(), parsed.getBlue())
@@ -124,9 +137,25 @@ public class PreviewGeometryNode extends BaseNode {
                 .setDuration(Math.max(1, duration));
             options.particleDensity = Math.max(8, Math.min(64, quality));
 
-            previewIds.addAll(PreviewManager.showGeometrySurfaces(getId().toString(), geometries, options));
+            if (previewDirty) {
+                List<String> refreshedIds = PreviewManager.showGeometrySurfaces(getId().toString(), geometries, options);
+                previewIds = List.copyOf(refreshedIds);
+                cachedPreviewIds = previewIds;
+                cachedGeometrySignature = geometrySignature;
+                cachedOptionsSignature = optionsSignature;
+                NodeCraft.LOGGER.info(
+                    "PreviewGeometryNode[{}] refreshed: geometries={}, previews={}, geometrySig={}, optionsSig={}",
+                    getId(),
+                    geometries.size(),
+                    previewIds.size(),
+                    geometrySignature,
+                    optionsSignature
+                );
+            }
         } else {
             PreviewManager.hideNodePreviews(getId().toString());
+            clearPreviewCache();
+            previewIds = List.of();
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, !previewIds.isEmpty());
@@ -134,6 +163,40 @@ public class PreviewGeometryNode extends BaseNode {
         outputValues.put(OUTPUT_PREVIEW_IDS_ID, List.copyOf(previewIds));
         outputValues.put(OUTPUT_PREVIEW_COUNT_ID, previewIds.size());
         outputValues.put(OUTPUT_GEOMETRY_ID, geometry);
+    }
+
+    private int computeGeometrySignature(List<GeometryData> geometries) {
+        int hash = geometries.size();
+        for (GeometryData geometry : geometries) {
+            if (geometry == null) {
+                hash = 31 * hash + 1;
+                continue;
+            }
+            hash = 31 * hash + geometry.getClass().getName().hashCode();
+            hash = 31 * hash + geometry.hashCode();
+        }
+        return hash;
+    }
+
+    private int computeOptionsSignature() {
+        int hash = 17;
+        hash = 31 * hash + Boolean.hashCode(previewEnabled);
+        hash = 31 * hash + (fillColor != null ? fillColor.hashCode() : 0);
+        hash = 31 * hash + Boolean.hashCode(showFill);
+        hash = 31 * hash + Boolean.hashCode(showOutline);
+        hash = 31 * hash + Float.floatToIntBits(transparency);
+        hash = 31 * hash + Float.floatToIntBits(lineWidth);
+        hash = 31 * hash + quality;
+        hash = 31 * hash + duration;
+        hash = 31 * hash + Double.hashCode(surfaceStripRadius);
+        hash = 31 * hash + surfaceStripSteps;
+        return hash;
+    }
+
+    private void clearPreviewCache() {
+        cachedGeometrySignature = 0;
+        cachedOptionsSignature = 0;
+        cachedPreviewIds = List.of();
     }
 
     private List<GeometryData> resolveGeometryInputs() {
@@ -250,5 +313,6 @@ public class PreviewGeometryNode extends BaseNode {
         if (map.get("surfaceStripSteps") instanceof Number value) {
             surfaceStripSteps = Math.max(1, value.intValue());
         }
+        clearPreviewCache();
     }
 }

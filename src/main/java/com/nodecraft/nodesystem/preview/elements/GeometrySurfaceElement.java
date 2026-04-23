@@ -7,11 +7,14 @@ import com.nodecraft.nodesystem.preview.PreviewRenderer;
 import com.nodecraft.nodesystem.preview.protocol.PreviewGeometryPayload;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.render.Camera;
+import net.minecraft.client.render.LightmapTextureManager;
+import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.Vec3d;
+import org.joml.Matrix4f;
 import org.joml.Vector3d;
 import org.joml.Vector3f;
 
@@ -485,40 +488,75 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         }
 
         MinecraftClient client = MinecraftClient.getInstance();
-        VertexConsumerProvider.Immediate immediate = client.getBufferBuilders().getEntityVertexConsumers();
+        VertexConsumerProvider provider = PreviewRenderer.getInstance().getActiveVertexConsumers();
+        VertexConsumerProvider.Immediate immediate = null;
+        boolean flushImmediately = false;
+        if (provider == null) {
+            immediate = client.getBufferBuilders().getEntityVertexConsumers();
+            provider = immediate;
+            flushImmediately = true;
+        }
         Vec3d cameraPos = camera.getCameraPos();
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
 
         if (showFill && !trianglesSnapshot.isEmpty()) {
-            VertexConsumer fillConsumer = immediate.getBuffer(RenderLayers.debugFilledBox());
+            VertexConsumer fillConsumer = provider.getBuffer(RenderLayers.debugFilledBox());
             for (Triangle triangle : trianglesSnapshot) {
-                addTriangle(fillConsumer, triangle, cameraPos, fillColor, alpha);
+                addTriangle(fillConsumer, matrix, triangle, cameraPos, fillColor, alpha);
             }
         }
 
         if (showOutline && !segmentsSnapshot.isEmpty()) {
-            VertexConsumer lineConsumer = immediate.getBuffer(RenderLayers.lines());
+            VertexConsumer lineConsumer = provider.getBuffer(RenderLayers.lines());
             for (Segment segment : segmentsSnapshot) {
                 addSegment(lineConsumer, segment, cameraPos, lineColor, alpha * lineAlphaScale);
             }
         }
 
-        immediate.draw();
+        if (flushImmediately && immediate != null) {
+            immediate.draw();
+        }
     }
 
-    private void addTriangle(VertexConsumer consumer, Triangle triangle, Vec3d cameraPos, Vector3f color, float alpha) {
+    private void addTriangle(
+        VertexConsumer consumer,
+        Matrix4f matrix,
+        Triangle triangle,
+        Vec3d cameraPos,
+        Vector3f color,
+        float alpha
+    ) {
         Vec3d a = triangle.a.subtract(cameraPos);
         Vec3d b = triangle.b.subtract(cameraPos);
         Vec3d c = triangle.c.subtract(cameraPos);
 
-        consumer.vertex((float) a.x, (float) a.y, (float) a.z)
+        fullBrightVertex(consumer, matrix, (float) a.x, (float) a.y, (float) a.z, color, alpha, triangle.normal);
+        fullBrightVertex(consumer, matrix, (float) b.x, (float) b.y, (float) b.z, color, alpha, triangle.normal);
+        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, triangle.normal);
+
+        // Draw both winding orders to avoid back-face culling hiding fill surfaces.
+        Vector3f opposite = new Vector3f(triangle.normal).mul(-1.0f);
+        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, opposite);
+        fullBrightVertex(consumer, matrix, (float) b.x, (float) b.y, (float) b.z, color, alpha, opposite);
+        fullBrightVertex(consumer, matrix, (float) a.x, (float) a.y, (float) a.z, color, alpha, opposite);
+    }
+
+    private void fullBrightVertex(
+        VertexConsumer consumer,
+        Matrix4f matrix,
+        float x,
+        float y,
+        float z,
+        Vector3f color,
+        float alpha,
+        Vector3f normal
+    ) {
+        consumer.vertex(matrix, x, y, z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(triangle.normal.x, triangle.normal.y, triangle.normal.z);
-        consumer.vertex((float) b.x, (float) b.y, (float) b.z)
-            .color(color.x(), color.y(), color.z(), alpha)
-            .normal(triangle.normal.x, triangle.normal.y, triangle.normal.z);
-        consumer.vertex((float) c.x, (float) c.y, (float) c.z)
-            .color(color.x(), color.y(), color.z(), alpha)
-            .normal(triangle.normal.x, triangle.normal.y, triangle.normal.z);
+            .texture(0.5f, 0.5f)
+            .overlay(OverlayTexture.DEFAULT_UV)
+            .light(LightmapTextureManager.MAX_LIGHT_COORDINATE)
+            .normal(normal.x, normal.y, normal.z);
     }
 
     private void addSegment(VertexConsumer consumer, Segment segment, Vec3d cameraPos, Vector3f color, float alpha) {
