@@ -81,6 +81,10 @@ public class GhostBlockElement extends AbstractPreviewElement {
         if (options.opacity != null) {
             this.ghostOpacity = options.opacity;
         }
+
+        // AbstractPreviewElement invokes processData(data) inside super(...), but subclass field initializers run
+        // afterwards and can reset parsed block data. Reprocess once here to keep final state consistent.
+        processData(data);
     }
     
     /**
