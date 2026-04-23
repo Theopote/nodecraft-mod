@@ -147,7 +147,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
             if (previewDirty) {
-                if (refreshPreview(context, blocksList, effectiveBlockType, trans)) {
+                if (refreshPreview(context, blocksList, effectiveBlockType, trans, color)) {
                     cachePreviewState(geometrySignature, trans, color, effectiveBlockType);
                 } else {
                     cachedPreviewBackend = null;
@@ -180,7 +180,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
         @Nullable ExecutionContext context,
         BlockPosList blocksList,
         String effectiveBlockType,
-        float trans
+        float trans,
+        String colorHex
     ) {
         try {
         if (previewBackend == PreviewBackend.TRACKED_WORLD) {
@@ -198,14 +199,17 @@ public class GeometryViewerNode extends BaseCustomUINode {
             return false;
         }
 
-        Color parsedColor = Color.fromHex(cachedColor != null ? cachedColor : previewColor);
+        String effectiveColorHex = (colorHex != null && !colorHex.isBlank()) ? colorHex.trim() : previewColor;
+        Color parsedColor = Color.fromHex(effectiveColorHex);
+        // Use "original" texture mode: matches other working ghost previews (e.g. SelectedBlockNode) and
+        // avoids solid_color + debugFilledBox batching issues in world render where nothing appeared.
         PreviewStyle style = PreviewStyle.forGhostBlocks(
             parsedColor.getRed(),
             parsedColor.getGreen(),
             parsedColor.getBlue(),
             trans,
             showOutline,
-            "solid_color",
+            "original",
             2.0f,
             0.1f,
             0
