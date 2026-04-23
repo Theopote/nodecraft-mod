@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.preview.elements;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.datatypes.*;
 import com.nodecraft.nodesystem.preview.AbstractPreviewElement;
 import com.nodecraft.nodesystem.preview.PreviewOptions;
@@ -40,6 +41,7 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
     private boolean showFill = true;
     private boolean showOutline = true;
     private float lineAlphaScale = 0.95f;
+    private volatile long lastVisibilityLogAtMs = 0L;
 
     public GeometrySurfaceElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
@@ -81,6 +83,16 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         segments = builder.segments;
         boundsCenter = builder.computeCenter();
         boundsRadius = builder.computeRadius(boundsCenter);
+        NodeCraft.LOGGER.info(
+            "GeometrySurfaceElement[{}] mesh built: triangles={}, segments={}, center=({}, {}, {}), radius={}",
+            getOwnerNodeId(),
+            triangles.size(),
+            segments.size(),
+            boundsCenter.x,
+            boundsCenter.y,
+            boundsCenter.z,
+            boundsRadius
+        );
     }
 
     private int resolveQuality() {
@@ -585,7 +597,25 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         }
         double distance = camera.getCameraPos().distanceTo(boundsCenter);
         float maxDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
-        return distance <= maxDistance + boundsRadius;
+        boolean visibleByDistance = distance <= maxDistance + boundsRadius;
+        long now = System.currentTimeMillis();
+        if (!visibleByDistance && now - lastVisibilityLogAtMs > 2000L) {
+            lastVisibilityLogAtMs = now;
+            NodeCraft.LOGGER.info(
+                "GeometrySurfaceElement[{}] shouldRender=false: distance={}, maxDistance={}, radius={}, cam=({}, {}, {}), center=({}, {}, {})",
+                getOwnerNodeId(),
+                distance,
+                maxDistance,
+                boundsRadius,
+                camera.getCameraPos().x,
+                camera.getCameraPos().y,
+                camera.getCameraPos().z,
+                boundsCenter.x,
+                boundsCenter.y,
+                boundsCenter.z
+            );
+        }
+        return visibleByDistance;
     }
 
     @Override
