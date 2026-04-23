@@ -550,15 +550,30 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         Vec3d b = triangle.b.subtract(cameraPos);
         Vec3d c = triangle.c.subtract(cameraPos);
 
-        fullBrightVertex(consumer, matrix, (float) a.x, (float) a.y, (float) a.z, color, alpha, triangle.normal);
-        fullBrightVertex(consumer, matrix, (float) b.x, (float) b.y, (float) b.z, color, alpha, triangle.normal);
-        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, triangle.normal);
+        // debugFilledBox layer is quad-oriented; write each triangle as a degenerate quad
+        // so winding and primitive boundaries stay stable for interior/exterior views.
+        emitDegenerateQuadForTriangle(consumer, matrix, a, b, c, color, alpha, triangle.normal);
 
         // Draw both winding orders to avoid back-face culling hiding fill surfaces.
         Vector3f opposite = new Vector3f(triangle.normal).mul(-1.0f);
-        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, opposite);
-        fullBrightVertex(consumer, matrix, (float) b.x, (float) b.y, (float) b.z, color, alpha, opposite);
-        fullBrightVertex(consumer, matrix, (float) a.x, (float) a.y, (float) a.z, color, alpha, opposite);
+        emitDegenerateQuadForTriangle(consumer, matrix, c, b, a, color, alpha, opposite);
+    }
+
+    private void emitDegenerateQuadForTriangle(
+        VertexConsumer consumer,
+        Matrix4f matrix,
+        Vec3d a,
+        Vec3d b,
+        Vec3d c,
+        Vector3f color,
+        float alpha,
+        Vector3f normal
+    ) {
+        fullBrightVertex(consumer, matrix, (float) a.x, (float) a.y, (float) a.z, color, alpha, normal);
+        fullBrightVertex(consumer, matrix, (float) b.x, (float) b.y, (float) b.z, color, alpha, normal);
+        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, normal);
+        // Fourth vertex duplicates the third to form a degenerate quad.
+        fullBrightVertex(consumer, matrix, (float) c.x, (float) c.y, (float) c.z, color, alpha, normal);
     }
 
     private void fullBrightVertex(
