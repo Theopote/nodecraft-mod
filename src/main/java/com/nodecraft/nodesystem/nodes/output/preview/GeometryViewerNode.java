@@ -61,7 +61,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
         public static GhostRenderMode fromState(@Nullable String value) {
             String mode = value != null ? value.trim().toLowerCase() : "";
             return switch (mode) {
-                case "original", "block_color" -> BLOCK_COLOR;
                 case "solid_color" -> SOLID_COLOR;
                 case "wireframe" -> WIREFRAME;
                 default -> BLOCK_COLOR;
@@ -270,12 +269,15 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (previewBackend == PreviewBackend.GHOST) {
             NodeCraft.LOGGER.info(
-                "GeometryViewerNode[{}] ghost request: blocks={}, blockType={}, opacity={}, outline={}",
+                "GeometryViewerNode[{}] ghost request: blocks={}, blockType={}, mode={}, opacity={}, outline={}, fillColor={}, outlineColor={}",
                 getId(),
                 payload.getBlocks().size(),
                 effectiveBlockType,
+                ghostRenderMode,
                 trans,
-                showOutline
+                showOutline,
+                effectiveColorHex,
+                effectiveOutlineColorHex
             );
         }
 
@@ -296,7 +298,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (previewBackend == PreviewBackend.GHOST) {
             NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost preview created: previewId={}", getId(), previewId);
-            statusMessage = "Previewing " + payload.getBlocks().size() + " ghost blocks";
+            statusMessage = "Previewing " + payload.getBlocks().size() + " ghost blocks (" + ghostRenderMode + ")";
         } else {
             int trackedCount = context != null && context.getWorld() != null
                 ? TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
@@ -338,7 +340,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 + TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
                 + " tracked blocks";
         }
-        return "Previewing " + lastBlockCount + " ghost blocks";
+        return "Previewing " + lastBlockCount + " ghost blocks (" + ghostRenderMode + ")";
     }
 
     private void clearAllPreviewState(@Nullable ExecutionContext context) {
@@ -376,17 +378,55 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (blocks == null || blocks.isEmpty()) {
             return 0;
         }
+        // Use an order-insensitive signature so previews don't thrash when upstream list iteration order changes.
+        int size = 0;
+        long sumX = 0L;
+        long sumY = 0L;
+        long sumZ = 0L;
+        int xorHash = 0;
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        int maxZ = Integer.MIN_VALUE;
 
-        int hash = blocks.size();
-        int i = 0;
         for (BlockPos pos : blocks) {
-            if (pos != null) {
-                hash = 31 * hash + pos.hashCode();
+            if (pos == null) {
+                continue;
             }
-            if (++i >= 5) {
-                break;
-            }
+            int x = pos.getX();
+            int y = pos.getY();
+            int z = pos.getZ();
+            size++;
+            sumX += x;
+            sumY += y;
+            sumZ += z;
+            xorHash ^= pos.hashCode();
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            minZ = Math.min(minZ, z);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            maxZ = Math.max(maxZ, z);
         }
+
+        if (size == 0) {
+            return 0;
+        }
+
+        int hash = 17;
+        hash = 31 * hash + size;
+        hash = 31 * hash + xorHash;
+        hash = 31 * hash + Long.hashCode(sumX);
+        hash = 31 * hash + Long.hashCode(sumY);
+        hash = 31 * hash + Long.hashCode(sumZ);
+        hash = 31 * hash + minX;
+        hash = 31 * hash + minY;
+        hash = 31 * hash + minZ;
+        hash = 31 * hash + maxX;
+        hash = 31 * hash + maxY;
+        hash = 31 * hash + maxZ;
         return hash;
     }
 

@@ -22,6 +22,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 幽灵方块预览元素 (完善版)
@@ -213,7 +214,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
             float maxZ = minZ + 1.0f;
 
             try {
-                float[] rgb = resolveOriginalColor(world, blockPos, blockState);
+                float[] rgb = resolveOriginalColor(world, blockPos, blockState, blockData.blockId);
                 float r = rgb[0];
                 float g = rgb[1];
                 float b = rgb[2];
@@ -226,18 +227,78 @@ public class GhostBlockElement extends AbstractPreviewElement {
         endDraw(draw);
     }
 
-    private float[] resolveOriginalColor(World world, BlockPos blockPos, BlockState blockState) {
+    private float[] resolveOriginalColor(World world, BlockPos blockPos, BlockState blockState, String blockId) {
         int color = MinecraftClient.getInstance().getBlockColors().getColor(blockState, world, blockPos, 0);
 
-        // Many blocks are not tint-driven and return -1 here. Use map color fallback instead of pure white.
-        if (color == -1) {
-            color = blockState.getMapColor(world, blockPos).color;
+        // Many blocks are not tint-driven and return -1 here.
+        if (color != -1) {
+            return rgbFromInt(color);
         }
 
+        int mapColor = blockState.getMapColor(world, blockPos).color;
+        float[] mapRgb = rgbFromInt(mapColor);
+        if (isMeaningfulColor(mapRgb)) {
+            return mapRgb;
+        }
+
+        // Final fallback for "gray/white-ish" cases: stable semantic color from block id.
+        return fallbackColorFromBlockId(blockId);
+    }
+
+    private float[] rgbFromInt(int color) {
         float r = ((color >> 16) & 0xFF) / 255.0f;
         float g = ((color >> 8) & 0xFF) / 255.0f;
         float b = (color & 0xFF) / 255.0f;
         return new float[]{r, g, b};
+    }
+
+    private boolean isMeaningfulColor(float[] rgb) {
+        float r = rgb[0];
+        float g = rgb[1];
+        float b = rgb[2];
+        float max = Math.max(r, Math.max(g, b));
+        float min = Math.min(r, Math.min(g, b));
+        float saturation = max - min;
+        // Treat near-white/near-gray map colors as low-information for BLOCK_COLOR preview.
+        return !(max > 0.80f && saturation < 0.08f);
+    }
+
+    private float[] fallbackColorFromBlockId(String blockId) {
+        String id = blockId == null ? "" : blockId.toLowerCase(Locale.ROOT);
+        if (id.contains("stone") || id.contains("deepslate") || id.contains("andesite") || id.contains("granite") || id.contains("diorite")) {
+            return new float[]{0.54f, 0.57f, 0.62f};
+        }
+        if (id.contains("wood") || id.contains("log") || id.contains("planks")) {
+            return new float[]{0.72f, 0.54f, 0.33f};
+        }
+        if (id.contains("sand") || id.contains("sandstone")) {
+            return new float[]{0.86f, 0.75f, 0.49f};
+        }
+        if (id.contains("grass") || id.contains("moss") || id.contains("leaves")) {
+            return new float[]{0.44f, 0.68f, 0.32f};
+        }
+        if (id.contains("water") || id.contains("ice")) {
+            return new float[]{0.37f, 0.63f, 0.97f};
+        }
+        if (id.contains("nether") || id.contains("crimson") || id.contains("netherrack")) {
+            return new float[]{0.66f, 0.32f, 0.32f};
+        }
+        if (id.contains("copper")) {
+            return new float[]{0.74f, 0.51f, 0.34f};
+        }
+
+        // Deterministic palette fallback by hash, to avoid all-gray blocks.
+        int idx = Math.floorMod(id.hashCode(), 8);
+        return switch (idx) {
+            case 0 -> new float[]{0.48f, 0.64f, 0.97f};
+            case 1 -> new float[]{0.62f, 0.81f, 0.42f};
+            case 2 -> new float[]{0.90f, 0.69f, 0.41f};
+            case 3 -> new float[]{0.95f, 0.47f, 0.56f};
+            case 4 -> new float[]{0.73f, 0.60f, 0.97f};
+            case 5 -> new float[]{0.45f, 0.83f, 0.79f};
+            case 6 -> new float[]{0.76f, 0.79f, 0.96f};
+            default -> new float[]{0.89f, 0.75f, 0.48f};
+        };
     }
     
     /**
@@ -254,8 +315,8 @@ public class GhostBlockElement extends AbstractPreviewElement {
                                   float maxRenderDistance) {
         Vec3d cameraPos = camera.getCameraPos();
         MinecraftClient client = MinecraftClient.getInstance();
-        DrawContext draw = beginDraw(client);
-        VertexConsumer fillConsumer = draw.provider().getBuffer(RenderLayers.debugFilledBox());
+        DrawContext fillDraw = beginDraw(client);
+        VertexConsumer fillConsumer = fillDraw.provider().getBuffer(RenderLayers.debugFilledBox());
         Matrix4f matrix = matrices.peek().getPositionMatrix();
 
         float r = fillColor.x();
@@ -283,10 +344,12 @@ public class GhostBlockElement extends AbstractPreviewElement {
 
             drawFilledAxisAlignedBox(fillConsumer, matrix, minX, minY, minZ, maxX, maxY, maxZ, r, g, b, opacity);
         }
+        endDraw(fillDraw);
 
         // Pass 2: outlines (optional)
         if (showOutline) {
-            VertexConsumer outlineConsumer = draw.provider().getBuffer(RenderLayers.lines());
+            DrawContext outlineDraw = beginDraw(client);
+            VertexConsumer outlineConsumer = outlineDraw.provider().getBuffer(RenderLayers.lines());
             float outlineAlpha = Math.min(1.0f, opacity * 0.95f);
             for (BlockData blockData : blocksSnapshot) {
                 double distance = cameraPos.distanceTo(blockData.position);
@@ -321,9 +384,8 @@ public class GhostBlockElement extends AbstractPreviewElement {
                     outlineAlpha
                 );
             }
+            endDraw(outlineDraw);
         }
-
-        endDraw(draw);
     }
     
     /**
