@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.input.type_selectors;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -69,8 +70,10 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     private transient ImString searchBuffer = new ImString(256);
     private transient volatile List<String> allBlocks = new ArrayList<>();
     private transient volatile List<String> filteredBlocks = new ArrayList<>();
-    private transient volatile boolean searchFromModdedOnly = false;
+    private transient volatile boolean minecraftOnly = false;
     private transient volatile int currentPage = 0;
+    private transient volatile boolean blockRegistryReady = true;
+    private transient volatile boolean registryErrorLogged = false;
 
     public BlockTypeSelectorNode() {
         super(UUID.randomUUID(), "input.type_selectors.block_type_selector");
@@ -119,15 +122,18 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
                 layout.pushFramePadding(4.0f, 3.0f);
                 layout.setItemWidth(availableWidth / zoom);
-                String compactLabel = buildCompactLabel();
-                if (ImGui.button(compactLabel + "##open_block_picker", availableWidth / zoom, 0)) {
-                    ensureBlockCatalogReady();
-                    updateFilteredList(searchBuffer.get());
-                    openScopedPopup(BLOCK_PICKER_POPUP_KEY);
+                try {
+                    String compactLabel = buildCompactLabel();
+                    if (ImGui.button(compactLabel + "##open_block_picker", availableWidth / zoom, 0)) {
+                        ensureBlockCatalogReady();
+                        updateFilteredList(searchBuffer.get());
+                        openScopedPopup(BLOCK_PICKER_POPUP_KEY);
+                    }
+                } finally {
+                    layout.popItemWidth();
+                    layout.popStyleVar();
                 }
 
-                layout.popItemWidth();
-                layout.popStyleVar();
                 if (renderBlockPickerPopup()) {
                     changed = true;
                 }
@@ -158,12 +164,12 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
             ImGui.sameLine();
             if (ImGui.smallButton("All##scope_all")) {
-                searchFromModdedOnly = false;
+                minecraftOnly = false;
                 updateFilteredList(searchBuffer.get());
             }
             ImGui.sameLine();
             if (ImGui.smallButton("Minecraft##scope_vanilla")) {
-                searchFromModdedOnly = true;
+                minecraftOnly = true;
                 updateFilteredList(searchBuffer.get());
             }
 
@@ -193,7 +199,11 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             ImGui.text(String.format("Results: %d", total));
             if (ImGui.beginChild("##block_picker_list", 0, -ImGui.getFrameHeightWithSpacing() * 2, true, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
                 if (snapshot.isEmpty()) {
-                    ImGui.textDisabled("No blocks found");
+                    if (!blockRegistryReady) {
+                        ImGui.textDisabled("Block registry not ready");
+                    } else {
+                        ImGui.textDisabled("No blocks found");
+                    }
                 } else {
                     for (int i = start; i < end; i++) {
                         String blockId = snapshot.get(i);
@@ -258,6 +268,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     private void ensureBlockCatalogReady() {
         if (!allBlocks.isEmpty()) {
+            blockRegistryReady = true;
             return;
         }
         List<String> collected = new ArrayList<>();
@@ -266,8 +277,16 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 collected.add(id.toString());
             }
             collected.sort(Comparator.naturalOrder());
+            blockRegistryReady = !collected.isEmpty();
+            if (blockRegistryReady) {
+                registryErrorLogged = false;
+            }
         } catch (Exception ignored) {
-            // Registry may not be ready yet.
+            blockRegistryReady = false;
+            if (!registryErrorLogged) {
+                NodeCraft.LOGGER.warn("Block registry is not ready for BlockTypeSelectorNode yet.");
+                registryErrorLogged = true;
+            }
         }
         allBlocks = collected;
     }
@@ -284,7 +303,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             if (!allowModded && !isMinecraft) {
                 continue;
             }
-            if (searchFromModdedOnly && !isMinecraft) {
+            if (minecraftOnly && !isMinecraft) {
                 continue;
             }
             if (searchText.isEmpty() || fullId.toLowerCase(Locale.ROOT).contains(searchText)) {
@@ -298,7 +317,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 if (!allowModded && !isMinecraft) {
                     continue;
                 }
-                if (searchFromModdedOnly && !isMinecraft) {
+                if (minecraftOnly && !isMinecraft) {
                     continue;
                 }
                 if (searchText.isEmpty() || quickBlock.toLowerCase(Locale.ROOT).contains(searchText)) {
@@ -312,13 +331,60 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     }
 
     public void setSelectedBlock(String blockId) {
-        if (blockId == null || blockId.isEmpty()) {
-            blockId = "minecraft:stone";
+        String nextBlockId = sanitizeBlockId(blockId);
+
+        if (!allowModded && !nextBlockId.startsWith("minecraft:")) {
+            nextBlockId = "minecraft:stone";
         }
-        if (!this.selectedBlock.equals(blockId)) {
-            this.selectedBlock = blockId;
+
+        if (!isKnownBlockId(nextBlockId)) {
+            nextBlockId = "minecraft:stone";
+        }
+
+        if (!this.selectedBlock.equals(nextBlockId)) {
+            this.selectedBlock = nextBlockId;
             updateOutputs();
             markDirty();
+        }
+    }
+
+    private String sanitizeBlockId(String blockId) {
+        if (blockId == null) {
+            return "minecraft:stone";
+        }
+        String normalized = blockId.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            return "minecraft:stone";
+        }
+        if (!normalized.contains(":")) {
+            normalized = "minecraft:" + normalized;
+        }
+        return normalized;
+    }
+
+    private boolean isKnownBlockId(String blockId) {
+        if ("minecraft:stone".equals(blockId)) {
+            return true;
+        }
+
+        ensureBlockCatalogReady();
+        if (!allBlocks.isEmpty()) {
+            return allBlocks.contains(blockId);
+        }
+
+        try {
+            Identifier id = Identifier.tryParse(blockId);
+            if (id == null) {
+                return false;
+            }
+
+            // 注册表可能在极早期尚未完全可用，此时不强制判定为未知，避免误降级。
+            if (Registries.BLOCK.getIds().isEmpty()) {
+                return true;
+            }
+            return Registries.BLOCK.containsId(id);
+        } catch (Exception ignored) {
+            return false;
         }
     }
 
