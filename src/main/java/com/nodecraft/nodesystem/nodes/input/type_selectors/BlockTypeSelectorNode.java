@@ -114,9 +114,8 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     @Override
     protected float calculateUIHeight() {
+        // 与 renderCustomUIScaled 一致：仅上下边距 + 单行按钮（无独立标题行）
         float height = getMediumPadding();
-        height += ImGui.getTextLineHeight();
-        height += getSmallPadding();
         height += ImGui.getFrameHeight();
         height += getMediumPadding();
         return height;
@@ -124,7 +123,8 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     @Override
     protected float calculateMinUIWidth() {
-        return 184f + getContentMargin();
+        // 与 Text Input 等节点同量级，保证缩小时仍有稳定内容区宽度（逻辑单位）
+        return 200f;
     }
 
     @Override
@@ -133,20 +133,24 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             boolean changed = false;
 
             try {
-                float availableWidth = getAvailableContentWidth(width, zoom);
+                // 与 TextInputNode 一致：在像素空间内算可用宽度，避免 getAvailableContentWidth(像素) 再 /zoom
+                // 又经 LayoutHelper.setItemWidth 二次缩放导致缩放画布时按钮宽度飘忽
+                float edgeMargin = layout.toPixels(getSmallPadding());
+                float availableWidth = Math.max(0.0f, layout.toPixelsExact(width) - edgeMargin * 2.0f);
+                float baseCursorX = ImGui.getCursorPosX();
+
                 layout.addVerticalSpacing(getMediumPadding());
+                ImGui.setCursorPosX(baseCursorX + edgeMargin);
 
                 layout.pushFramePadding(4.0f, 3.0f);
-                layout.setItemWidth(availableWidth / zoom);
                 try {
                     String compactLabel = buildCompactLabel();
-                    if (ImGui.button(compactLabel + "##open_block_picker", availableWidth / zoom, 0)) {
+                    if (ImGui.button(compactLabel + "##open_block_picker", availableWidth, 0)) {
                         ensureBlockCatalogReady();
                         updateFilteredList(searchBuffer.get());
                         openScopedPopup(BLOCK_PICKER_POPUP_KEY);
                     }
                 } finally {
-                    layout.popItemWidth();
                     layout.popStyleVar();
                 }
 
