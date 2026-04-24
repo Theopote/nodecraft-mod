@@ -42,8 +42,12 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             "minecraft:quartz_block"
     };
     private static final int POPUP_PAGE_SIZE = 18;
-    private static final float POPUP_WIDTH = 400.0f;
-    private static final float POPUP_HEIGHT = 500.0f;
+    /** 弹窗推荐尺寸（每次打开时用 Appearing 应用，避免 ini 里残留过小的窗口） */
+    private static final float POPUP_WIDTH = 560.0f;
+    private static final float POPUP_HEIGHT = 620.0f;
+    /** 弹窗最小尺寸，防止分类 + 列表被压到不可见 */
+    private static final float POPUP_MIN_WIDTH = 440.0f;
+    private static final float POPUP_MIN_HEIGHT = 480.0f;
     private static final String BLOCK_PICKER_POPUP_KEY = "block_picker";
     private static final String CATEGORY_ALL = "all";
     private static final String CATEGORY_STONE = "stone";
@@ -159,7 +163,9 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     private boolean renderBlockPickerPopup() {
         boolean changed = false;
-        ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_HEIGHT, imgui.flag.ImGuiCond.FirstUseEver);
+        // 限制最小窗口，避免分类/快捷栏把列表挤没；Appearing 在每次弹出时给足默认尺寸
+        ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
+        ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_HEIGHT, imgui.flag.ImGuiCond.Appearing);
         if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY)) {
             return false;
         }
@@ -187,16 +193,8 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             renderCategorySelector();
             ImGui.separator();
 
-            for (int i = 0; i < QUICK_BLOCKS.length; i++) {
-                String quickBlock = QUICK_BLOCKS[i];
-                String quickLabel = quickBlock.split(":", 2)[1];
-                if (i > 0 && i % 4 != 0) {
-                    ImGui.sameLine();
-                }
-                if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
-                    setSelectedBlock(quickBlock);
-                    changed = true;
-                }
+            if (renderQuickBlockStrip()) {
+                changed = true;
             }
 
             ImGui.separator();
@@ -210,7 +208,13 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             int end = Math.min(start + POPUP_PAGE_SIZE, total);
 
             ImGui.text(String.format("Results: %d", total));
-            if (ImGui.beginChild("##block_picker_list", 0, -ImGui.getFrameHeightWithSpacing() * 2, true, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+            // 用剩余可用高度显式分配列表区，避免负高度在头部内容变多时算错导致列表被压扁
+            float footerReserve = ImGui.getFrameHeightWithSpacing() + ImGui.getStyle().getItemSpacingY() * 2.0f;
+            float listHeight = ImGui.getContentRegionAvail().y - footerReserve;
+            listHeight = Math.max(160.0f, listHeight);
+            float listWidth = ImGui.getContentRegionAvail().x;
+            ImGui.beginChild("##block_picker_list", listWidth, listHeight, true, ImGuiWindowFlags.AlwaysVerticalScrollbar);
+            try {
                 if (snapshot.isEmpty()) {
                     if (!blockRegistryReady) {
                         ImGui.textDisabled("Block registry not ready");
@@ -231,6 +235,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                         }
                     }
                 }
+            } finally {
                 ImGui.endChild();
             }
 
@@ -276,12 +281,15 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         };
 
         ImGui.text("Category:");
+        float stripHeight = ImGui.getFrameHeightWithSpacing() + ImGui.getStyle().getFramePadding().y * 2.0f + 2.0f;
+        float stripWidth = ImGui.getContentRegionAvail().x;
+        ImGui.beginChild("##block_cat_strip", stripWidth, stripHeight, false, ImGuiWindowFlags.HorizontalScrollbar);
         for (int i = 0; i < categories.length; i++) {
-            String categoryKey = categories[i][0];
-            String categoryLabel = categories[i][1];
-            if (i > 0 && i % 3 != 0) {
+            if (i > 0) {
                 ImGui.sameLine();
             }
+            String categoryKey = categories[i][0];
+            String categoryLabel = categories[i][1];
 
             boolean isSelected = categoryKey.equals(selectedCategory);
             if (isSelected) {
@@ -296,6 +304,29 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 ImGui.popStyleColor(2);
             }
         }
+        ImGui.endChild();
+    }
+
+    /** 单行横向滚动，避免窄窗口下换行把列表区挤没 */
+    private boolean renderQuickBlockStrip() {
+        boolean quickChanged = false;
+        ImGui.text("Quick:");
+        float stripHeight = ImGui.getFrameHeightWithSpacing() + ImGui.getStyle().getFramePadding().y * 2.0f + 2.0f;
+        float stripWidth = ImGui.getContentRegionAvail().x;
+        ImGui.beginChild("##block_quick_strip", stripWidth, stripHeight, false, ImGuiWindowFlags.HorizontalScrollbar);
+        for (int i = 0; i < QUICK_BLOCKS.length; i++) {
+            if (i > 0) {
+                ImGui.sameLine();
+            }
+            String quickBlock = QUICK_BLOCKS[i];
+            String quickLabel = quickBlock.split(":", 2)[1];
+            if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
+                setSelectedBlock(quickBlock);
+                quickChanged = true;
+            }
+        }
+        ImGui.endChild();
+        return quickChanged;
     }
 
     private String buildCompactLabel() {
