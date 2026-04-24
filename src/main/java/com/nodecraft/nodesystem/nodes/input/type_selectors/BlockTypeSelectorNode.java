@@ -169,14 +169,13 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         // 限制最小窗口，避免分类/快捷栏把列表挤没；Appearing 在每次弹出时给足默认尺寸
         ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
         ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_HEIGHT, imgui.flag.ImGuiCond.Appearing);
-        if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY)) {
-            return false;
-        }
-
+        // WindowPadding 必须在 BeginPopup 之前 push，否则弹窗已按默认 padding 创建，内容会紧贴左/上边缘
+        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 8.0f, 8.0f);
+        ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 8.0f, 8.0f);
         try {
-            // 与面板边缘留出足够边距；略增控件间距，避免贴边观感
-            ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 16.0f, 14.0f);
-            ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 8.0f, 8.0f);
+            if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY)) {
+                return false;
+            }
             try {
             ImGui.text("Select Block");
             ImGui.separator();
@@ -257,10 +256,10 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 ImGui.closeCurrentPopup();
             }
             } finally {
-                ImGui.popStyleVar(2);
+                endScopedPopup();
             }
         } finally {
-            endScopedPopup();
+            ImGui.popStyleVar(2);
         }
         return changed;
     }
