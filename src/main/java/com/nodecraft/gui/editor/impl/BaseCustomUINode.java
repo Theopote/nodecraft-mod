@@ -1632,7 +1632,18 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
      * @return true 表示 Popup 已打开并进入渲染作用域
      */
     protected final boolean beginScopedPopup(String popupKey) {
-        return ImGui.beginPopup(buildScopedPopupId(popupKey));
+        return beginScopedPopup(popupKey, 0);
+    }
+
+    /**
+     * 开始渲染当前节点作用域下的 Popup（可附加 ImGui 窗口标志，例如 {@code ImGuiWindowFlags.AlwaysAutoResize}）。
+     *
+     * @param popupKey 弹层业务键
+     * @param windowFlags Dear ImGui 窗口标志；无额外需求时传 {@code 0}
+     * @return true 表示 Popup 已打开并进入渲染作用域
+     */
+    protected final boolean beginScopedPopup(String popupKey, int windowFlags) {
+        return ImGui.beginPopup(buildScopedPopupId(popupKey), windowFlags);
     }
 
     /**

@@ -47,7 +47,6 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     private static final int POPUP_PAGE_SIZE = 18;
     /** 弹窗推荐尺寸（每次打开时用 Appearing 应用，避免 ini 里残留过小的窗口） */
     private static final float POPUP_WIDTH = 440.0f;
-    private static final float POPUP_HEIGHT = 600.0f;
     /** 弹窗最小尺寸，防止分类 + 列表被压到不可见 */
     private static final float POPUP_MIN_WIDTH = 380.0f;
     private static final float POPUP_MIN_HEIGHT = 480.0f;
@@ -168,12 +167,13 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         boolean changed = false;
         // 限制最小窗口，避免分类/快捷栏把列表挤没；Appearing 在每次弹出时给足默认尺寸
         ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
-        ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_HEIGHT, imgui.flag.ImGuiCond.Appearing);
+        // 固定宽度；高度由内容决定（AlwaysAutoResize），避免固定 600px 时底部大块空白
+        ImGui.setNextWindowSize(POPUP_WIDTH, 0.0f, imgui.flag.ImGuiCond.Appearing);
         // WindowPadding 必须在 BeginPopup 之前 push，否则弹窗已按默认 padding 创建，内容会紧贴左/上边缘
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 8.0f, 8.0f);
         ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 8.0f, 8.0f);
         try {
-            if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY)) {
+            if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY, ImGuiWindowFlags.AlwaysAutoResize)) {
                 return false;
             }
             try {
