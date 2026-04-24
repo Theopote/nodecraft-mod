@@ -1603,6 +1603,45 @@ public abstract class BaseCustomUINode extends BaseNode implements ICustomUINode
         return getImGuiId();
     }
 
+    /**
+     * 构建带节点作用域的 Popup ID，避免不同节点实例之间的 ID 冲突。
+     *
+     * @param popupKey 弹层业务键，例如 "block_picker"
+     * @return 当前节点作用域内唯一的 Popup ID
+     */
+    protected final String buildScopedPopupId(String popupKey) {
+        if (popupKey == null || popupKey.isBlank()) {
+            throw new IllegalArgumentException("popupKey cannot be null or blank");
+        }
+        return popupKey + "_" + getCurrentImGuiId();
+    }
+
+    /**
+     * 打开当前节点作用域下的 Popup。
+     *
+     * @param popupKey 弹层业务键
+     */
+    protected final void openScopedPopup(String popupKey) {
+        ImGui.openPopup(buildScopedPopupId(popupKey));
+    }
+
+    /**
+     * 开始渲染当前节点作用域下的 Popup。
+     *
+     * @param popupKey 弹层业务键
+     * @return true 表示 Popup 已打开并进入渲染作用域
+     */
+    protected final boolean beginScopedPopup(String popupKey) {
+        return ImGui.beginPopup(buildScopedPopupId(popupKey));
+    }
+
+    /**
+     * 结束当前节点作用域下的 Popup 渲染。
+     */
+    protected final void endScopedPopup() {
+        ImGui.endPopup();
+    }
+
     protected final void regenerateImGuiId() {
         cachedImGuiId = null;
         if (isImGuiIdDebugEnabled()) {

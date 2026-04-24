@@ -7,14 +7,17 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
-import imgui.flag.ImGuiCol;
+import imgui.flag.ImGuiInputTextFlags;
+import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImString;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -28,15 +31,19 @@ import java.util.UUID;
 public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     private static final String[] QUICK_BLOCKS = {
-        "minecraft:stone",
-        "minecraft:cobblestone",
-        "minecraft:stone_bricks",
-        "minecraft:polished_andesite",
-        "minecraft:smooth_stone",
-        "minecraft:glass",
-        "minecraft:oak_planks",
-        "minecraft:quartz_block"
+            "minecraft:stone",
+            "minecraft:cobblestone",
+            "minecraft:stone_bricks",
+            "minecraft:polished_andesite",
+            "minecraft:smooth_stone",
+            "minecraft:glass",
+            "minecraft:oak_planks",
+            "minecraft:quartz_block"
     };
+    private static final int POPUP_PAGE_SIZE = 18;
+    private static final float POPUP_WIDTH = 400.0f;
+    private static final float POPUP_HEIGHT = 500.0f;
+    private static final String BLOCK_PICKER_POPUP_KEY = "block_picker";
 
     @NodeProperty(
         displayName = "Selected Block",
@@ -60,11 +67,10 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     private static final String OUTPUT_IS_MODDED = "output_is_modded";
 
     private transient ImString searchBuffer = new ImString(256);
+    private transient volatile List<String> allBlocks = new ArrayList<>();
     private transient volatile List<String> filteredBlocks = new ArrayList<>();
-    private transient volatile boolean showDropdown = false;
-    private transient volatile String lastSearchText = "";
-
-    private static final int MAX_RESULTS = 20;
+    private transient volatile boolean searchFromModdedOnly = false;
+    private transient volatile int currentPage = 0;
 
     public BlockTypeSelectorNode() {
         super(UUID.randomUUID(), "input.type_selectors.block_type_selector");
@@ -93,11 +99,6 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         height += ImGui.getTextLineHeight();
         height += getSmallPadding();
         height += ImGui.getFrameHeight();
-        height += getSmallPadding();
-        if (showDropdown) {
-            height += Math.min(filteredBlocks.size(), MAX_RESULTS) * ImGui.getTextLineHeightWithSpacing();
-            height += getSmallPadding();
-        }
         height += getMediumPadding();
         return height;
     }
@@ -116,84 +117,19 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 float availableWidth = getAvailableContentWidth(width, zoom);
                 layout.addVerticalSpacing(getMediumPadding());
 
-                ImGui.text("Common:");
-                for (int i = 0; i < QUICK_BLOCKS.length; i++) {
-                    String quickBlock = QUICK_BLOCKS[i];
-                    String quickLabel = quickBlock.split(":", 2)[1];
-                    if (i > 0 && i % 2 != 0) {
-                        ImGui.sameLine();
-                    }
-                    if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
-                        setSelectedBlock(quickBlock);
-                        searchBuffer.set("");
-                        filteredBlocks = new ArrayList<>();
-                        showDropdown = false;
-                        lastSearchText = "";
-                        changed = true;
-                    }
-                }
-
-                layout.addVerticalSpacing(getSmallPadding());
-
                 layout.pushFramePadding(4.0f, 3.0f);
                 layout.setItemWidth(availableWidth / zoom);
-
-                if (ImGui.inputTextWithHint("##block_search", "Search blocks...", searchBuffer)) {
-                    String searchText = searchBuffer.get().trim().toLowerCase();
-                    if (!searchText.equals(lastSearchText)) {
-                        lastSearchText = searchText;
-                        updateFilteredList(searchText);
-                        showDropdown = !searchText.isEmpty();
-                    }
-                }
-
-                if (ImGui.isItemActivated() && !searchBuffer.get().isEmpty()) {
-                    showDropdown = true;
+                String compactLabel = buildCompactLabel();
+                if (ImGui.button(compactLabel + "##open_block_picker", availableWidth / zoom, 0)) {
+                    ensureBlockCatalogReady();
+                    updateFilteredList(searchBuffer.get());
+                    openScopedPopup(BLOCK_PICKER_POPUP_KEY);
                 }
 
                 layout.popItemWidth();
                 layout.popStyleVar();
-
-                layout.addVerticalSpacing(getSmallPadding());
-
-                List<String> filteredSnapshot = filteredBlocks;
-                if (showDropdown && !filteredSnapshot.isEmpty()) {
-                    ImGui.pushStyleColor(ImGuiCol.ChildBg, 0.15f, 0.15f, 0.18f, 0.95f);
-
-                    int displayCount = Math.min(filteredSnapshot.size(), MAX_RESULTS);
-                    for (int i = 0; i < displayCount; i++) {
-                        String blockId = filteredSnapshot.get(i);
-                        String blockPath = blockId.contains(":") ? blockId.split(":", 2)[1] : blockId;
-
-                        boolean isSelected = blockId.equals(selectedBlock);
-                        if (isSelected) {
-                            ImGui.pushStyleColor(ImGuiCol.Text, 0.3f, 0.9f, 0.5f, 1.0f);
-                        }
-
-                        if (ImGui.selectable("  " + blockPath + "##" + i, isSelected)) {
-                            setSelectedBlock(blockId);
-                            searchBuffer.set("");
-                            showDropdown = false;
-                            lastSearchText = "";
-                            changed = true;
-                        }
-
-                        if (isSelected) {
-                            ImGui.popStyleColor();
-                        }
-
-                        if (ImGui.isItemHovered()) {
-                            ImGui.setTooltip(blockId);
-                        }
-                    }
-
-                    if (filteredSnapshot.size() > MAX_RESULTS) {
-                        ImGui.pushStyleColor(ImGuiCol.Text, 0.5f, 0.5f, 0.5f, 1.0f);
-                        ImGui.text("  ... " + (filteredSnapshot.size() - MAX_RESULTS) + " more");
-                        ImGui.popStyleColor();
-                    }
-
-                    ImGui.popStyleColor();
+                if (renderBlockPickerPopup()) {
+                    changed = true;
                 }
 
                 layout.addVerticalSpacing(getMediumPadding());
@@ -205,40 +141,174 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         });
     }
 
-    private void updateFilteredList(String searchText) {
-        List<String> nextFilteredBlocks = new ArrayList<>();
-        if (searchText.isEmpty()) {
-            for (String quickBlock : QUICK_BLOCKS) {
-                if (allowModded || quickBlock.startsWith("minecraft:")) {
-                    nextFilteredBlocks.add(quickBlock);
-                }
-            }
-            filteredBlocks = nextFilteredBlocks;
-            invalidateCache();
-            return;
+    private boolean renderBlockPickerPopup() {
+        boolean changed = false;
+        ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_HEIGHT, imgui.flag.ImGuiCond.FirstUseEver);
+        if (!beginScopedPopup(BLOCK_PICKER_POPUP_KEY)) {
+            return false;
         }
 
         try {
-            for (Identifier id : Registries.BLOCK.getIds()) {
-                String fullId = id.toString();
-                if (!allowModded && !id.getNamespace().equals("minecraft")) {
-                    continue;
-                }
+            ImGui.text("Select Block");
+            ImGui.separator();
 
-                if (fullId.contains(searchText) || id.getPath().contains(searchText)) {
-                    nextFilteredBlocks.add(fullId);
-                    if (nextFilteredBlocks.size() >= MAX_RESULTS * 2) {
-                        break;
-                    }
+            if (ImGui.inputTextWithHint("##block_picker_search", "Search block id...", searchBuffer, ImGuiInputTextFlags.None)) {
+                updateFilteredList(searchBuffer.get());
+            }
+
+            ImGui.sameLine();
+            if (ImGui.smallButton("All##scope_all")) {
+                searchFromModdedOnly = false;
+                updateFilteredList(searchBuffer.get());
+            }
+            ImGui.sameLine();
+            if (ImGui.smallButton("Minecraft##scope_vanilla")) {
+                searchFromModdedOnly = true;
+                updateFilteredList(searchBuffer.get());
+            }
+
+            ImGui.separator();
+            for (int i = 0; i < QUICK_BLOCKS.length; i++) {
+                String quickBlock = QUICK_BLOCKS[i];
+                String quickLabel = quickBlock.split(":", 2)[1];
+                if (i > 0 && i % 4 != 0) {
+                    ImGui.sameLine();
+                }
+                if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
+                    setSelectedBlock(quickBlock);
+                    changed = true;
                 }
             }
+
+            ImGui.separator();
+            List<String> snapshot = filteredBlocks;
+            int total = snapshot.size();
+            int totalPages = Math.max(1, (int) Math.ceil(total / (float) POPUP_PAGE_SIZE));
+            if (currentPage >= totalPages) {
+                currentPage = totalPages - 1;
+            }
+            int start = currentPage * POPUP_PAGE_SIZE;
+            int end = Math.min(start + POPUP_PAGE_SIZE, total);
+
+            ImGui.text(String.format("Results: %d", total));
+            if (ImGui.beginChild("##block_picker_list", 0, -ImGui.getFrameHeightWithSpacing() * 2, true, ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+                if (snapshot.isEmpty()) {
+                    ImGui.textDisabled("No blocks found");
+                } else {
+                    for (int i = start; i < end; i++) {
+                        String blockId = snapshot.get(i);
+                        boolean isSelected = blockId.equals(selectedBlock);
+                        String selectableLabel = buildSelectableLabel(blockId);
+                        if (ImGui.selectable(selectableLabel + "##block_" + i, isSelected)) {
+                            setSelectedBlock(blockId);
+                            changed = true;
+                        }
+                        if (ImGui.isItemHovered()) {
+                            ImGui.setTooltip(blockId);
+                        }
+                    }
+                }
+                ImGui.endChild();
+            }
+
+            boolean canPrev = currentPage > 0;
+            boolean canNext = currentPage + 1 < totalPages;
+            if (!canPrev) ImGui.beginDisabled();
+            if (ImGui.button("< Prev##block_page_prev")) {
+                currentPage--;
+            }
+            if (!canPrev) ImGui.endDisabled();
+
+            ImGui.sameLine();
+            ImGui.text(String.format("Page %d / %d", currentPage + 1, totalPages));
+            ImGui.sameLine();
+
+            if (!canNext) ImGui.beginDisabled();
+            if (ImGui.button("Next >##block_page_next")) {
+                currentPage++;
+            }
+            if (!canNext) ImGui.endDisabled();
+
+            ImGui.sameLine();
+            if (ImGui.button("Close##close_block_picker")) {
+                ImGui.closeCurrentPopup();
+            }
+        } finally {
+            endScopedPopup();
+        }
+        return changed;
+    }
+
+    private String buildCompactLabel() {
+        String display = selectedBlock;
+        if (display.length() > 26) {
+            display = display.substring(0, 23) + "...";
+        }
+        return "[" + display + " v]";
+    }
+
+    private String buildSelectableLabel(String blockId) {
+        String[] parts = blockId.split(":", 2);
+        if (parts.length < 2) {
+            return blockId;
+        }
+        String prefix = "minecraft".equals(parts[0]) ? "[MC]" : "[MOD]";
+        return prefix + " " + parts[1];
+    }
+
+    private void ensureBlockCatalogReady() {
+        if (!allBlocks.isEmpty()) {
+            return;
+        }
+        List<String> collected = new ArrayList<>();
+        try {
+            for (Identifier id : Registries.BLOCK.getIds()) {
+                collected.add(id.toString());
+            }
+            collected.sort(Comparator.naturalOrder());
         } catch (Exception ignored) {
             // Registry may not be ready yet.
         }
+        allBlocks = collected;
+    }
 
+    private void updateFilteredList(String searchTextRaw) {
+        ensureBlockCatalogReady();
+
+        String searchText = searchTextRaw == null ? "" : searchTextRaw.trim().toLowerCase(Locale.ROOT);
+        List<String> nextFilteredBlocks = new ArrayList<>();
+
+        List<String> source = allBlocks;
+        for (String fullId : source) {
+            boolean isMinecraft = fullId.startsWith("minecraft:");
+            if (!allowModded && !isMinecraft) {
+                continue;
+            }
+            if (searchFromModdedOnly && !isMinecraft) {
+                continue;
+            }
+            if (searchText.isEmpty() || fullId.toLowerCase(Locale.ROOT).contains(searchText)) {
+                nextFilteredBlocks.add(fullId);
+            }
+        }
+
+        for (String quickBlock : QUICK_BLOCKS) {
+            if (!nextFilteredBlocks.contains(quickBlock)) {
+                boolean isMinecraft = quickBlock.startsWith("minecraft:");
+                if (!allowModded && !isMinecraft) {
+                    continue;
+                }
+                if (searchFromModdedOnly && !isMinecraft) {
+                    continue;
+                }
+                if (searchText.isEmpty() || quickBlock.toLowerCase(Locale.ROOT).contains(searchText)) {
+                    nextFilteredBlocks.add(quickBlock);
+                }
+            }
+        }
+
+        currentPage = 0;
         filteredBlocks = nextFilteredBlocks;
-
-        invalidateCache();
     }
 
     public void setSelectedBlock(String blockId) {
@@ -280,6 +350,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         if (!allowModded && !selectedBlock.startsWith("minecraft:")) {
             setSelectedBlock("minecraft:stone");
         }
+        updateFilteredList(searchBuffer.get());
     }
 
     @Override
