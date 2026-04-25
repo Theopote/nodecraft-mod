@@ -64,7 +64,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     /** 区块之间的垂直留白 */
     private static final float POPUP_SECTION_GAP = 2.0f;
     /** 列表与底栏（分页+关闭）之间的预留 */
-    private static final float POPUP_LIST_FOOTER_EXTRA = 2.0f;
+    private static final float POPUP_LIST_FOOTER_EXTRA = 0.0f;
     private static final String OPEN_BUTTON_SUFFIX = " v]";
     private static final String OPEN_BUTTON_PREFIX = "[";
     private static final String ELLIPSIS = "...";
@@ -231,7 +231,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
             ImGui.text(String.format("Results: %d", total));
             // 用剩余可用高度显式分配列表区，避免负高度在头部内容变多时算错导致列表被压扁
-            float footerReserve = ImGui.getFrameHeightWithSpacing() + ImGui.getStyle().getItemSpacingY() + POPUP_LIST_FOOTER_EXTRA;
+            float footerReserve = ImGui.getFrameHeightWithSpacing() + POPUP_LIST_FOOTER_EXTRA;
             float listHeight = ImGui.getContentRegionAvail().y - footerReserve;
             listHeight = Math.max(160.0f, listHeight);
             float listWidth = ImGui.getContentRegionAvail().x;
