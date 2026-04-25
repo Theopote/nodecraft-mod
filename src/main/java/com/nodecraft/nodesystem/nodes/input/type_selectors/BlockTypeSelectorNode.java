@@ -45,11 +45,15 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             "minecraft:quartz_block"
     };
     private static final int POPUP_PAGE_SIZE = 18;
-    /** 弹窗推荐尺寸（每次打开时用 Appearing 应用，避免 ini 里残留过小的窗口） */
-    private static final float POPUP_WIDTH = 440.0f;
     /** 弹窗最小尺寸，防止分类 + 列表被压到不可见 */
     private static final float POPUP_MIN_WIDTH = 380.0f;
     private static final float POPUP_MIN_HEIGHT = 480.0f;
+    /** 弹窗内边距与控件间距（略小于默认，布局更紧凑） */
+    private static final float POPUP_WINDOW_PADDING = 5.0f;
+    private static final float POPUP_ITEM_SPACING_X = 4.0f;
+    private static final float POPUP_ITEM_SPACING_Y = 3.0f;
+    /** 区块之间的垂直留白（替代粗 separator） */
+    private static final float POPUP_SECTION_GAP = 3.0f;
     private static final String BLOCK_PICKER_POPUP_KEY = "block_picker";
     private static final String CATEGORY_ALL = "all";
     private static final String CATEGORY_STONE = "stone";
@@ -169,28 +173,30 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
     private boolean renderBlockPickerPopup() {
         boolean changed = false;
-        // 限制最小窗口，避免分类/快捷栏把列表挤没；Appearing 在每次弹出时给足默认尺寸
+        // 限制最小窗口，避免分类/快捷栏把列表挤没
         ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
-        // 固定宽高（不用 AlwaysAutoResize），避免首帧内容区过窄导致按钮极小，以及每帧重算宽度产生「由宽变窄」的观感
-        ImGui.setNextWindowSize(POPUP_WIDTH, POPUP_MIN_HEIGHT, imgui.flag.ImGuiCond.Appearing);
+        // 宽度 0 = 该轴按内容自动贴合；固定高度保证列表区稳定（见 ImGui.setNextWindowSize 文档）
+        ImGui.setNextWindowSize(0.0f, POPUP_MIN_HEIGHT, imgui.flag.ImGuiCond.Appearing);
         // WindowPadding 必须在 BeginPopupModal 之前 push，否则弹窗已按默认 padding 创建，内容会紧贴左/上边缘
-        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, 8.0f, 8.0f);
-        ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, 8.0f, 8.0f);
+        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, POPUP_WINDOW_PADDING, POPUP_WINDOW_PADDING);
+        ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, POPUP_ITEM_SPACING_X, POPUP_ITEM_SPACING_Y);
         try {
-            if (!beginScopedPopupModal(BLOCK_PICKER_POPUP_KEY, "Select Block", 0)) {
+            int popupFlags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize;
+            if (!beginScopedPopupModal(BLOCK_PICKER_POPUP_KEY, "Select Block", popupFlags)) {
                 return false;
             }
             try {
             renderSearchScopeRow();
 
-            ImGui.separator();
+            popupSectionGap();
             renderCategorySelector();
-            ImGui.separator();
+            popupSectionGap();
 
             if (renderQuickBlockStrip()) {
                 changed = true;
             }
 
+            popupSectionGap();
             ImGui.separator();
             List<String> snapshot = filteredBlocks;
             int total = snapshot.size();
@@ -203,7 +209,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
             ImGui.text(String.format("Results: %d", total));
             // 用剩余可用高度显式分配列表区，避免负高度在头部内容变多时算错导致列表被压扁
-            float footerReserve = ImGui.getFrameHeightWithSpacing() * 1.35f + ImGui.getStyle().getItemSpacingY() * 2.0f + 6.0f;
+            float footerReserve = ImGui.getFrameHeightWithSpacing() * 1.35f + ImGui.getStyle().getItemSpacingY() * 1.5f + 4.0f;
             float listHeight = ImGui.getContentRegionAvail().y - footerReserve;
             listHeight = Math.max(160.0f, listHeight);
             float listWidth = ImGui.getContentRegionAvail().x;
@@ -263,6 +269,10 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             ImGui.popStyleVar(2);
         }
         return changed;
+    }
+
+    private static void popupSectionGap() {
+        ImGui.dummy(0.0f, POPUP_SECTION_GAP);
     }
 
     /**
