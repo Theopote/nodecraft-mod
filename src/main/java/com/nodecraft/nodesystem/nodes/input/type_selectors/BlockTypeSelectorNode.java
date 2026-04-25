@@ -50,6 +50,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     /** 弹窗最小尺寸，防止分类 + 列表被压到不可见 */
     private static final float POPUP_MIN_WIDTH = 380.0f;
     private static final float POPUP_MIN_HEIGHT = 420.0f;
+    private static final float POPUP_FIXED_HEIGHT = 520.0f;
     /** 水平内边距；垂直略小，减轻底栏与窗口底之间的空白 */
     private static final float POPUP_WINDOW_PADDING_X = 5.0f;
     private static final float POPUP_WINDOW_PADDING_Y = 3.0f;
@@ -189,8 +190,9 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         imgui.ImGui imguiInstance = new imgui.ImGui();
 
         // Keep popup layout in screen-pixel space (no inverse zoom compensation).
+        float popupAppearingHeight = computePopupAppearingHeight();
         ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
-        ImGui.setNextWindowSize(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, imgui.flag.ImGuiCond.Appearing);
+        ImGui.setNextWindowSize(POPUP_MIN_WIDTH, popupAppearingHeight, imgui.flag.ImGuiCond.Appearing);
         ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, POPUP_WINDOW_PADDING_X, POPUP_WINDOW_PADDING_Y);
         ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, POPUP_ITEM_SPACING_X, POPUP_ITEM_SPACING_Y);
         ImGui.pushStyleVar(ImGuiStyleVar.ScrollbarSize, POPUP_SCROLLBAR_SIZE);
@@ -201,7 +203,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             // Important: window font scale is absolute, not multiplicative.
             // Use 1.0f here to neutralize inherited node zoom.
             imguiInstance.setWindowFontScale(1.0f);
-            int popupFlags = ImGuiWindowFlags.NoResize;
+            int popupFlags = ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
             if (!beginScopedPopupModal(BLOCK_PICKER_POPUP_KEY, "Select Block", popupFlags)) {
                 return false;
             }
@@ -296,6 +298,11 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         ImGui.dummy(0.0f, POPUP_SECTION_GAP);
     }
 
+    private float computePopupAppearingHeight() {
+        // Use fixed screen pixels so popup height is fully independent of canvas zoom/style scaling.
+        return Math.max(POPUP_MIN_HEIGHT, POPUP_FIXED_HEIGHT);
+    }
+
     private ImString getSearchBuffer() {
         if (searchBuffer == null) {
             searchBuffer = new ImString(256);
@@ -328,12 +335,12 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         }
         ImGui.popItemWidth();
         ImGui.tableSetColumnIndex(1);
-        if (ImGui.smallButton("All##scope_all")) {
+        if (renderPopupButton("All##scope_all")) {
             minecraftOnly = false;
             updateFilteredList(getSearchBuffer().get());
         }
         ImGui.sameLine(0f, inner);
-        if (ImGui.smallButton("Minecraft##scope_vanilla")) {
+        if (renderPopupButton("Minecraft##scope_vanilla")) {
             minecraftOnly = true;
             updateFilteredList(getSearchBuffer().get());
         }
@@ -373,7 +380,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 ImGui.pushStyleColor(imgui.flag.ImGuiCol.Button, 0.26f, 0.44f, 0.62f, 1.0f);
                 ImGui.pushStyleColor(imgui.flag.ImGuiCol.ButtonHovered, 0.30f, 0.50f, 0.70f, 1.0f);
             }
-            if (ImGui.smallButton(categoryLabel + "##category_" + categoryKey)) {
+            if (renderPopupButton(categoryLabel + "##category_" + categoryKey)) {
                 selectedCategory = categoryKey;
                 updateFilteredList(getSearchBuffer().get());
             }
@@ -400,13 +407,24 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
                 }
                 String quickBlock = QUICK_BLOCKS[i];
                 String quickLabel = quickBlock.split(":", 2)[1];
-                if (ImGui.smallButton(quickLabel + "##quick_" + i)) {
+                if (renderPopupButton(quickLabel + "##quick_" + i)) {
                     setSelectedBlock(quickBlock);
                     quickChanged = true;
                 }
             }
         }
         return quickChanged;
+    }
+
+    private boolean renderPopupButton(String label) {
+        String visibleLabel = label;
+        int idSeparator = label.indexOf("##");
+        if (idSeparator >= 0) {
+            visibleLabel = label.substring(0, idSeparator);
+        }
+        float width = ImGui.calcTextSize(visibleLabel).x + ImGui.getStyle().getFramePaddingX() * 2.0f;
+        float height = ImGui.getFrameHeight();
+        return ImGui.button(label, width, height);
     }
 
     private String buildCompactLabel(float buttonWidthPx) {
