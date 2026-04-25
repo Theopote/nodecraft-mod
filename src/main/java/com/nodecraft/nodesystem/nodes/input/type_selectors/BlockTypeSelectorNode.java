@@ -47,13 +47,16 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
     private static final int POPUP_PAGE_SIZE = 18;
     /** 弹窗最小尺寸，防止分类 + 列表被压到不可见 */
     private static final float POPUP_MIN_WIDTH = 380.0f;
-    private static final float POPUP_MIN_HEIGHT = 480.0f;
-    /** 弹窗内边距与控件间距（略小于默认，布局更紧凑） */
-    private static final float POPUP_WINDOW_PADDING = 5.0f;
+    private static final float POPUP_MIN_HEIGHT = 420.0f;
+    /** 水平内边距；垂直略小，减轻底栏与窗口底之间的空白 */
+    private static final float POPUP_WINDOW_PADDING_X = 5.0f;
+    private static final float POPUP_WINDOW_PADDING_Y = 3.0f;
     private static final float POPUP_ITEM_SPACING_X = 4.0f;
     private static final float POPUP_ITEM_SPACING_Y = 3.0f;
-    /** 区块之间的垂直留白（替代粗 separator） */
-    private static final float POPUP_SECTION_GAP = 3.0f;
+    /** 区块之间的垂直留白 */
+    private static final float POPUP_SECTION_GAP = 2.0f;
+    /** 列表与底栏（分页+关闭）之间的预留 */
+    private static final float POPUP_LIST_FOOTER_EXTRA = 2.0f;
     private static final String BLOCK_PICKER_POPUP_KEY = "block_picker";
     private static final String CATEGORY_ALL = "all";
     private static final String CATEGORY_STONE = "stone";
@@ -175,10 +178,10 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
         boolean changed = false;
         // 限制最小窗口，避免分类/快捷栏把列表挤没
         ImGui.setNextWindowSizeConstraints(POPUP_MIN_WIDTH, POPUP_MIN_HEIGHT, 4096.0f, 4096.0f);
-        // 宽度 0 = 该轴按内容自动贴合；固定高度保证列表区稳定（见 ImGui.setNextWindowSize 文档）
-        ImGui.setNextWindowSize(0.0f, POPUP_MIN_HEIGHT, imgui.flag.ImGuiCond.Appearing);
+        // 宽高均 0：由内容与 SizeConstraints 决定尺寸，避免固定高度大于实际内容时在底部留大块空白
+        ImGui.setNextWindowSize(0.0f, 0.0f, imgui.flag.ImGuiCond.Appearing);
         // WindowPadding 必须在 BeginPopupModal 之前 push，否则弹窗已按默认 padding 创建，内容会紧贴左/上边缘
-        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, POPUP_WINDOW_PADDING, POPUP_WINDOW_PADDING);
+        ImGui.pushStyleVar(ImGuiStyleVar.WindowPadding, POPUP_WINDOW_PADDING_X, POPUP_WINDOW_PADDING_Y);
         ImGui.pushStyleVar(ImGuiStyleVar.ItemSpacing, POPUP_ITEM_SPACING_X, POPUP_ITEM_SPACING_Y);
         try {
             int popupFlags = ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoResize;
@@ -197,7 +200,6 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
             }
 
             popupSectionGap();
-            ImGui.separator();
             List<String> snapshot = filteredBlocks;
             int total = snapshot.size();
             int totalPages = Math.max(1, (int) Math.ceil(total / (float) POPUP_PAGE_SIZE));
@@ -209,7 +211,7 @@ public class BlockTypeSelectorNode extends BaseCustomUINode {
 
             ImGui.text(String.format("Results: %d", total));
             // 用剩余可用高度显式分配列表区，避免负高度在头部内容变多时算错导致列表被压扁
-            float footerReserve = ImGui.getFrameHeightWithSpacing() * 1.35f + ImGui.getStyle().getItemSpacingY() * 1.5f + 4.0f;
+            float footerReserve = ImGui.getFrameHeightWithSpacing() + ImGui.getStyle().getItemSpacingY() + POPUP_LIST_FOOTER_EXTRA;
             float listHeight = ImGui.getContentRegionAvail().y - footerReserve;
             listHeight = Math.max(160.0f, listHeight);
             float listWidth = ImGui.getContentRegionAvail().x;
