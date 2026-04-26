@@ -1,14 +1,14 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **329**
+- Total nodes: **330**
 - Total categories: **43**
 
 ## Category Statistics
 
 | Category ID | Node Count |
 |---|---:|
-| `geometry.boolean` | 18 |
+| `geometry.boolean` | 19 |
 | `geometry.curves` | 16 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
@@ -52,7 +52,7 @@
 | `world.selection` | 8 |
 | `world.write` | 16 |
 
-## geometry.boolean (18)
+## geometry.boolean (19)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -74,6 +74,7 @@
 | SDF Noise Displace | `geometry.boolean.sdf_noise_displace` | Applies deterministic pseudo-noise displacement to an input SDF | `SdfNoiseDisplaceNode` |
 | SDF Transform | `geometry.boolean.sdf_transform` | Applies translation, rotation, and uniform scale to an input SDF | `SdfTransformNode` |
 | SDF Blend Material Mask | `geometry.boolean.sdf_blend_material_mask` | Maps SDF distance values to smooth 0..1 blend weights and inside/outside booleans | `SdfBlendMaterialMaskNode` |
+| SDF Domain Warp | `geometry.boolean.sdf_domain_warp` | Applies coordinate-space noise warping before sampling an input SDF | `SdfDomainWarpNode` |
 
 ## geometry.curves (16)
 

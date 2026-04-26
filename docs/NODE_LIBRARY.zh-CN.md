@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**329**
+- **节点总数**：**330**
 - **分类总数**：**43**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -9,7 +9,7 @@
 
 | 分类 ID | 节点数 |
 |---|---:|
-| `geometry.boolean` | 18 |
+| `geometry.boolean` | 19 |
 | `geometry.curves` | 16 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
@@ -53,7 +53,7 @@
 | `world.selection` | 8 |
 | `world.write` | 16 |
 
-## geometry.boolean（18）
+## geometry.boolean（19）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -75,6 +75,7 @@
 | SDF Noise Displace | `geometry.boolean.sdf_noise_displace` | Applies deterministic pseudo-noise displacement to an input SDF | `SdfNoiseDisplaceNode` |
 | SDF Transform | `geometry.boolean.sdf_transform` | Applies translation, rotation, and uniform scale to an input SDF | `SdfTransformNode` |
 | SDF Blend Material Mask | `geometry.boolean.sdf_blend_material_mask` | Maps SDF distance values to smooth 0..1 blend weights and inside/outside booleans | `SdfBlendMaterialMaskNode` |
+| SDF Domain Warp | `geometry.boolean.sdf_domain_warp` | Applies coordinate-space noise warping before sampling an input SDF | `SdfDomainWarpNode` |
 
 ## geometry.curves（16）
 
