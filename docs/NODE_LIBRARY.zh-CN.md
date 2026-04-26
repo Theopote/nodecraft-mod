@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**396**
+- **节点总数**：**403**
 - **分类总数**：**51**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -32,9 +32,9 @@
 | `math.list_sequence` | 3 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
-| `math.scalar_math` | 18 |
+| `math.scalar_math` | 21 |
 | `math.sequence` | 3 |
-| `math.trigonometry` | 10 |
+| `math.trigonometry` | 14 |
 | `output.debug` | 4 |
 | `output.execute` | 15 |
 | `output.export` | 3 |
@@ -372,7 +372,7 @@
 | Random List Item | `math.random.random_list_item` | Randomly selects one or more items from a list. | `RandomListItemNode` |
 | Random Vector | `math.random.random_vector` | Generates random vectors within a specified bounding box. | `RandomVectorNode` |
 
-## math.scalar_math（18）
+## math.scalar_math（21）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -394,6 +394,9 @@
 | Square Root | `math.scalar_math.sqrt` | Computes the square root of a numeric input. | `SqrtNode` |
 | Lerp | `math.scalar_math.lerp` | Linearly interpolates between A and B using parameter T. | `LerpNode` |
 | Integer Divide | `math.scalar_math.int_divide` | Performs floor-style integer division A / B and returns quotient and remainder. | `IntDivideNode` |
+| Smoothstep | `math.scalar_math.smoothstep` | Computes smooth Hermite interpolation 3t^2 - 2t^3 between edge0 and edge1. | `SmoothstepNode` |
+| Sign | `math.scalar_math.sign` | Returns -1, 0, or +1 based on the sign of the input value. | `SignNode` |
+| Fraction (Frac) | `math.scalar_math.frac` | Returns the fractional part of x as x - floor(x). | `FracNode` |
 
 ## math.sequence（3）
 
@@ -403,7 +406,7 @@
 | Data Series | `math.list_sequence.series` | Generates a series of numbers with constant increment | `DataSeriesNode` |
 | Repeat | `math.list_sequence.repeat` | Repeats a single data item or list multiple times | `RepeatNode` |
 
-## math.trigonometry（10）
+## math.trigonometry（14）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -417,6 +420,10 @@
 | Arctangent (ArcTan) | `math.trigonometry.atan` | 计算输入值的反正切值（结果以弧度为单位） | `ArcTanNode` |
 | Atan2 | `math.trigonometry.atan2` | Computes the signed angle in radians from X and Y using atan2(Y, X). | `Atan2Node` |
 | Pi | `math.trigonometry.pi` | 输出数学常数π的值 | `PiNode` |
+| E | `math.trigonometry.e` | Outputs the mathematical constant e (approximately 2.718281828...). | `ENode` |
+| Sinh | `math.trigonometry.sinh` | Computes the hyperbolic sine of the input value. | `SinhNode` |
+| Cosh | `math.trigonometry.cosh` | Computes the hyperbolic cosine of the input value. | `CoshNode` |
+| Tanh | `math.trigonometry.tanh` | Computes the hyperbolic tangent of the input value. | `TanhNode` |
 
 ## output.debug（4）
 
