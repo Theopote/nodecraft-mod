@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 @NodeInfo(
     id = "utilities.organization.subgraph",
@@ -32,6 +33,10 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SubgraphNode extends BaseNode {
 
     private static final Map<String, Object> FALLBACK_CALLS = new ConcurrentHashMap<>();
+    private static final Pattern NON_ALNUM_UNDERSCORE = Pattern.compile("[^a-zA-Z0-9_]");
+
+    private static final String DYNAMIC_INPUT_PREFIX = "dynamic_input_key_";
+    private static final String DYNAMIC_OUTPUT_PREFIX = "dynamic_output_key_";
 
     @NodeProperty(displayName = "Subgraph Ref", category = "Subgraph", order = 1)
     private String subgraphRef = "subgraph";
@@ -74,6 +79,9 @@ public class SubgraphNode extends BaseNode {
     private static final String OUTPUT_DEBUG_TRACE_ID = "output_debug_trace";
     private static final String OUTPUT_VALID_ID = "output_valid";
 
+    private Set<String> activeDynamicInputKeys = new LinkedHashSet<>();
+    private Set<String> activeDynamicOutputKeys = new LinkedHashSet<>();
+
     public SubgraphNode() {
         super(UUID.randomUUID(), "utilities.organization.subgraph");
 
@@ -93,6 +101,8 @@ public class SubgraphNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_METADATA_ID, "Metadata", "Subgraph invocation metadata", NodeDataType.ANY, this));
         addOutputPort(new BasePort(OUTPUT_DEBUG_TRACE_ID, "Debug Trace", "Debug messages for subgraph mapping/execution", NodeDataType.LIST, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether subgraph mapping/execution succeeded", NodeDataType.BOOLEAN, this));
+
+        rebuildDynamicPorts(List.of(resolveInputKey()), List.of(resolveOutputKey()));
     }
 
     @Override
@@ -141,6 +151,7 @@ public class SubgraphNode extends BaseNode {
             additionalOutputKeys,
             inputValues.get(INPUT_OUTPUT_KEYS_ID)
         );
+        rebuildDynamicPorts(inputKeys, outputKeys);
         debugTrace.add("inputKeys=" + inputKeys);
         debugTrace.add("outputKeys=" + outputKeys);
 
@@ -152,6 +163,11 @@ public class SubgraphNode extends BaseNode {
         resolvedInputs.putIfAbsent(resolvedInputKey, mappedInputValue);
         for (String key : inputKeys) {
             if (resolvedInputs.containsKey(key)) {
+                continue;
+            }
+            String dynamicPortId = dynamicInputPortId(key);
+            if (inputValues.containsKey(dynamicPortId)) {
+                resolvedInputs.put(key, inputValues.get(dynamicPortId));
                 continue;
             }
             if (resolvedInputKey.equals(key)) {
@@ -286,6 +302,14 @@ public class SubgraphNode extends BaseNode {
         outputValues.put(OUTPUT_METADATA_ID, metadata);
         outputValues.put(OUTPUT_DEBUG_TRACE_ID, emitDebugTrace ? debugTrace : List.of());
         outputValues.put(OUTPUT_VALID_ID, valid);
+        writeDynamicOutputValues(mappedOutputs);
+    }
+
+    private void writeDynamicOutputValues(Map<String, Object> mappedOutputs) {
+        for (String key : activeDynamicOutputKeys) {
+            String portId = dynamicOutputPortId(key);
+            outputValues.put(portId, mappedOutputs.get(key));
+        }
     }
 
     private Map<String, Object> resolveMappedOutputs(
@@ -368,6 +392,59 @@ public class SubgraphNode extends BaseNode {
         addKeysFromCsv(keys, propertyKeys);
         addKeysFromObject(keys, overrideKeysObj);
         return new ArrayList<>(keys);
+    }
+
+    private void rebuildDynamicPorts(List<String> inputKeys, List<String> outputKeys) {
+        Set<String> desiredInputKeys = new LinkedHashSet<>(inputKeys);
+        Set<String> desiredOutputKeys = new LinkedHashSet<>(outputKeys);
+
+        if (desiredInputKeys.equals(activeDynamicInputKeys) && desiredOutputKeys.equals(activeDynamicOutputKeys)) {
+            return;
+        }
+
+        inputPorts.removeIf(port -> port.getId().startsWith(DYNAMIC_INPUT_PREFIX));
+        outputPorts.removeIf(port -> port.getId().startsWith(DYNAMIC_OUTPUT_PREFIX));
+
+        for (String key : desiredInputKeys) {
+            String portId = dynamicInputPortId(key);
+            addInputPort(new BasePort(
+                portId,
+                "In " + key,
+                "Dynamic subgraph input for key: " + key,
+                NodeDataType.ANY,
+                this
+            ));
+        }
+
+        for (String key : desiredOutputKeys) {
+            String portId = dynamicOutputPortId(key);
+            addOutputPort(new BasePort(
+                portId,
+                "Out " + key,
+                "Dynamic subgraph output for key: " + key,
+                NodeDataType.ANY,
+                this
+            ));
+        }
+
+        activeDynamicInputKeys = desiredInputKeys;
+        activeDynamicOutputKeys = desiredOutputKeys;
+    }
+
+    private String dynamicInputPortId(String key) {
+        return DYNAMIC_INPUT_PREFIX + keyToToken(key);
+    }
+
+    private String dynamicOutputPortId(String key) {
+        return DYNAMIC_OUTPUT_PREFIX + keyToToken(key);
+    }
+
+    private String keyToToken(String key) {
+        if (key == null || key.isBlank()) {
+            return "empty";
+        }
+        String normalized = NON_ALNUM_UNDERSCORE.matcher(key.trim()).replaceAll("_");
+        return normalized.isEmpty() ? "empty" : normalized;
     }
 
     private void addKeysFromCsv(Set<String> keys, String csv) {
@@ -601,6 +678,7 @@ public class SubgraphNode extends BaseNode {
         if (emitDebugTraceObj instanceof Boolean value) {
             emitDebugTrace = value;
         }
+        rebuildDynamicPorts(List.of(resolveInputKey()), List.of(resolveOutputKey()));
     }
 
     private record NestedExecutionResult(boolean executed, boolean success, Map<String, Object> outputs, @Nullable String errorMessage) {
