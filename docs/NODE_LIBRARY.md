@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **363**
+- Total nodes: **366**
 - Total categories: **46**
 
 ## Category Statistics
@@ -46,7 +46,7 @@
 | `reference.points` | 17 |
 | `reference.vectors` | 12 |
 | `transform.basic_transforms` | 10 |
-| `transform.deformations` | 4 |
+| `transform.deformations` | 7 |
 | `transform.orientation` | 2 |
 | `utilities.assist` | 5 |
 | `utilities.organization` | 4 |
@@ -552,7 +552,7 @@
 | Transform Geometry | `transform.basic_transforms.transform_geometry` | Applies translation, Euler XYZ rotation, and uniform scale to analytic geometry (primitives, composites, booleans, SDF wrappers) | `TransformGeometryNode` |
 | Mirror Vector List About Plane | `transform.basic_transforms.mirror_vector_list_plane` | Mirrors each point in a list about a plane and outputs Vector3d positions | `MirrorVectorListAboutPlaneNode` |
 
-## transform.deformations (4)
+## transform.deformations (7)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -560,6 +560,9 @@
 | Bend Point List | `transform.deformations.bend` | Bends a point list into an arc along an axis over a configurable bend length, with explicit bend-plane control (AUTO/XY/XZ/YZ/CUSTOM) | `BendPointListNode` |
 | Taper Point List | `transform.deformations.taper` | Scales radial distance along an axis to create tapered forms, with a minimum-scale clamp to prevent collapse | `TaperPointListNode` |
 | Noise Displace Point List | `transform.deformations.noise_displace` | Applies deterministic pseudo-noise displacement to a point list, with per-axis weights and XYZ noise offset controls | `NoiseDisplacePointListNode` |
+| Curve Attract Point List | `transform.deformations.curve_attract` | Pulls points toward a sampled curve with quadratic falloff; optional displacement along full vector, tangent only, or perpendicular-to-tangent only | `CurveAttractPointListNode` |
+| Relax Point List | `transform.deformations.relax_points` | Laplacian-style smoothing using k nearest neighbors (uniform grid hash for speed; capped point count) | `RelaxPointListNode` |
+| Lattice Deform Point List | `transform.deformations.lattice_deform` | Free-form deformation: trilinear blend of control displacements on a uniform (nx+1)(ny+1)(nz+1) lattice in an axis-aligned box | `LatticeDeformPointListNode` |
 
 ## transform.orientation (2)
 
