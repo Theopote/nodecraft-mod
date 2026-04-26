@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **430**
+- Total nodes: **435**
 - Total categories: **51**
 
 ## Category Statistics
@@ -38,11 +38,11 @@
 | `output.execute` | 15 |
 | `output.export` | 3 |
 | `output.preview` | 12 |
-| `pattern.grid` | 3 |
-| `pattern.linear` | 3 |
+| `pattern.grid` | 4 |
+| `pattern.linear` | 4 |
 | `pattern.lsystem` | 2 |
-| `pattern.radial` | 2 |
-| `pattern.surface_volume_distribution` | 7 |
+| `pattern.radial` | 3 |
+| `pattern.surface_volume_distribution` | 9 |
 | `pattern.voronoi_3d` | 1 |
 | `reference.frames` | 4 |
 | `reference.planes` | 6 |
@@ -489,21 +489,23 @@
 | Preview Profiles | `output.preview.preview_profiles` | Previews polygon profile boundaries and optional normal indicators | `PreviewPolygonProfilesNode` |
 | Preview Geometry | `output.preview.preview_geometry` | Previews analytic geometry directly (semi-transparent fill + outline) before voxelization | `PreviewGeometryNode` |
 
-## pattern.grid (3)
+## pattern.grid (4)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Grid Array | `pattern.grid.grid_array` | 在平面或三维网格上重复坐标列表 | `GridArrayNode` |
 | Facade Grid | `pattern.grid.facade_grid` | Generates facade cell centers and boundaries on a box face | `FacadeGridNode` |
 | Hex Grid | `pattern.grid.hex_grid` | Repeats coordinates on a flat-top hexagonal lattice (X/Z) with configurable spacing | `HexGridNode` |
+| Triangular Grid | `pattern.grid.triangle_grid` | Repeats coordinates on a triangular lattice with alternating row offsets. | `TriangularGridNode` |
 
-## pattern.linear (3)
+## pattern.linear (4)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Linear Array | `pattern.linear.linear_array` | 将坐标列表沿直线方向重复排列 | `LinearArrayNode` |
 | Along Path | `pattern.linear.along_path` | Repeats a block pattern at each resolved path point from a line, polyline, curve, or point list | `AlongPathNode` |
 | Staggered Array | `pattern.linear.staggered_array` | Repeats coordinates in rows and applies an alternating offset for brick-like staggering | `StaggeredArrayNode` |
+| Path Instances | `pattern.linear.path_instances` | Generates path instance frames (origin + axes) for oriented placement along a path. | `PathInstancesNode` |
 
 ## pattern.lsystem (2)
 
@@ -512,14 +514,15 @@
 | L-System Expand String | `pattern.lsystem.expand_string` | Expands an L-system axiom using production rules for a fixed number of iterations (longest symbol match; probabilities as weights) | `LSystemExpandStringNode` |
 | L-System Turtle 3D | `pattern.lsystem.turtle_3d` | Traces a 3D polyline from L-system commands: F/f forward, +- yaw, & and ^ pitch, / and \\ roll, [] stack (local turns; angle in degrees) | `LSystemTurtle3DNode` |
 
-## pattern.radial (2)
+## pattern.radial (3)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Polar Array | `pattern.radial.polar_array` | 将坐标列表绕中心点重复旋转排列 | `PolarArrayNode` |
 | Spiral Array | `pattern.radial.spiral_array` | Repeats coordinates along a spiral path around a center point | `SpiralArrayNode` |
+| Phyllotaxis | `pattern.radial.phyllotaxis` | Repeats coordinates using sunflower-like golden-angle distribution. | `PhyllotaxisNode` |
 
-## pattern.surface_volume_distribution (7)
+## pattern.surface_volume_distribution (9)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -530,6 +533,8 @@
 | Poisson Disk On Plane | `pattern.surface_volume_distribution.poisson_disk_plane` | Samples points on a plane inside a UV rectangle with minimum separation using rejection sampling | `PoissonDiskOnPlaneNode` |
 | Scatter On Geometry Surface | `pattern.surface_volume_distribution.scatter_geometry_surface` | Scatters points on voxelized geometry surfaces with random or blue-noise approximation and spacing fallback controls | `ScatterOnGeometrySurfaceNode` |
 | Scatter On Surface Strip | `pattern.surface_volume_distribution.scatter_surface_strip` | Scatters points on a surface strip by random section interpolation with optional spacing | `ScatterOnSurfaceStripNode` |
+| Scatter In Volume | `pattern.surface_volume_distribution.scatter_volume` | Scatters points inside voxelized geometry volume with random or blue-noise approximation. | `ScatterInVolumeNode` |
+| Image-Based Scatter | `pattern.surface_volume_distribution.image_scatter` | Scatters points using image grayscale density maps on a plane or world XZ. | `ImageBasedScatterNode` |
 
 ## pattern.voronoi_3d (1)
 
