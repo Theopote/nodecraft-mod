@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**408**
+- **节点总数**：**413**
 - **分类总数**：**51**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -48,7 +48,7 @@
 | `reference.frames` | 4 |
 | `reference.planes` | 6 |
 | `reference.points` | 17 |
-| `reference.vectors` | 12 |
+| `reference.vectors` | 17 |
 | `transform.basic_transforms` | 10 |
 | `transform.deformations` | 7 |
 | `transform.orientation` | 2 |
@@ -574,7 +574,7 @@
 | Deconstruct Face Edge | `reference.points.deconstruct_edge` | Extracts endpoints, midpoint, direction, vector, and length from a face edge | `DeconstructFaceEdgeNode` |
 | Project Point To Polyline | `reference.points.project_to_polyline` | Projects a point onto the closest location on a polyline or line segment | `ProjectPointToPolylineNode` |
 
-## reference.vectors（12）
+## reference.vectors（17）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -590,6 +590,11 @@
 | Vector Scalar Multiply | `reference.vectors.vector_scalar_multiply` | 向量与标量相乘 (Vector * Scalar) | `VectorScalarMultiplyNode` |
 | Vector Scalar Divide | `reference.vectors.vector_scalar_divide` | 向量除以标量 (Vector / Scalar) | `VectorScalarDivideNode` |
 | Angle Between Vectors | `reference.vectors.angle_between` | Angle between two vectors in radians and degrees; optional reference vector yields a signed angle | `AngleBetweenVectorsNode` |
+| Lerp Vectors | `reference.vectors.lerp_vectors` | Linearly interpolates between vector A and B using parameter T. | `LerpVectorsNode` |
+| Reflect Vector | `reference.vectors.reflect` | Reflects an input vector around a normal vector using v - 2(v·n)n. | `ReflectVectorNode` |
+| Project Vector onto Vector | `reference.vectors.project` | Projects vector A onto vector B as (A·B / \|B\|^2)B. | `ProjectVectorNode` |
+| Vector Component Min/Max | `reference.vectors.component_minmax` | Computes per-component min and max between vectors A and B. | `VectorComponentMinMaxNode` |
+| Slerp Vectors | `reference.vectors.slerp` | Performs spherical linear interpolation between two direction vectors. | `SlerpVectorsNode` |
 
 ## transform.basic_transforms（10）
 
