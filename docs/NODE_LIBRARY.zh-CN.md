@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**435**
+- **节点总数**：**441**
 - **分类总数**：**50**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -27,7 +27,7 @@
 | `material.pattern_mapping` | 4 |
 | `material.surface_aging` | 3 |
 | `math.compare` | 7 |
-| `math.fields` | 11 |
+| `math.fields` | 17 |
 | `math.list` | 22 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
@@ -320,7 +320,7 @@
 | Greater Than (>) | `math.compare.greater_than` | Returns true when A is greater than B. | `GreaterThanNode` |
 | Greater Than or Equal (>=) | `math.compare.greater_than_or_equal` | Returns true when A is greater than or equal to B. | `GreaterThanOrEqualNode` |
 
-## math.fields（11）
+## math.fields（17）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -331,10 +331,16 @@
 | Vector Field Constant | `math.fields.vector_constant` | Builds a vector field that returns a constant vector everywhere. | `VectorFieldConstantNode` |
 | Vector Field From SDF Gradient | `math.fields.vector_from_sdf_gradient` | Builds a vector field from central-difference gradients of an SDF (normalized direction). | `VectorFieldFromSdfGradientNode` |
 | Vector Field Binary Op | `math.fields.vector_binary_op` | Combines two vector fields component-wise or via cross product. | `VectorFieldBinaryOpNode` |
+| Point Attractor Field | `math.fields.point_attractor_field` | Builds a vector field that pulls points toward a center with configurable distance falloff. | `PointAttractorFieldNode` |
 | Scalar Field Sample Point | `math.fields.scalar_sample_point` | Samples a scalar field at a point. | `ScalarFieldSamplePointNode` |
+| Curve Attractor Field | `math.fields.curve_attractor_field` | Builds a vector field that pulls points toward the closest point on a sampled curve. | `CurveAttractorFieldNode` |
 | Scalar Field Sample Points | `math.fields.scalar_sample_points` | Samples a scalar field for each query point and outputs a value list. | `ScalarFieldSamplePointsNode` |
 | Vector Field Sample Point | `math.fields.vector_sample_point` | Samples a vector field at a point. | `VectorFieldSamplePointNode` |
+| Volume Attractor Field | `math.fields.volume_attractor_field` | Builds a volume-based attractor field using center-pull or nearest-surface pull from geometry/SDF inputs. | `VolumeAttractorFieldNode` |
 | Vector Field Sample Points | `math.fields.vector_sample_points` | Samples a vector field for each query point and outputs a vector list. | `VectorFieldSamplePointsNode` |
+| Vortex Field | `math.fields.vortex_field` | Builds a tangential swirl field around an axis, with radial falloff and clockwise/counter-clockwise control. | `VortexFieldNode` |
+| Repulsor Field | `math.fields.repulsor_field` | Inverts a vector field direction (repulsion) with optional strength scaling. | `RepulsorFieldNode` |
+| Attractor Field Blend | `math.fields.attractor_blend` | Blends up to four attractor/repulsor fields using per-field weights. | `AttractorFieldBlendNode` |
 
 ## math.list（22）
 
