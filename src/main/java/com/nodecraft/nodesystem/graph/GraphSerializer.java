@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -132,6 +133,24 @@ public class GraphSerializer {
     public static NodeGraph fromJsonToGraph(String json) {
         SavedGraph savedGraph = fromJson(json);
         return fromSavedGraph(savedGraph);
+    }
+
+    /**
+     * Compatibility hook kept for callers that still invoke migration preflight.
+     * Legacy remapping has been removed in this development phase.
+     */
+    public static MigrationReport migrateCompatibilityNodes(SavedGraph savedGraph) {
+        return MigrationReport.empty();
+    }
+
+    public record MigrationReport(int migratedNodeCount, List<String> migratedTypeIds, List<String> notes) {
+        public static MigrationReport empty() {
+            return new MigrationReport(0, List.of(), List.of());
+        }
+
+        public boolean hasChanges() {
+            return migratedNodeCount > 0;
+        }
     }
 
     public static NodeGraph loadFromFile(Path filePath) throws IOException {
