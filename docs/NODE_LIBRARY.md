@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **313**
+- Total nodes: **315**
 - Total categories: **43**
 
 ## Category Statistics
@@ -9,7 +9,7 @@
 | Category ID | Node Count |
 |---|---:|
 | `geometry.boolean` | 5 |
-| `geometry.curves` | 13 |
+| `geometry.curves` | 15 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
 | `geometry.solids` | 17 |
@@ -62,7 +62,7 @@
 | Difference | `geometry.boolean.difference` | Creates a voxel-evaluated difference geometry value by subtracting cutter geometry from a base geometry | `DifferenceNode` |
 | Intersection | `geometry.boolean.intersection` | Creates a voxel-evaluated intersection geometry value from two geometry inputs | `IntersectionNode` |
 
-## geometry.curves (13)
+## geometry.curves (15)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -79,6 +79,8 @@
 | Interpolate Spline | `geometry.curves.interpolate_spline` | Builds a Catmull-Rom interpolation spline that passes through all resolved input points | `InterpolateSplineNode` |
 | B-Spline | `geometry.curves.b_spline` | Builds a sampled clamped uniform B-spline from an ordered control point list | `BSplineNode` |
 | NURBS Curve | `geometry.curves.nurbs` | Builds a sampled clamped uniform NURBS curve from control points and optional per-point weights | `NurbsCurveNode` |
+| Curve Rebuild By Length | `geometry.curves.rebuild_curve_length` | Rebuilds a curve/path to uniform arc-length samples using spacing, or using a total point count (count wins when both are provided) | `CurveRebuildByLengthNode` |
+| Curve Evaluate | `geometry.curves.evaluate_curve` | Evaluates a curve/path at normalized parameter t and outputs point, tangent, normal, and binormal | `CurveEvaluateNode` |
 
 ## geometry.primitives (19)
 

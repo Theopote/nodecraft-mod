@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**313**
+- **节点总数**：**315**
 - **分类总数**：**43**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -10,7 +10,7 @@
 | 分类 ID | 节点数 |
 |---|---:|
 | `geometry.boolean` | 5 |
-| `geometry.curves` | 13 |
+| `geometry.curves` | 15 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
 | `geometry.solids` | 17 |
@@ -63,7 +63,7 @@
 | Difference | `geometry.boolean.difference` | Creates a voxel-evaluated difference geometry value by subtracting cutter geometry from a base geometry | `DifferenceNode` |
 | Intersection | `geometry.boolean.intersection` | Creates a voxel-evaluated intersection geometry value from two geometry inputs | `IntersectionNode` |
 
-## geometry.curves（13）
+## geometry.curves（15）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -80,6 +80,8 @@
 | Interpolate Spline | `geometry.curves.interpolate_spline` | Builds a Catmull-Rom interpolation spline that passes through all resolved input points | `InterpolateSplineNode` |
 | B-Spline | `geometry.curves.b_spline` | Builds a sampled clamped uniform B-spline from an ordered control point list | `BSplineNode` |
 | NURBS Curve | `geometry.curves.nurbs` | Builds a sampled clamped uniform NURBS curve from control points and optional per-point weights | `NurbsCurveNode` |
+| Curve Rebuild By Length | `geometry.curves.rebuild_curve_length` | Rebuilds a curve/path to uniform arc-length samples using spacing, or using a total point count (count wins when both are provided) | `CurveRebuildByLengthNode` |
+| Curve Evaluate | `geometry.curves.evaluate_curve` | Evaluates a curve/path at normalized parameter t and outputs point, tangent, normal, and binormal | `CurveEvaluateNode` |
 
 ## geometry.primitives（19）
 
