@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**326**
+- **节点总数**：**328**
 - **分类总数**：**43**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -9,7 +9,7 @@
 
 | 分类 ID | 节点数 |
 |---|---:|
-| `geometry.boolean` | 15 |
+| `geometry.boolean` | 17 |
 | `geometry.curves` | 16 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
@@ -53,7 +53,7 @@
 | `world.selection` | 8 |
 | `world.write` | 16 |
 
-## geometry.boolean（15）
+## geometry.boolean（17）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -72,6 +72,8 @@
 | SDF Sample Points | `geometry.boolean.sdf_sample_points` | Samples signed distance for each query point and outputs distance and inside lists | `SdfSamplePointsNode` |
 | SDF Gradient At Point | `geometry.boolean.sdf_gradient_point` | Samples SDF gradient at a point and outputs a normalized normal-like direction | `SdfGradientPointNode` |
 | SDF Smooth Boolean | `geometry.boolean.sdf_smooth_boolean` | Combines two SDF inputs with smooth union/intersection/difference blending | `SdfSmoothBooleanNode` |
+| SDF Noise Displace | `geometry.boolean.sdf_noise_displace` | Applies deterministic pseudo-noise displacement to an input SDF | `SdfNoiseDisplaceNode` |
+| SDF Transform | `geometry.boolean.sdf_transform` | Applies translation, rotation, and uniform scale to an input SDF | `SdfTransformNode` |
 
 ## geometry.curves（16）
 

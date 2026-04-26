@@ -1,14 +1,14 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **326**
+- Total nodes: **328**
 - Total categories: **43**
 
 ## Category Statistics
 
 | Category ID | Node Count |
 |---|---:|
-| `geometry.boolean` | 15 |
+| `geometry.boolean` | 17 |
 | `geometry.curves` | 16 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
@@ -52,7 +52,7 @@
 | `world.selection` | 8 |
 | `world.write` | 16 |
 
-## geometry.boolean (15)
+## geometry.boolean (17)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -71,6 +71,8 @@
 | SDF Sample Points | `geometry.boolean.sdf_sample_points` | Samples signed distance for each query point and outputs distance and inside lists | `SdfSamplePointsNode` |
 | SDF Gradient At Point | `geometry.boolean.sdf_gradient_point` | Samples SDF gradient at a point and outputs a normalized normal-like direction | `SdfGradientPointNode` |
 | SDF Smooth Boolean | `geometry.boolean.sdf_smooth_boolean` | Combines two SDF inputs with smooth union/intersection/difference blending | `SdfSmoothBooleanNode` |
+| SDF Noise Displace | `geometry.boolean.sdf_noise_displace` | Applies deterministic pseudo-noise displacement to an input SDF | `SdfNoiseDisplaceNode` |
+| SDF Transform | `geometry.boolean.sdf_transform` | Applies translation, rotation, and uniform scale to an input SDF | `SdfTransformNode` |
 
 ## geometry.curves (16)
 
