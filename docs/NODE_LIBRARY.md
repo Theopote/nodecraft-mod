@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **435**
+- Total nodes: **440**
 - Total categories: **51**
 
 ## Category Statistics
@@ -11,10 +11,10 @@
 | `flow.control` | 3 |
 | `flow.loop` | 3 |
 | `geometry.boolean` | 19 |
-| `geometry.curves` | 18 |
-| `geometry.primitives` | 28 |
+| `geometry.curves` | 19 |
+| `geometry.primitives` | 29 |
 | `geometry.profiles` | 25 |
-| `geometry.solids` | 17 |
+| `geometry.solids` | 20 |
 | `input.context` | 4 |
 | `input.numeric` | 8 |
 | `input.type_selectors` | 5 |
@@ -100,7 +100,7 @@
 | SDF Blend Material Mask | `geometry.boolean.sdf_blend_material_mask` | Maps SDF distance values to smooth 0..1 blend weights and inside/outside booleans | `SdfBlendMaterialMaskNode` |
 | SDF Domain Warp | `geometry.boolean.sdf_domain_warp` | Applies coordinate-space noise warping before sampling an input SDF | `SdfDomainWarpNode` |
 
-## geometry.curves (18)
+## geometry.curves (19)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -121,9 +121,10 @@
 | Curve Evaluate | `geometry.curves.evaluate_curve` | Evaluates a curve/path at normalized parameter t and outputs point, tangent, normal, and binormal | `CurveEvaluateNode` |
 | Curve Frame Along Path | `geometry.curves.frame_along_path` | Generates local frames along a curve/path using count or spacing, outputting origins, axes, and planes per sample | `CurveFrameAlongPathNode` |
 | Parabola On Plane | `geometry.curves.parabola_curve` | Builds a sampled parabola on a plane from vertex, curvature, x-range, and segment count | `ParabolaOnPlaneNode` |
+| Helix Curve | `geometry.curves.helix` | Builds a sampled helix from center, axis, radius, pitch, turns, and segment count. | `HelixCurveNode` |
 | Infinity Curve On Plane | `geometry.curves.infinity_curve` | Builds a sampled figure-eight (lemniscate-like) curve on a plane | `InfinityCurveOnPlaneNode` |
 
-## geometry.primitives (28)
+## geometry.primitives (29)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -144,6 +145,7 @@
 | Deconstruct Cylinder | `geometry.primitives.deconstruct_cylinder` | Extracts axis, radius, height, bounds, and analytical values from cylinder geometry | `DeconstructCylinderNode` |
 | Deconstruct Cone | `geometry.primitives.deconstruct_cone` | Extracts axis, height, radius, bounds, and analytical values from cone geometry | `DeconstructConeNode` |
 | Hemisphere By Center Axis Radius | `geometry.primitives.hemisphere` | Constructs a solid hemisphere: sphere intersected with the half-space on the +axis side of the center (flat face through center, dome along axis) | `HemisphereByCenterAxisRadiusNode` |
+| Capsule By Axis Radius | `geometry.primitives.capsule` | Constructs analytic capsule geometry from axis endpoints and radius (cylinder + two hemispheres). | `CapsuleByAxisRadiusNode` |
 | Deconstruct Frustum Cone | `geometry.primitives.deconstruct_frustum_cone` | Extracts axis, heights, radii, bounds, and analytical values from frustum cone geometry | `DeconstructFrustumConeNode` |
 | Square Pyramid | `geometry.primitives.square_pyramid` | Constructs square pyramid geometry from a base center, base size, height, and plane | `SquarePyramidNode` |
 | Deconstruct Ellipsoid | `geometry.primitives.deconstruct_ellipsoid` | Extracts center, radii, bounds, volume, and approximate surface area from ellipsoid geometry | `DeconstructEllipsoidNode` |
@@ -186,7 +188,7 @@
 | Profile Boolean 2D | `geometry.profiles.boolean_2d` | Performs 2D boolean operations (union/intersection/difference) on two polygon profiles in a shared plane | `ProfileBoolean2DNode` |
 | Profile Triangulate 2D | `geometry.profiles.triangulate_2d` | Triangulates a planar polygon profile into triangle profiles using ear clipping | `ProfileTriangulate2DNode` |
 
-## geometry.solids (17)
+## geometry.solids (20)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -204,7 +206,10 @@
 | Prism By Profile Vector | `geometry.solids.extrude_profile` | Constructs prism geometry from a polygon profile and an extrusion vector | `PrismByProfileVectorNode` |
 | Thicken Surface | `geometry.solids.thicken_surface` | Thickens a surface strip into two offset layers with optional cap strips and a reusable geometry approximation | `ThickenSurfaceNode` |
 | Prism By Base Points Vector | `geometry.solids.extrude_profile_from_points` | Constructs prism geometry from an ordered base polygon and an extrusion vector | `PrismByBasePointsVectorNode` |
+| Section Cut | `geometry.solids.section_cut` | Cuts geometry by a plane and outputs a section profile extracted from voxelized intersection points. | `SectionCutNode` |
 | Deconstruct Surface Strip | `geometry.solids.deconstruct_surface_strip` | Breaks a surface strip into section paths, flattened points, and rail segments | `DeconstructSurfaceStripNode` |
+| Multi-Section Loft | `geometry.solids.loft_multi_section` | Lofts multiple polygon sections with matching vertex counts into one surface strip. | `MultiSectionLoftNode` |
+| Morph Between Profiles | `geometry.solids.morph_profiles` | Interpolates between two compatible polygon profiles using parameter t in [0,1]. | `MorphBetweenProfilesNode` |
 | Shrinkwrap Points On Surface Strip | `geometry.solids.shrinkwrap_points_surface_strip` | Projects each query point to the closest location on the surface strip triangle mesh | `ShrinkwrapPointsOnSurfaceStripNode` |
 | Shrinkwrap Points To Voxel Geometry | `geometry.solids.shrinkwrap_points_voxel_geometry` | Voxelizes geometry to blocks, then snaps each query point to the nearest voxel block center (shell when fill is off); distinct from triangle strip shrinkwrap | `ShrinkwrapPointsToVoxelGeometryNode` |
 
