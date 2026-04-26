@@ -58,6 +58,11 @@ public class VortexFieldNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Builds a tangential swirl field around an axis, with radial falloff and clockwise/counter-clockwise control.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d origin = FieldSampleUtils.resolvePoint(inputValues.get(INPUT_ORIGIN_ID));
         Vector3d axis = FieldSampleUtils.resolvePoint(inputValues.get(INPUT_AXIS_ID));

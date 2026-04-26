@@ -51,6 +51,11 @@ public class PointAttractorFieldNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Builds a vector field that pulls points toward a center with configurable distance falloff.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = FieldSampleUtils.resolvePoint(inputValues.get(INPUT_CENTER_ID));
         if (center == null) {

@@ -39,6 +39,11 @@ public class RepulsorFieldNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Inverts a vector field direction (repulsion) with optional strength scaling.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object fieldObj = inputValues.get(INPUT_FIELD_ID);
         if (!(fieldObj instanceof VectorFieldData field)) {

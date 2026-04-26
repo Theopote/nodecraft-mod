@@ -55,6 +55,11 @@ public class AttractorFieldBlendNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Blends up to four attractor/repulsor fields using per-field weights.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         VectorFieldData fieldA = asField(inputValues.get(INPUT_FIELD_A_ID));
         VectorFieldData fieldB = asField(inputValues.get(INPUT_FIELD_B_ID));

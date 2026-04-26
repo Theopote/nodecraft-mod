@@ -70,6 +70,11 @@ public class VolumeAttractorFieldNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Builds a volume-based attractor field using center-pull or nearest-surface pull from geometry/SDF inputs.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object geometryObj = inputValues.get(INPUT_GEOMETRY_ID);
         Object sdfObj = inputValues.get(INPUT_SDF_ID);

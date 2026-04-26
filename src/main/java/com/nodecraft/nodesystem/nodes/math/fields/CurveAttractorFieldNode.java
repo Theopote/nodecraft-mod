@@ -54,6 +54,11 @@ public class CurveAttractorFieldNode extends BaseNode {
     }
 
     @Override
+    public String getDescription() {
+        return "Builds a vector field that pulls points toward the closest point on a sampled curve.";
+    }
+
+    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object curveObj = inputValues.get(INPUT_CURVE_ID);
         if (!(curveObj instanceof Curve curve)) {
