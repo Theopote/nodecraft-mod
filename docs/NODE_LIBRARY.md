@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **330**
+- Total nodes: **336**
 - Total categories: **43**
 
 ## Category Statistics
@@ -11,7 +11,7 @@
 | `geometry.boolean` | 19 |
 | `geometry.curves` | 16 |
 | `geometry.primitives` | 19 |
-| `geometry.profiles` | 9 |
+| `geometry.profiles` | 15 |
 | `geometry.solids` | 17 |
 | `input.values` | 3 |
 | `input.context` | 4 |
@@ -121,7 +121,7 @@
 | Deconstruct Tetrahedron | `geometry.primitives.deconstruct_tetrahedron` | Extracts center, edge length, vertices, bounds, and analytical values from tetrahedron geometry | `DeconstructTetrahedronNode` |
 | Deconstruct Prism | `geometry.primitives.deconstruct_prism` | Extracts base polygon, top polygon, extrusion, side surface strip, and bounds from prism geometry | `DeconstructPrismNode` |
 
-## geometry.profiles (9)
+## geometry.profiles (15)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -133,6 +133,12 @@
 | Convex Hull 2D On Plane | `geometry.profiles.convex_hull_plane` | Projects points into a plane, computes their 2D convex hull, and outputs a closed polygon profile | `ConvexHull2DOnPlaneNode` |
 | Voronoi Cells 2D On Plane | `geometry.profiles.voronoi_cells_plane` | Projects sites into a plane, builds a clipped planar Voronoi diagram (JTS), and outputs each cell as a polygon profile on the plane | `VoronoiCells2DOnPlaneNode` |
 | Convex Hull 3D From Points | `geometry.profiles.convex_hull_3d_points` | Builds a 3D convex hull (triangle facets) from points; intended for small clouds due to brute-force enumeration; coplanar / collinear inputs yield no facets | `ConvexHull3DFromPointsNode` |
+| Circle On Plane | `geometry.profiles.circle_profile` | Constructs a circular profile from center, radius, plane, and segment count | `CircleOnPlaneNode` |
+| Ellipse On Plane | `geometry.profiles.ellipse_profile` | Constructs an ellipse profile from center, major/minor radii, plane, and segment count | `EllipseOnPlaneNode` |
+| Sector On Plane | `geometry.profiles.sector_profile` | Constructs a circular sector profile from center, radius, start/end angles, and plane | `SectorOnPlaneNode` |
+| Annulus On Plane | `geometry.profiles.annulus_profile` | Constructs annulus boundaries from center, inner/outer radii, plane, and segment count | `AnnulusOnPlaneNode` |
+| Rounded Rectangle On Plane | `geometry.profiles.rounded_rectangle_profile` | Constructs a rounded-rectangle profile from center, width, height, corner radius, and plane | `RoundedRectangleOnPlaneNode` |
+| Star Polygon On Plane | `geometry.profiles.star_polygon_profile` | Constructs a star polygon profile from center, inner/outer radii, point count, and plane | `StarPolygonOnPlaneNode` |
 | Window Array | `geometry.architectural_primitives.window_array` | Generates a rectangular array of inset window opening boxes on a box face | `WindowArrayNode` |
 
 ## geometry.solids (17)
