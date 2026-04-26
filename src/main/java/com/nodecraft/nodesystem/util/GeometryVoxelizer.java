@@ -11,6 +11,7 @@ import com.nodecraft.nodesystem.datatypes.IntersectionGeometryData;
 import com.nodecraft.nodesystem.datatypes.OctahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
+import com.nodecraft.nodesystem.datatypes.SdfGeometryData;
 import com.nodecraft.nodesystem.datatypes.SquarePyramidGeometryData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.datatypes.TetrahedronGeometryData;
@@ -114,6 +115,9 @@ public final class GeometryVoxelizer {
         if (geometry instanceof SphereData sphereGeometry) {
             return voxelizeSphere(sphereGeometry, fillSolid);
         }
+        if (geometry instanceof SdfGeometryData sdfGeometry) {
+            return voxelizeSdfGeometry(sdfGeometry, fillSolid);
+        }
         if (geometry instanceof TetrahedronGeometryData tetrahedronGeometry) {
             return voxelizeTetrahedron(tetrahedronGeometry, fillSolid);
         }
@@ -162,6 +166,12 @@ public final class GeometryVoxelizer {
         }
         if (geometry instanceof SphereData sphereGeometry) {
             return SphereBlockGenerator.createBoundingRegion(sphereGeometry);
+        }
+        if (geometry instanceof SdfGeometryData sdfGeometry) {
+            return new RegionData(
+                BlockPos.ofFloored(sdfGeometry.getMin().x, sdfGeometry.getMin().y, sdfGeometry.getMin().z),
+                BlockPos.ofFloored(sdfGeometry.getMax().x, sdfGeometry.getMax().y, sdfGeometry.getMax().z)
+            );
         }
         if (geometry instanceof TetrahedronGeometryData tetrahedronGeometry) {
             return TetrahedronBlockGenerator.createBoundingRegion(tetrahedronGeometry);
@@ -617,6 +627,43 @@ public final class GeometryVoxelizer {
         // First pass matches the legacy generator, which only exposed a solid tetrahedron.
         TetrahedronBlockGenerator.populateTetrahedron(blocks, region, geometry);
         return blocks;
+    }
+
+    public static BlockPosList voxelizeSdfGeometry(SdfGeometryData geometry, boolean fillSolid) {
+        RegionData region = createBoundingRegion(geometry);
+        if (region == null || !region.isComplete()) {
+            return new BlockPosList();
+        }
+
+        BlockPos minCorner = region.getMinCorner();
+        BlockPos maxCorner = region.getMaxCorner();
+        if (minCorner == null || maxCorner == null) {
+            return new BlockPosList();
+        }
+
+        Set<BlockPos> solid = new LinkedHashSet<>();
+        for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
+            for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
+                for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
+                    double d = geometry.getSdf().sampleDistance(new Vector3d(x + 0.5d, y + 0.5d, z + 0.5d));
+                    if (d <= geometry.getIsoValue()) {
+                        solid.add(new BlockPos(x, y, z));
+                    }
+                }
+            }
+        }
+
+        if (fillSolid) {
+            return new BlockPosList(solid);
+        }
+
+        Set<BlockPos> shell = new LinkedHashSet<>();
+        for (BlockPos pos : solid) {
+            if (isBoundaryBlock(pos, solid)) {
+                shell.add(pos.toImmutable());
+            }
+        }
+        return new BlockPosList(shell);
     }
 
     public static RegionData createAxisAlignedRegion(BoxGeometryData geometry) {
