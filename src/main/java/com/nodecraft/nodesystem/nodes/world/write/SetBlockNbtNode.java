@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.mojang.brigadier.StringReader;
 import net.minecraft.block.entity.BlockEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -12,6 +13,7 @@ import net.minecraft.nbt.StringNbtReader;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.UUID;
 
@@ -103,12 +105,32 @@ public class SetBlockNbtNode extends BaseNode {
             return nbt.copy();
         }
         if (inputValues.get(INPUT_NBT_STRING_ID) instanceof String text && !text.isBlank()) {
-            try {
-                return StringNbtReader.parse(text);
-            } catch (Exception ignored) {
-                return null;
-            }
+            return parseSnbt(text);
         }
+        return null;
+    }
+
+    private @Nullable NbtCompound parseSnbt(String text) {
+        try {
+            Method parse = StringNbtReader.class.getMethod("parse", String.class);
+            Object result = parse.invoke(null, text);
+            if (result instanceof NbtCompound nbt) {
+                return nbt;
+            }
+        } catch (Exception ignored) {
+        }
+
+        try {
+            Constructor<StringNbtReader> ctor = StringNbtReader.class.getConstructor(StringReader.class);
+            StringNbtReader reader = ctor.newInstance(new StringReader(text));
+            Method parseCompound = StringNbtReader.class.getMethod("parseCompound");
+            Object result = parseCompound.invoke(reader);
+            if (result instanceof NbtCompound nbt) {
+                return nbt;
+            }
+        } catch (Exception ignored) {
+        }
+
         return null;
     }
 
