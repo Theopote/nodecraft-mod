@@ -1,0 +1,278 @@
+package com.nodecraft.nodesystem.nodes.geometry.curves;
+
+import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.api.NodeInfo;
+import com.nodecraft.nodesystem.api.NodeProperty;
+import com.nodecraft.nodesystem.core.BaseNode;
+import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.PointData;
+import com.nodecraft.nodesystem.datatypes.PolylineData;
+import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Curve;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.UUID;
+
+@NodeInfo(
+    id = "geometry.curves.b_spline",
+    displayName = "B-Spline",
+    description = "Builds a sampled clamped uniform B-spline from an ordered control point list",
+    category = "geometry.curves",
+    order = 11
+)
+public class BSplineNode extends BaseNode {
+
+    @NodeProperty(displayName = "Default Degree", category = "B-Spline", order = 1)
+    private int defaultDegree = 3;
+
+    @NodeProperty(displayName = "Default Resolution Per Span", category = "B-Spline", order = 2)
+    private int defaultResolutionPerSpan = 12;
+
+    private static final String INPUT_CONTROL_POINTS_ID = "input_control_points";
+    private static final String INPUT_DEGREE_ID = "input_degree";
+    private static final String INPUT_RESOLUTION_ID = "input_resolution";
+
+    private static final String OUTPUT_CURVE_ID = "output_curve";
+    private static final String OUTPUT_POLYLINE_ID = "output_polyline";
+    private static final String OUTPUT_POINTS_ID = "output_points";
+    private static final String OUTPUT_CONTROL_POLYGON_ID = "output_control_polygon";
+    private static final String OUTPUT_CONTROL_COUNT_ID = "output_control_count";
+    private static final String OUTPUT_EFFECTIVE_DEGREE_ID = "output_effective_degree";
+    private static final String OUTPUT_LENGTH_ID = "output_length";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+
+    public BSplineNode() {
+        super(UUID.randomUUID(), "geometry.curves.b_spline");
+
+        addInputPort(new BasePort(INPUT_CONTROL_POINTS_ID, "Control Points", "Ordered B-spline control points", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_DEGREE_ID, "Degree", "Spline degree (1..5, clamped by control-point count)", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_RESOLUTION_ID, "Resolution / Span", "Samples generated per knot span", NodeDataType.INTEGER, this));
+
+        addOutputPort(new BasePort(OUTPUT_CURVE_ID, "Curve", "Sampled B-spline curve representation", NodeDataType.CURVE, this));
+        addOutputPort(new BasePort(OUTPUT_POLYLINE_ID, "Polyline", "Sampled polyline approximation", NodeDataType.POLYLINE, this));
+        addOutputPort(new BasePort(OUTPUT_POINTS_ID, "Points", "Sampled points along the B-spline", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_CONTROL_POLYGON_ID, "Control Polygon", "Polyline through the control points", NodeDataType.POLYLINE, this));
+        addOutputPort(new BasePort(OUTPUT_CONTROL_COUNT_ID, "Control Count", "Number of valid control points", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_EFFECTIVE_DEGREE_ID, "Effective Degree", "Degree used after safety clamping", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_LENGTH_ID, "Length", "Sampled polyline length", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when valid control points are sufficient", NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDescription() {
+        return "Builds a sampled clamped uniform B-spline from an ordered control point list";
+    }
+
+    @Override
+    public void processNode(@Nullable ExecutionContext context) {
+        Object controlPointsObj = inputValues.get(INPUT_CONTROL_POINTS_ID);
+        if (!(controlPointsObj instanceof Collection<?> collection)) {
+            writeEmptyOutputs();
+            return;
+        }
+
+        List<Vec3d> controlPoints = new ArrayList<>();
+        for (Object entry : collection) {
+            Vec3d point = resolvePoint(entry);
+            if (point != null) {
+                controlPoints.add(point);
+            }
+        }
+
+        int requestedDegree = Math.max(1, getInputInt(INPUT_DEGREE_ID, defaultDegree));
+        int resolutionPerSpan = Math.max(2, getInputInt(INPUT_RESOLUTION_ID, defaultResolutionPerSpan));
+
+        if (controlPoints.size() < 2) {
+            writeEmptyOutputs();
+            outputValues.put(OUTPUT_CONTROL_COUNT_ID, controlPoints.size());
+            outputValues.put(OUTPUT_EFFECTIVE_DEGREE_ID, 0);
+            return;
+        }
+
+        int effectiveDegree = Math.min(Math.min(5, requestedDegree), controlPoints.size() - 1);
+        int n = controlPoints.size() - 1;
+        int knotCount = n + effectiveDegree + 2;
+        double[] knots = buildClampedUniformKnots(knotCount, effectiveDegree, n);
+
+        int spanCount = Math.max(1, n - effectiveDegree + 1);
+        int totalSamples = spanCount * resolutionPerSpan + 1;
+        double uStart = knots[effectiveDegree];
+        double uEnd = knots[n + 1];
+        List<Vec3d> sampled = new ArrayList<>(totalSamples);
+
+        for (int i = 0; i < totalSamples; i++) {
+            double t = totalSamples == 1 ? 0.0d : (double) i / (double) (totalSamples - 1);
+            double u = uStart + (uEnd - uStart) * t;
+            sampled.add(evaluateBSpline(controlPoints, knots, effectiveDegree, u, n));
+        }
+
+        Curve curve = new Curve(Curve.CurveType.LINEAR, 2);
+        for (Vec3d sample : sampled) {
+            curve.addControlPoint(sample);
+        }
+
+        PolylineData polyline = new PolylineData(sampled);
+        PolylineData controlPolygon = new PolylineData(controlPoints);
+        List<PointData> points = new ArrayList<>(sampled.size());
+        for (Vec3d sample : sampled) {
+            points.add(new PointData(sample.x, sample.y, sample.z));
+        }
+
+        outputValues.put(OUTPUT_CURVE_ID, curve);
+        outputValues.put(OUTPUT_POLYLINE_ID, polyline);
+        outputValues.put(OUTPUT_POINTS_ID, List.copyOf(points));
+        outputValues.put(OUTPUT_CONTROL_POLYGON_ID, controlPolygon);
+        outputValues.put(OUTPUT_CONTROL_COUNT_ID, controlPoints.size());
+        outputValues.put(OUTPUT_EFFECTIVE_DEGREE_ID, effectiveDegree);
+        outputValues.put(OUTPUT_LENGTH_ID, polyline.getLength());
+        outputValues.put(OUTPUT_VALID_ID, true);
+    }
+
+    public int getDefaultDegree() {
+        return defaultDegree;
+    }
+
+    public void setDefaultDegree(int defaultDegree) {
+        int resolved = Math.max(1, defaultDegree);
+        if (this.defaultDegree != resolved) {
+            this.defaultDegree = resolved;
+            markDirty();
+        }
+    }
+
+    public int getDefaultResolutionPerSpan() {
+        return defaultResolutionPerSpan;
+    }
+
+    public void setDefaultResolutionPerSpan(int defaultResolutionPerSpan) {
+        int resolved = Math.max(2, defaultResolutionPerSpan);
+        if (this.defaultResolutionPerSpan != resolved) {
+            this.defaultResolutionPerSpan = resolved;
+            markDirty();
+        }
+    }
+
+    @Override
+    public Object getNodeState() {
+        return new java.util.HashMap<String, Object>() {{
+            put("defaultDegree", defaultDegree);
+            put("defaultResolutionPerSpan", defaultResolutionPerSpan);
+        }};
+    }
+
+    @Override
+    public void setNodeState(Object state) {
+        if (!(state instanceof java.util.Map<?, ?> map)) {
+            return;
+        }
+        if (map.get("defaultDegree") instanceof Number value) {
+            setDefaultDegree(value.intValue());
+        }
+        if (map.get("defaultResolutionPerSpan") instanceof Number value) {
+            setDefaultResolutionPerSpan(value.intValue());
+        }
+    }
+
+    private void writeEmptyOutputs() {
+        outputValues.put(OUTPUT_CURVE_ID, null);
+        outputValues.put(OUTPUT_POLYLINE_ID, null);
+        outputValues.put(OUTPUT_POINTS_ID, List.of());
+        outputValues.put(OUTPUT_CONTROL_POLYGON_ID, null);
+        outputValues.put(OUTPUT_CONTROL_COUNT_ID, 0);
+        outputValues.put(OUTPUT_EFFECTIVE_DEGREE_ID, 0);
+        outputValues.put(OUTPUT_LENGTH_ID, 0.0d);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    private double[] buildClampedUniformKnots(int knotCount, int degree, int n) {
+        double[] knots = new double[knotCount];
+        int last = knotCount - 1;
+        int domainEnd = n - degree + 1;
+
+        for (int i = 0; i < knotCount; i++) {
+            if (i <= degree) {
+                knots[i] = 0.0d;
+            } else if (i >= n + 1) {
+                knots[i] = domainEnd;
+            } else {
+                knots[i] = i - degree;
+            }
+        }
+
+        knots[last] = domainEnd;
+        return knots;
+    }
+
+    private Vec3d evaluateBSpline(List<Vec3d> cps, double[] knots, int degree, double u, int n) {
+        if (u >= knots[n + 1]) {
+            Vec3d end = cps.get(n);
+            return new Vec3d(end.x, end.y, end.z);
+        }
+
+        double x = 0.0d;
+        double y = 0.0d;
+        double z = 0.0d;
+
+        for (int i = 0; i <= n; i++) {
+            double basis = basis(i, degree, u, knots);
+            if (basis == 0.0d) {
+                continue;
+            }
+            Vec3d p = cps.get(i);
+            x += basis * p.x;
+            y += basis * p.y;
+            z += basis * p.z;
+        }
+
+        return new Vec3d(x, y, z);
+    }
+
+    private double basis(int i, int degree, double u, double[] knots) {
+        if (degree == 0) {
+            return (knots[i] <= u && u < knots[i + 1]) ? 1.0d : 0.0d;
+        }
+
+        double leftDenominator = knots[i + degree] - knots[i];
+        double rightDenominator = knots[i + degree + 1] - knots[i + 1];
+
+        double left = 0.0d;
+        double right = 0.0d;
+
+        if (leftDenominator > 0.0d) {
+            left = ((u - knots[i]) / leftDenominator) * basis(i, degree - 1, u, knots);
+        }
+        if (rightDenominator > 0.0d) {
+            right = ((knots[i + degree + 1] - u) / rightDenominator) * basis(i + 1, degree - 1, u, knots);
+        }
+
+        return left + right;
+    }
+
+    private @Nullable Vec3d resolvePoint(Object value) {
+        if (value instanceof PointData pointData) {
+            Vector3d p = pointData.getPosition();
+            return new Vec3d(p.x, p.y, p.z);
+        }
+        if (value instanceof Vector3d vector) {
+            return new Vec3d(vector.x, vector.y, vector.z);
+        }
+        if (value instanceof BlockPos blockPos) {
+            return new Vec3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        }
+        if (value instanceof Vec3d vec3d) {
+            return vec3d;
+        }
+        return null;
+    }
+
+    private int getInputInt(String portId, int fallback) {
+        Object value = inputValues.get(portId);
+        return value instanceof Number number ? number.intValue() : fallback;
+    }
+}

@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**308**
+- **节点总数**：**313**
 - **分类总数**：**43**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -10,7 +10,7 @@
 | 分类 ID | 节点数 |
 |---|---:|
 | `geometry.boolean` | 5 |
-| `geometry.curves` | 10 |
+| `geometry.curves` | 13 |
 | `geometry.primitives` | 19 |
 | `geometry.profiles` | 9 |
 | `geometry.solids` | 17 |
@@ -63,7 +63,7 @@
 | Difference | `geometry.boolean.difference` | Creates a voxel-evaluated difference geometry value by subtracting cutter geometry from a base geometry | `DifferenceNode` |
 | Intersection | `geometry.boolean.intersection` | Creates a voxel-evaluated intersection geometry value from two geometry inputs | `IntersectionNode` |
 
-## geometry.curves（10）
+## geometry.curves（13）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -77,6 +77,9 @@
 | Fillet Polyline Corners | `geometry.curves.fillet_polyline_corners` | Fillets interior corners of an open polyline with circular arcs in the work plane | `PolylineCornerFilletNode` |
 | Resample Polyline By Length | `geometry.curves.resample_polyline_length` | Resamples a polyline along its arc length using spacing, or using a total point count (count wins when both are provided) | `ResamplePolylineByLengthNode` |
 | Polyline Length | `geometry.curves.polyline_length` | Computes the total length of a polyline or line segment | `PolylineLengthNode` |
+| Interpolate Spline | `geometry.curves.interpolate_spline` | Builds a Catmull-Rom interpolation spline that passes through all resolved input points | `InterpolateSplineNode` |
+| B-Spline | `geometry.curves.b_spline` | Builds a sampled clamped uniform B-spline from an ordered control point list | `BSplineNode` |
+| NURBS Curve | `geometry.curves.nurbs` | Builds a sampled clamped uniform NURBS curve from control points and optional per-point weights | `NurbsCurveNode` |
 
 ## geometry.primitives（19）
 
