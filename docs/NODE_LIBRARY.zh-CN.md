@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**360**
+- **节点总数**：**359**
 - **分类总数**：**44**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -25,12 +25,12 @@
 | `material.pattern_mapping` | 4 |
 | `material.surface_aging` | 3 |
 | `math.compare` | 7 |
-| `math.sequence` | 3 |
+| `math.fields` | 11 |
 | `math.list` | 16 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
-| `math.fields` | 11 |
 | `math.scalar_math` | 15 |
+| `math.sequence` | 3 |
 | `math.trigonometry` | 9 |
 | `output.debug` | 4 |
 | `output.execute` | 15 |
@@ -42,8 +42,8 @@
 | `pattern.surface_volume_distribution` | 7 |
 | `reference.frames` | 4 |
 | `reference.planes` | 6 |
-| `reference.points` | 16 |
-| `reference.vectors` | 11 |
+| `reference.points` | 17 |
+| `reference.vectors` | 12 |
 | `transform.basic_transforms` | 9 |
 | `transform.deformations` | 4 |
 | `transform.orientation` | 2 |

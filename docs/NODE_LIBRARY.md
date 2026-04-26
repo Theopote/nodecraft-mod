@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **360**
+- Total nodes: **359**
 - Total categories: **44**
 
 ## Category Statistics
@@ -24,12 +24,12 @@
 | `material.pattern_mapping` | 4 |
 | `material.surface_aging` | 3 |
 | `math.compare` | 7 |
-| `math.sequence` | 3 |
+| `math.fields` | 11 |
 | `math.list` | 16 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
-| `math.fields` | 11 |
 | `math.scalar_math` | 15 |
+| `math.sequence` | 3 |
 | `math.trigonometry` | 9 |
 | `output.debug` | 4 |
 | `output.execute` | 15 |
