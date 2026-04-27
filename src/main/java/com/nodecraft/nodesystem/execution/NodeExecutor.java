@@ -4,6 +4,8 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.preview.PreviewManager;
+import com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -110,6 +112,7 @@ public class NodeExecutor {
         if (isExecuting.get() && executionFuture != null && !executionFuture.isDone()) {
             executionFuture.cancel(true);
             isExecuting.set(false);
+            clearGraphPreviews();
         }
     }
 
@@ -126,6 +129,7 @@ public class NodeExecutor {
         List<INode> sortedNodes = topologicalSort();
         if (sortedNodes == null) {
             LOGGER.error("Node graph contains a cycle and cannot be executed.");
+            clearGraphPreviews();
             return false;
         }
 
@@ -139,6 +143,10 @@ public class NodeExecutor {
 
         int executedCount = 0;
         for (INode node : sortedNodes) {
+            if (Thread.currentThread().isInterrupted()) {
+                clearGraphPreviews();
+                return false;
+            }
             if (!shouldExecuteNode(node)) {
                 nodeStates.put(node.getId(), NodeState.VISITED);
                 continue;
@@ -156,6 +164,7 @@ public class NodeExecutor {
             } catch (Exception e) {
                 LOGGER.error("Node {} failed during execution: {}", node.getDisplayName(), e.getMessage(), e);
                 nodeStates.put(node.getId(), NodeState.ERROR);
+                clearGraphPreviews();
                 return false;
             }
         }
@@ -167,6 +176,17 @@ public class NodeExecutor {
                 partialExecution ? "partial" : "full"
         );
         return true;
+    }
+
+    private void clearGraphPreviews() {
+        if (graph == null) {
+            return;
+        }
+        for (INode node : graph.getNodes()) {
+            String ownerNodeId = node.getId().toString();
+            PreviewManager.hideNodePreviews(ownerNodeId);
+            TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(ownerNodeId);
+        }
     }
 
     private boolean shouldExecuteNode(INode node) {

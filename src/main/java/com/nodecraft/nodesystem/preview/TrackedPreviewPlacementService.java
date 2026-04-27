@@ -204,6 +204,19 @@ public final class TrackedPreviewPlacementService {
         return restoredCount;
     }
 
+    public synchronized int clearTrackedPreviewAcrossWorlds(String nodeId) {
+        if (nodeId == null || nodeId.isEmpty()) {
+            return 0;
+        }
+
+        int restoredCount = 0;
+        List<World> worlds = new ArrayList<>(trackedPreviews.keySet());
+        for (World world : worlds) {
+            restoredCount += clearTrackedPreview(world, nodeId);
+        }
+        return restoredCount;
+    }
+
     private record TrackedPreviewState(Map<BlockPos, BlockState> previousStates, BlockState previewState) {
     }
 }

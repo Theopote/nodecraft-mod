@@ -11,6 +11,7 @@ import java.util.UUID;
 
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 
 /**
@@ -107,7 +108,27 @@ public class NodeGraph {
         // 移除节点
         nodes.remove(node);
         nodeMap.remove(nodeId);
+        cleanupRemovedNodeSideEffects(node);
         return true;
+    }
+
+    private void cleanupRemovedNodeSideEffects(INode node) {
+        if (node == null) {
+            return;
+        }
+
+        String ownerNodeId = node.getId().toString();
+        com.nodecraft.nodesystem.preview.PreviewManager.hideNodePreviews(ownerNodeId);
+        com.nodecraft.nodesystem.preview.TrackedPreviewPlacementService.getInstance()
+            .clearTrackedPreviewAcrossWorlds(ownerNodeId);
+
+        if (node instanceof BaseNode baseNode) {
+            try {
+                baseNode.onNodeRemoved();
+            } catch (Exception ignored) {
+                // Best-effort cleanup hook.
+            }
+        }
     }
     
     /**

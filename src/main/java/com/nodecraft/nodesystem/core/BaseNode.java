@@ -222,6 +222,14 @@ public abstract class BaseNode implements INode {
     }
 
     /**
+     * Lifecycle hook invoked when the node is removed from a graph.
+     * Subclasses can override to release external resources.
+     */
+    public void onNodeRemoved() {
+        // Default no-op.
+    }
+
+    /**
      * Marks this node dirty and notifies graph-level listeners.
      */
     public void markDirty() {
