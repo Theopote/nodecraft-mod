@@ -54,8 +54,7 @@ public final class HemisphereBlockGenerator {
         for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
             for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
                 for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    // Match SphereBlockGenerator: use block corner coordinates for inclusion tests.
-                    Vector3d rel = new Vector3d(x, y, z).sub(center, new Vector3d());
+                    Vector3d rel = new Vector3d(x + 0.5d, y + 0.5d, z + 0.5d).sub(center, new Vector3d());
                     double axial = rel.dot(axis);
                     if (axial < -EPS) {
                         continue;

@@ -66,7 +66,7 @@ public final class TorusBlockGenerator {
         double majorRadius,
         double minorRadiusSquared
     ) {
-        Vector3d relative = new Vector3d(x, y, z).sub(center);
+        Vector3d relative = new Vector3d(x + 0.5d, y + 0.5d, z + 0.5d).sub(center);
         double localX = relative.dot(tangent);
         double localY = relative.dot(bitangent);
         double localZ = relative.dot(axis);

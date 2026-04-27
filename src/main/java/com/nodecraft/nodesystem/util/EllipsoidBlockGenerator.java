@@ -66,9 +66,9 @@ public final class EllipsoidBlockGenerator {
         for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
             for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
                 for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    double dx = x - center.x;
-                    double dy = y - center.y;
-                    double dz = z - center.z;
+                    double dx = (x + 0.5d) - center.x;
+                    double dy = (y + 0.5d) - center.y;
+                    double dz = (z + 0.5d) - center.z;
                     double outerDist = normalizedDistance(dx, dy, dz, radii.x, radii.y, radii.z);
                     if (outerDist > 1.0d) {
                         continue;

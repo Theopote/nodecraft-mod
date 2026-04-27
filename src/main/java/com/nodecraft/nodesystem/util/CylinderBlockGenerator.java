@@ -49,7 +49,7 @@ public final class CylinderBlockGenerator {
         for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
             for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
                 for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    Vector3d point = new Vector3d(x, y, z);
+                    Vector3d point = new Vector3d(x + 0.5d, y + 0.5d, z + 0.5d);
                     double radialDistance = computeRadialDistance(point, start, axis, axisLengthSquared);
                     if (radialDistance > radius) {
                         continue;

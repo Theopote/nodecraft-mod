@@ -59,7 +59,7 @@ public final class SphereBlockGenerator {
         for (int x = minCorner.getX(); x <= maxCorner.getX(); x++) {
             for (int y = minCorner.getY(); y <= maxCorner.getY(); y++) {
                 for (int z = minCorner.getZ(); z <= maxCorner.getZ(); z++) {
-                    double distance = center.distance(x, y, z);
+                    double distance = center.distance(x + 0.5d, y + 0.5d, z + 0.5d);
                     if (distance > radius) {
                         continue;
                     }
