@@ -47,7 +47,7 @@ public class SquarePyramidNode extends BaseNode {
         addInputPort(new BasePort(INPUT_BASE_SIZE_ID, "Base Size", "Length of each base edge", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_HEIGHT_ID, "Height", "Distance from base plane to apex", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Construction plane for the square base", NodeDataType.PLANE, this));
-        addInputPort(new BasePort(INPUT_X_AXIS_ID, "X Axis", "Optional in-plane axis to rotate the square base", NodeDataType.VECTOR, this));
+        addInputPort(new BasePort(INPUT_X_AXIS_ID, "X Axis", "Optional in-plane axis to rotate the square base", NodeDataType.ANY, this));
 
         addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Square pyramid geometry", NodeDataType.GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_APEX_ID, "Apex", "Apex point above the base plane", NodeDataType.VECTOR, this));
@@ -69,7 +69,7 @@ public class SquarePyramidNode extends BaseNode {
         Object baseSizeObj = inputValues.get(INPUT_BASE_SIZE_ID);
         Object heightObj = inputValues.get(INPUT_HEIGHT_ID);
         PlaneData plane = inputValues.get(INPUT_PLANE_ID) instanceof PlaneData p ? p : PlaneData.XY_PLANE;
-        Vector3d preferredXAxis = inputValues.get(INPUT_X_AXIS_ID) instanceof Vector3d vector ? new Vector3d(vector) : null;
+        Vector3d preferredXAxis = resolvePoint(inputValues.get(INPUT_X_AXIS_ID));
 
         if (center == null || !(baseSizeObj instanceof Number baseSizeNumber) || !(heightObj instanceof Number heightNumber)) {
             writeEmptyOutputs();

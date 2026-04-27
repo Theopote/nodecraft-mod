@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -60,7 +61,7 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Vector3d axis = resolvePoint(inputValues.get(INPUT_AXIS_ID));
+        Vector3d axis = resolveVector(inputValues.get(INPUT_AXIS_ID));
         Object majorObj = inputValues.get(INPUT_MAJOR_RADIUS_ID);
         Object minorObj = inputValues.get(INPUT_MINOR_RADIUS_ID);
 
@@ -119,5 +120,14 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
             return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         }
         return null;
+    }
+
+    private Vector3d resolveVector(Object value) {
+        if (value instanceof LineData lineData) {
+            Vec3d start = lineData.getStart();
+            Vec3d end = lineData.getEnd();
+            return new Vector3d(end.x - start.x, end.y - start.y, end.z - start.z);
+        }
+        return resolvePoint(value);
     }
 }
