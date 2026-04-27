@@ -7,7 +7,9 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -67,7 +69,7 @@ public class EllipsoidByCenterRadiiNode extends BaseNode {
 
         Vector3d radii = new Vector3d(rx.doubleValue(), ry.doubleValue(), rz.doubleValue());
         if (!Double.isFinite(radii.x) || !Double.isFinite(radii.y) || !Double.isFinite(radii.z)
-            || radii.x < 0.0d || radii.y < 0.0d || radii.z < 0.0d) {
+            || radii.x <= 0.0d || radii.y <= 0.0d || radii.z <= 0.0d) {
             writeEmptyOutputs();
             return;
         }
@@ -90,7 +92,9 @@ public class EllipsoidByCenterRadiiNode extends BaseNode {
 
     private Vector3d resolvePoint(Object value) {
         if (value instanceof PointData pointData) return pointData.getPosition();
+        if (value instanceof Coordinate coordinate) return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
         if (value instanceof Vector3d vector) return new Vector3d(vector);
+        if (value instanceof Vec3d vec3d) return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
         if (value instanceof BlockPos blockPos) return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         return null;
     }
