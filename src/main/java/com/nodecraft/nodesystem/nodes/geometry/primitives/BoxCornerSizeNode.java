@@ -26,7 +26,7 @@ public class BoxCornerSizeNode extends AbstractBoxGeneratorNode {
     public BoxCornerSizeNode() {
         super("geometry.primitives.box_from_corner_size");
 
-        addInputPort(new BasePort(INPUT_CORNER_ID, "Corner", "Anchor corner of the box", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_CORNER_ID, "Corner", "Anchor corner of the box", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional reference plane used to orient the local X/Y/Z axes", NodeDataType.PLANE, this));
         addInputPort(new BasePort(INPUT_SIZE_X_ID, "Size X", "Signed size along local X. Negative values grow from the corner in the opposite X direction.", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_SIZE_Y_ID, "Size Y", "Signed size along local Y. Negative values grow from the corner in the opposite Y direction.", NodeDataType.INTEGER, this));
@@ -57,7 +57,8 @@ public class BoxCornerSizeNode extends AbstractBoxGeneratorNode {
         Object rotYObj = inputValues.get(INPUT_ROT_Y_ID);
         Object rotZObj = inputValues.get(INPUT_ROT_Z_ID);
 
-        if (!(cornerObj instanceof BlockPos corner)
+        BlockPos corner = resolveBlockPosInput(cornerObj);
+        if (corner == null
             || !(sizeXObj instanceof Number sizeX)
             || !(sizeYObj instanceof Number sizeY)
             || !(sizeZObj instanceof Number sizeZ)) {

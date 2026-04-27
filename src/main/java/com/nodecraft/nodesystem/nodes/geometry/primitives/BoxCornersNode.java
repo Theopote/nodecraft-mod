@@ -20,8 +20,8 @@ public class BoxCornersNode extends AbstractBoxGeneratorNode {
     public BoxCornersNode() {
         super("geometry.primitives.box_from_corners");
 
-        addInputPort(new BasePort(INPUT_CORNER_A_ID, "Corner A", "First corner of the box", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_CORNER_B_ID, "Corner B", "Opposite corner of the box. The result stays axis-aligned.", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_CORNER_A_ID, "Corner A", "First corner of the box", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_CORNER_B_ID, "Corner B", "Opposite corner of the box. The result stays axis-aligned.", NodeDataType.ANY, this));
     }
 
     @Override
@@ -39,7 +39,9 @@ public class BoxCornersNode extends AbstractBoxGeneratorNode {
         Object cornerAObj = inputValues.get(INPUT_CORNER_A_ID);
         Object cornerBObj = inputValues.get(INPUT_CORNER_B_ID);
 
-        if (!(cornerAObj instanceof BlockPos cornerA) || !(cornerBObj instanceof BlockPos cornerB)) {
+        BlockPos cornerA = resolveBlockPosInput(cornerAObj);
+        BlockPos cornerB = resolveBlockPosInput(cornerBObj);
+        if (cornerA == null || cornerB == null) {
             return null;
         }
 

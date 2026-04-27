@@ -26,7 +26,7 @@ public class BoxCenterSizeNode extends AbstractBoxGeneratorNode {
     public BoxCenterSizeNode() {
         super("geometry.primitives.box");
 
-        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center point of the box", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center point of the box", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional reference plane used to orient the local X/Y/Z axes", NodeDataType.PLANE, this));
         addInputPort(new BasePort(INPUT_SIZE_X_ID, "Size X", "Box size along local X. Negative values use the same size magnitude.", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_SIZE_Y_ID, "Size Y", "Box size along local Y. Negative values use the same size magnitude.", NodeDataType.INTEGER, this));
@@ -57,7 +57,8 @@ public class BoxCenterSizeNode extends AbstractBoxGeneratorNode {
         Object rotYObj = inputValues.get(INPUT_ROT_Y_ID);
         Object rotZObj = inputValues.get(INPUT_ROT_Z_ID);
 
-        if (!(centerObj instanceof BlockPos center)
+        BlockPos center = resolveBlockPosInput(centerObj);
+        if (center == null
             || !(sizeXObj instanceof Number sizeX)
             || !(sizeYObj instanceof Number sizeY)
             || !(sizeZObj instanceof Number sizeZ)) {

@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -68,6 +69,10 @@ public class SphereByDiameterNode extends BaseNode {
         Vector3d center = new Vector3d(start).add(end).mul(0.5d);
         double diameter = start.distance(end);
         double radius = diameter * 0.5d;
+        if (!Double.isFinite(diameter) || diameter <= 1.0e-9d || !Double.isFinite(radius) || radius <= 0.0d) {
+            writeEmptyOutputs();
+            return;
+        }
 
         SphereData sphere = new SphereData(center, radius);
         LineData diameterLine = new LineData(
@@ -98,8 +103,14 @@ public class SphereByDiameterNode extends BaseNode {
         if (value instanceof PointData pointData) {
             return pointData.getPosition();
         }
+        if (value instanceof Coordinate coordinate) {
+            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        }
         if (value instanceof Vector3d vector) {
             return new Vector3d(vector);
+        }
+        if (value instanceof Vec3d vec3d) {
+            return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
         }
         if (value instanceof BlockPos blockPos) {
             return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());

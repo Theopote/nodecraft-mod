@@ -7,7 +7,9 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -38,7 +40,7 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
         super(UUID.randomUUID(), "geometry.primitives.torus");
 
         addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Torus center point", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_AXIS_ID, "Axis", "Symmetry axis direction (tube runs around this axis)", NodeDataType.VECTOR, this));
+        addInputPort(new BasePort(INPUT_AXIS_ID, "Axis", "Symmetry axis direction (tube runs around this axis)", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_MAJOR_RADIUS_ID, "Major Radius", "Distance from center to tube center", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_MINOR_RADIUS_ID, "Minor Radius", "Tube cross-section radius", NodeDataType.DOUBLE, this));
 
@@ -58,16 +60,15 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Object axisObj = inputValues.get(INPUT_AXIS_ID);
+        Vector3d axis = resolvePoint(inputValues.get(INPUT_AXIS_ID));
         Object majorObj = inputValues.get(INPUT_MAJOR_RADIUS_ID);
         Object minorObj = inputValues.get(INPUT_MINOR_RADIUS_ID);
 
-        if (center == null || !(axisObj instanceof Vector3d rawAxis) || !(majorObj instanceof Number majorNum) || !(minorObj instanceof Number minorNum)) {
+        if (center == null || axis == null || !(majorObj instanceof Number majorNum) || !(minorObj instanceof Number minorNum)) {
             writeEmptyOutputs();
             return;
         }
 
-        Vector3d axis = new Vector3d(rawAxis);
         double axisLen = axis.length();
         if (axisLen <= 1.0e-9d) {
             writeEmptyOutputs();
@@ -105,8 +106,14 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
         if (value instanceof PointData pointData) {
             return pointData.getPosition();
         }
+        if (value instanceof Coordinate coordinate) {
+            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        }
         if (value instanceof Vector3d vector) {
             return new Vector3d(vector);
+        }
+        if (value instanceof Vec3d vec3d) {
+            return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
         }
         if (value instanceof BlockPos blockPos) {
             return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());

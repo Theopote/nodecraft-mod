@@ -7,11 +7,14 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.BoxBlockGenerator;
+import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
@@ -314,6 +317,26 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
         if (stateMap.get("outputAsRegion") instanceof Boolean outputAsRegionValue) {
             setOutputAsRegion(outputAsRegionValue);
         }
+    }
+
+    protected @Nullable BlockPos resolveBlockPosInput(@Nullable Object value) {
+        if (value instanceof BlockPos blockPos) {
+            return blockPos;
+        }
+        if (value instanceof Coordinate coordinate) {
+            return new BlockPos(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        }
+        if (value instanceof PointData pointData) {
+            Vector3d p = pointData.getPosition();
+            return BlockPos.ofFloored(p.x, p.y, p.z);
+        }
+        if (value instanceof Vector3d vector) {
+            return BlockPos.ofFloored(vector.x, vector.y, vector.z);
+        }
+        if (value instanceof Vec3d vec3d) {
+            return BlockPos.ofFloored(vec3d.x, vec3d.y, vec3d.z);
+        }
+        return null;
     }
 
     protected record BoxDefinition(
