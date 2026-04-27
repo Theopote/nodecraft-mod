@@ -339,6 +339,25 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
         return null;
     }
 
+    protected @Nullable Vector3d resolveVectorInput(@Nullable Object value) {
+        if (value instanceof PointData pointData) {
+            return new Vector3d(pointData.getPosition());
+        }
+        if (value instanceof Coordinate coordinate) {
+            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        }
+        if (value instanceof Vector3d vector) {
+            return new Vector3d(vector);
+        }
+        if (value instanceof Vec3d vec3d) {
+            return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
+        }
+        if (value instanceof BlockPos blockPos) {
+            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        }
+        return null;
+    }
+
     protected record BoxDefinition(
         RegionData region,
         Vector3d center,

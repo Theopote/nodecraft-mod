@@ -58,8 +58,23 @@ public class SphereByDiameterNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d start = resolvePoint(inputValues.get(INPUT_START_ID));
-        Vector3d end = resolvePoint(inputValues.get(INPUT_END_ID));
+        Object startInput = inputValues.get(INPUT_START_ID);
+        Object endInput = inputValues.get(INPUT_END_ID);
+
+        Vector3d start = resolvePoint(startInput);
+        Vector3d end = resolvePoint(endInput);
+
+        if ((start == null || end == null) && startInput instanceof LineData diameterLine) {
+            Vec3d lineStart = diameterLine.getStart();
+            Vec3d lineEnd = diameterLine.getEnd();
+            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        } else if ((start == null || end == null) && endInput instanceof LineData diameterLine) {
+            Vec3d lineStart = diameterLine.getStart();
+            Vec3d lineEnd = diameterLine.getEnd();
+            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        }
 
         if (start == null || end == null) {
             writeEmptyOutputs();

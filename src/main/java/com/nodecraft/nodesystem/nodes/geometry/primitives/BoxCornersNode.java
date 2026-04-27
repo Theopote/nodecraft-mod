@@ -4,6 +4,8 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BasePort;
 import net.minecraft.util.math.BlockPos;
+import org.joml.Matrix3d;
+import org.joml.Vector3d;
 
 @NodeInfo(
     id = "geometry.primitives.box_from_corners",
@@ -39,23 +41,39 @@ public class BoxCornersNode extends AbstractBoxGeneratorNode {
         Object cornerAObj = inputValues.get(INPUT_CORNER_A_ID);
         Object cornerBObj = inputValues.get(INPUT_CORNER_B_ID);
 
-        BlockPos cornerA = resolveBlockPosInput(cornerAObj);
-        BlockPos cornerB = resolveBlockPosInput(cornerBObj);
+        Vector3d cornerA = resolveVectorInput(cornerAObj);
+        Vector3d cornerB = resolveVectorInput(cornerBObj);
         if (cornerA == null || cornerB == null) {
             return null;
         }
 
-        BlockPos minCorner = new BlockPos(
-            Math.min(cornerA.getX(), cornerB.getX()),
-            Math.min(cornerA.getY(), cornerB.getY()),
-            Math.min(cornerA.getZ(), cornerB.getZ())
+        double minX = Math.min(cornerA.x, cornerB.x);
+        double minY = Math.min(cornerA.y, cornerB.y);
+        double minZ = Math.min(cornerA.z, cornerB.z);
+        double maxX = Math.max(cornerA.x, cornerB.x);
+        double maxY = Math.max(cornerA.y, cornerB.y);
+        double maxZ = Math.max(cornerA.z, cornerB.z);
+
+        BlockPos minCorner = BlockPos.ofFloored(minX, minY, minZ);
+        BlockPos maxCorner = BlockPos.ofFloored(maxX, maxY, maxZ);
+
+        Vector3d center = new Vector3d(
+            (minX + maxX) * 0.5d,
+            (minY + maxY) * 0.5d,
+            (minZ + maxZ) * 0.5d
         );
-        BlockPos maxCorner = new BlockPos(
-            Math.max(cornerA.getX(), cornerB.getX()),
-            Math.max(cornerA.getY(), cornerB.getY()),
-            Math.max(cornerA.getZ(), cornerB.getZ())
+        Vector3d halfExtents = new Vector3d(
+            Math.max(1.0e-6d, (maxX - minX) * 0.5d),
+            Math.max(1.0e-6d, (maxY - minY) * 0.5d),
+            Math.max(1.0e-6d, (maxZ - minZ) * 0.5d)
         );
 
-        return createAxisAlignedDefinition(minCorner, maxCorner);
+        return new BoxDefinition(
+            new com.nodecraft.nodesystem.datatypes.RegionData(minCorner, maxCorner),
+            center,
+            halfExtents,
+            new Matrix3d().identity(),
+            false
+        );
     }
 }

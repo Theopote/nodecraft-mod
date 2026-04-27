@@ -60,8 +60,22 @@ public class ConeByBaseApexRadiusNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d baseCenter = resolvePoint(inputValues.get(INPUT_BASE_CENTER_ID));
-        Vector3d apex = resolvePoint(inputValues.get(INPUT_APEX_ID));
+        Object baseInput = inputValues.get(INPUT_BASE_CENTER_ID);
+        Object apexInput = inputValues.get(INPUT_APEX_ID);
+
+        Vector3d baseCenter = resolvePoint(baseInput);
+        Vector3d apex = resolvePoint(apexInput);
+        if ((baseCenter == null || apex == null) && baseInput instanceof LineData axisLineInput) {
+            Vec3d lineStart = axisLineInput.getStart();
+            Vec3d lineEnd = axisLineInput.getEnd();
+            baseCenter = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            apex = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        } else if ((baseCenter == null || apex == null) && apexInput instanceof LineData axisLineInput) {
+            Vec3d lineStart = axisLineInput.getStart();
+            Vec3d lineEnd = axisLineInput.getEnd();
+            baseCenter = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            apex = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        }
         Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
 
         if (baseCenter == null || apex == null || !(radiusObj instanceof Number radiusNumber)) {

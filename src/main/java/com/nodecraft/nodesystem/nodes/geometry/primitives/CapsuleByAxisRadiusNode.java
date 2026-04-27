@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.datatypes.CompositeGeometryData;
 import com.nodecraft.nodesystem.datatypes.CylinderGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
 import com.nodecraft.nodesystem.datatypes.HemisphereGeometryData;
+import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
@@ -62,8 +63,22 @@ public class CapsuleByAxisRadiusNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d start = resolvePoint(inputValues.get(INPUT_START_ID));
-        Vector3d end = resolvePoint(inputValues.get(INPUT_END_ID));
+        Object startInput = inputValues.get(INPUT_START_ID);
+        Object endInput = inputValues.get(INPUT_END_ID);
+
+        Vector3d start = resolvePoint(startInput);
+        Vector3d end = resolvePoint(endInput);
+        if ((start == null || end == null) && startInput instanceof LineData axisLineInput) {
+            Vec3d lineStart = axisLineInput.getStart();
+            Vec3d lineEnd = axisLineInput.getEnd();
+            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        } else if ((start == null || end == null) && endInput instanceof LineData axisLineInput) {
+            Vec3d lineStart = axisLineInput.getStart();
+            Vec3d lineEnd = axisLineInput.getEnd();
+            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        }
         Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
         if (start == null || end == null || !(radiusObj instanceof Number rn)) {
             writeInvalid();
