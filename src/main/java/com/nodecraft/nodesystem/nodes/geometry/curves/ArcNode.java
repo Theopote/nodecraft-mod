@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.Curve;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -187,6 +188,9 @@ public class ArcNode extends BaseNode {
         if (value instanceof PointData point) {
             return point.getPosition();
         }
+        if (value instanceof Coordinate coordinate) {
+            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
+        }
         if (value instanceof Vector3d vector) {
             return new Vector3d(vector);
         }
@@ -208,6 +212,9 @@ public class ArcNode extends BaseNode {
         }
         if (normalValue instanceof PointData point) {
             return point.getPosition();
+        }
+        if (normalValue instanceof Coordinate coordinate) {
+            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
         }
         if (normalValue instanceof Vec3d vec) {
             return new Vector3d(vec.x, vec.y, vec.z);

@@ -348,9 +348,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedPreviewBackend = null;
         cachedGhostRenderMode = null;
         PreviewManager.hideNodePreviews(getId().toString());
-        if (context != null && context.getWorld() != null) {
-            TrackedPreviewPlacementService.getInstance().clearTrackedPreview(context.getWorld(), getId().toString());
-        }
+        TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(getId().toString());
     }
 
     private BlockPosList resolveBlocks(Object blocksObj,

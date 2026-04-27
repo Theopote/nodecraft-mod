@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -138,6 +139,9 @@ public class PointsToPathNode extends BaseNode {
         if (value instanceof PointData pointData) {
             Vector3d p = pointData.getPosition();
             return new Vec3d(p.x, p.y, p.z);
+        }
+        if (value instanceof Coordinate coordinate) {
+            return new Vec3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
         }
         if (value instanceof Vector3d vector) {
             return new Vec3d(vector.x, vector.y, vector.z);
