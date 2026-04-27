@@ -38,7 +38,7 @@ public class HemisphereByCenterAxisRadiusNode extends BaseNode {
         super(UUID.randomUUID(), "geometry.primitives.hemisphere");
 
         addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Sphere center (lies on the flat circular face)", NodeDataType.ANY, this));
-        addInputPort(new BasePort(INPUT_AXIS_ID, "Axis", "Unit direction from the flat face into the dome (solid uses dot(p - center, axis) >= 0)", NodeDataType.VECTOR, this));
+        addInputPort(new BasePort(INPUT_AXIS_ID, "Axis", "Unit direction from the flat face into the dome (solid uses dot(p - center, axis) >= 0)", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Sphere radius", NodeDataType.DOUBLE, this));
 
         addOutputPort(new BasePort(OUTPUT_HEMISPHERE_ID, "Hemisphere", "Constructed hemisphere geometry", NodeDataType.HEMISPHERE_GEOMETRY, this));
@@ -56,15 +56,13 @@ public class HemisphereByCenterAxisRadiusNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Object axisObj = inputValues.get(INPUT_AXIS_ID);
+        Vector3d axis = resolvePoint(inputValues.get(INPUT_AXIS_ID));
         Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
 
-        if (center == null || !(axisObj instanceof Vector3d rawAxis) || !(radiusObj instanceof Number radiusNum)) {
+        if (center == null || axis == null || !(radiusObj instanceof Number radiusNum)) {
             writeEmptyOutputs();
             return;
         }
-
-        Vector3d axis = new Vector3d(rawAxis);
         if (axis.lengthSquared() <= 1.0e-18d) {
             writeEmptyOutputs();
             return;

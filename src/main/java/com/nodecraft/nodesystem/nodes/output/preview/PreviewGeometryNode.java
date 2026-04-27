@@ -133,9 +133,11 @@ public class PreviewGeometryNode extends BaseNode {
         } else if (!geometries.isEmpty()) {
             int geometrySignature = computeGeometrySignature(geometries);
             int optionsSignature = computeOptionsSignature();
+            boolean cachedPreviewsActive = hasActiveCachedPreviews(previewIds);
             boolean previewDirty = geometrySignature != cachedGeometrySignature
                 || optionsSignature != cachedOptionsSignature
-                || previewIds.isEmpty();
+                || previewIds.isEmpty()
+                || !cachedPreviewsActive;
 
             Color parsed = Color.fromHex(fillColor);
             Color outlineParsed = Color.fromHex(outlineColor);
@@ -210,6 +212,18 @@ public class PreviewGeometryNode extends BaseNode {
         cachedGeometrySignature = 0;
         cachedOptionsSignature = 0;
         cachedPreviewIds = List.of();
+    }
+
+    private boolean hasActiveCachedPreviews(List<String> previewIds) {
+        if (previewIds == null || previewIds.isEmpty()) {
+            return false;
+        }
+        for (String previewId : previewIds) {
+            if (PreviewManager.hasActivePreview(previewId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private List<GeometryData> resolveGeometryInputs() {

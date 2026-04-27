@@ -491,6 +491,10 @@ public final class PreviewManager {
         return RENDERER.getActivePreviewCount();
     }
 
+    public static boolean hasActivePreview(String previewId) {
+        return RENDERER.hasActivePreview(previewId);
+    }
+
     public static void updatePreview(String previewId, Object newData) {
         RENDERER.updatePreview(previewId, newData, null);
     }

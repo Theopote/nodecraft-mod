@@ -457,6 +457,13 @@ public class PreviewRenderer {
     public int getActiveElementCount() {
         return activeElements.size();
     }
+
+    public boolean hasActivePreview(String previewId) {
+        if (previewId == null || previewId.isEmpty()) {
+            return false;
+        }
+        return activeElements.containsKey(previewId);
+    }
     
     public Map<String, Integer> getElementCountByType() {
         Map<String, Integer> counts = new ConcurrentHashMap<>();
