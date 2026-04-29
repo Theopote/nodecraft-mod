@@ -7,6 +7,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SquarePyramidGeometryData;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
@@ -155,12 +156,7 @@ public class SquarePyramidNode extends BaseNode {
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) return pointData.getPosition();
-        if (value instanceof Coordinate coordinate) return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        if (value instanceof Vector3d vector) return new Vector3d(vector);
-        if (value instanceof Vec3d vec3d) return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
-        if (value instanceof BlockPos blockPos) return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     private record Basis(Vector3d xAxis, Vector3d yAxis, Vector3d normal) { }

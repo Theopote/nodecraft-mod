@@ -13,7 +13,7 @@ import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.BoxBlockGenerator;
-import com.nodecraft.nodesystem.util.Coordinate;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -321,9 +321,6 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
     }
 
     protected @Nullable BlockPos resolveBlockPosInput(@Nullable Object value) {
-        if (value instanceof BlockPos blockPos) {
-            return blockPos;
-        }
         if (value instanceof LineData lineData) {
             Vec3d start = lineData.getStart();
             return BlockPos.ofFloored(start.x, start.y, start.z);
@@ -332,20 +329,7 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
             Vector3d point = planeData.getPoint();
             return BlockPos.ofFloored(point.x, point.y, point.z);
         }
-        if (value instanceof Coordinate coordinate) {
-            return new BlockPos(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        }
-        if (value instanceof PointData pointData) {
-            Vector3d p = pointData.getPosition();
-            return BlockPos.ofFloored(p.x, p.y, p.z);
-        }
-        if (value instanceof Vector3d vector) {
-            return BlockPos.ofFloored(vector.x, vector.y, vector.z);
-        }
-        if (value instanceof Vec3d vec3d) {
-            return BlockPos.ofFloored(vec3d.x, vec3d.y, vec3d.z);
-        }
-        return null;
+        return SpatialValueResolver.resolveBlockPos(value);
     }
 
     protected @Nullable Vector3d resolveVectorInput(@Nullable Object value) {
@@ -356,22 +340,7 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
         if (value instanceof PlaneData planeData) {
             return planeData.getPoint();
         }
-        if (value instanceof PointData pointData) {
-            return new Vector3d(pointData.getPosition());
-        }
-        if (value instanceof Coordinate coordinate) {
-            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof Vec3d vec3d) {
-            return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     protected record BoxDefinition(

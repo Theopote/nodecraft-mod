@@ -16,6 +16,7 @@ import imgui.ImGui;
 import imgui.flag.ImGuiCol;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,7 +91,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
             selectionHint = "First point selected. Choose the second point.";
             clearCompletedRegionPreview();
             clearCompletedBlocksPreview();
-            outputValues.put(OUTPUT_POS1_ID, pos1);
+            outputValues.put(OUTPUT_POS1_ID, toVector3d(pos1));
             outputValues.put(OUTPUT_POS1_X_ID, (int) pos1.getX());
             outputValues.put(OUTPUT_POS1_Y_ID, (int) pos1.getY());
             outputValues.put(OUTPUT_POS1_Z_ID, (int) pos1.getZ());
@@ -280,7 +281,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         if (pos2 != null) {
             updateOutputsFromPositions();
         } else {
-            outputValues.put(OUTPUT_POS1_ID, pos1);
+            outputValues.put(OUTPUT_POS1_ID, toVector3d(pos1));
             outputValues.put(OUTPUT_POS1_X_ID, (int) pos1.getX());
             outputValues.put(OUTPUT_POS1_Y_ID, (int) pos1.getY());
             outputValues.put(OUTPUT_POS1_Z_ID, (int) pos1.getZ());
@@ -295,7 +296,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
         if (pos1 != null) {
             updateOutputsFromPositions();
         } else {
-            outputValues.put(OUTPUT_POS2_ID, pos2);
+            outputValues.put(OUTPUT_POS2_ID, toVector3d(pos2));
             outputValues.put(OUTPUT_POS2_X_ID, (int) pos2.getX());
             outputValues.put(OUTPUT_POS2_Y_ID, (int) pos2.getY());
             outputValues.put(OUTPUT_POS2_Z_ID, (int) pos2.getZ());
@@ -327,11 +328,11 @@ public class SelectedRegionNode extends BaseCustomUINode {
             return;
         }
 
-        outputValues.put(OUTPUT_POS1_ID, pos1);
+        outputValues.put(OUTPUT_POS1_ID, toVector3d(pos1));
         outputValues.put(OUTPUT_POS1_X_ID, (int) pos1.getX());
         outputValues.put(OUTPUT_POS1_Y_ID, (int) pos1.getY());
         outputValues.put(OUTPUT_POS1_Z_ID, (int) pos1.getZ());
-        outputValues.put(OUTPUT_POS2_ID, pos2);
+        outputValues.put(OUTPUT_POS2_ID, toVector3d(pos2));
         outputValues.put(OUTPUT_POS2_X_ID, (int) pos2.getX());
         outputValues.put(OUTPUT_POS2_Y_ID, (int) pos2.getY());
         outputValues.put(OUTPUT_POS2_Z_ID, (int) pos2.getZ());
@@ -343,8 +344,8 @@ public class SelectedRegionNode extends BaseCustomUINode {
         float maxY = Math.max(pos1.getY(), pos2.getY());
         float maxZ = Math.max(pos1.getZ(), pos2.getZ());
 
-        outputValues.put(OUTPUT_MIN_POS_ID, new Vector3(minX, minY, minZ));
-        outputValues.put(OUTPUT_MAX_POS_ID, new Vector3(maxX, maxY, maxZ));
+        outputValues.put(OUTPUT_MIN_POS_ID, new Vector3d(minX, minY, minZ));
+        outputValues.put(OUTPUT_MAX_POS_ID, new Vector3d(maxX, maxY, maxZ));
 
         int sizeX = (int) (maxX - minX) + 1;
         int sizeY = (int) (maxY - minY) + 1;
@@ -358,7 +359,7 @@ public class SelectedRegionNode extends BaseCustomUINode {
     }
 
     private void resetOutputs() {
-        Vector3 zeroVec = new Vector3(0, 0, 0);
+        Vector3d zeroVec = new Vector3d();
         outputValues.put(OUTPUT_POS1_ID, zeroVec);
         outputValues.put(OUTPUT_POS2_ID, zeroVec);
         outputValues.put(OUTPUT_POS1_X_ID, 0);
@@ -374,6 +375,13 @@ public class SelectedRegionNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_SIZE_Z_ID, 0);
         outputValues.put(OUTPUT_VOLUME_ID, 0);
         outputValues.put(OUTPUT_HAS_SELECTION_ID, false);
+    }
+
+    private Vector3d toVector3d(@Nullable Vector3 vector) {
+        if (vector == null) {
+            return new Vector3d();
+        }
+        return new Vector3d(vector.getX(), vector.getY(), vector.getZ());
     }
 
     public boolean isAutoUpdate() {

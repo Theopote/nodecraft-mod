@@ -1,9 +1,8 @@
 package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.datatypes.PlaneData;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
-import net.minecraft.util.math.BlockPos;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -16,16 +15,7 @@ final class ProfilePlaneUtils {
     }
 
     static @Nullable Vector3d resolvePoint(@Nullable Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     static @Nullable Basis createBasis(PlaneData plane, @Nullable Vector3d preferredXAxis) {

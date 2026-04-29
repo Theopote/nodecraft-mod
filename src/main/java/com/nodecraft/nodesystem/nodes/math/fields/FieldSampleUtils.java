@@ -1,7 +1,6 @@
 package com.nodecraft.nodesystem.nodes.math.fields;
 
-import com.nodecraft.nodesystem.datatypes.PointData;
-import net.minecraft.util.math.BlockPos;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import org.joml.Vector3d;
 
 final class FieldSampleUtils {
@@ -9,15 +8,6 @@ final class FieldSampleUtils {
     }
 
     static Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 }

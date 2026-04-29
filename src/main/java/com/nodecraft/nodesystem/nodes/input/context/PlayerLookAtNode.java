@@ -17,6 +17,7 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.RaycastContext;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -160,7 +161,7 @@ public class PlayerLookAtNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_HAS_HIT_ID, true);
         outputValues.put(
             OUTPUT_HIT_POSITION_ID,
-            new Vector3((float) best.hitPos.x, (float) best.hitPos.y, (float) best.hitPos.z)
+            new Vector3d(best.hitPos.x, best.hitPos.y, best.hitPos.z)
         );
         outputValues.put(
             OUTPUT_HIT_BLOCK_ID,
@@ -210,7 +211,7 @@ public class PlayerLookAtNode extends BaseCustomUINode {
 
     private void resetOutputs() {
         outputValues.put(OUTPUT_HAS_HIT_ID, false);
-        outputValues.put(OUTPUT_HIT_POSITION_ID, new Vector3(0, 0, 0));
+        outputValues.put(OUTPUT_HIT_POSITION_ID, new Vector3d());
         outputValues.put(OUTPUT_HIT_BLOCK_ID, null);
         outputValues.put(OUTPUT_HIT_ENTITY_ID, null);
         outputValues.put(OUTPUT_HIT_DISTANCE_ID, 0.0f);

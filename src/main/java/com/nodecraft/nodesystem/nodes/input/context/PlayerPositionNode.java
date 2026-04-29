@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.minecraft.PlayerAccessor;
 import com.nodecraft.nodesystem.util.Vector3;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.UUID;
 
@@ -51,7 +52,7 @@ public class PlayerPositionNode extends BaseCustomUINode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         if (context == null) {
-            updateOutputs(new Vector3(0, 0, 0));
+            updateOutputs(new Vector3d());
             return;
         }
         updateOutputs(getPlayerPosition(context));
@@ -72,19 +73,20 @@ public class PlayerPositionNode extends BaseCustomUINode {
         return false;
     }
 
-    private Vector3 getPlayerPosition(ExecutionContext context) {
+    private Vector3d getPlayerPosition(ExecutionContext context) {
         PlayerAccessor playerAccessor = context.getPlayerAccessor();
         if (playerAccessor == null) {
-            return new Vector3(0, 0, 0);
+            return new Vector3d();
         }
-        return useEyePosition ? playerAccessor.getPlayerEyePosition() : playerAccessor.getPlayerPosition();
+        Vector3 position = useEyePosition ? playerAccessor.getPlayerEyePosition() : playerAccessor.getPlayerPosition();
+        return new Vector3d(position.getX(), position.getY(), position.getZ());
     }
 
-    private void updateOutputs(Vector3 position) {
+    private void updateOutputs(Vector3d position) {
         outputValues.put(OUTPUT_POSITION_ID, position);
-        outputValues.put(OUTPUT_X_ID, position.getX());
-        outputValues.put(OUTPUT_Y_ID, position.getY());
-        outputValues.put(OUTPUT_Z_ID, position.getZ());
+        outputValues.put(OUTPUT_X_ID, (float) position.x);
+        outputValues.put(OUTPUT_Y_ID, (float) position.y);
+        outputValues.put(OUTPUT_Z_ID, (float) position.z);
     }
 
     public boolean isUseEyePosition() {

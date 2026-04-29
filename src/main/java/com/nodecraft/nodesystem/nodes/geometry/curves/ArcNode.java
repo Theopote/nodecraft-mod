@@ -11,6 +11,7 @@ import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.Curve;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -185,44 +186,15 @@ public class ArcNode extends BaseNode {
     }
 
     private @Nullable Vector3d resolveCenter(@Nullable Object value) {
-        if (value instanceof PointData point) {
-            return point.getPosition();
-        }
-        if (value instanceof Coordinate coordinate) {
-            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos pos) {
-            return new Vector3d(pos.getX(), pos.getY(), pos.getZ());
-        }
-        if (value instanceof Vec3d vec) {
-            return new Vector3d(vec.x, vec.y, vec.z);
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     private @Nullable Vector3d resolveNormal(@Nullable Object planeValue, @Nullable Object normalValue) {
         if (planeValue instanceof PlaneData plane) {
             return plane.getNormal();
         }
-        if (normalValue instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (normalValue instanceof PointData point) {
-            return point.getPosition();
-        }
-        if (normalValue instanceof Coordinate coordinate) {
-            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        }
-        if (normalValue instanceof Vec3d vec) {
-            return new Vector3d(vec.x, vec.y, vec.z);
-        }
-        if (normalValue instanceof BlockPos pos) {
-            return new Vector3d(pos.getX(), pos.getY(), pos.getZ());
-        }
-        return new Vector3d(0.0d, 1.0d, 0.0d);
+        Vector3d resolved = SpatialValueResolver.resolveVector3d(normalValue);
+        return resolved != null ? resolved : new Vector3d(0.0d, 1.0d, 0.0d);
     }
 
     private @Nullable Basis buildBasis(Vector3d normal) {

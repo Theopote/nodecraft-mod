@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.datatypes.BoxSdfData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SignedDistanceFieldData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -52,8 +53,9 @@ public class SdfBoxNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Vector3d ext = inputValues.get(INPUT_HALF_EXTENTS_ID) instanceof Vector3d v
-            ? new Vector3d(Math.abs(v.x), Math.abs(v.y), Math.abs(v.z))
+        Vector3d extInput = SpatialValueResolver.resolveVector3d(inputValues.get(INPUT_HALF_EXTENTS_ID));
+        Vector3d ext = extInput != null
+            ? new Vector3d(Math.abs(extInput.x), Math.abs(extInput.y), Math.abs(extInput.z))
             : new Vector3d(Math.abs(halfX), Math.abs(halfY), Math.abs(halfZ));
         if (center == null || ext.lengthSquared() <= 0.0d) {
             outputValues.put(OUTPUT_SDF_ID, null);
@@ -66,15 +68,6 @@ public class SdfBoxNode extends BaseNode {
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 }

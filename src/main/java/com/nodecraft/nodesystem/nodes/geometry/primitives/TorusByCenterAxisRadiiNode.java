@@ -9,8 +9,7 @@ import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import com.nodecraft.nodesystem.util.Coordinate;
-import net.minecraft.util.math.BlockPos;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -105,25 +104,10 @@ public class TorusByCenterAxisRadiiNode extends BaseNode {
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
         if (value instanceof PlaneData planeData) {
             return planeData.getPoint();
         }
-        if (value instanceof Coordinate coordinate) {
-            return new Vector3d(coordinate.getX(), coordinate.getY(), coordinate.getZ());
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof Vec3d vec3d) {
-            return new Vector3d(vec3d.x, vec3d.y, vec3d.z);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     private Vector3d resolveVector(Object value) {

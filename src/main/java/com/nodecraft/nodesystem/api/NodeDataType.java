@@ -3,6 +3,7 @@ package com.nodecraft.nodesystem.api;
 import com.nodecraft.nodesystem.datatypes.*;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Curve;
+import com.nodecraft.nodesystem.util.Vector3;
 import net.minecraft.util.math.BlockPos;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
@@ -139,6 +140,10 @@ public enum NodeDataType {
         }
 
         if (this == FLOAT && value instanceof Float) {
+            return true;
+        }
+
+        if ((this == VECTOR || this == POSITION) && value instanceof Vector3) {
             return true;
         }
 

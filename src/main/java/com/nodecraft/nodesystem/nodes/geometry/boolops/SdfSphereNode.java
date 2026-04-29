@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SignedDistanceFieldData;
 import com.nodecraft.nodesystem.datatypes.SphereSdfData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -62,16 +63,7 @@ public class SdfSphereNode extends BaseNode {
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        return SpatialValueResolver.resolveVector3d(value);
     }
 
     private double getInputDouble(String portId, double fallback) {
