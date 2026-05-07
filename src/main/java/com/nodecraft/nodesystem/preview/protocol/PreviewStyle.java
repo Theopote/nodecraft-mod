@@ -94,7 +94,6 @@ public final class PreviewStyle {
             case PLANE -> fromLegacyPlaneGridOptions(safeOptions);
             case FRAME -> fromLegacyFrameAxesOptions(safeOptions);
             case LABELS -> fromLegacyLabelsOptions(safeOptions);
-            case SURFACE_STRIP -> fromLegacyGeometryOptions(safeOptions);
         };
     }
 
@@ -350,7 +349,6 @@ public final class PreviewStyle {
             case PLANE -> toPlaneGridPreviewOptions();
             case FRAME -> toFrameAxesPreviewOptions();
             case LABELS -> toLabelsPreviewOptions();
-            default -> new PreviewOptions().setColor(red, green, blue).setOpacity(opacity);
         };
     }
 

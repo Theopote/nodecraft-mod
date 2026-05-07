@@ -118,12 +118,6 @@ public final class PreviewManager {
                 case PLANE -> showPreviewPlaneGrid(nodeId, payload, opts);
                 case FRAME -> showPreviewFrameAxes(nodeId, payload, opts);
                 case LABELS -> showPreviewTextLabels(nodeId, payload, opts);
-                case SURFACE_STRIP -> {
-                    NodeCraft.LOGGER.warn(
-                        "PreviewManager.showPreview: SURFACE_STRIP preview is deprecated/unimplemented; use GEOMETRY payload instead"
-                    );
-                    yield null;
-                }
             };
         } catch (Exception e) {
             NodeCraft.LOGGER.error("PreviewManager.showPreview failed: nodeId={}", request.ownerNodeId(), e);
