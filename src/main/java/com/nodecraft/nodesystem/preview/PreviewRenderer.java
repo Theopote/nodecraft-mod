@@ -233,6 +233,116 @@ public class PreviewRenderer {
             listDirty.set(true);
         }
     }
+
+    /**
+     * Hide previews for a node but only for a given preview type.
+     */
+    public void hidePreviewsByNodeAndType(String ownerNodeId, String previewType) {
+        if (ownerNodeId == null || ownerNodeId.isEmpty() || previewType == null || previewType.isEmpty()) {
+            return;
+        }
+        List<String> previews = nodeToPreviewsMap.get(ownerNodeId);
+        if (previews == null || previews.isEmpty()) {
+            return;
+        }
+
+        List<String> removed = new ArrayList<>();
+        for (String previewId : previews) {
+            if (!isPreviewIdOfType(previewId, ownerNodeId, previewType)) {
+                continue;
+            }
+            AbstractPreviewElement element = activeElements.remove(previewId);
+            if (element != null) {
+                element.cleanup();
+            }
+            removed.add(previewId);
+        }
+
+        if (!removed.isEmpty()) {
+            previews.removeAll(removed);
+            if (previews.isEmpty()) {
+                nodeToPreviewsMap.remove(ownerNodeId);
+            }
+            listDirty.set(true);
+        }
+    }
+
+    /**
+     * Find active previews for a node and preview type.
+     */
+    public List<String> getPreviewIdsByNodeAndType(String ownerNodeId, String previewType) {
+        if (ownerNodeId == null || ownerNodeId.isEmpty() || previewType == null || previewType.isEmpty()) {
+            return List.of();
+        }
+        List<String> previews = nodeToPreviewsMap.get(ownerNodeId);
+        if (previews == null || previews.isEmpty()) {
+            return List.of();
+        }
+        List<String> filtered = new ArrayList<>();
+        for (String previewId : previews) {
+            if (!isPreviewIdOfType(previewId, ownerNodeId, previewType)) {
+                continue;
+            }
+            if (activeElements.containsKey(previewId)) {
+                filtered.add(previewId);
+            }
+        }
+        return filtered;
+    }
+
+    /**
+     * Update existing preview of same node/type if present, otherwise create one.
+     */
+    public String upsertPreview(String ownerNodeId, String previewType, Object data, PreviewOptions options) {
+        List<String> existing = getPreviewIdsByNodeAndType(ownerNodeId, previewType);
+        if (!existing.isEmpty()) {
+            String previewId = existing.getFirst();
+            updatePreview(previewId, data, options);
+            // If duplicates exist for same node/type, remove extras to keep render stable.
+            for (int i = 1; i < existing.size(); i++) {
+                hidePreview(existing.get(i));
+            }
+            return previewId;
+        }
+        return showPreview(ownerNodeId, previewType, data, options);
+    }
+
+    /**
+     * Upsert a batch of previews for same node/type: reuse existing IDs by index, create missing, remove extras.
+     */
+    public List<String> upsertPreviews(String ownerNodeId, String previewType, List<?> dataList, PreviewOptions options) {
+        if (dataList == null || dataList.isEmpty()) {
+            hidePreviewsByNodeAndType(ownerNodeId, previewType);
+            return List.of();
+        }
+
+        List<String> existing = getPreviewIdsByNodeAndType(ownerNodeId, previewType);
+        List<String> result = new ArrayList<>(dataList.size());
+
+        int i = 0;
+        for (Object data : dataList) {
+            if (data == null) {
+                continue;
+            }
+            if (i < existing.size()) {
+                String previewId = existing.get(i);
+                updatePreview(previewId, data, options);
+                result.add(previewId);
+            } else {
+                String previewId = showPreview(ownerNodeId, previewType, data, options);
+                if (previewId != null) {
+                    result.add(previewId);
+                }
+            }
+            i++;
+        }
+
+        for (int j = i; j < existing.size(); j++) {
+            hidePreview(existing.get(j));
+        }
+
+        return result;
+    }
     
     /**
      * 清除所有活跃预览
@@ -403,6 +513,13 @@ public class PreviewRenderer {
         long counter = idCounter.incrementAndGet();
         int randomSuffix = ThreadLocalRandom.current().nextInt(1000, 9999);
         return nodeId + "_" + type + "_" + counter + "_" + randomSuffix;
+    }
+
+    private boolean isPreviewIdOfType(String previewId, String nodeId, String previewType) {
+        if (previewId == null || nodeId == null || previewType == null) {
+            return false;
+        }
+        return previewId.startsWith(nodeId + "_" + previewType + "_");
     }
     
     // ================= 配置管理 =================

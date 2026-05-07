@@ -90,6 +90,8 @@ public class PreviewGeometryNode extends BaseNode {
     // Execution throttling: prevents rapid re-execution when node is selected (which causes flickering)
     private volatile long lastExecutionTime = 0;
     private static final long MIN_EXECUTION_INTERVAL_MS = 50;
+    private static final long EMPTY_INPUT_HOLD_MS = 750;
+    private volatile long lastNonEmptyInputAt = 0L;
 
     public PreviewGeometryNode() {
         super(UUID.randomUUID(), "output.preview.preview_geometry");
@@ -147,6 +149,7 @@ public class PreviewGeometryNode extends BaseNode {
             clearPreviewCache();
             previewIds = List.of();
         } else if (!geometries.isEmpty()) {
+            lastNonEmptyInputAt = now;
             int geometrySignature = computeGeometrySignature(geometries);
             int optionsSignature = computeOptionsSignature();
             boolean cachedPreviewsActive = hasActiveCachedPreviews(previewIds);
@@ -184,9 +187,13 @@ public class PreviewGeometryNode extends BaseNode {
                 );
             }
         } else {
-            PreviewManager.hideNodePreviews(getId().toString());
-            clearPreviewCache();
-            previewIds = List.of();
+            boolean keepExisting = hasActiveCachedPreviews(previewIds)
+                && (now - lastNonEmptyInputAt) < EMPTY_INPUT_HOLD_MS;
+            if (!keepExisting) {
+                PreviewManager.hideNodePreviews(getId().toString());
+                clearPreviewCache();
+                previewIds = List.of();
+            }
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, !previewIds.isEmpty());

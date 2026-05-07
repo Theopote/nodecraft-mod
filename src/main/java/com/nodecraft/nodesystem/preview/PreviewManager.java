@@ -29,6 +29,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * High-level helper API for preview rendering.
@@ -38,8 +40,28 @@ import java.util.List;
 public final class PreviewManager {
 
     private static final PreviewRenderer RENDERER = PreviewRenderer.getInstance();
+    private static final long EMPTY_INPUT_GRACE_MS = 750L;
+    private static final Map<String, Long> LAST_NON_EMPTY_BY_NODE_TYPE = new ConcurrentHashMap<>();
 
     private PreviewManager() {
+    }
+
+    private static String nodeTypeKey(String nodeId, String previewType) {
+        return nodeId + "|" + previewType;
+    }
+
+    private static void touchNonEmpty(String nodeId, String previewType) {
+        LAST_NON_EMPTY_BY_NODE_TYPE.put(nodeTypeKey(nodeId, previewType), System.currentTimeMillis());
+    }
+
+    private static boolean withinEmptyGrace(String nodeId, String previewType) {
+        Long last = LAST_NON_EMPTY_BY_NODE_TYPE.get(nodeTypeKey(nodeId, previewType));
+        return last != null && (System.currentTimeMillis() - last) < EMPTY_INPUT_GRACE_MS;
+    }
+
+    private static void clearTypePreviewState(String nodeId, String previewType) {
+        LAST_NON_EMPTY_BY_NODE_TYPE.remove(nodeTypeKey(nodeId, previewType));
+        RENDERER.hidePreviewsByNodeAndType(nodeId, previewType);
     }
 
     public static String highlightBlock(String nodeId, Coordinate position, PreviewOptions options) {
@@ -124,13 +146,19 @@ public final class PreviewManager {
             return null;
         }
 
-        hideNodePreviews(nodeId);
-
         if (request.backend() == PreviewBackend.GHOST) {
+            if (blocksPayload.getBlocks().isEmpty()) {
+                if (withinEmptyGrace(nodeId, "ghost_block")) {
+                    return null;
+                }
+                clearTypePreviewState(nodeId, "ghost_block");
+                return null;
+            }
+            touchNonEmpty(nodeId, "ghost_block");
             if (ctx != null && ctx.getWorld() != null) {
                 TrackedPreviewPlacementService.getInstance().clearTrackedPreview(ctx.getWorld(), nodeId);
             }
-            return RENDERER.showPreview(nodeId, "ghost_block", blocksPayload, opts);
+            return RENDERER.upsertPreview(nodeId, "ghost_block", blocksPayload, opts);
         }
 
         if (request.backend() == PreviewBackend.TRACKED_WORLD) {
@@ -169,11 +197,13 @@ public final class PreviewManager {
             return null;
         }
         if (pointsPayload.getPoints().isEmpty()) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "points")) {
+                clearTypePreviewState(nodeId, "points");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "points", pointsPayload, opts);
+        touchNonEmpty(nodeId, "points");
+        return RENDERER.upsertPreview(nodeId, "points", pointsPayload, opts);
     }
 
     @Nullable
@@ -182,11 +212,13 @@ public final class PreviewManager {
             return null;
         }
         if (vectorsPayload.getVectors().isEmpty()) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "vectors")) {
+                clearTypePreviewState(nodeId, "vectors");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "vectors", vectorsPayload, opts);
+        touchNonEmpty(nodeId, "vectors");
+        return RENDERER.upsertPreview(nodeId, "vectors", vectorsPayload, opts);
     }
 
     @Nullable
@@ -194,8 +226,8 @@ public final class PreviewManager {
         if (!(payload instanceof PreviewRegionPayload regionPayload)) {
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "region_box", regionPayload, opts);
+        touchNonEmpty(nodeId, "region_box");
+        return RENDERER.upsertPreview(nodeId, "region_box", regionPayload, opts);
     }
 
     @Nullable
@@ -204,11 +236,13 @@ public final class PreviewManager {
             return null;
         }
         if (curvePayload.getPoints().size() < 2) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "paths")) {
+                clearTypePreviewState(nodeId, "paths");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "paths", curvePayload, opts);
+        touchNonEmpty(nodeId, "paths");
+        return RENDERER.upsertPreview(nodeId, "paths", curvePayload, opts);
     }
 
     /**
@@ -240,20 +274,26 @@ public final class PreviewManager {
     ) {
         if (curves == null || curves.isEmpty()) {
             if (replaceNodePreviews) {
-                hideNodePreviews(nodeId);
+                if (!withinEmptyGrace(nodeId, "paths")) {
+                    clearTypePreviewState(nodeId, "paths");
+                }
             }
             return List.of();
         }
-        if (replaceNodePreviews) {
-            hideNodePreviews(nodeId);
-        }
         PreviewStyle style = PreviewStyle.from(options, PreviewKind.CURVES);
         PreviewOptions opts = style.toPreviewOptions(PreviewKind.CURVES);
-        List<String> ids = new ArrayList<>();
+        List<PreviewCurvePayload> valid = new ArrayList<>();
         for (PreviewCurvePayload c : curves) {
-            if (c == null || c.getPoints().size() < 2) {
-                continue;
+            if (c != null && c.getPoints().size() >= 2) {
+                valid.add(c);
             }
+        }
+        if (replaceNodePreviews) {
+            touchNonEmpty(nodeId, "paths");
+            return RENDERER.upsertPreviews(nodeId, "paths", valid, opts);
+        }
+        List<String> ids = new ArrayList<>();
+        for (PreviewCurvePayload c : valid) {
             String id = RENDERER.showPreview(nodeId, "paths", c, opts);
             if (id != null) {
                 ids.add(id);
@@ -267,23 +307,22 @@ public final class PreviewManager {
      */
     public static List<String> showGeometrySurfaces(String nodeId, List<GeometryData> geometries, PreviewOptions options) {
         if (geometries == null || geometries.isEmpty()) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "geometry_surface")) {
+                clearTypePreviewState(nodeId, "geometry_surface");
+            }
             return List.of();
         }
-        hideNodePreviews(nodeId);
+        touchNonEmpty(nodeId, "geometry_surface");
         PreviewStyle style = PreviewStyle.from(options, PreviewKind.GEOMETRY);
         PreviewOptions opts = style.toPreviewOptions(PreviewKind.GEOMETRY);
-        List<String> ids = new ArrayList<>();
+        List<PreviewGeometryPayload> payloads = new ArrayList<>();
         for (GeometryData g : geometries) {
             if (g == null) {
                 continue;
             }
-            String id = RENDERER.showPreview(nodeId, "geometry_surface", new PreviewGeometryPayload(g), opts);
-            if (id != null) {
-                ids.add(id);
-            }
+            payloads.add(new PreviewGeometryPayload(g));
         }
-        return ids;
+        return RENDERER.upsertPreviews(nodeId, "geometry_surface", payloads, opts);
     }
 
     @Nullable
@@ -292,11 +331,13 @@ public final class PreviewManager {
             return null;
         }
         if (geometryPayload.getGeometry() == null) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "geometry_surface")) {
+                clearTypePreviewState(nodeId, "geometry_surface");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "geometry_surface", geometryPayload, opts);
+        touchNonEmpty(nodeId, "geometry_surface");
+        return RENDERER.upsertPreview(nodeId, "geometry_surface", geometryPayload, opts);
     }
 
     @Nullable
@@ -305,11 +346,13 @@ public final class PreviewManager {
             return null;
         }
         if (planePayload.getPlaneGridData() == null || planePayload.getPlaneGridData().getPlane() == null) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "plane_grid")) {
+                clearTypePreviewState(nodeId, "plane_grid");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "plane_grid", planePayload, opts);
+        touchNonEmpty(nodeId, "plane_grid");
+        return RENDERER.upsertPreview(nodeId, "plane_grid", planePayload, opts);
     }
 
     @Nullable
@@ -318,11 +361,13 @@ public final class PreviewManager {
             return null;
         }
         if (framePayload.getFrameData() == null) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "frame_axes")) {
+                clearTypePreviewState(nodeId, "frame_axes");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "frame_axes", framePayload, opts);
+        touchNonEmpty(nodeId, "frame_axes");
+        return RENDERER.upsertPreview(nodeId, "frame_axes", framePayload, opts);
     }
 
     @Nullable
@@ -331,11 +376,13 @@ public final class PreviewManager {
             return null;
         }
         if (labelsPayload.getLabelData() == null) {
-            hideNodePreviews(nodeId);
+            if (!withinEmptyGrace(nodeId, "text_labels")) {
+                clearTypePreviewState(nodeId, "text_labels");
+            }
             return null;
         }
-        hideNodePreviews(nodeId);
-        return RENDERER.showPreview(nodeId, "text_labels", labelsPayload, opts);
+        touchNonEmpty(nodeId, "text_labels");
+        return RENDERER.upsertPreview(nodeId, "text_labels", labelsPayload, opts);
     }
 
     @Nullable

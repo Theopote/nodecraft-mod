@@ -105,6 +105,9 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private volatile String cachedBlockType = null;
     private volatile PreviewBackend cachedPreviewBackend = null;
     private volatile GhostRenderMode cachedGhostRenderMode = null;
+    private volatile String cachedPreviewId = null;
+    private volatile long lastNonEmptyInputAt = 0L;
+    private static final long EMPTY_INPUT_HOLD_MS = 750;
 
     private static final String INPUT_BLOCKS_ID = "input_blocks";
     private static final String INPUT_GEOMETRY_ID = "input_geometry";
@@ -181,6 +184,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             || cachedGhostRenderMode != ghostRenderMode;
 
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
+            lastNonEmptyInputAt = System.currentTimeMillis();
             if (previewDirty) {
                 if (refreshPreview(context, blocksList, effectiveBlockType, trans, color, outlineColor)) {
                     cachePreviewState(geometrySignature, trans, color, outlineColor, effectiveBlockType);
@@ -198,8 +202,15 @@ public class GeometryViewerNode extends BaseCustomUINode {
             clearAllPreviewState(context);
             statusMessage = "Preview disabled";
         } else {
-            clearAllPreviewState(context);
-            statusMessage = "Waiting for input...";
+            boolean keepExisting = cachedPreviewId != null
+                && PreviewManager.hasActivePreview(cachedPreviewId)
+                && (System.currentTimeMillis() - lastNonEmptyInputAt) < EMPTY_INPUT_HOLD_MS;
+            if (keepExisting) {
+                statusMessage = buildSteadyStateStatus(context);
+            } else {
+                clearAllPreviewState(context);
+                statusMessage = "Waiting for input...";
+            }
         }
 
         outputValues.put(OUTPUT_BLOCKS_ID, blocksList);
@@ -293,9 +304,11 @@ public class GeometryViewerNode extends BaseCustomUINode {
         }
 
         if (previewBackend == PreviewBackend.GHOST) {
+            cachedPreviewId = previewId;
             NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost preview created: previewId={}", getId(), previewId);
             statusMessage = "Previewing " + payload.getBlocks().size() + " ghost blocks (" + ghostRenderMode + ")";
         } else {
+            cachedPreviewId = previewId;
             int trackedCount = context != null && context.getWorld() != null
                 ? TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
                 : 0;
@@ -347,6 +360,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedBlockType = null;
         cachedPreviewBackend = null;
         cachedGhostRenderMode = null;
+        cachedPreviewId = null;
         PreviewManager.hideNodePreviews(getId().toString());
         TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(getId().toString());
     }

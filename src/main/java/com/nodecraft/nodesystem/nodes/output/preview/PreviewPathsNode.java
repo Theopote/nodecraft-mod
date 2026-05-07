@@ -51,6 +51,12 @@ public class PreviewPathsNode extends BaseNode {
     // Execution throttling: prevents rapid re-execution when node is selected (which causes flickering)
     private volatile long lastExecutionTime = 0;
     private static final long MIN_EXECUTION_INTERVAL_MS = 50;
+    private static final long EMPTY_INPUT_HOLD_MS = 750;
+
+    private volatile int cachedInputSignature = 0;
+    private volatile int cachedOptionsSignature = 0;
+    private volatile List<String> cachedPreviewIds = List.of();
+    private volatile long lastNonEmptyInputAt = 0L;
 
     @NodeProperty(displayName = "Line Width", category = "Preview", order = 2)
     private float lineWidth = 1.5f;
@@ -96,10 +102,15 @@ public class PreviewPathsNode extends BaseNode {
         }
         lastExecutionTime = now;
         List<Object> previewItems = resolvePreviewItems();
-        List<String> previewIds = new ArrayList<>();
+        List<String> previewIds = new ArrayList<>(cachedPreviewIds);
         if (!previewEnabled) {
             PreviewManager.hideNodePreviews(getId().toString());
+            cachedInputSignature = 0;
+            cachedOptionsSignature = 0;
+            cachedPreviewIds = List.of();
+            previewIds = List.of();
         } else if (!previewItems.isEmpty()) {
+            lastNonEmptyInputAt = now;
             Color parsedColor = Color.fromHex(pathColor);
             PreviewOptions options = new PreviewOptions()
                 .setColor(parsedColor.getRed(), parsedColor.getGreen(), parsedColor.getBlue())
@@ -115,14 +126,72 @@ public class PreviewPathsNode extends BaseNode {
                     curves.add(payload);
                 }
             }
-            previewIds.addAll(PreviewManager.showPathCurves(getId().toString(), curves, options));
+            int inputSignature = computeCurvesSignature(curves);
+            int optionsSignature = computeOptionsSignature();
+            boolean hasActiveCached = hasAnyActivePreview(cachedPreviewIds);
+            boolean previewDirty = inputSignature != cachedInputSignature
+                || optionsSignature != cachedOptionsSignature
+                || cachedPreviewIds.isEmpty()
+                || !hasActiveCached;
+
+            if (previewDirty) {
+                previewIds = PreviewManager.showPathCurves(getId().toString(), curves, options);
+                cachedPreviewIds = List.copyOf(previewIds);
+                cachedInputSignature = inputSignature;
+                cachedOptionsSignature = optionsSignature;
+            }
         } else {
-            PreviewManager.hideNodePreviews(getId().toString());
+            boolean keepExisting = hasAnyActivePreview(cachedPreviewIds)
+                && (now - lastNonEmptyInputAt) < EMPTY_INPUT_HOLD_MS;
+            if (!keepExisting) {
+                PreviewManager.hideNodePreviews(getId().toString());
+                cachedInputSignature = 0;
+                cachedOptionsSignature = 0;
+                cachedPreviewIds = List.of();
+                previewIds = List.of();
+            }
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, !previewIds.isEmpty());
         outputValues.put(OUTPUT_PREVIEW_IDS_ID, List.copyOf(previewIds));
         outputValues.put(OUTPUT_PREVIEW_COUNT_ID, previewIds.size());
+    }
+
+    private boolean hasAnyActivePreview(List<String> previewIds) {
+        if (previewIds == null || previewIds.isEmpty()) {
+            return false;
+        }
+        for (String previewId : previewIds) {
+            if (PreviewManager.hasActivePreview(previewId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int computeOptionsSignature() {
+        int hash = 17;
+        hash = 31 * hash + Float.floatToIntBits(lineWidth);
+        hash = 31 * hash + (pathColor != null ? pathColor.hashCode() : 0);
+        hash = 31 * hash + Boolean.hashCode(showDirection);
+        hash = 31 * hash + Float.floatToIntBits(arrowSize);
+        hash = 31 * hash + Boolean.hashCode(smoothCurves);
+        hash = 31 * hash + duration;
+        return hash;
+    }
+
+    private int computeCurvesSignature(List<PreviewCurvePayload> curves) {
+        int hash = curves.size();
+        for (PreviewCurvePayload curve : curves) {
+            hash = 31 * hash + Boolean.hashCode(curve.closed());
+            hash = 31 * hash + curve.getPoints().size();
+            for (var p : curve.getPoints()) {
+                hash = 31 * hash + Double.hashCode(p.x());
+                hash = 31 * hash + Double.hashCode(p.y());
+                hash = 31 * hash + Double.hashCode(p.z());
+            }
+        }
+        return hash;
     }
 
     @Override
