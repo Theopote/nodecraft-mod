@@ -12,11 +12,9 @@ import net.minecraft.client.render.OverlayTexture;
 import net.minecraft.client.render.RenderLayers;
 import net.minecraft.client.render.VertexConsumer;
 import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.VertexRendering;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShapes;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -32,7 +30,12 @@ public class RegionBoxElement extends AbstractPreviewElement {
     private boolean showFill = false;
     private boolean showOutline = true;
     private float lineWidth = 2.0f;
-    private static final float OUTLINE_EXPAND = 0.003f;
+    private static final float OUTLINE_EXPAND = 0.012f;
+    private static final int[][] BOX_EDGES = new int[][] {
+        {0, 1}, {1, 2}, {2, 3}, {3, 0},
+        {4, 5}, {5, 6}, {6, 7}, {7, 4},
+        {0, 4}, {1, 5}, {2, 6}, {3, 7}
+    };
 
     public RegionBoxElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
@@ -170,7 +173,7 @@ public class RegionBoxElement extends AbstractPreviewElement {
             flushImmediately = true;
         }
 
-        VertexConsumer lineVertexConsumer = showOutline ? provider.getBuffer(RenderLayers.LINES) : null;
+        VertexConsumer lineVertexConsumer = showOutline ? provider.getBuffer(RenderLayers.lines()) : null;
         VertexConsumer fillVertexConsumer = showFill ? provider.getBuffer(RenderLayers.debugFilledBox()) : null;
         Matrix4f matrix = matrices.peek().getPositionMatrix();
         Vec3d cameraPos = camera.getCameraPos();
@@ -190,31 +193,54 @@ public class RegionBoxElement extends AbstractPreviewElement {
     }
 
     private void drawBox(VertexConsumer vertexConsumer, MatrixStack matrices, BoundingBox box, Vec3d cameraPos, float alpha) {
-        Vec3d min = box.min.subtract(cameraPos).subtract(OUTLINE_EXPAND, OUTLINE_EXPAND, OUTLINE_EXPAND);
-        Vec3d max = box.max.subtract(cameraPos).add(OUTLINE_EXPAND, OUTLINE_EXPAND, OUTLINE_EXPAND);
-
-        float r = color.x();
-        float g = color.y();
-        float b = color.z();
-        float a = Math.max(0.0f, Math.min(1.0f, alpha));
-        int argb = ((int) (a * 255.0f) & 0xFF) << 24
-            | ((int) (r * 255.0f) & 0xFF) << 16
-            | ((int) (g * 255.0f) & 0xFF) << 8
-            | ((int) (b * 255.0f) & 0xFF);
-
-        VertexRendering.drawOutline(
-            matrices,
-            vertexConsumer,
-            VoxelShapes.cuboid(0.0d, 0.0d, 0.0d, max.x - min.x, max.y - min.y, max.z - min.z),
-            min.x,
-            min.y,
-            min.z,
-            argb,
-            lineWidth
-        );
+        Matrix4f matrix = matrices.peek().getPositionMatrix();
+        float clampedAlpha = Math.max(0.0f, Math.min(1.0f, alpha));
+        // Draw a slightly larger dark shell first, then the colored outline,
+        // so border remains visible when semi-transparent fill is enabled.
+        drawBoxEdges(vertexConsumer, matrix, box, cameraPos, OUTLINE_EXPAND * 1.8f, 0.05f, 0.05f, 0.05f, Math.min(1.0f, clampedAlpha * 0.92f));
+        drawBoxEdges(vertexConsumer, matrix, box, cameraPos, OUTLINE_EXPAND, color.x(), color.y(), color.z(), clampedAlpha);
     }
 
-    private void drawLine(VertexConsumer vertexConsumer, Matrix4f matrix, Vec3d start, Vec3d end, float alpha) {
+    private void drawBoxEdges(
+        VertexConsumer vertexConsumer,
+        Matrix4f matrix,
+        BoundingBox box,
+        Vec3d cameraPos,
+        float expand,
+        float r,
+        float g,
+        float b,
+        float alpha
+    ) {
+        Vec3d min = box.min.subtract(cameraPos).subtract(expand, expand, expand);
+        Vec3d max = box.max.subtract(cameraPos).add(expand, expand, expand);
+
+        Vec3d[] vertices = new Vec3d[] {
+            new Vec3d(min.x, min.y, min.z),
+            new Vec3d(max.x, min.y, min.z),
+            new Vec3d(max.x, min.y, max.z),
+            new Vec3d(min.x, min.y, max.z),
+            new Vec3d(min.x, max.y, min.z),
+            new Vec3d(max.x, max.y, min.z),
+            new Vec3d(max.x, max.y, max.z),
+            new Vec3d(min.x, max.y, max.z)
+        };
+
+        for (int[] edge : BOX_EDGES) {
+            drawLine(vertexConsumer, matrix, vertices[edge[0]], vertices[edge[1]], r, g, b, alpha);
+        }
+    }
+
+    private void drawLine(
+        VertexConsumer vertexConsumer,
+        Matrix4f matrix,
+        Vec3d start,
+        Vec3d end,
+        float r,
+        float g,
+        float b,
+        float alpha
+    ) {
         Vector3f normal = new Vector3f((float) (end.x - start.x), (float) (end.y - start.y), (float) (end.z - start.z));
         if (normal.lengthSquared() < 1.0e-12f) {
             normal.set(0.0f, 1.0f, 0.0f);
@@ -223,11 +249,11 @@ public class RegionBoxElement extends AbstractPreviewElement {
         }
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
-            .color(color.x(), color.y(), color.z(), alpha)
+            .color(r, g, b, alpha)
             .normal(normal.x, normal.y, normal.z)
             .lineWidth(lineWidth);
         vertexConsumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
-            .color(color.x(), color.y(), color.z(), alpha)
+            .color(r, g, b, alpha)
             .normal(normal.x, normal.y, normal.z)
             .lineWidth(lineWidth);
     }
