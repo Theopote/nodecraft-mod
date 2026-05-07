@@ -372,12 +372,20 @@ public final class PreviewManager {
 
     // Region box
 
-    public static String showRegionBox(String nodeId, Vec3d min, Vec3d max) {
-        return showRegionBox(nodeId, min, max, PreviewOptions.createRegionBox());
+    /**
+     * Shows a region preview from min-inclusive / max-exclusive world-space corners.
+     * <p>
+     * Example: min=(10,64,10), maxExclusive=(13,67,13) previews blocks x:[10..12], y:[64..66], z:[10..12].
+     */
+    public static String showRegionBox(String nodeId, Vec3d min, Vec3d maxExclusive) {
+        return showRegionBox(nodeId, min, maxExclusive, PreviewOptions.createRegionBox());
     }
 
-    public static String showRegionBox(String nodeId, Vec3d min, Vec3d max, PreviewOptions options) {
-        PreviewRegionPayload payload = PreviewPayloadAdapters.regionFromBoxCorners(min, max);
+    /**
+     * Shows a region preview from min-inclusive / max-exclusive world-space corners.
+     */
+    public static String showRegionBox(String nodeId, Vec3d min, Vec3d maxExclusive, PreviewOptions options) {
+        PreviewRegionPayload payload = PreviewPayloadAdapters.regionFromBoxCorners(min, maxExclusive);
         PreviewStyle style = PreviewStyle.from(options, PreviewKind.REGIONS);
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }

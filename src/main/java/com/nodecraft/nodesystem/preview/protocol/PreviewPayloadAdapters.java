@@ -74,9 +74,17 @@ public final class PreviewPayloadAdapters {
     }
 
     /**
-     * Inclusive block corners from axis-aligned box corners in world space:
-     * {@code minCorner} is the inclusive min block corner; {@code maxCornerExclusive} is the exclusive max corner
-     * (same convention as {@link com.nodecraft.nodesystem.preview.PreviewManager#showRegionBox}).
+     * Converts world-space box corners into an inclusive block region payload.
+     * <p>
+     * Semantics:
+     * - {@code minCorner} is inclusive.
+     * - {@code maxCornerExclusive} is exclusive.
+     * <p>
+     * Examples:
+     * - min=(0,0,0), maxExclusive=(5,5,5) -> region [0..4] on each axis.
+     * - min=(0,0,0), maxExclusive=(5.2,5.2,5.2) -> region [0..5] on each axis.
+     * <p>
+     * This matches {@link com.nodecraft.nodesystem.preview.PreviewManager#showRegionBox}.
      */
     public static PreviewRegionPayload regionFromBoxCorners(Vec3d minCorner, Vec3d maxCornerExclusive) {
         BlockPos minB = BlockPos.ofFloored(minCorner.x, minCorner.y, minCorner.z);
