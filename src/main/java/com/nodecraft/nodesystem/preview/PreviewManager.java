@@ -42,12 +42,6 @@ public final class PreviewManager {
     private PreviewManager() {
     }
 
-    // Block highlight
-
-    public static String highlightBlock(String nodeId, Coordinate position) {
-        return highlightBlock(nodeId, position, PreviewOptions.createBlockHighlight());
-    }
-
     public static String highlightBlock(String nodeId, Coordinate position, PreviewOptions options) {
         try {
             String previewId = RENDERER.showPreview(nodeId, "block_highlight", position, options);
@@ -59,10 +53,6 @@ public final class PreviewManager {
             NodeCraft.LOGGER.error("PreviewManager.highlightBlock failed: nodeId={}, position={}", nodeId, position, e);
             return null;
         }
-    }
-
-    public static String highlightBlocks(String nodeId, List<Coordinate> positions) {
-        return highlightBlocks(nodeId, positions, PreviewOptions.createBlockHighlight());
     }
 
     public static String highlightBlocks(String nodeId, List<Coordinate> positions, PreviewOptions options) {
@@ -382,11 +372,6 @@ public final class PreviewManager {
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }
 
-    // Points
-
-    public static String showPoints(String nodeId, List<Coordinate> points) {
-        return showPoints(nodeId, points, PreviewOptions.createPoints());
-    }
 
     public static String showPoints(String nodeId, List<Coordinate> points, PreviewOptions options) {
         if (points == null || points.isEmpty()) {
@@ -396,12 +381,6 @@ public final class PreviewManager {
         PreviewPointsPayload payload = PreviewPayloadAdapters.previewPointsFromCoordinates(points);
         PreviewStyle style = PreviewStyle.from(options, PreviewKind.POINTS);
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
-    }
-
-    // Vectors
-
-    public static String showVectors(String nodeId, List<Vec3d> vectors, List<Vec3d> startPoints) {
-        return showVectors(nodeId, vectors, startPoints, PreviewOptions.createVectorArrows());
     }
 
     public static String showVectors(
@@ -441,23 +420,6 @@ public final class PreviewManager {
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
     }
 
-    public static String showPaths(String nodeId, Object pathData, PreviewOptions options) {
-        if (pathData == null) {
-            hideNodePreviews(nodeId);
-            return null;
-        }
-        PreviewCurvePayload curve = PreviewPayloadAdapters.tryCurvePayloadFromPreviewSource(pathData);
-        if (curve != null) {
-            return showCurve(nodeId, curve, options);
-        }
-        NodeCraft.LOGGER.warn(
-            "PreviewManager.showPaths: unsupported pathData type {}, hiding node previews",
-            pathData.getClass().getName()
-        );
-        hideNodePreviews(nodeId);
-        return null;
-    }
-
     public static String showTextLabels(String nodeId, Object labelData, PreviewOptions options) {
         if (labelData == null) {
             hideNodePreviews(nodeId);
@@ -466,16 +428,6 @@ public final class PreviewManager {
         PreviewLabelsPayload payload = new PreviewLabelsPayload(labelData);
         PreviewStyle style = PreviewStyle.from(options, PreviewKind.LABELS);
         return showPreview(new PreviewRequest(nodeId, payload, style, PreviewBackend.GHOST, null));
-    }
-
-    // Transform gizmo
-
-    public static String showTransformGizmo(String nodeId, Vec3d center) {
-        return showTransformGizmo(nodeId, center, PreviewOptions.createTransformGizmo());
-    }
-
-    public static String showTransformGizmo(String nodeId, Vec3d center, PreviewOptions options) {
-        return RENDERER.showPreview(nodeId, "transformation_gizmo", center, options);
     }
 
     // Generic control
@@ -512,12 +464,6 @@ public final class PreviewManager {
         RENDERER.updatePreview(previewId, null, newOptions);
     }
 
-    // Global settings
-
-    public static void setGlobalPreviewEnabled(boolean enabled) {
-        RENDERER.setGlobalPreviewEnabled(enabled);
-    }
-
     public static void setGlobalOpacity(float opacity) {
         RENDERER.setGlobalOpacity(opacity);
     }
@@ -526,27 +472,4 @@ public final class PreviewManager {
         return RENDERER.getSettings();
     }
 
-    // Convenience helpers
-
-    public static PreviewOptions createColoredHighlight(float r, float g, float b, float opacity) {
-        return new PreviewOptions()
-                .setColor(r, g, b)
-                .setOpacity(opacity)
-                .wireframeMode()
-                .setLineWidth(2.0f);
-    }
-
-    public static PreviewOptions createPulsingRegionBox(float r, float g, float b) {
-        return new PreviewOptions()
-                .setColor(r, g, b)
-                .setOpacity(0.4f)
-                .enablePulse()
-                .setLineWidth(1.5f);
-    }
-
-    public static PreviewOptions createTransparentGhostBlocks(float opacity) {
-        return new PreviewOptions()
-                .ghostBlockMode()
-                .setOpacity(opacity);
-    }
 }

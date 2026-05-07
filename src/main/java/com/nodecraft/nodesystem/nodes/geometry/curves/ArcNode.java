@@ -9,14 +9,13 @@ import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import com.nodecraft.nodesystem.util.Coordinate;
 import com.nodecraft.nodesystem.util.Curve;
 import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import com.nodecraft.core.NodeCraft;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -91,14 +90,9 @@ public class ArcNode extends BaseNode {
         double radius = getInputDouble(INPUT_RADIUS_ID, defaultRadius);
         double startDegrees = getInputDouble(INPUT_START_ANGLE_ID, 0.0d);
         double endDegrees = getInputDouble(INPUT_END_ANGLE_ID, 90.0d);
-        int resolution = Math.max(2, getInputInt(INPUT_RESOLUTION_ID, defaultResolution));
+        int resolution = Math.max(2, getInputInt(defaultResolution));
 
         // Validate inputs: center and normal are required
-        if (center == null) {
-            NodeCraft.LOGGER.warn("ArcNode: center is null; cannot build arc");
-            writeEmptyOutputs();
-            return;
-        }
         if (normal == null || normal.lengthSquared() <= EPSILON) {
             NodeCraft.LOGGER.warn("ArcNode: normal is null or zero; cannot build arc");
             writeEmptyOutputs();
@@ -129,7 +123,7 @@ public class ArcNode extends BaseNode {
         Curve curve = new Curve(Curve.CurveType.LINEAR, 2);
 
         for (int i = 0; i < resolution; i++) {
-            double t = resolution == 1 ? 0.0d : (double) i / (double) (resolution - 1);
+            double t = (double) i / (double) (resolution - 1);
             double angleRadians = Math.toRadians(startDegrees) + sweepRadians * t;
             Vector3d point = new Vector3d(center)
                 .add(new Vector3d(basis.xAxis()).mul(Math.cos(angleRadians) * radius))
@@ -236,7 +230,7 @@ public class ArcNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
-    private @Nullable Vector3d resolveCenter(@Nullable Object value) {
+    private @NonNull Vector3d resolveCenter(@Nullable Object value) {
         // If input is provided, try to resolve it
         Vector3d resolved = SpatialValueResolver.resolveVector3d(value);
         if (resolved != null) {
@@ -310,8 +304,8 @@ public class ArcNode extends BaseNode {
         return value instanceof Number number ? number.doubleValue() : fallback;
     }
 
-    private int getInputInt(String portId, int fallback) {
-        Object value = inputValues.get(portId);
+    private int getInputInt(int fallback) {
+        Object value = inputValues.get(ArcNode.INPUT_RESOLUTION_ID);
         return value instanceof Number number ? number.intValue() : fallback;
     }
 
