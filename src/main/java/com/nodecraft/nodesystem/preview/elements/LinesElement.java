@@ -36,9 +36,6 @@ public class LinesElement extends AbstractPreviewElement {
         if (options.color != null) {
             this.color = new Vector3f(options.color);
         }
-        if (options.smoothCurves != null) {
-            boolean smoothCurves = options.smoothCurves;
-        }
         if (options.lineWidth != null) {
             this.lineWidth = Math.max(0.25f, options.lineWidth);
         }
@@ -58,7 +55,7 @@ public class LinesElement extends AbstractPreviewElement {
                 nextPoints.add(new Vec3d(p.x(), p.y(), p.z()));
             }
             if (curve.closed() && !nextPoints.isEmpty()) {
-                nextPoints.add(nextPoints.get(0));
+                nextPoints.add(nextPoints.getFirst());
             }
             points = nextPoints;
             return;
