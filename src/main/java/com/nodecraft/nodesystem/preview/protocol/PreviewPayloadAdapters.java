@@ -36,19 +36,6 @@ public final class PreviewPayloadAdapters {
         return new PreviewBlocksPayload(blocks);
     }
 
-    public static PreviewBlocksPayload fromCoordinates(List<Coordinate> coords, String blockId) {
-        if (coords == null || coords.isEmpty()) {
-            return new PreviewBlocksPayload(List.of());
-        }
-        List<PreviewBlock> blocks = new ArrayList<>(coords.size());
-        for (Coordinate c : coords) {
-            if (c != null) {
-                blocks.add(new PreviewBlock(c.getX(), c.getY(), c.getZ(), blockId));
-            }
-        }
-        return new PreviewBlocksPayload(blocks);
-    }
-
     public static List<BlockPos> toBlockPosList(PreviewBlocksPayload payload) {
         List<BlockPos> out = new ArrayList<>(payload.getBlocks().size());
         for (PreviewBlock b : payload.getBlocks()) {
