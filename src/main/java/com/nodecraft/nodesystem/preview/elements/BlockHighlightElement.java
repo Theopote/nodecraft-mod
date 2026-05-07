@@ -164,12 +164,13 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         }
 
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
+        double maxRenderDistanceSq = (double) maxRenderDistance * maxRenderDistance;
 
         // 遍历所有要高亮的方块位置
         for (Coordinate pos : blockPositionsSnapshot) {
             // 检查是否在渲染距离内
-            double distance = cameraPos.distanceTo(new Vec3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
-            if (distance > maxRenderDistance) {
+            double distanceSq = cameraPos.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            if (distanceSq > maxRenderDistanceSq) {
                 continue;
             }
 
@@ -364,12 +365,13 @@ public class BlockHighlightElement extends AbstractPreviewElement {
         }
 
         float maxRenderDistance = PreviewRenderer.getInstance().getSettings().maxRenderDistance;
+        double maxRenderDistanceSq = (double) maxRenderDistance * maxRenderDistance;
         Vec3d cameraPos = camera.getCameraPos();
 
         // 检查是否有任何方块在渲染距离内
         for (Coordinate pos : blockPositions) {
-            double distance = cameraPos.distanceTo(new Vec3d(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
-            if (distance <= maxRenderDistance) {
+            double distanceSq = cameraPos.squaredDistanceTo(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5);
+            if (distanceSq <= maxRenderDistanceSq) {
                 return true;
             }
         }

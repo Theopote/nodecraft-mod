@@ -681,7 +681,7 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         if (showOutline && !segmentsSnapshot.isEmpty()) {
             VertexConsumer lineConsumer = provider.getBuffer(RenderLayers.lines());
             for (Segment segment : segmentsSnapshot) {
-                addSegment(lineConsumer, segment, cameraPos, lineColor, alpha * lineAlphaScale);
+                addSegment(lineConsumer, matrix, segment, cameraPos, lineColor, alpha * lineAlphaScale);
             }
         }
 
@@ -746,7 +746,7 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
             .normal(normal.x, normal.y, normal.z);
     }
 
-    private void addSegment(VertexConsumer consumer, Segment segment, Vec3d cameraPos, Vector3f color, float alpha) {
+    private void addSegment(VertexConsumer consumer, Matrix4f matrix, Segment segment, Vec3d cameraPos, Vector3f color, float alpha) {
         Vec3d start = segment.start.subtract(cameraPos);
         Vec3d end = segment.end.subtract(cameraPos);
 
@@ -757,11 +757,11 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
             normal.normalize();
         }
 
-        consumer.vertex((float) start.x, (float) start.y, (float) start.z)
+        consumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(color.x(), color.y(), color.z(), alpha)
             .normal(normal.x, normal.y, normal.z)
             .lineWidth(Math.max(0.25f, lineWidth));
-        consumer.vertex((float) end.x, (float) end.y, (float) end.z)
+        consumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
             .color(color.x(), color.y(), color.z(), alpha)
             .normal(normal.x, normal.y, normal.z)
             .lineWidth(Math.max(0.25f, lineWidth));
