@@ -18,10 +18,14 @@ import org.joml.Vector3f;
 public class FrameAxesElement extends AbstractPreviewElement {
 
     private FrameAxesPreviewData frameData;
+    private float lineWidth = 1.5f;
 
     public FrameAxesElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
         this.renderPriority = 16;
+        if (options.lineWidth != null) {
+            this.lineWidth = Math.max(0.25f, options.lineWidth);
+        }
     }
 
     @Override
@@ -86,10 +90,12 @@ public class FrameAxesElement extends AbstractPreviewElement {
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(r, g, b, alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
         vertexConsumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
             .color(r, g, b, alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
     }
 
     @Override
