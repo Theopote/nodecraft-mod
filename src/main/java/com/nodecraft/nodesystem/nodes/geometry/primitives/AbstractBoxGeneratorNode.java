@@ -156,22 +156,20 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
         int resolvedZ = normalizeSignedSize(sizeZ);
 
         Matrix3d orientationMatrix = createOrientationMatrix(planeObj, rotationX, rotationY, rotationZ);
-        Vector3d startOffset = signedCornerOffset(resolvedX, resolvedY, resolvedZ);
-        Vector3d endOffset = signedOppositeCornerOffset(resolvedX, resolvedY, resolvedZ);
-
+        // 使 size 直接等于几何长度
+        Vector3d startOffset = new Vector3d(0, 0, 0);
+        Vector3d endOffset = new Vector3d(resolvedX, resolvedY, resolvedZ);
         orientationMatrix.transform(startOffset);
         orientationMatrix.transform(endOffset);
-
         Vector3d cornerVector = new Vector3d(corner.getX(), corner.getY(), corner.getZ());
         Vector3d startCorner = new Vector3d(cornerVector).add(startOffset);
         Vector3d endCorner = new Vector3d(cornerVector).add(endOffset);
         Vector3d center = new Vector3d(startCorner).add(endCorner).mul(0.5d);
         Vector3d halfExtents = new Vector3d(
-            (Math.abs(resolvedX) - 1) / 2.0d,
-            (Math.abs(resolvedY) - 1) / 2.0d,
-            (Math.abs(resolvedZ) - 1) / 2.0d
+            Math.abs(resolvedX) / 2.0d,
+            Math.abs(resolvedY) / 2.0d,
+            Math.abs(resolvedZ) / 2.0d
         );
-
         RegionData region = BoxBlockGenerator.createOrientedBoundingRegion(center, halfExtents, orientationMatrix);
         boolean rotated = hasRotation(rotationX, rotationY, rotationZ) || planeObj instanceof PlaneData;
         return new BoxDefinition(region, center, halfExtents, orientationMatrix, rotated);
