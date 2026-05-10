@@ -35,6 +35,7 @@ public class PreviewFrameNode extends BaseNode {
     private static final String INPUT_Z_AXIS_ID = "input_z_axis";
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_PREVIEW_ID_ID = "output_preview_id";
+    private static final String OUTPUT_STATUS_ID = "output_status";
 
     @NodeProperty(displayName = "Preview Enabled", category = "Preview", order = 1)
     private boolean previewEnabled = true;
@@ -51,13 +52,14 @@ public class PreviewFrameNode extends BaseNode {
 
     public PreviewFrameNode() {
         super(UUID.randomUUID(), "output.preview.preview_frame");
-        addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin", "Frame origin", NodeDataType.BLOCK_POS, this));
+        addInputPort(new BasePort(INPUT_ORIGIN_ID, "Origin", "Frame origin (position/vector/block position)", NodeDataType.POSITION, this));
         addInputPort(new BasePort(INPUT_PLANE_ID, "Plane", "Optional plane used to derive a frame", NodeDataType.PLANE, this));
         addInputPort(new BasePort(INPUT_X_AXIS_ID, "X Axis", "Optional X axis vector", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_Y_AXIS_ID, "Y Axis", "Optional Y axis vector", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_Z_AXIS_ID, "Z Axis", "Optional Z axis vector", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether the preview was shown", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_PREVIEW_ID_ID, "Preview ID", "Active preview identifier", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_STATUS_ID, "Status", "Diagnostic status for preview result", NodeDataType.STRING, this));
     }
 
     @Override
@@ -76,10 +78,12 @@ public class PreviewFrameNode extends BaseNode {
         lastExecutionTime = now;
         boolean success = false;
         String previewId = null;
+        String status = "preview_not_shown";
 
         Vec3d origin = resolveOrigin();
         if (!previewEnabled) {
             PreviewManager.hideNodePreviews(getId().toString());
+            status = "preview_disabled";
         } else if (origin != null) {
             FrameAxesPreviewData data = buildFrame(origin);
             if (data != null) {
@@ -87,16 +91,25 @@ public class PreviewFrameNode extends BaseNode {
                 PreviewOptions options = new PreviewOptions().setDuration(duration);
                 previewId = PreviewManager.showFrameAxes(getId().toString(), data, options);
                 success = previewId != null;
+                status = success ? "ok" : "preview_manager_returned_null";
+            } else {
+                status = "invalid_frame_data";
             }
+        } else {
+            status = "missing_origin: connect Origin(position/vector/block_pos) or Plane";
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_PREVIEW_ID_ID, previewId);
+        outputValues.put(OUTPUT_STATUS_ID, status);
     }
 
     private Vec3d resolveOrigin() {
         if (inputValues.get(INPUT_ORIGIN_ID) instanceof BlockPos pos) {
             return pos.toCenterPos();
+        }
+        if (inputValues.get(INPUT_ORIGIN_ID) instanceof Vector3d vector) {
+            return new Vec3d(vector.x, vector.y, vector.z);
         }
         if (inputValues.get(INPUT_PLANE_ID) instanceof PlaneData plane) {
             Vector3d point = plane.getPoint();
