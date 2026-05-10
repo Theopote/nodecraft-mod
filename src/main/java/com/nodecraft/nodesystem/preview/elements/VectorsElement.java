@@ -24,6 +24,7 @@ public class VectorsElement extends AbstractPreviewElement {
     private volatile List<Vec3d> startPoints = new ArrayList<>();
     private Vector3f color = new Vector3f(0.2f, 1.0f, 0.2f);
     private float arrowSize = 0.2f;
+    private float lineWidth = 1.5f;
     private float lengthScale = 1.0f;
     private boolean showArrows = true;
 
@@ -36,6 +37,9 @@ public class VectorsElement extends AbstractPreviewElement {
         }
         if (options.arrowSize != null) {
             this.arrowSize = Math.max(0.05f, options.arrowSize);
+        }
+        if (options.lineWidth != null) {
+            this.lineWidth = Math.max(0.25f, options.lineWidth);
         }
         if (options.lengthScale != null) {
             this.lengthScale = Math.max(0.01f, options.lengthScale);
@@ -150,10 +154,12 @@ public class VectorsElement extends AbstractPreviewElement {
 
         vertexConsumer.vertex(matrix, (float) start.x, (float) start.y, (float) start.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
         vertexConsumer.vertex(matrix, (float) end.x, (float) end.y, (float) end.z)
             .color(color.x(), color.y(), color.z(), alpha)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(lineWidth);
     }
 
     @Override

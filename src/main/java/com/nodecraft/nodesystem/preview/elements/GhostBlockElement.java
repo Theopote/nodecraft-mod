@@ -610,7 +610,8 @@ public class GhostBlockElement extends AbstractPreviewElement {
             .texture(0.5f, 0.5f)
             .overlay(OverlayTexture.DEFAULT_UV)
             .light(LightmapTextureManager.MAX_LIGHT_COORDINATE)
-            .normal(normal.x, normal.y, normal.z);
+            .normal(normal.x, normal.y, normal.z)
+            .lineWidth(1.0f);
     }
     
     /**
