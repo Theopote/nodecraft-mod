@@ -66,7 +66,6 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import org.joml.Vector3d;
-import org.jspecify.annotations.NonNull;
 
 public class PropertyPanelComponent implements EditorComponent {
 
@@ -2432,69 +2431,40 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        Map<String, UUID> createdNodeIds = new HashMap<>();
-        int undoSteps = 0;
-        int successfulConnections = 0;
-
-        try {
-            for (AiPlanNode node : nodesToApply) {
-                float x = anchor[0] + node.offsetX();
-                float y = anchor[1] + node.offsetY();
-                INode created = node.nodeState() == null
-                        ? editor.addNode(node.typeId(), x, y)
-                        : editor.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
-
-                if (created == null) {
-                    rollbackAiApply(editor, undoSteps);
-                    aiPlanStatusMessage = "Failed to create node: " + node.ref() + " (" + node.typeId() + "). Auto-rolled back.";
-                    return;
-                }
-                createdNodeIds.put(node.ref(), created.getId());
-                undoSteps++;
-            }
-
-            for (AiPlanConnection connection : pendingAiPlan.connections()) {
-                UUID sourceNodeId = createdNodeIds.get(connection.sourceRef());
-                UUID targetNodeId = createdNodeIds.get(connection.targetRef());
-                if (sourceNodeId == null || targetNodeId == null) {
-                    rollbackAiApply(editor, undoSteps);
-                    aiPlanStatusMessage = "Connection failed due to missing node ref: "
-                        + connection.sourceRef() + " -> " + connection.targetRef() + ". Auto-rolled back.";
-                    return;
-                }
-
-                boolean connected = editor.connectPorts(
-                        sourceNodeId,
-                        connection.sourcePortId(),
-                        targetNodeId,
-                        connection.targetPortId()
-                );
-                if (connected) {
-                    successfulConnections++;
-                    undoSteps++;
-                } else {
-                    NodeCraft.LOGGER.warn("AI plan connection failed and will rollback: {}.{} -> {}.{}",
-                            connection.sourceRef(), connection.sourcePortId(),
-                            connection.targetRef(), connection.targetPortId());
-                    rollbackAiApply(editor, undoSteps);
-                    aiPlanStatusMessage = "Failed to connect: "
-                            + connection.sourceRef() + "." + connection.sourcePortId()
-                            + " -> " + connection.targetRef() + "." + connection.targetPortId()
-                            + ". Auto-rolled back.";
-                    return;
-                }
-            }
-
-            lastAiUndoStepCount = undoSteps;
-            aiPlanStatusMessage = "Applied AI plan: created " + createdNodeIds.size()
-                    + " nodes, connected " + successfulConnections
-                    + ". Undo steps available: " + lastAiUndoStepCount + "."
-                    + (aiAutoLayoutBeforeApply.get() ? " (auto layout enabled)" : "");
-        } catch (Exception e) {
-            rollbackAiApply(editor, undoSteps);
-            NodeCraft.LOGGER.error("Failed to apply AI plan", e);
-            aiPlanStatusMessage = "Failed to apply plan: " + e.getMessage() + ". Auto-rolled back.";
+        List<AiPlanApplyCoordinatorService.PlanNode> applyNodes = new ArrayList<>(nodesToApply.size());
+        for (AiPlanNode node : nodesToApply) {
+            applyNodes.add(new AiPlanApplyCoordinatorService.PlanNode(
+                    node.ref(),
+                    node.typeId(),
+                    node.offsetX(),
+                    node.offsetY(),
+                    node.nodeState()
+            ));
         }
+
+        List<AiPlanApplyCoordinatorService.PlanConnection> applyConnections = new ArrayList<>(pendingAiPlan.connections().size());
+        for (AiPlanConnection connection : pendingAiPlan.connections()) {
+            applyConnections.add(new AiPlanApplyCoordinatorService.PlanConnection(
+                    connection.sourceRef(),
+                    connection.sourcePortId(),
+                    connection.targetRef(),
+                    connection.targetPortId()
+            ));
+        }
+
+        AiPlanApplyCoordinatorService.ApplyResult result = AiPlanApplyCoordinatorService.applyExact(
+                editor,
+                applyNodes,
+                applyConnections,
+                anchor
+        );
+
+        if (result.success()) {
+            lastAiUndoStepCount = result.undoSteps();
+        }
+
+        aiPlanStatusMessage = result.statusMessage()
+                + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled)" : "");
     }
 
     private void applyPendingAiPlanPatch(ImGuiNodeEditor editor, List<AiPlanNode> nodesToApply, float[] anchor) {
@@ -2537,16 +2507,6 @@ public class PropertyPanelComponent implements EditorComponent {
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled for new nodes)" : "");
     }
 
-    private void rollbackAiApply(ImGuiNodeEditor editor, int undoSteps) {
-        int undone = 0;
-        for (int i = 0; i < undoSteps; i++) {
-            if (!editor.undo()) {
-                break;
-            }
-            undone++;
-        }
-    }
-
     private void undoLastAiApply() {
         if (lastAiUndoStepCount <= 0) {
             aiPlanStatusMessage = "No AI apply operation to undo.";
@@ -2554,15 +2514,10 @@ public class PropertyPanelComponent implements EditorComponent {
         }
 
         ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        int undone = 0;
-        for (int i = 0; i < lastAiUndoStepCount; i++) {
-            if (!editor.undo()) {
-                break;
-            }
-            undone++;
-        }
+        int expectedUndoSteps = lastAiUndoStepCount;
+        int undone = AiPlanApplyCoordinatorService.undo(editor, expectedUndoSteps);
 
-        aiPlanStatusMessage = "Undo completed: " + undone + " / " + lastAiUndoStepCount + " steps.";
+        aiPlanStatusMessage = "Undo completed: " + undone + " / " + expectedUndoSteps + " steps.";
         lastAiUndoStepCount = 0;
     }
 
@@ -2581,71 +2536,25 @@ public class PropertyPanelComponent implements EditorComponent {
             return List.of();
         }
 
-        Map<String, AiPlanNode> nodeByRef = new LinkedHashMap<>();
-        Map<String, Integer> indegree = new HashMap<>();
-        Map<String, Integer> depth = new HashMap<>();
-        Map<String, List<String>> edges = new HashMap<>();
-
+        List<AiPlanAutoLayoutService.PlanNode> nodes = new ArrayList<>(plan.nodes().size());
         for (AiPlanNode node : plan.nodes()) {
-            nodeByRef.put(node.ref(), node);
-            indegree.put(node.ref(), 0);
-            depth.put(node.ref(), 0);
-            edges.put(node.ref(), new ArrayList<>());
+            nodes.add(new AiPlanAutoLayoutService.PlanNode(node.ref(), node.typeId(), node.nodeState()));
         }
 
+        List<AiPlanAutoLayoutService.PlanConnection> connections = new ArrayList<>(plan.connections().size());
         for (AiPlanConnection connection : plan.connections()) {
-            if (!nodeByRef.containsKey(connection.sourceRef()) || !nodeByRef.containsKey(connection.targetRef())) {
-                continue;
-            }
-            edges.get(connection.sourceRef()).add(connection.targetRef());
-            indegree.put(connection.targetRef(), indegree.get(connection.targetRef()) + 1);
+            connections.add(new AiPlanAutoLayoutService.PlanConnection(
+                    connection.sourceRef(),
+                    connection.targetRef()
+            ));
         }
 
-        ArrayDeque<String> queue = new ArrayDeque<>();
-        for (AiPlanNode node : plan.nodes()) {
-            if (indegree.get(node.ref()) == 0) {
-                queue.add(node.ref());
-            }
+        List<AiPlanAutoLayoutService.ArrangedNode> arranged = AiPlanAutoLayoutService.autoLayout(nodes, connections);
+        List<AiPlanNode> result = new ArrayList<>(arranged.size());
+        for (AiPlanAutoLayoutService.ArrangedNode node : arranged) {
+            result.add(new AiPlanNode(node.ref(), node.typeId(), node.offsetX(), node.offsetY(), node.nodeState()));
         }
-
-        while (!queue.isEmpty()) {
-            String current = queue.poll();
-            int currentDepth = depth.getOrDefault(current, 0);
-            for (String next : edges.getOrDefault(current, List.of())) {
-                depth.put(next, Math.max(depth.getOrDefault(next, 0), currentDepth + 1));
-                int nextIn = indegree.getOrDefault(next, 0) - 1;
-                indegree.put(next, nextIn);
-                if (nextIn == 0) {
-                    queue.add(next);
-                }
-            }
-        }
-
-        Map<Integer, List<AiPlanNode>> layerMap = new TreeMap<>();
-        for (AiPlanNode node : plan.nodes()) {
-            int layer = Math.max(0, depth.getOrDefault(node.ref(), 0));
-            layerMap.computeIfAbsent(layer, ignored -> new ArrayList<>()).add(node);
-        }
-
-        return getAiPlanNodes(layerMap);
-    }
-
-    private static @NonNull List<AiPlanNode> getAiPlanNodes(Map<Integer, List<AiPlanNode>> layerMap) {
-        float layerSpacingX = 320.0f;
-        float layerSpacingY = 180.0f;
-        List<AiPlanNode> arranged = new ArrayList<>();
-
-        for (Map.Entry<Integer, List<AiPlanNode>> layerEntry : layerMap.entrySet()) {
-            int layer = layerEntry.getKey();
-            List<AiPlanNode> layerNodes = layerEntry.getValue();
-            for (int i = 0; i < layerNodes.size(); i++) {
-                AiPlanNode node = layerNodes.get(i);
-                float x = layer * layerSpacingX;
-                float y = (i - (layerNodes.size() - 1) / 2.0f) * layerSpacingY;
-                arranged.add(new AiPlanNode(node.ref(), node.typeId(), x, y, node.nodeState()));
-            }
-        }
-        return arranged;
+        return result;
     }
 
     private void renderNodeInfo() {
