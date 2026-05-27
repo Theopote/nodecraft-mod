@@ -10,6 +10,7 @@ import com.nodecraft.gui.ai.AiPromptBuilder;
 import com.nodecraft.gui.ai.AiRemotePlannerService;
 import com.nodecraft.core.NodeCraft; // For logging
 import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.datatypes.LSystemRule;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -127,6 +128,8 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImBoolean aiEnableRemotePlanner = new ImBoolean(false);
     private final ImBoolean aiAutoLayoutBeforeApply = new ImBoolean(true);
     private final ImBoolean aiPreviewOnlyMode = new ImBoolean(false);
+    private final ImBoolean aiPatchApplyMode = new ImBoolean(true);
+    private final ImBoolean aiPatchRemoveScopedConnections = new ImBoolean(false);
     private final Path aiSettingsPath;
     private final AiRemotePlannerService aiRemotePlannerService = new AiRemotePlannerService();
     private CompletableFuture<AiRemotePlannerService.RemotePlanResult> aiRemotePlanFuture = null;
@@ -183,11 +186,13 @@ public class PropertyPanelComponent implements EditorComponent {
             int paramUpdateCandidates,
             int connectionAdditions,
             int connectionRemovalCandidates,
+                int incomingReplacementCandidates,
             List<String> nodeReuseSamples,
             List<String> nodeCreationSamples,
             List<String> paramUpdateSamples,
             List<String> connectionAdditionSamples,
-            List<String> connectionRemovalSamples
+                List<String> connectionRemovalSamples,
+                List<String> incomingReplacementSamples
         ) {}
 
     public PropertyPanelComponent() {
@@ -1693,6 +1698,10 @@ public class PropertyPanelComponent implements EditorComponent {
         ImGui.checkbox("Use current selection as context", aiUseSelectionContext);
         ImGui.checkbox("Include current canvas graph summary", aiIncludeGraphContext);
         ImGui.checkbox("Preview-only mode (do not mutate graph)", aiPreviewOnlyMode);
+        ImGui.checkbox("Patch apply mode (reuse matching nodes)", aiPatchApplyMode);
+        if (aiPatchApplyMode.get()) {
+            ImGui.checkbox("Patch remove scoped stale connections", aiPatchRemoveScopedConnections);
+        }
 
         if (aiUseSelectionContext.get()) {
             ImGui.separator();
@@ -2153,6 +2162,12 @@ public class PropertyPanelComponent implements EditorComponent {
             if (root.has("previewOnlyMode")) {
                 aiPreviewOnlyMode.set(root.get("previewOnlyMode").getAsBoolean());
             }
+            if (root.has("patchApplyMode")) {
+                aiPatchApplyMode.set(root.get("patchApplyMode").getAsBoolean());
+            }
+            if (root.has("patchRemoveScopedConnections")) {
+                aiPatchRemoveScopedConnections.set(root.get("patchRemoveScopedConnections").getAsBoolean());
+            }
 
             aiSettingsStatusMessage = "AI settings loaded from disk.";
         } catch (Exception e) {
@@ -2179,6 +2194,8 @@ public class PropertyPanelComponent implements EditorComponent {
             root.addProperty("autoLayoutBeforeApply", aiAutoLayoutBeforeApply.get());
             root.addProperty("includeGraphContext", aiIncludeGraphContext.get());
             root.addProperty("previewOnlyMode", aiPreviewOnlyMode.get());
+            root.addProperty("patchApplyMode", aiPatchApplyMode.get());
+            root.addProperty("patchRemoveScopedConnections", aiPatchRemoveScopedConnections.get());
 
             Files.writeString(aiSettingsPath, AI_SETTINGS_GSON.toJson(root), StandardCharsets.UTF_8);
             aiSettingsStatusMessage = "AI settings saved.";
@@ -2250,13 +2267,15 @@ public class PropertyPanelComponent implements EditorComponent {
         ImGui.text("Unchanged reused=" + mappedDiff.unchangedReusableNodes()
             + ", param updates=" + mappedDiff.paramUpdateCandidates());
         ImGui.text("Connection additions=" + mappedDiff.connectionAdditions()
-            + ", connection removal candidates=" + mappedDiff.connectionRemovalCandidates());
+            + ", connection removal candidates=" + mappedDiff.connectionRemovalCandidates()
+            + ", incoming replacements=" + mappedDiff.incomingReplacementCandidates());
 
         renderDiffSamples("Node reuse matches", mappedDiff.nodeReuseSamples());
         renderDiffSamples("Node creation candidates", mappedDiff.nodeCreationSamples());
         renderDiffSamples("Param update candidates", mappedDiff.paramUpdateSamples());
         renderDiffSamples("Connection additions", mappedDiff.connectionAdditionSamples());
         renderDiffSamples("Connection removal candidates", mappedDiff.connectionRemovalSamples());
+        renderDiffSamples("Incoming replacement candidates", mappedDiff.incomingReplacementSamples());
 
         ImGui.treePop();
     }
@@ -2314,8 +2333,16 @@ public class PropertyPanelComponent implements EditorComponent {
                 .append(", paramUpdates=").append(mapped.paramUpdateCandidates())
                 .append(", connAdd=").append(mapped.connectionAdditions())
                 .append(", connRemoveCandidates=").append(mapped.connectionRemovalCandidates())
+                .append(", incomingReplaceCandidates=").append(mapped.incomingReplacementCandidates())
                 .append(". Heuristic missing: nodes=").append(heuristic.nodeMissingFromPlan())
                 .append(", connections=").append(heuristic.connectionMissingFromPlan()).append(".");
+
+            if (!mapped.incomingReplacementSamples().isEmpty()) {
+                report.append(" Incoming replacements sample: ")
+                    .append(String.join(" | ", mapped.incomingReplacementSamples().subList(0,
+                        Math.min(3, mapped.incomingReplacementSamples().size()))))
+                    .append(".");
+            }
 
         String reportText = report.toString();
         aiPlanStatusMessage = reportText;
@@ -2509,8 +2536,8 @@ public class PropertyPanelComponent implements EditorComponent {
     private MappedDiffSummary buildMappedDiffSummary(AiGraphPlan plan) {
         NodeGraph graph = getNodeGraph();
         if (graph == null) {
-            return new MappedDiffSummary(0, plan.nodes().size(), 0, 0, plan.connections().size(), 0,
-                    List.of(), List.of(), List.of(), List.of(), List.of());
+            return new MappedDiffSummary(0, plan.nodes().size(), 0, 0, plan.connections().size(), 0, 0,
+                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
         }
 
         List<CurrentNodeInfo> currentNodes = new ArrayList<>();
@@ -2582,6 +2609,8 @@ public class PropertyPanelComponent implements EditorComponent {
 
         Set<String> plannedConnMappedAll = new HashSet<>();
         Set<String> plannedConnMappedScoped = new HashSet<>();
+        List<String> incomingReplacementSamples = new ArrayList<>();
+        int incomingReplacementCandidates = 0;
         for (AiPlanConnection conn : plan.connections()) {
             String sourceToken = tokenForPlanRef(conn.sourceRef(), refToMatched);
             String targetToken = tokenForPlanRef(conn.targetRef(), refToMatched);
@@ -2590,6 +2619,32 @@ public class PropertyPanelComponent implements EditorComponent {
 
             if (sourceToken.startsWith("CUR:") && targetToken.startsWith("CUR:")) {
                 plannedConnMappedScoped.add(mapped);
+            }
+
+            if (targetToken.startsWith("CUR:")) {
+                UUID targetId = parseCurrentTokenUuid(targetToken);
+                UUID sourceId = parseCurrentTokenUuid(sourceToken);
+                if (targetId != null && sourceId != null) {
+                    INode targetNode = graph.getNode(targetId);
+                    IPort targetPort = findInputPortById(targetNode, conn.targetPortId());
+                    if (targetPort != null && !targetPort.allowsMultipleIncomingConnections()) {
+                        UUID oldSourceNodeId = graph.getConnectedOutputNodeId(targetId, targetPort.getId());
+                        String oldSourcePortId = graph.getConnectedOutputPortId(targetId, targetPort.getId());
+                        boolean replaceNeeded = oldSourceNodeId != null
+                                && oldSourcePortId != null
+                                && (!oldSourceNodeId.equals(sourceId) || !oldSourcePortId.equals(conn.sourcePortId()));
+                        if (replaceNeeded) {
+                            incomingReplacementCandidates++;
+                            if (incomingReplacementSamples.size() < 12) {
+                                incomingReplacementSamples.add(
+                                        shortUuid(oldSourceNodeId) + "." + oldSourcePortId
+                                                + " => " + shortUuid(sourceId) + "." + conn.sourcePortId()
+                                                + " @ " + shortUuid(targetId) + "." + conn.targetPortId()
+                                );
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2628,12 +2683,26 @@ public class PropertyPanelComponent implements EditorComponent {
                 paramUpdates,
                 connAdd,
                 connRemove,
+                incomingReplacementCandidates,
                 reuseSamples,
                 createSamples,
                 paramUpdateSamples,
                 connectionAddSamples,
-                connectionRemoveSamples
+                connectionRemoveSamples,
+                incomingReplacementSamples
         );
+    }
+
+    private UUID parseCurrentTokenUuid(String token) {
+        if (token == null || !token.startsWith("CUR:")) {
+            return null;
+        }
+        String raw = token.substring(4);
+        try {
+            return UUID.fromString(raw);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
     }
 
     private CurrentNodeInfo matchCurrentNode(
@@ -3369,6 +3438,12 @@ public class PropertyPanelComponent implements EditorComponent {
         List<AiPlanNode> nodesToApply = aiAutoLayoutBeforeApply.get()
                 ? buildAutoLayoutNodes(pendingAiPlan)
                 : pendingAiPlan.nodes();
+
+        if (aiPatchApplyMode.get()) {
+            applyPendingAiPlanPatch(editor, nodesToApply, anchor);
+            return;
+        }
+
         Map<String, UUID> createdNodeIds = new HashMap<>();
         int undoSteps = 0;
         int successfulConnections = 0;
@@ -3432,6 +3507,259 @@ public class PropertyPanelComponent implements EditorComponent {
             NodeCraft.LOGGER.error("Failed to apply AI plan", e);
             aiPlanStatusMessage = "Failed to apply plan: " + e.getMessage() + ". Auto-rolled back.";
         }
+    }
+
+    private void applyPendingAiPlanPatch(ImGuiNodeEditor editor, List<AiPlanNode> nodesToApply, float[] anchor) {
+        NodeGraph graph = getNodeGraph();
+        if (graph == null) {
+            aiPlanStatusMessage = "Patch apply failed: current graph is unavailable.";
+            return;
+        }
+
+        List<CurrentNodeInfo> currentNodes = new ArrayList<>();
+        Map<String, List<CurrentNodeInfo>> byType = new HashMap<>();
+        for (INode node : graph.getNodes()) {
+            Object state = node instanceof BaseNode baseNode ? baseNode.getNodeState() : null;
+            CurrentNodeInfo info = new CurrentNodeInfo(node.getId(), node.getTypeId(), normalizeStateForSignature(state));
+            currentNodes.add(info);
+            byType.computeIfAbsent(info.typeId(), key -> new ArrayList<>()).add(info);
+        }
+
+        Set<UUID> usedCurrent = new HashSet<>();
+        Map<String, UUID> planRefToNodeId = new HashMap<>();
+        Map<UUID, Object> previousStates = new HashMap<>();
+        int undoSteps = 0;
+        int successfulConnections = 0;
+        int replacedIncomingConnections = 0;
+        int removedScopedConnections = 0;
+        int reusedNodes = 0;
+        int createdNodes = 0;
+        int updatedNodes = 0;
+
+        try {
+            for (AiPlanNode node : nodesToApply) {
+                CurrentNodeInfo matched = matchCurrentNode(node, byType, usedCurrent);
+                if (matched != null) {
+                    usedCurrent.add(matched.id());
+                    planRefToNodeId.put(node.ref(), matched.id());
+                    reusedNodes++;
+
+                    INode existing = graph.getNode(matched.id());
+                    if (existing instanceof BaseNode existingBaseNode) {
+                        String plannedSig = normalizeStateForSignature(node.nodeState());
+                        if (!plannedSig.equals(matched.paramSignature())) {
+                            previousStates.putIfAbsent(matched.id(), deepCopyNodeState(existingBaseNode.getNodeState()));
+                            existingBaseNode.setNodeState(deepCopyNodeState(node.nodeState()));
+                            updatedNodes++;
+                        }
+                    }
+                    continue;
+                }
+
+                float x = anchor[0] + node.offsetX();
+                float y = anchor[1] + node.offsetY();
+                INode created = node.nodeState() == null
+                        ? editor.addNode(node.typeId(), x, y)
+                        : editor.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
+
+                if (created == null) {
+                    rollbackAiApply(editor, undoSteps);
+                    restoreNodeStates(graph, previousStates);
+                    aiPlanStatusMessage = "Patch apply failed to create node: " + node.ref() + " (" + node.typeId() + "). Auto-rolled back.";
+                    return;
+                }
+
+                planRefToNodeId.put(node.ref(), created.getId());
+                undoSteps++;
+                createdNodes++;
+            }
+
+            for (AiPlanConnection connection : pendingAiPlan.connections()) {
+                UUID sourceNodeId = planRefToNodeId.get(connection.sourceRef());
+                UUID targetNodeId = planRefToNodeId.get(connection.targetRef());
+                if (sourceNodeId == null || targetNodeId == null) {
+                    rollbackAiApply(editor, undoSteps);
+                    restoreNodeStates(graph, previousStates);
+                    aiPlanStatusMessage = "Patch apply connection failed due to missing mapped node ref: "
+                            + connection.sourceRef() + " -> " + connection.targetRef() + ". Auto-rolled back.";
+                    return;
+                }
+
+                if (graph.isConnected(sourceNodeId, connection.sourcePortId(), targetNodeId, connection.targetPortId())) {
+                    continue;
+                }
+
+                INode targetNode = graph.getNode(targetNodeId);
+                IPort targetPort = findInputPortById(targetNode, connection.targetPortId());
+                if (targetPort == null) {
+                    rollbackAiApply(editor, undoSteps);
+                    restoreNodeStates(graph, previousStates);
+                    aiPlanStatusMessage = "Patch apply failed: target input port not found for "
+                            + connection.targetRef() + "." + connection.targetPortId() + ".";
+                    return;
+                }
+
+                if (!targetPort.allowsMultipleIncomingConnections()) {
+                    UUID oldSourceNodeId = graph.getConnectedOutputNodeId(targetNodeId, targetPort.getId());
+                    String oldSourcePortId = graph.getConnectedOutputPortId(targetNodeId, targetPort.getId());
+                    boolean hasDifferentExisting = oldSourceNodeId != null
+                            && oldSourcePortId != null
+                            && (!oldSourceNodeId.equals(sourceNodeId) || !oldSourcePortId.equals(connection.sourcePortId()));
+
+                    if (hasDifferentExisting) {
+                        boolean disconnected = editor.disconnectPorts(
+                                oldSourceNodeId,
+                                oldSourcePortId,
+                                targetNodeId,
+                                targetPort.getId()
+                        );
+                        if (!disconnected) {
+                            rollbackAiApply(editor, undoSteps);
+                            restoreNodeStates(graph, previousStates);
+                            aiPlanStatusMessage = "Patch apply failed to replace existing connection on "
+                                    + connection.targetRef() + "." + connection.targetPortId()
+                                    + ". Try Dry Run for details.";
+                            return;
+                        }
+                        undoSteps++;
+                        replacedIncomingConnections++;
+                    }
+                }
+
+                boolean connected = editor.connectPorts(
+                        sourceNodeId,
+                        connection.sourcePortId(),
+                        targetNodeId,
+                        connection.targetPortId()
+                );
+                if (!connected) {
+                    rollbackAiApply(editor, undoSteps);
+                    restoreNodeStates(graph, previousStates);
+                    aiPlanStatusMessage = "Patch apply failed to connect: "
+                            + connection.sourceRef() + "." + connection.sourcePortId()
+                            + " -> " + connection.targetRef() + "." + connection.targetPortId()
+                            + ". Try disabling patch apply mode or run Dry Run to inspect conflicts.";
+                    return;
+                }
+
+                successfulConnections++;
+                undoSteps++;
+            }
+
+            if (aiPatchRemoveScopedConnections.get()) {
+                Map<String, Integer> plannedScopedCounts = buildPlannedScopedConnectionCounts(pendingAiPlan, planRefToNodeId);
+                List<NodeGraph.Connection> existingConnections = graph.getConnections();
+                for (NodeGraph.Connection conn : existingConnections) {
+                    UUID currentSource = conn.sourceNode.getId();
+                    UUID currentTarget = conn.targetNode.getId();
+                    if (!usedCurrent.contains(currentSource) || !usedCurrent.contains(currentTarget)) {
+                        continue;
+                    }
+
+                    String signature = buildMappedConnectionSignature(
+                            "CUR:" + currentSource,
+                            conn.sourcePort.getId(),
+                            "CUR:" + currentTarget,
+                            conn.targetPort.getId()
+                    );
+
+                    int remain = plannedScopedCounts.getOrDefault(signature, 0);
+                    if (remain > 0) {
+                        plannedScopedCounts.put(signature, remain - 1);
+                        continue;
+                    }
+
+                    boolean disconnected = editor.disconnectPorts(
+                            currentSource,
+                            conn.sourcePort.getId(),
+                            currentTarget,
+                            conn.targetPort.getId()
+                    );
+                    if (!disconnected) {
+                        rollbackAiApply(editor, undoSteps);
+                        restoreNodeStates(graph, previousStates);
+                        aiPlanStatusMessage = "Patch apply failed while removing scoped stale connection. Try Dry Run first.";
+                        return;
+                    }
+                    undoSteps++;
+                    removedScopedConnections++;
+                }
+            }
+
+            lastAiUndoStepCount = undoSteps;
+            aiPlanStatusMessage = "Patch apply completed: reused " + reusedNodes
+                    + ", created " + createdNodes
+                    + ", updated " + updatedNodes
+                    + ", connected " + successfulConnections
+                    + ", replacedIncoming " + replacedIncomingConnections
+                    + ", removedScoped " + removedScopedConnections
+                    + ". Undo steps available: " + lastAiUndoStepCount + "."
+                    + (aiAutoLayoutBeforeApply.get() ? " (auto layout enabled for new nodes)" : "");
+        } catch (Exception e) {
+            rollbackAiApply(editor, undoSteps);
+            restoreNodeStates(graph, previousStates);
+            NodeCraft.LOGGER.error("Failed to patch-apply AI plan", e);
+            aiPlanStatusMessage = "Patch apply failed: " + e.getMessage() + ". Auto-rolled back.";
+        }
+    }
+
+    private Object deepCopyNodeState(Object state) {
+        if (state == null) {
+            return null;
+        }
+        try {
+            return AI_SETTINGS_GSON.fromJson(AI_SETTINGS_GSON.toJsonTree(state), Object.class);
+        } catch (Exception e) {
+            return state;
+        }
+    }
+
+    private void restoreNodeStates(NodeGraph graph, Map<UUID, Object> previousStates) {
+        if (graph == null || previousStates == null || previousStates.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<UUID, Object> entry : previousStates.entrySet()) {
+            INode node = graph.getNode(entry.getKey());
+            if (node instanceof BaseNode baseNode) {
+                baseNode.setNodeState(deepCopyNodeState(entry.getValue()));
+            }
+        }
+    }
+
+    private IPort findInputPortById(INode node, String portId) {
+        if (node == null || portId == null || portId.isBlank()) {
+            return null;
+        }
+        for (IPort port : node.getInputPorts()) {
+            if (portId.equals(port.getId())) {
+                return port;
+            }
+        }
+        return null;
+    }
+
+    private Map<String, Integer> buildPlannedScopedConnectionCounts(AiGraphPlan plan, Map<String, UUID> planRefToNodeId) {
+        Map<String, Integer> counts = new HashMap<>();
+        if (plan == null || plan.connections() == null) {
+            return counts;
+        }
+
+        for (AiPlanConnection conn : plan.connections()) {
+            UUID sourceId = planRefToNodeId.get(conn.sourceRef());
+            UUID targetId = planRefToNodeId.get(conn.targetRef());
+            if (sourceId == null || targetId == null) {
+                continue;
+            }
+
+            String signature = buildMappedConnectionSignature(
+                    "CUR:" + sourceId,
+                    conn.sourcePortId(),
+                    "CUR:" + targetId,
+                    conn.targetPortId()
+            );
+            counts.merge(signature, 1, Integer::sum);
+        }
+        return counts;
     }
 
     private Map<String, Object> createNodeState(Object... keyValues) {
