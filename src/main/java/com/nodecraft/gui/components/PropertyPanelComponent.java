@@ -94,6 +94,19 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private final NodeGraphAccess nodeGraphAccess;
 
+    private final ImString aiPromptInput = new ImString("", 2048);
+    private final ImBoolean aiUseSelectionContext = new ImBoolean(true);
+    private final List<AiChatMessage> aiChatMessages = new ArrayList<>();
+
+    private enum RightPanelTab {
+        PROPERTIES,
+        AI_ASSISTANT
+    }
+
+    private RightPanelTab activeTab = RightPanelTab.PROPERTIES;
+
+    private record AiChatMessage(String role, String content, long timestampMs) {}
+
     public PropertyPanelComponent() {
         this.editorState = new PropertyEditorState(tempValues, propertiesBeingEdited, errorCounts);
         this.nodeGraphAccess = new NodeGraphAccess(() -> {
@@ -1481,6 +1494,8 @@ public class PropertyPanelComponent implements EditorComponent {
         propertyInspector.clearCache();
         // 移除未保存更改相关的清理
         selectedNode = null;
+        aiChatMessages.clear();
+        aiPromptInput.clear();
     }
 
     @Override
@@ -1492,31 +1507,24 @@ public class PropertyPanelComponent implements EditorComponent {
         try {
             checkAndCleanExpiredEditLocks();
 
-            ImGui.text("Properties");
+            ImGui.text("Inspector");
             ImGui.separator();
 
-            if (selectedNode != null) {
-                if (ImGui.collapsingHeader("Basic Info")) {
-                    renderNodeInfo();
+            if (ImGui.beginTabBar("rightPanelTabs")) {
+                int propertyTabFlags = activeTab == RightPanelTab.PROPERTIES ? imgui.flag.ImGuiTabItemFlags.SetSelected : 0;
+                if (ImGui.beginTabItem("Properties", propertyTabFlags)) {
+                    activeTab = RightPanelTab.PROPERTIES;
+                    renderPropertiesTabContent();
+                    ImGui.endTabItem();
                 }
 
-                if (ImGui.collapsingHeader("Node Properties", ImGuiTreeNodeFlags.DefaultOpen)) {
-                    renderNodeProperties();
+                int aiTabFlags = activeTab == RightPanelTab.AI_ASSISTANT ? imgui.flag.ImGuiTabItemFlags.SetSelected : 0;
+                if (ImGui.beginTabItem("AI Assistant", aiTabFlags)) {
+                    activeTab = RightPanelTab.AI_ASSISTANT;
+                    renderAiAssistantTabContent();
+                    ImGui.endTabItem();
                 }
-
-                if (ImGui.collapsingHeader("Input Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
-                    renderInputPorts();
-                }
-
-                if (ImGui.collapsingHeader("Output Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
-                    renderOutputPorts();
-                }
-
-                if (ImGui.collapsingHeader("Actions", ImGuiTreeNodeFlags.DefaultOpen)) {
-                    renderActionButtons();
-                }
-            } else {
-                ImGui.text("No node selected");
+                ImGui.endTabBar();
             }
 
         } catch (Exception e) {
@@ -1525,6 +1533,135 @@ public class PropertyPanelComponent implements EditorComponent {
         } finally {
             ImGui.popStyleVar();
         }
+    }
+
+    private void renderPropertiesTabContent() {
+        if (selectedNode != null) {
+            if (ImGui.collapsingHeader("Basic Info")) {
+                renderNodeInfo();
+            }
+
+            if (ImGui.collapsingHeader("Node Properties", ImGuiTreeNodeFlags.DefaultOpen)) {
+                renderNodeProperties();
+            }
+
+            if (ImGui.collapsingHeader("Input Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
+                renderInputPorts();
+            }
+
+            if (ImGui.collapsingHeader("Output Ports", ImGuiTreeNodeFlags.DefaultOpen)) {
+                renderOutputPorts();
+            }
+
+            if (ImGui.collapsingHeader("Actions", ImGuiTreeNodeFlags.DefaultOpen)) {
+                renderActionButtons();
+            }
+        } else {
+            ImGui.text("No node selected");
+        }
+    }
+
+    private void renderAiAssistantTabContent() {
+        ImGui.textWrapped("Describe what you want to build, and AI will generate a node graph plan.");
+        ImGui.checkbox("Use current selection as context", aiUseSelectionContext);
+
+        if (aiUseSelectionContext.get()) {
+            ImGui.separator();
+            if (selectedNode != null) {
+                ImGui.textColored(0.45f, 0.85f, 0.55f, 1.0f,
+                        "Context: Selected node = " + selectedNode.getDisplayName());
+                ImGui.textDisabled("Type ID: " + selectedNode.getTypeId());
+            } else {
+                ImGui.textDisabled("Context: No node selected");
+            }
+        }
+
+        ImGui.separator();
+        ImGui.text("Quick prompts:");
+        if (ImGui.smallButton("Generate from selection")) {
+            setAiPrompt("Generate a node graph based on current selection and keep existing style.");
+        }
+        ImGui.sameLine();
+        if (ImGui.smallButton("Optimize selected graph")) {
+            setAiPrompt("Optimize selected node graph for readability and performance.");
+        }
+        if (ImGui.smallButton("Explain current node")) {
+            setAiPrompt("Explain what the selected node does and how to connect it.");
+        }
+        ImGui.sameLine();
+        if (ImGui.smallButton("Mobius ring example")) {
+            setAiPrompt("Build a parametrized Mobius ring above selected position with radius/width/thickness controls.");
+        }
+
+        float inputBlockHeight = ImGui.getFrameHeightWithSpacing() * 3.2f;
+        float historyHeight = Math.max(120.0f, ImGui.getContentRegionAvailY() - inputBlockHeight);
+
+        if (ImGui.beginChild("aiChatHistory", 0.0f, historyHeight, true)) {
+            if (aiChatMessages.isEmpty()) {
+                ImGui.textDisabled("No messages yet.");
+                ImGui.textDisabled("Tip: Ask AI to create or modify a node graph.");
+            } else {
+                for (AiChatMessage message : aiChatMessages) {
+                    boolean isUser = "user".equals(message.role());
+                    ImGui.textColored(
+                            isUser ? 0.45f : 0.65f,
+                            isUser ? 0.75f : 0.85f,
+                            isUser ? 1.0f : 0.55f,
+                            1.0f,
+                            isUser ? "You" : "AI");
+                    ImGui.sameLine();
+                    ImGui.textWrapped(message.content());
+                    ImGui.spacing();
+                }
+                ImGui.setScrollHereY(1.0f);
+            }
+        }
+        ImGui.endChild();
+
+        ImGui.pushItemWidth(-80.0f);
+        boolean submitByEnter = ImGui.inputText("##ai_prompt", aiPromptInput, ImGuiInputTextFlags.EnterReturnsTrue);
+        ImGui.popItemWidth();
+        ImGui.sameLine();
+        if (ImGui.button("Send") || submitByEnter) {
+            submitAiPrompt();
+        }
+
+        ImGui.textDisabled("AI planning backend not connected yet. This tab is the UI foundation.");
+    }
+
+    private void setAiPrompt(String text) {
+        if (text == null) {
+            aiPromptInput.clear();
+            return;
+        }
+        aiPromptInput.set(text);
+    }
+
+    private void submitAiPrompt() {
+        String prompt = aiPromptInput.get();
+        if (prompt == null || prompt.isBlank()) {
+            return;
+        }
+
+        String trimmedPrompt = prompt.trim();
+        aiChatMessages.add(new AiChatMessage("user", trimmedPrompt, System.currentTimeMillis()));
+        aiChatMessages.add(new AiChatMessage("assistant", buildAiPlaceholderReply(trimmedPrompt), System.currentTimeMillis()));
+        aiPromptInput.clear();
+    }
+
+    private String buildAiPlaceholderReply(String prompt) {
+        String contextSummary;
+        if (aiUseSelectionContext.get() && selectedNode != null) {
+            contextSummary = "Using selected node context: " + selectedNode.getDisplayName() + " (" + selectedNode.getTypeId() + ").";
+        } else if (aiUseSelectionContext.get()) {
+            contextSummary = "Selection context requested, but no node is selected.";
+        } else {
+            contextSummary = "Selection context disabled.";
+        }
+
+        return "Plan received: '" + prompt + "'\n"
+                + contextSummary + "\n"
+                + "Next step after backend integration: generate preview plan (create nodes, set properties, connect ports) before applying changes.";
     }
     private void renderNodeInfo() {
         String typeId = selectedNode.getTypeId();
