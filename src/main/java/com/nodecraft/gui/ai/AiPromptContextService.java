@@ -170,15 +170,11 @@ public final class AiPromptContextService {
         if (value instanceof Number || value instanceof Boolean) {
             return String.valueOf(value);
         }
-        if (value instanceof String text) {
-            return text.length() <= 32 ? text : text.substring(0, 32) + "...";
-        }
-        if (value instanceof Collection<?> collection) {
-            return "list(size=" + collection.size() + ")";
-        }
-        if (value instanceof Map<?, ?> map) {
-            return "map(size=" + map.size() + ")";
-        }
-        return value.getClass().getSimpleName();
+        return switch (value) {
+            case String text -> text.length() <= 32 ? text : text.substring(0, 32) + "...";
+            case Collection<?> collection -> "list(size=" + collection.size() + ")";
+            case Map<?, ?> map -> "map(size=" + map.size() + ")";
+            default -> value.getClass().getSimpleName();
+        };
     }
 }
