@@ -2065,26 +2065,18 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private AiGraphDiffService.GraphDiffSummary buildGraphDiffSummary(AiGraphPlan plan) {
-        return AiGraphDiffService.buildGraphDiffSummary(toDiffGraphPlan(plan), getNodeGraph());
-    }
-
-    private AiGraphDiffService.MappedDiffSummary buildMappedDiffSummary(AiGraphPlan plan) {
-        return AiGraphDiffService.buildMappedDiffSummary(toDiffGraphPlan(plan), getNodeGraph());
-    }
-
-    private AiGraphDiffService.GraphPlan toDiffGraphPlan(AiGraphPlan plan) {
         if (plan == null) {
-            return new AiGraphDiffService.GraphPlan(List.of(), List.of());
+            return AiGraphDiffAdapterService.buildGraphDiffSummary(List.of(), List.of(), getNodeGraph());
         }
 
-        List<AiGraphDiffService.PlanNode> nodes = new ArrayList<>();
+        List<AiGraphDiffAdapterService.PlanNode> nodes = new ArrayList<>(plan.nodes().size());
         for (AiPlanNode node : plan.nodes()) {
-            nodes.add(new AiGraphDiffService.PlanNode(node.ref(), node.typeId(), node.nodeState()));
+            nodes.add(new AiGraphDiffAdapterService.PlanNode(node.ref(), node.typeId(), node.nodeState()));
         }
 
-        List<AiGraphDiffService.PlanConnection> connections = new ArrayList<>();
+        List<AiGraphDiffAdapterService.PlanConnection> connections = new ArrayList<>(plan.connections().size());
         for (AiPlanConnection connection : plan.connections()) {
-            connections.add(new AiGraphDiffService.PlanConnection(
+            connections.add(new AiGraphDiffAdapterService.PlanConnection(
                     connection.sourceRef(),
                     connection.sourcePortId(),
                     connection.targetRef(),
@@ -2092,7 +2084,30 @@ public class PropertyPanelComponent implements EditorComponent {
             ));
         }
 
-        return new AiGraphDiffService.GraphPlan(nodes, connections);
+        return AiGraphDiffAdapterService.buildGraphDiffSummary(nodes, connections, getNodeGraph());
+    }
+
+    private AiGraphDiffService.MappedDiffSummary buildMappedDiffSummary(AiGraphPlan plan) {
+        if (plan == null) {
+            return AiGraphDiffAdapterService.buildMappedDiffSummary(List.of(), List.of(), getNodeGraph());
+        }
+
+        List<AiGraphDiffAdapterService.PlanNode> nodes = new ArrayList<>(plan.nodes().size());
+        for (AiPlanNode node : plan.nodes()) {
+            nodes.add(new AiGraphDiffAdapterService.PlanNode(node.ref(), node.typeId(), node.nodeState()));
+        }
+
+        List<AiGraphDiffAdapterService.PlanConnection> connections = new ArrayList<>(plan.connections().size());
+        for (AiPlanConnection connection : plan.connections()) {
+            connections.add(new AiGraphDiffAdapterService.PlanConnection(
+                    connection.sourceRef(),
+                    connection.sourcePortId(),
+                    connection.targetRef(),
+                    connection.targetPortId()
+            ));
+        }
+
+        return AiGraphDiffAdapterService.buildMappedDiffSummary(nodes, connections, getNodeGraph());
     }
 
     private void setAiPrompt(String text) {
