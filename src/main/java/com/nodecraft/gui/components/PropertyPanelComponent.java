@@ -1768,140 +1768,97 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private void renderAiDebugConsolePopup() {
-        int flags = ImGuiWindowFlags.AlwaysAutoResize;
-        if (!ImGui.beginPopupModal("AI Debug Console", flags)) {
-            return;
-        }
+        String compactDiagnostics = buildAiDiagnosticsExportText(false);
+        String fullDiagnostics = buildAiDiagnosticsExportText(true);
 
-        AiAssistantFailurePanelRenderer.renderFailureSummaryCard(
-                new AiAssistantFailurePanelRenderer.State(
+        AiAssistantDebugConsoleRenderer.renderDebugConsolePopup(
+                new AiAssistantDebugConsoleRenderer.State(
                         aiLastRemoteErrorCategory,
-                        aiLastRemoteStatusCode,
                         aiLastRemoteAttempts,
-                        aiLastRemoteErrorMessage,
-                        aiLastSubmittedPrompt != null && !aiLastSubmittedPrompt.isBlank(),
-                        isRemotePlannerBusy(),
-                        aiEnableRemotePlanner.get()
+                        aiLastRemoteRawResponse,
+                        aiLastRemoteModelText,
+                        aiLastRemoteRequestSnapshot,
+                        compactDiagnostics,
+                        fullDiagnostics
                 ),
-                new AiAssistantFailurePanelRenderer.Actions() {
+                new AiAssistantDebugConsoleRenderer.Actions() {
                     @Override
-                    public void retryLastRequest() {
-                        retryLastAiRequest();
+                    public void renderFailureSummarySection() {
+                        AiAssistantFailurePanelRenderer.renderFailureSummaryCard(
+                                new AiAssistantFailurePanelRenderer.State(
+                                        aiLastRemoteErrorCategory,
+                                        aiLastRemoteStatusCode,
+                                        aiLastRemoteAttempts,
+                                        aiLastRemoteErrorMessage,
+                                        aiLastSubmittedPrompt != null && !aiLastSubmittedPrompt.isBlank(),
+                                        isRemotePlannerBusy(),
+                                        aiEnableRemotePlanner.get()
+                                ),
+                                new AiAssistantFailurePanelRenderer.Actions() {
+                                    @Override
+                                    public void retryLastRequest() {
+                                        retryLastAiRequest();
+                                    }
+
+                                    @Override
+                                    public void increaseTimeoutSeconds(int deltaSeconds) {
+                                        increaseAiTimeoutSeconds(deltaSeconds);
+                                    }
+
+                                    @Override
+                                    public void togglePlannerMode() {
+                                        aiEnableRemotePlanner.set(!aiEnableRemotePlanner.get());
+                                        saveAiSettingsToDisk();
+                                        aiSettingsStatusMessage = aiEnableRemotePlanner.get()
+                                                ? "Remote planner re-enabled."
+                                                : "Switched to local planner for the next request.";
+                                    }
+
+                                    @Override
+                                    public void openAiSettingsPopup() {
+                                        ImGui.openPopup("AI Settings");
+                                    }
+
+                                    @Override
+                                    public void resaveSettings() {
+                                        saveAiSettingsToDisk();
+                                        aiSettingsStatusMessage = "AI settings saved.";
+                                    }
+                                }
+                        );
                     }
 
                     @Override
-                    public void increaseTimeoutSeconds(int deltaSeconds) {
-                        increaseAiTimeoutSeconds(deltaSeconds);
+                    public void copyRawResponse() {
+                        copyToClipboard(aiLastRemoteRawResponse == null ? "" : aiLastRemoteRawResponse);
+                        aiPlanStatusMessage = "Raw response copied to clipboard.";
                     }
 
                     @Override
-                    public void togglePlannerMode() {
-                        aiEnableRemotePlanner.set(!aiEnableRemotePlanner.get());
-                        saveAiSettingsToDisk();
-                        aiSettingsStatusMessage = aiEnableRemotePlanner.get()
-                                ? "Remote planner re-enabled."
-                                : "Switched to local planner for the next request.";
+                    public void copyModelText() {
+                        copyToClipboard(aiLastRemoteModelText == null ? "" : aiLastRemoteModelText);
+                        aiPlanStatusMessage = "Model text copied to clipboard.";
                     }
 
                     @Override
-                    public void openAiSettingsPopup() {
-                        ImGui.openPopup("AI Settings");
+                    public void copyRequestSnapshot() {
+                        copyToClipboard(aiLastRemoteRequestSnapshot == null ? "" : aiLastRemoteRequestSnapshot);
+                        aiPlanStatusMessage = "Request snapshot copied to clipboard.";
                     }
 
                     @Override
-                    public void resaveSettings() {
-                        saveAiSettingsToDisk();
-                        aiSettingsStatusMessage = "AI settings saved.";
+                    public void copyCompactExport() {
+                        copyToClipboard(compactDiagnostics);
+                        aiPlanStatusMessage = "Compact diagnostics exported to clipboard.";
+                    }
+
+                    @Override
+                    public void copyFullExport() {
+                        copyToClipboard(fullDiagnostics);
+                        aiPlanStatusMessage = "Full diagnostics exported to clipboard.";
                     }
                 }
         );
-        ImGui.spacing();
-
-        ImGui.textDisabled("Category: " + (aiLastRemoteErrorCategory == null || aiLastRemoteErrorCategory.isBlank()
-                ? "none"
-                : aiLastRemoteErrorCategory)
-                + " | Attempts: " + aiLastRemoteAttempts);
-        ImGui.separator();
-
-        float width = Math.max(620.0f, ImGui.getContentRegionAvailX());
-        if (ImGui.beginTabBar("aiDebugConsoleTabs")) {
-            if (ImGui.beginTabItem("Raw Response")) {
-                if (ImGui.beginChild("aiDebugRawBody", width, 280.0f, true)) {
-                    if (aiLastRemoteRawResponse == null || aiLastRemoteRawResponse.isBlank()) {
-                        ImGui.textDisabled("No raw response available.");
-                    } else {
-                        ImGui.textWrapped(aiLastRemoteRawResponse);
-                    }
-                }
-                ImGui.endChild();
-                if (ImGui.button("Copy Raw Response")) {
-                    copyToClipboard(aiLastRemoteRawResponse == null ? "" : aiLastRemoteRawResponse);
-                    aiPlanStatusMessage = "Raw response copied to clipboard.";
-                }
-                ImGui.endTabItem();
-            }
-
-            if (ImGui.beginTabItem("Model Text")) {
-                if (ImGui.beginChild("aiDebugModelTextBody", width, 280.0f, true)) {
-                    if (aiLastRemoteModelText == null || aiLastRemoteModelText.isBlank()) {
-                        ImGui.textDisabled("No extracted model text available.");
-                    } else {
-                        ImGui.textWrapped(aiLastRemoteModelText);
-                    }
-                }
-                ImGui.endChild();
-                if (ImGui.button("Copy Model Text")) {
-                    copyToClipboard(aiLastRemoteModelText == null ? "" : aiLastRemoteModelText);
-                    aiPlanStatusMessage = "Model text copied to clipboard.";
-                }
-                ImGui.endTabItem();
-            }
-
-            if (ImGui.beginTabItem("Request Snapshot")) {
-                ImGui.textDisabled("API key is masked for safety.");
-                if (ImGui.beginChild("aiDebugRequestSnapshotBody", width, 260.0f, true)) {
-                    if (aiLastRemoteRequestSnapshot == null || aiLastRemoteRequestSnapshot.isBlank()) {
-                        ImGui.textDisabled("No request snapshot available.");
-                    } else {
-                        ImGui.textWrapped(aiLastRemoteRequestSnapshot);
-                    }
-                }
-                ImGui.endChild();
-                if (ImGui.button("Copy Request Snapshot")) {
-                    copyToClipboard(aiLastRemoteRequestSnapshot == null ? "" : aiLastRemoteRequestSnapshot);
-                    aiPlanStatusMessage = "Request snapshot copied to clipboard.";
-                }
-                ImGui.endTabItem();
-            }
-
-            if (ImGui.beginTabItem("Export")) {
-                String compactDiagnostics = buildAiDiagnosticsExportText(false);
-                String fullDiagnostics = buildAiDiagnosticsExportText(true);
-                if (ImGui.beginChild("aiDebugExportBody", width, 260.0f, true)) {
-                    ImGui.textDisabled("Preview (compact):");
-                    ImGui.textWrapped(compactDiagnostics);
-                }
-                ImGui.endChild();
-                if (ImGui.button("Copy Compact Export")) {
-                    copyToClipboard(compactDiagnostics);
-                    aiPlanStatusMessage = "Compact diagnostics exported to clipboard.";
-                }
-                ImGui.sameLine();
-                if (ImGui.button("Copy Full Export")) {
-                    copyToClipboard(fullDiagnostics);
-                    aiPlanStatusMessage = "Full diagnostics exported to clipboard.";
-                }
-                ImGui.endTabItem();
-            }
-
-            ImGui.endTabBar();
-        }
-
-        if (ImGui.button("Close")) {
-            ImGui.closeCurrentPopup();
-        }
-
-        ImGui.endPopup();
     }
 
     private boolean hasAiDebugData() {
