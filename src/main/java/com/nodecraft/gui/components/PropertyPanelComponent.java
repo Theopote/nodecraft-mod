@@ -2122,8 +2122,9 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        AiGraphPlan mockTemplatePlan = buildMockAiPlan(trimmedPrompt);
-        String dslJson = buildDslJsonFromPlan(mockTemplatePlan);
+        String dslJson = AiPlanDslWorkflowService.toDslJson(
+            AiPlanDslWorkflowService.buildMockGraphPlan(trimmedPrompt)
+        );
         applyDslResponse(trimmedPrompt, dslJson, "local-template");
     }
 
@@ -2248,7 +2249,7 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        pendingAiPlan = buildPlanFromDsl(parsed.graph());
+        pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph()));
         aiChatMessages.add(new AiChatMessage(
             "assistant",
             AiPromptContextService.buildAiPlanReply(
@@ -2267,8 +2268,9 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private void fallbackToLocalPlan(String prompt, String reason) {
-        AiGraphPlan localPlan = buildMockAiPlan(prompt);
-        String localDslJson = buildDslJsonFromPlan(localPlan);
+        String localDslJson = AiPlanDslWorkflowService.toDslJson(
+            AiPlanDslWorkflowService.buildMockGraphPlan(prompt)
+        );
         AiGraphDslSupport.ParseValidationResult localParsed =
                 AiGraphDslSupport.parseAndValidate(localDslJson, NodeRegistry.getInstance());
 
@@ -2278,7 +2280,7 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        pendingAiPlan = buildPlanFromDsl(localParsed.graph());
+        pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(localParsed.graph()));
         aiPlanStatusMessage = "Remote planner fallback applied (" + reason + "). Review and click Apply Plan.";
         aiChatMessages.add(new AiChatMessage("assistant", aiPlanStatusMessage, System.currentTimeMillis()));
     }
@@ -2345,49 +2347,6 @@ public class PropertyPanelComponent implements EditorComponent {
         String prefix = secret.substring(0, 4);
         String suffix = secret.substring(Math.max(0, len - 2));
         return prefix + "***" + suffix;
-    }
-
-    private String buildDslJsonFromPlan(AiGraphPlan plan) {
-        return AiGraphPlanDslAdapterService.toDslJson(toServiceGraphPlan(plan));
-    }
-
-    private AiGraphPlan buildPlanFromDsl(AiGraphDslSupport.DslGraph dslGraph) {
-        return fromServiceGraphPlan(AiGraphPlanDslAdapterService.fromDsl(dslGraph));
-    }
-
-    private AiGraphPlan buildMockAiPlan(String prompt) {
-        AiMockPlanService.MockPlan mockPlan = AiMockPlanService.buildMockPlan(prompt);
-        return fromServiceGraphPlan(AiGraphPlanDslAdapterService.fromMockPlan(mockPlan));
-    }
-
-    private AiGraphPlanDslAdapterService.GraphPlan toServiceGraphPlan(AiGraphPlan plan) {
-        List<AiGraphPlanDslAdapterService.PlanNode> nodes = new ArrayList<>();
-        for (AiPlanNode node : plan.nodes()) {
-            nodes.add(new AiGraphPlanDslAdapterService.PlanNode(
-                    node.ref(),
-                    node.typeId(),
-                    node.offsetX(),
-                    node.offsetY(),
-                    node.nodeState()
-            ));
-        }
-
-        List<AiGraphPlanDslAdapterService.PlanConnection> connections = new ArrayList<>();
-        for (AiPlanConnection connection : plan.connections()) {
-            connections.add(new AiGraphPlanDslAdapterService.PlanConnection(
-                    connection.sourceRef(),
-                    connection.sourcePortId(),
-                    connection.targetRef(),
-                    connection.targetPortId()
-            ));
-        }
-
-        return new AiGraphPlanDslAdapterService.GraphPlan(
-                plan.summary(),
-                nodes,
-                connections,
-                plan.validationErrors()
-        );
     }
 
     private AiGraphPlan fromServiceGraphPlan(AiGraphPlanDslAdapterService.GraphPlan plan) {
