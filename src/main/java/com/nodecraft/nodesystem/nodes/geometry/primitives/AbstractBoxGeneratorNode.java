@@ -157,6 +157,9 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
         int resolvedX = normalizeSignedSize(sizeX);
         int resolvedY = normalizeSignedSize(sizeY);
         int resolvedZ = normalizeSignedSize(sizeZ);
+        if (resolvedX == 0 || resolvedY == 0 || resolvedZ == 0) {
+            return null;
+        }
 
         Matrix3d orientationMatrix = createOrientationMatrix(planeObj, rotationX, rotationY, rotationZ);
         // 使 size 直接等于几何长度
@@ -179,9 +182,6 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
     }
 
     protected int normalizeSignedSize(int value) {
-        if (value == 0) {
-            return 1;
-        }
         return value;
     }
 
