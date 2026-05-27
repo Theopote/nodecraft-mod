@@ -12,6 +12,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.lang.reflect.Modifier;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
@@ -129,6 +130,9 @@ public final class AutoNodeScanner {
         try {
             Class<?> clazz = Class.forName(className);
             if (!INode.class.isAssignableFrom(clazz)) {
+                return false;
+            }
+            if (Modifier.isAbstract(clazz.getModifiers())) {
                 return false;
             }
 
