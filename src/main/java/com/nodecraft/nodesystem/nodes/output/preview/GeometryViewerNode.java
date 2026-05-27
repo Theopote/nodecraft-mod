@@ -68,6 +68,9 @@ public class GeometryViewerNode extends BaseCustomUINode {
         }
     }
 
+    @NodeProperty(displayName = "Preview Enabled", category = "Display", order = 0)
+    private boolean previewEnabled = true;
+
     @NodeProperty(displayName = "Preview Color", category = "Display", order = 1)
     private String previewColor = "#4CAF50";
 
@@ -82,9 +85,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
     @NodeProperty(displayName = "Block Type", category = "Preview", order = 4)
     private String blockType = "minecraft:stone";
-
-    @NodeProperty(displayName = "Preview Enabled", category = "Display", order = 5)
-    private boolean previewEnabled = true;
 
     @NodeProperty(displayName = "Preview Backend", category = "Display", order = 6)
     private PreviewBackend previewBackend = PreviewBackend.GHOST;

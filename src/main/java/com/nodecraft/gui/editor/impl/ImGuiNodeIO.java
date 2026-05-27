@@ -192,12 +192,12 @@ public class ImGuiNodeIO {
             GraphSerializer.MigrationReport migrationReport = GraphSerializer.migrateCompatibilityNodes(savedGraph);
             if (migrationReport.hasChanges()) {
                 NodeCraft.LOGGER.warn(
-                    "加载图时已自动迁移 {} 个已弃用 Bake 节点到 output.execute.bake_geometry_to_blocks，类型: {}",
+                    "加载图时已自动迁移 {} 个兼容节点类型映射，类型: {}",
                     migrationReport.migratedNodeCount(),
                     migrationReport.migratedTypeIds()
                 );
                 for (String note : migrationReport.notes()) {
-                    NodeCraft.LOGGER.warn("Bake 节点迁移提示: {}", note);
+                    NodeCraft.LOGGER.warn("兼容迁移提示: {}", note);
                 }
             }
 
@@ -216,13 +216,26 @@ public class ImGuiNodeIO {
                 try {
                     INode iNode = registry.createNodeInstance(savedNode.typeId);
                     if (iNode instanceof BaseNode newNode) {
+                        boolean stateRestored = true;
                         try {
                             newNode.setNodeState(savedNode.state);
+                        } catch (Exception e) {
+                            stateRestored = false;
+                            NodeCraft.LOGGER.warn("恢复节点状态失败，已回退为默认状态继续加载: Node Type={}, Saved ID={}, Error={}",
+                                savedNode.typeId, savedNode.nodeId, e.getMessage(), e);
+                        }
+
+                        try {
                             loadedNodesMap.put(savedNode.nodeId, newNode);
                             newGraph.addNode(newNode);
                         } catch (Exception e) {
-                            NodeCraft.LOGGER.error("恢复节点状态或添加到图时出错: Node Type={}, Saved ID={}, Error={}",
+                            loadedNodesMap.remove(savedNode.nodeId);
+                            NodeCraft.LOGGER.error("添加节点到图时出错: Node Type={}, Saved ID={}, Error={}",
                                 savedNode.typeId, savedNode.nodeId, e.getMessage(), e);
+                        }
+
+                        if (!stateRestored) {
+                            lastOperationError = "部分节点状态不兼容，已使用默认值回退加载。";
                         }
                     } else if (iNode == null) {
                         NodeCraft.LOGGER.warn("无法创建节点实例 (返回为null): Type ID={}, Saved ID={}",

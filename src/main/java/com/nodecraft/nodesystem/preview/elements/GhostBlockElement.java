@@ -55,7 +55,7 @@ public class GhostBlockElement extends AbstractPreviewElement {
     
     private volatile List<BlockData> blocks = new ArrayList<>();
     private Vector3f fillColor = new Vector3f(0.2f, 0.7f, 1.0f); // 默认天蓝色
-    private Vector3f outlineColor = new Vector3f(0.1f, 0.1f, 0.1f);
+    private Vector3f outlineColor;
     private boolean showOutline = true;
     private float outlineLineWidth = 1.5f;
     private String textureMode = "original"; // "original", "solid_color", "wireframe"

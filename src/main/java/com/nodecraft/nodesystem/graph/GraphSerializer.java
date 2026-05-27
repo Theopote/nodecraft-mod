@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -137,10 +138,52 @@ public class GraphSerializer {
 
     /**
      * Compatibility hook kept for callers that still invoke migration preflight.
-     * Legacy remapping has been removed in this development phase.
+     * Performs best-effort type-id remapping for renamed/relocated nodes.
      */
     public static MigrationReport migrateCompatibilityNodes(SavedGraph savedGraph) {
-        return MigrationReport.empty();
+        if (savedGraph == null || savedGraph.nodes == null || savedGraph.nodes.isEmpty()) {
+            return MigrationReport.empty();
+        }
+
+        Map<String, String> typeIdRemap = legacyTypeIdRemap();
+        if (typeIdRemap.isEmpty()) {
+            return MigrationReport.empty();
+        }
+
+        int migrated = 0;
+        List<String> migratedTypes = new ArrayList<>();
+        List<String> notes = new ArrayList<>();
+
+        for (SavedNode savedNode : savedGraph.nodes) {
+            if (savedNode == null || savedNode.typeId == null || savedNode.typeId.isBlank()) {
+                continue;
+            }
+            String oldId = savedNode.typeId;
+            String newId = typeIdRemap.get(oldId);
+            if (newId == null || newId.equals(oldId)) {
+                continue;
+            }
+
+            savedNode.typeId = newId;
+            migrated++;
+            if (!migratedTypes.contains(oldId + "->" + newId)) {
+                migratedTypes.add(oldId + "->" + newId);
+            }
+        }
+
+        if (migrated > 0) {
+            notes.add("已自动映射旧节点类型 ID 到新版 ID，请保存以写回新格式。");
+        }
+        return migrated > 0
+            ? new MigrationReport(migrated, migratedTypes, notes)
+            : MigrationReport.empty();
+    }
+
+    private static Map<String, String> legacyTypeIdRemap() {
+        Map<String, String> remap = new HashMap<>();
+        // Legacy id kept in older graphs before input category normalization.
+        remap.put("input.numeric.boolean_toggle", "input.basic.boolean_toggle");
+        return Collections.unmodifiableMap(remap);
     }
 
     public record MigrationReport(int migratedNodeCount, List<String> migratedTypeIds, List<String> notes) {

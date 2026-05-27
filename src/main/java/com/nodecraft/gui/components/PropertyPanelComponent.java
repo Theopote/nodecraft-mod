@@ -53,6 +53,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.registry.Registries;
+import net.minecraft.util.Identifier;
 import org.joml.Vector3d;
 
 public class PropertyPanelComponent implements EditorComponent {
@@ -227,6 +229,10 @@ public class PropertyPanelComponent implements EditorComponent {
                 }
             }
 
+            if (panel.isGeometryViewerBlockType(node, prop)) {
+                panel.renderGeometryViewerBlockTypeHint(imStr.get());
+            }
+
             // 重置该属性的错误计数
             panel.errorCounts.remove(prop.name);
         } catch (Throwable e) { // 统一捕获 Throwable
@@ -283,9 +289,16 @@ public class PropertyPanelComponent implements EditorComponent {
             float currentValue = (float) prop.getter.invoke(node);
             float[] valArr = {currentValue};
             boolean isReadOnly = prop.setter == null;
+            boolean isGeometryTransparency = panel.isGeometryViewerTransparency(node, prop);
 
             if (isReadOnly) ImGui.beginDisabled();
-            if (ImGui.dragFloat("##" + prop.name, valArr, 0.01f)) {
+            boolean changed;
+            if (isGeometryTransparency) {
+                changed = ImGui.sliderFloat("##" + prop.name, valArr, 0.0f, 1.0f, "%.2f");
+            } else {
+                changed = ImGui.dragFloat("##" + prop.name, valArr, 0.01f);
+            }
+            if (changed) {
                 if (!isReadOnly) {
                     if (valArr[0] != currentValue) { // 避免不必要的setter调用
                         panel.applyPropertyValue(node, prop, valArr[0]);
@@ -296,6 +309,11 @@ public class PropertyPanelComponent implements EditorComponent {
             // 标记编辑状态
             if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
             if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
+
+            if (isGeometryTransparency) {
+                ImGui.sameLine();
+                ImGui.text(String.format(Locale.ROOT, "%d%%", Math.round(valArr[0] * 100.0f)));
+            }
 
             if (isReadOnly) ImGui.endDisabled();
 
@@ -425,9 +443,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
             // 获取枚举的所有值
             Enum<?>[] values = currentValue.getDeclaringClass().getEnumConstants();
-            String[] names = Arrays.stream(values)
-                    .map(Enum::name) // ImGui.combo 使用的是字符串名称
-                    .toArray(String[]::new);
+                String[] names = panel.buildEnumDisplayNames(node, prop, values);
 
             int currentIndex = currentValue.ordinal();
             ImInt selectedIndex = new ImInt(currentIndex);
@@ -448,11 +464,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
             // 如果鼠标悬停，显示所有可用值
             if (ImGui.isItemHovered()) {
-                StringBuilder tooltip = new StringBuilder("可用值:\n");
-                for (String name : names) {
-                    tooltip.append("- ").append(name).append("\n");
-                }
-                ImGui.setTooltip(tooltip.toString());
+                ImGui.setTooltip(panel.buildEnumTooltip(node, prop, values, names, selectedIndex.get()));
             }
 
             // 重置该属性的错误计数
@@ -1778,15 +1790,129 @@ public class PropertyPanelComponent implements EditorComponent {
     private boolean shouldDisplayProperty(INode node, PropertyDescriptor prop) {
         if (node instanceof GeometryViewerNode geometryViewerNode) {
             boolean isGhostBackend = geometryViewerNode.getPreviewBackend() == com.nodecraft.nodesystem.preview.PreviewBackend.GHOST;
+            GeometryViewerNode.GhostRenderMode mode = geometryViewerNode.getGhostRenderMode();
+
+            if (!isGhostBackend && (
+                "previewColor".equals(prop.name)
+                    || "transparency".equals(prop.name)
+                    || "showOutline".equals(prop.name)
+                    || "ghostOutlineColor".equals(prop.name)
+                    || "ghostRenderMode".equals(prop.name)
+            )) {
+                return false;
+            }
+
             if ("ghostRenderMode".equals(prop.name)) {
                 return isGhostBackend;
             }
+            if ("previewColor".equals(prop.name)) {
+                return isGhostBackend && mode != GeometryViewerNode.GhostRenderMode.BLOCK_COLOR;
+            }
+            if ("transparency".equals(prop.name)) {
+                return isGhostBackend;
+            }
+            if ("showOutline".equals(prop.name)) {
+                return isGhostBackend && mode == GeometryViewerNode.GhostRenderMode.SOLID_COLOR;
+            }
             if ("ghostOutlineColor".equals(prop.name)) {
                 return isGhostBackend
-                    && geometryViewerNode.getGhostRenderMode() == GeometryViewerNode.GhostRenderMode.SOLID_COLOR;
+                    && mode == GeometryViewerNode.GhostRenderMode.SOLID_COLOR;
             }
         }
         return true;
+    }
+
+    private boolean isGeometryViewerTransparency(INode node, PropertyDescriptor prop) {
+        return node instanceof GeometryViewerNode && "transparency".equals(prop.name);
+    }
+
+    private boolean isGeometryViewerBlockType(INode node, PropertyDescriptor prop) {
+        return node instanceof GeometryViewerNode && "blockType".equals(prop.name);
+    }
+
+    private void renderGeometryViewerBlockTypeHint(String rawValue) {
+        String value = rawValue != null ? rawValue.trim() : "";
+        ImGui.sameLine();
+        if (value.isEmpty()) {
+            ImGui.textColored(0.95f, 0.8f, 0.35f, 1.0f, "Empty (fallback: minecraft:stone)");
+            return;
+        }
+
+        boolean valid = isValidBlockTypeId(value);
+        if (valid) {
+            ImGui.textColored(0.35f, 0.85f, 0.45f, 1.0f, "Valid");
+        } else {
+            ImGui.textColored(0.95f, 0.4f, 0.4f, 1.0f, "Invalid block id");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Use namespace:path, e.g. minecraft:stone");
+            }
+        }
+    }
+
+    private boolean isValidBlockTypeId(String value) {
+        try {
+            Identifier id = Identifier.of(value);
+            return Registries.BLOCK.containsId(id);
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    private String[] buildEnumDisplayNames(INode node, PropertyDescriptor prop, Enum<?>[] values) {
+        String[] labels = new String[values.length];
+        for (int i = 0; i < values.length; i++) {
+            labels[i] = buildEnumDisplayName(node, prop, values[i]);
+        }
+        return labels;
+    }
+
+    private String buildEnumDisplayName(INode node, PropertyDescriptor prop, Enum<?> value) {
+        if (node instanceof GeometryViewerNode && "ghostRenderMode".equals(prop.name)) {
+            return switch (value.name()) {
+                case "BLOCK_COLOR" -> "Block Color";
+                case "SOLID_COLOR" -> "Solid Color";
+                case "WIREFRAME" -> "Wireframe";
+                default -> humanizeEnumName(value.name());
+            };
+        }
+        return humanizeEnumName(value.name());
+    }
+
+    private String humanizeEnumName(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String[] parts = raw.toLowerCase(Locale.ROOT).split("_");
+        StringBuilder out = new StringBuilder();
+        for (String part : parts) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (!out.isEmpty()) {
+                out.append(' ');
+            }
+            out.append(Character.toUpperCase(part.charAt(0)));
+            if (part.length() > 1) {
+                out.append(part.substring(1));
+            }
+        }
+        return out.toString();
+    }
+
+    private String buildEnumTooltip(INode node, PropertyDescriptor prop, Enum<?>[] values, String[] names, int selectedIndex) {
+        if (node instanceof GeometryViewerNode && "ghostRenderMode".equals(prop.name)) {
+            String current = (selectedIndex >= 0 && selectedIndex < names.length) ? names[selectedIndex] : "";
+            return "Current: " + current + "\n"
+                + "- Block Color: use block palette-derived color\n"
+                + "- Solid Color: use Preview Color fill (+ optional Outline)\n"
+                + "- Wireframe: render edges only";
+        }
+
+        StringBuilder tooltip = new StringBuilder("可用值:\n");
+        for (String name : names) {
+            tooltip.append("- ").append(name).append("\n");
+        }
+        return tooltip.toString();
     }
 
     private boolean shouldUseColorPickerForStringProperty(PropertyDescriptor prop, String value) {
