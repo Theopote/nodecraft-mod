@@ -37,6 +37,7 @@ import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.Curve;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.editor.impl.NodePosition;
 import imgui.ImGui;
 import imgui.ImVec4;
 import imgui.flag.ImGuiInputTextFlags;
@@ -97,6 +98,9 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImString aiPromptInput = new ImString("", 2048);
     private final ImBoolean aiUseSelectionContext = new ImBoolean(true);
     private final List<AiChatMessage> aiChatMessages = new ArrayList<>();
+    private AiGraphPlan pendingAiPlan = null;
+    private int lastAiUndoStepCount = 0;
+    private String aiPlanStatusMessage = "";
 
     private enum RightPanelTab {
         PROPERTIES,
@@ -106,6 +110,16 @@ public class PropertyPanelComponent implements EditorComponent {
     private RightPanelTab activeTab = RightPanelTab.PROPERTIES;
 
     private record AiChatMessage(String role, String content, long timestampMs) {}
+
+    private record AiPlanNode(String ref, String typeId, float offsetX, float offsetY, @org.jetbrains.annotations.Nullable Object nodeState) {}
+
+    private record AiPlanConnection(String sourceRef, String sourcePortId, String targetRef, String targetPortId) {}
+
+    private record AiGraphPlan(String summary, List<AiPlanNode> nodes, List<AiPlanConnection> connections, List<String> validationErrors) {
+        boolean isValid() {
+            return validationErrors == null || validationErrors.isEmpty();
+        }
+    }
 
     public PropertyPanelComponent() {
         this.editorState = new PropertyEditorState(tempValues, propertiesBeingEdited, errorCounts);
@@ -1496,6 +1510,9 @@ public class PropertyPanelComponent implements EditorComponent {
         selectedNode = null;
         aiChatMessages.clear();
         aiPromptInput.clear();
+        pendingAiPlan = null;
+        lastAiUndoStepCount = 0;
+        aiPlanStatusMessage = "";
     }
 
     @Override
@@ -1593,6 +1610,8 @@ public class PropertyPanelComponent implements EditorComponent {
             setAiPrompt("Build a parametrized Mobius ring above selected position with radius/width/thickness controls.");
         }
 
+        renderAiPlanPreviewSection();
+
         float inputBlockHeight = ImGui.getFrameHeightWithSpacing() * 3.2f;
         float historyHeight = Math.max(120.0f, ImGui.getContentRegionAvailY() - inputBlockHeight);
 
@@ -1626,7 +1645,67 @@ public class PropertyPanelComponent implements EditorComponent {
             submitAiPrompt();
         }
 
-        ImGui.textDisabled("AI planning backend not connected yet. This tab is the UI foundation.");
+        ImGui.textDisabled("Current mode: local mock planner (preview + apply + undo).");
+    }
+
+    private void renderAiPlanPreviewSection() {
+        ImGui.separator();
+        ImGui.text("Plan Preview");
+
+        if (pendingAiPlan == null) {
+            ImGui.textDisabled("No plan yet. Send a prompt to generate a plan.");
+            return;
+        }
+
+        ImGui.textWrapped(pendingAiPlan.summary());
+        ImGui.text("Nodes: " + pendingAiPlan.nodes().size() + "  Connections: " + pendingAiPlan.connections().size());
+
+        if (!pendingAiPlan.isValid()) {
+            ImGui.textColored(1.0f, 0.45f, 0.35f, 1.0f, "Validation errors:");
+            for (String error : pendingAiPlan.validationErrors()) {
+                ImGui.bulletText(error);
+            }
+        }
+
+        if (ImGui.treeNode("Planned Nodes")) {
+            for (AiPlanNode node : pendingAiPlan.nodes()) {
+                ImGui.bulletText(node.ref() + " -> " + node.typeId()
+                        + "  (" + String.format(java.util.Locale.ROOT, "%.0f", node.offsetX())
+                        + ", " + String.format(java.util.Locale.ROOT, "%.0f", node.offsetY()) + ")");
+            }
+            ImGui.treePop();
+        }
+
+        if (ImGui.treeNode("Planned Connections")) {
+            if (pendingAiPlan.connections().isEmpty()) {
+                ImGui.textDisabled("None");
+            } else {
+                for (AiPlanConnection connection : pendingAiPlan.connections()) {
+                    ImGui.bulletText(connection.sourceRef() + "." + connection.sourcePortId()
+                            + " -> " + connection.targetRef() + "." + connection.targetPortId());
+                }
+            }
+            ImGui.treePop();
+        }
+
+        boolean canApply = pendingAiPlan.isValid() && !pendingAiPlan.nodes().isEmpty();
+        if (!canApply) ImGui.beginDisabled();
+        if (ImGui.button("Apply Plan")) {
+            applyPendingAiPlan();
+        }
+        if (!canApply) ImGui.endDisabled();
+
+        ImGui.sameLine();
+        boolean canUndo = lastAiUndoStepCount > 0;
+        if (!canUndo) ImGui.beginDisabled();
+        if (ImGui.button("Undo Last AI Apply")) {
+            undoLastAiApply();
+        }
+        if (!canUndo) ImGui.endDisabled();
+
+        if (aiPlanStatusMessage != null && !aiPlanStatusMessage.isBlank()) {
+            ImGui.textWrapped(aiPlanStatusMessage);
+        }
     }
 
     private void setAiPrompt(String text) {
@@ -1644,12 +1723,14 @@ public class PropertyPanelComponent implements EditorComponent {
         }
 
         String trimmedPrompt = prompt.trim();
+        pendingAiPlan = buildMockAiPlan(trimmedPrompt);
         aiChatMessages.add(new AiChatMessage("user", trimmedPrompt, System.currentTimeMillis()));
-        aiChatMessages.add(new AiChatMessage("assistant", buildAiPlaceholderReply(trimmedPrompt), System.currentTimeMillis()));
+        aiChatMessages.add(new AiChatMessage("assistant", buildAiPlanReply(trimmedPrompt, pendingAiPlan), System.currentTimeMillis()));
+        aiPlanStatusMessage = "Plan ready. Review and click Apply Plan.";
         aiPromptInput.clear();
     }
 
-    private String buildAiPlaceholderReply(String prompt) {
+    private String buildAiPlanReply(String prompt, AiGraphPlan plan) {
         String contextSummary;
         if (aiUseSelectionContext.get() && selectedNode != null) {
             contextSummary = "Using selected node context: " + selectedNode.getDisplayName() + " (" + selectedNode.getTypeId() + ").";
@@ -1661,7 +1742,202 @@ public class PropertyPanelComponent implements EditorComponent {
 
         return "Plan received: '" + prompt + "'\n"
                 + contextSummary + "\n"
-                + "Next step after backend integration: generate preview plan (create nodes, set properties, connect ports) before applying changes.";
+                + "Generated preview: " + plan.nodes().size() + " nodes, " + plan.connections().size() + " connections."
+                + (plan.isValid() ? "" : " Validation issues: " + String.join("; ", plan.validationErrors()));
+    }
+
+    private AiGraphPlan buildMockAiPlan(String prompt) {
+        String lowerPrompt = prompt.toLowerCase(java.util.Locale.ROOT);
+        List<AiPlanNode> nodes = new ArrayList<>();
+        List<AiPlanConnection> connections = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+
+        if (lowerPrompt.contains("mobius") || lowerPrompt.contains("möbius") || lowerPrompt.contains("莫比乌斯")) {
+            nodes.add(new AiPlanNode("torus", "geometry.primitives.torus", 0.0f, 0.0f, null));
+            nodes.add(new AiPlanNode("bake", "output.execute.bake_geometry_to_blocks", 360.0f, 0.0f,
+                createNodeState("fillGeometry", false)));
+            nodes.add(new AiPlanNode("preview", "output.preview.geometry_viewer", 720.0f, -120.0f,
+                createNodeState("previewEnabled", true, "previewColor", "#45B36B", "transparency", 0.35f, "showOutline", true)));
+            nodes.add(new AiPlanNode("apply", "output.execute.apply_changes", 720.0f, 120.0f,
+                createNodeState("recordUndo", true, "useAsyncBake", true)));
+
+            connections.add(new AiPlanConnection("torus", "output_geometry", "bake", "input_geometry"));
+            connections.add(new AiPlanConnection("bake", "output_blocks", "preview", "input_blocks"));
+            connections.add(new AiPlanConnection("bake", "output_blocks", "apply", "input_blocks"));
+        } else {
+            nodes.add(new AiPlanNode("preview", "output.preview.geometry_viewer", 0.0f, -100.0f,
+                createNodeState("previewEnabled", true, "previewColor", "#4CAF50", "transparency", 0.40f)));
+            nodes.add(new AiPlanNode("apply", "output.execute.apply_changes", 360.0f, 80.0f,
+                createNodeState("recordUndo", true)));
+            connections.add(new AiPlanConnection("preview", "output_blocks", "apply", "input_blocks"));
+        }
+
+        validatePlan(nodes, connections, errors);
+        String summary = "Mock plan generated locally from your prompt."
+                + " Replace this planner with backend output later without changing the apply path.";
+        return new AiGraphPlan(summary, nodes, connections, errors);
+    }
+
+    private void validatePlan(List<AiPlanNode> nodes, List<AiPlanConnection> connections, List<String> errors) {
+        Set<String> refs = new HashSet<>();
+        for (AiPlanNode node : nodes) {
+            if (node.ref() == null || node.ref().isBlank()) {
+                errors.add("Node reference cannot be empty.");
+                continue;
+            }
+            if (!refs.add(node.ref())) {
+                errors.add("Duplicate node reference: " + node.ref());
+            }
+            if (node.typeId() == null || node.typeId().isBlank()) {
+                errors.add("Node type cannot be empty for reference: " + node.ref());
+            }
+        }
+
+        for (AiPlanConnection connection : connections) {
+            if (!refs.contains(connection.sourceRef())) {
+                errors.add("Unknown source reference: " + connection.sourceRef());
+            }
+            if (!refs.contains(connection.targetRef())) {
+                errors.add("Unknown target reference: " + connection.targetRef());
+            }
+            if (connection.sourcePortId() == null || connection.sourcePortId().isBlank()) {
+                errors.add("Connection source port is empty for source ref: " + connection.sourceRef());
+            }
+            if (connection.targetPortId() == null || connection.targetPortId().isBlank()) {
+                errors.add("Connection target port is empty for target ref: " + connection.targetRef());
+            }
+        }
+    }
+
+    private void applyPendingAiPlan() {
+        if (pendingAiPlan == null) {
+            aiPlanStatusMessage = "No plan available.";
+            return;
+        }
+        if (!pendingAiPlan.isValid()) {
+            aiPlanStatusMessage = "Cannot apply: plan has validation errors.";
+            return;
+        }
+
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        float[] anchor = resolveAiPlanAnchorPosition(editor);
+        Map<String, UUID> createdNodeIds = new HashMap<>();
+        int undoSteps = 0;
+        int successfulConnections = 0;
+
+        try {
+            for (AiPlanNode node : pendingAiPlan.nodes()) {
+                float x = anchor[0] + node.offsetX();
+                float y = anchor[1] + node.offsetY();
+                INode created = node.nodeState() == null
+                        ? editor.addNode(node.typeId(), x, y)
+                        : editor.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
+
+                if (created == null) {
+                    rollbackAiApply(editor, undoSteps);
+                    aiPlanStatusMessage = "Failed to create node: " + node.ref() + " (" + node.typeId() + "). Auto-rolled back.";
+                    return;
+                }
+                createdNodeIds.put(node.ref(), created.getId());
+                undoSteps++;
+            }
+
+            for (AiPlanConnection connection : pendingAiPlan.connections()) {
+                UUID sourceNodeId = createdNodeIds.get(connection.sourceRef());
+                UUID targetNodeId = createdNodeIds.get(connection.targetRef());
+                if (sourceNodeId == null || targetNodeId == null) {
+                    rollbackAiApply(editor, undoSteps);
+                    aiPlanStatusMessage = "Connection failed due to missing node ref: "
+                        + connection.sourceRef() + " -> " + connection.targetRef() + ". Auto-rolled back.";
+                    return;
+                }
+
+                boolean connected = editor.connectPorts(
+                        sourceNodeId,
+                        connection.sourcePortId(),
+                        targetNodeId,
+                        connection.targetPortId()
+                );
+                if (connected) {
+                    successfulConnections++;
+                    undoSteps++;
+                } else {
+                    NodeCraft.LOGGER.warn("AI plan connection failed and will rollback: {}.{} -> {}.{}",
+                            connection.sourceRef(), connection.sourcePortId(),
+                            connection.targetRef(), connection.targetPortId());
+                    rollbackAiApply(editor, undoSteps);
+                    aiPlanStatusMessage = "Failed to connect: "
+                            + connection.sourceRef() + "." + connection.sourcePortId()
+                            + " -> " + connection.targetRef() + "." + connection.targetPortId()
+                            + ". Auto-rolled back.";
+                    return;
+                }
+            }
+
+            lastAiUndoStepCount = undoSteps;
+            aiPlanStatusMessage = "Applied AI plan: created " + createdNodeIds.size()
+                    + " nodes, connected " + successfulConnections
+                    + ". Undo steps available: " + lastAiUndoStepCount + ".";
+        } catch (Exception e) {
+            rollbackAiApply(editor, undoSteps);
+            NodeCraft.LOGGER.error("Failed to apply AI plan", e);
+            aiPlanStatusMessage = "Failed to apply plan: " + e.getMessage() + ". Auto-rolled back.";
+        }
+    }
+
+    private Map<String, Object> createNodeState(Object... keyValues) {
+        Map<String, Object> state = new HashMap<>();
+        if (keyValues == null || keyValues.length == 0) {
+            return state;
+        }
+        for (int i = 0; i + 1 < keyValues.length; i += 2) {
+            Object key = keyValues[i];
+            Object value = keyValues[i + 1];
+            if (key instanceof String keyString && !keyString.isBlank()) {
+                state.put(keyString, value);
+            }
+        }
+        return state;
+    }
+
+    private int rollbackAiApply(ImGuiNodeEditor editor, int undoSteps) {
+        int undone = 0;
+        for (int i = 0; i < undoSteps; i++) {
+            if (!editor.undo()) {
+                break;
+            }
+            undone++;
+        }
+        return undone;
+    }
+
+    private void undoLastAiApply() {
+        if (lastAiUndoStepCount <= 0) {
+            aiPlanStatusMessage = "No AI apply operation to undo.";
+            return;
+        }
+
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        int undone = 0;
+        for (int i = 0; i < lastAiUndoStepCount; i++) {
+            if (!editor.undo()) {
+                break;
+            }
+            undone++;
+        }
+
+        aiPlanStatusMessage = "Undo completed: " + undone + " / " + lastAiUndoStepCount + " steps.";
+        lastAiUndoStepCount = 0;
+    }
+
+    private float[] resolveAiPlanAnchorPosition(ImGuiNodeEditor editor) {
+        if (selectedNode != null) {
+            NodePosition selectedPosition = editor.getNodePosition(selectedNode.getId());
+            if (selectedPosition != null) {
+                return new float[]{selectedPosition.x + 280.0f, selectedPosition.y};
+            }
+        }
+        return new float[]{0.0f, 0.0f};
     }
     private void renderNodeInfo() {
         String typeId = selectedNode.getTypeId();
