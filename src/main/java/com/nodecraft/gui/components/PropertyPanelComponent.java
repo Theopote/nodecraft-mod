@@ -1806,7 +1806,48 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        renderAiFailureSummaryCard();
+        AiAssistantFailurePanelRenderer.renderFailureSummaryCard(
+                new AiAssistantFailurePanelRenderer.State(
+                        aiLastRemoteErrorCategory,
+                        aiLastRemoteStatusCode,
+                        aiLastRemoteAttempts,
+                        aiLastRemoteErrorMessage,
+                        aiLastSubmittedPrompt != null && !aiLastSubmittedPrompt.isBlank(),
+                        isRemotePlannerBusy(),
+                        aiEnableRemotePlanner.get()
+                ),
+                new AiAssistantFailurePanelRenderer.Actions() {
+                    @Override
+                    public void retryLastRequest() {
+                        retryLastAiRequest();
+                    }
+
+                    @Override
+                    public void increaseTimeoutSeconds(int deltaSeconds) {
+                        increaseAiTimeoutSeconds(deltaSeconds);
+                    }
+
+                    @Override
+                    public void togglePlannerMode() {
+                        aiEnableRemotePlanner.set(!aiEnableRemotePlanner.get());
+                        saveAiSettingsToDisk();
+                        aiSettingsStatusMessage = aiEnableRemotePlanner.get()
+                                ? "Remote planner re-enabled."
+                                : "Switched to local planner for the next request.";
+                    }
+
+                    @Override
+                    public void openAiSettingsPopup() {
+                        ImGui.openPopup("AI Settings");
+                    }
+
+                    @Override
+                    public void resaveSettings() {
+                        saveAiSettingsToDisk();
+                        aiSettingsStatusMessage = "AI settings saved.";
+                    }
+                }
+        );
         ImGui.spacing();
 
         ImGui.textDisabled("Category: " + (aiLastRemoteErrorCategory == null || aiLastRemoteErrorCategory.isBlank()
@@ -1901,97 +1942,6 @@ public class PropertyPanelComponent implements EditorComponent {
                 || (aiLastRemoteModelText != null && !aiLastRemoteModelText.isBlank())
                 || (aiLastRemoteRequestSnapshot != null && !aiLastRemoteRequestSnapshot.isBlank())
                 || (aiLastRemoteErrorMessage != null && !aiLastRemoteErrorMessage.isBlank());
-    }
-
-    private void renderAiFailureSummaryCard() {
-        if (aiLastRemoteErrorCategory == null || aiLastRemoteErrorCategory.isBlank() || "none".equals(aiLastRemoteErrorCategory)) {
-            ImGui.textDisabled("No remote failure summary available.");
-            return;
-        }
-
-        ImGui.text("Failure Summary");
-        ImGui.separator();
-        ImGui.textWrapped("Category: " + aiLastRemoteErrorCategory
-                + " | Status: " + aiLastRemoteStatusCode
-                + " | Attempts: " + aiLastRemoteAttempts);
-        if (aiLastRemoteErrorMessage != null && !aiLastRemoteErrorMessage.isBlank()) {
-            ImGui.textWrapped("Message: " + aiLastRemoteErrorMessage);
-        }
-        String suggestion = buildRemoteFailureSuggestion(aiLastRemoteErrorCategory);
-        if (!suggestion.isBlank()) {
-            ImGui.textWrapped("Suggested action: " + suggestion);
-        }
-
-        ImGui.spacing();
-        renderAiFailureRecoveryActions();
-    }
-
-    private void renderAiFailureRecoveryActions() {
-        boolean allowTimeoutAction = "timeout".equals(aiLastRemoteErrorCategory)
-                || "server".equals(aiLastRemoteErrorCategory)
-                || "rate-limit".equals(aiLastRemoteErrorCategory)
-                || "network".equals(aiLastRemoteErrorCategory)
-                || "request".equals(aiLastRemoteErrorCategory)
-                || "response-format".equals(aiLastRemoteErrorCategory);
-        boolean allowSettingsAction = "auth".equals(aiLastRemoteErrorCategory)
-                || "request".equals(aiLastRemoteErrorCategory)
-                || "timeout".equals(aiLastRemoteErrorCategory)
-                || "response-format".equals(aiLastRemoteErrorCategory);
-        boolean allowModeAction = "network".equals(aiLastRemoteErrorCategory)
-                || "auth".equals(aiLastRemoteErrorCategory)
-                || "request".equals(aiLastRemoteErrorCategory)
-                || "server".equals(aiLastRemoteErrorCategory);
-
-        if (aiLastSubmittedPrompt != null && !aiLastSubmittedPrompt.isBlank() && !isRemotePlannerBusy()) {
-            if (ImGui.smallButton("Retry Last Request")) {
-                retryLastAiRequest();
-            }
-            ImGui.sameLine();
-        }
-
-        if (allowTimeoutAction) {
-            if (ImGui.smallButton("Increase Timeout +30s")) {
-                increaseAiTimeoutSeconds(30);
-            }
-            ImGui.sameLine();
-        }
-
-        if (allowModeAction) {
-            if (ImGui.smallButton(aiEnableRemotePlanner.get() ? "Use Local Planner" : "Use Remote Planner")) {
-                aiEnableRemotePlanner.set(!aiEnableRemotePlanner.get());
-                saveAiSettingsToDisk();
-                aiSettingsStatusMessage = aiEnableRemotePlanner.get()
-                        ? "Remote planner re-enabled."
-                        : "Switched to local planner for the next request.";
-            }
-            ImGui.sameLine();
-        }
-
-        if (allowSettingsAction) {
-            if (ImGui.smallButton("Open AI Settings")) {
-                ImGui.openPopup("AI Settings");
-            }
-            ImGui.sameLine();
-        }
-
-        if (ImGui.smallButton("Resave Settings")) {
-            saveAiSettingsToDisk();
-            aiSettingsStatusMessage = "AI settings saved.";
-        }
-    }
-
-    private String buildRemoteFailureSuggestion(String category) {
-        return switch (category) {
-            case "auth" -> "Verify API key, organization/project scope, and endpoint authorization policy.";
-            case "rate-limit" -> "Reduce request frequency, switch to a lower-cost model, or increase provider quota.";
-            case "timeout" -> "Increase timeout in AI settings and reduce prompt/schema size for this request.";
-            case "network" -> "Check connectivity, proxy/firewall rules, and whether the base URL is reachable.";
-            case "server" -> "Retry later or switch provider/model temporarily if 5xx errors persist.";
-            case "request" -> "Check model name, endpoint path, and payload constraints for this provider.";
-            case "response-format" -> "Inspect raw response and tighten system prompt to force strict JSON output.";
-            case "canceled" -> "No action required; resend request when ready.";
-            default -> "Open raw response and request snapshot for manual diagnosis.";
-        };
     }
 
     private void increaseAiTimeoutSeconds(int deltaSeconds) {
