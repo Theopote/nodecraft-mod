@@ -8,6 +8,8 @@ import com.nodecraft.gui.ai.AiGraphDslSupport;
 import com.nodecraft.gui.ai.AiNodeSchemaCatalog;
 import com.nodecraft.gui.ai.AiPromptBuilder;
 import com.nodecraft.gui.ai.AiRemotePlannerService;
+import com.nodecraft.gui.ai.AiSettingsStore;
+import com.nodecraft.gui.ai.AiGraphDiffService;
 import com.nodecraft.core.NodeCraft; // For logging
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
@@ -62,15 +64,11 @@ import imgui.type.ImInt;
 import imgui.type.ImString;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.registry.Registries;
@@ -166,34 +164,7 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     }
 
-    private record GraphDiffSummary(
-            int nodeAdditions,
-            int nodeMissingFromPlan,
-            int connectionAdditions,
-            int connectionMissingFromPlan,
-            List<String> nodeAdditionSamples,
-            List<String> nodeMissingSamples,
-            List<String> connectionAdditionSamples,
-            List<String> connectionMissingSamples
-    ) {}
-
         private record CurrentNodeInfo(UUID id, String typeId, String paramSignature) {}
-
-        private record MappedDiffSummary(
-            int reusableNodeMatches,
-            int newNodesToCreate,
-            int unchangedReusableNodes,
-            int paramUpdateCandidates,
-            int connectionAdditions,
-            int connectionRemovalCandidates,
-                int incomingReplacementCandidates,
-            List<String> nodeReuseSamples,
-            List<String> nodeCreationSamples,
-            List<String> paramUpdateSamples,
-            List<String> connectionAdditionSamples,
-                List<String> connectionRemovalSamples,
-                List<String> incomingReplacementSamples
-        ) {}
 
     public PropertyPanelComponent() {
         this.editorState = new PropertyEditorState(tempValues, propertiesBeingEdited, errorCounts);
@@ -2082,127 +2053,60 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private String validateAiSettings() {
-        if (!aiEnableRemotePlanner.get()) {
-            return "Remote planner is disabled. Local mock planner remains active.";
-        }
-        if (aiApiBaseUrl.get() == null || aiApiBaseUrl.get().isBlank()) {
-            return "Validation failed: API Base URL is required when remote planner is enabled.";
-        }
-        if (aiApiKey.get() == null || aiApiKey.get().isBlank()) {
-            return "Validation failed: API Key is required when remote planner is enabled.";
-        }
-        if (aiModel.get() == null || aiModel.get().isBlank()) {
-            return "Validation failed: Model is required when remote planner is enabled.";
-        }
-        if (!aiApiBaseUrl.get().startsWith("http://") && !aiApiBaseUrl.get().startsWith("https://")) {
-            return "Validation failed: API Base URL must start with http:// or https://.";
-        }
-        return "AI settings look valid. Remote planner wiring can now use these values.";
+        return AiSettingsStore.validate(collectAiSettingsData());
     }
 
     private String buildAiSettingsSummary() {
-        String plannerMode = aiEnableRemotePlanner.get() ? "Planner: Remote" : "Planner: Local";
-        String modelName = aiModel.get() == null || aiModel.get().isBlank() ? "(no model)" : aiModel.get();
-        String keyStatus = aiApiKey.get() == null || aiApiKey.get().isBlank() ? "API Key: missing" : "API Key: set";
-        String layoutMode = aiAutoLayoutBeforeApply.get() ? "Layout: Auto" : "Layout: Plan";
-        return plannerMode + " | Model: " + modelName + " | " + keyStatus + " | " + layoutMode;
+        return AiSettingsStore.buildSummary(collectAiSettingsData());
     }
 
     private Path resolveAiSettingsPath() {
-        try {
-            Path gameDir = FabricLoader.getInstance().getGameDir();
-            return gameDir.resolve("nodecraft").resolve("config").resolve("ai_settings.json");
-        } catch (IllegalStateException e) {
-            NodeCraft.LOGGER.warn("Fabric game directory unavailable, falling back to local AI settings path.");
-            return Paths.get("nodecraft", "config", "ai_settings.json");
-        }
+        return AiSettingsStore.resolveSettingsPath();
     }
 
     private void loadAiSettingsFromDisk() {
-        try {
-            if (!Files.exists(aiSettingsPath)) {
-                aiSettingsStatusMessage = "AI settings file not found, using defaults.";
-                return;
-            }
-
-            String json = Files.readString(aiSettingsPath, StandardCharsets.UTF_8);
-            JsonObject root = AI_SETTINGS_GSON.fromJson(json, JsonObject.class);
-            if (root == null) {
-                aiSettingsStatusMessage = "AI settings file is empty, using defaults.";
-                return;
-            }
-
-            if (root.has("apiBaseUrl")) {
-                aiApiBaseUrl.set(root.get("apiBaseUrl").getAsString());
-            }
-            if (root.has("apiKey")) {
-                aiApiKey.set(root.get("apiKey").getAsString());
-            }
-            if (root.has("model")) {
-                aiModel.set(root.get("model").getAsString());
-            }
-            if (root.has("systemPrompt")) {
-                aiSystemPrompt.set(root.get("systemPrompt").getAsString());
-            }
-            if (root.has("timeoutSeconds")) {
-                aiRequestTimeoutSeconds.set(Math.max(5, Math.min(600, root.get("timeoutSeconds").getAsInt())));
-            }
-            if (root.has("showApiKey")) {
-                aiShowApiKey.set(root.get("showApiKey").getAsBoolean());
-            }
-            if (root.has("enableRemotePlanner")) {
-                aiEnableRemotePlanner.set(root.get("enableRemotePlanner").getAsBoolean());
-            }
-            if (root.has("autoLayoutBeforeApply")) {
-                aiAutoLayoutBeforeApply.set(root.get("autoLayoutBeforeApply").getAsBoolean());
-            }
-            if (root.has("includeGraphContext")) {
-                aiIncludeGraphContext.set(root.get("includeGraphContext").getAsBoolean());
-            }
-            if (root.has("previewOnlyMode")) {
-                aiPreviewOnlyMode.set(root.get("previewOnlyMode").getAsBoolean());
-            }
-            if (root.has("patchApplyMode")) {
-                aiPatchApplyMode.set(root.get("patchApplyMode").getAsBoolean());
-            }
-            if (root.has("patchRemoveScopedConnections")) {
-                aiPatchRemoveScopedConnections.set(root.get("patchRemoveScopedConnections").getAsBoolean());
-            }
-
-            aiSettingsStatusMessage = "AI settings loaded from disk.";
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("Failed to load AI settings", e);
-            aiSettingsStatusMessage = "Failed to load AI settings: " + e.getMessage();
-        }
+        AiSettingsStore.LoadResult result = AiSettingsStore.load(aiSettingsPath);
+        applyAiSettingsData(result.data());
+        aiSettingsStatusMessage = result.statusMessage();
     }
 
     private void saveAiSettingsToDisk() {
-        try {
-            Path parent = aiSettingsPath.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
+        aiSettingsStatusMessage = AiSettingsStore.save(aiSettingsPath, collectAiSettingsData());
+    }
 
-            JsonObject root = new JsonObject();
-            root.addProperty("apiBaseUrl", aiApiBaseUrl.get());
-            root.addProperty("apiKey", aiApiKey.get());
-            root.addProperty("model", aiModel.get());
-            root.addProperty("systemPrompt", aiSystemPrompt.get());
-            root.addProperty("timeoutSeconds", aiRequestTimeoutSeconds.get());
-            root.addProperty("showApiKey", aiShowApiKey.get());
-            root.addProperty("enableRemotePlanner", aiEnableRemotePlanner.get());
-            root.addProperty("autoLayoutBeforeApply", aiAutoLayoutBeforeApply.get());
-            root.addProperty("includeGraphContext", aiIncludeGraphContext.get());
-            root.addProperty("previewOnlyMode", aiPreviewOnlyMode.get());
-            root.addProperty("patchApplyMode", aiPatchApplyMode.get());
-            root.addProperty("patchRemoveScopedConnections", aiPatchRemoveScopedConnections.get());
+    private AiSettingsStore.AiSettingsData collectAiSettingsData() {
+        return new AiSettingsStore.AiSettingsData(
+                aiApiBaseUrl.get(),
+                aiApiKey.get(),
+                aiModel.get(),
+                aiSystemPrompt.get(),
+                aiRequestTimeoutSeconds.get(),
+                aiShowApiKey.get(),
+                aiEnableRemotePlanner.get(),
+                aiAutoLayoutBeforeApply.get(),
+                aiIncludeGraphContext.get(),
+                aiPreviewOnlyMode.get(),
+                aiPatchApplyMode.get(),
+                aiPatchRemoveScopedConnections.get()
+        );
+    }
 
-            Files.writeString(aiSettingsPath, AI_SETTINGS_GSON.toJson(root), StandardCharsets.UTF_8);
-            aiSettingsStatusMessage = "AI settings saved.";
-        } catch (IOException e) {
-            NodeCraft.LOGGER.error("Failed to save AI settings", e);
-            aiSettingsStatusMessage = "Failed to save AI settings: " + e.getMessage();
+    private void applyAiSettingsData(AiSettingsStore.AiSettingsData data) {
+        if (data == null) {
+            return;
         }
+        aiApiBaseUrl.set(data.apiBaseUrl());
+        aiApiKey.set(data.apiKey());
+        aiModel.set(data.model());
+        aiSystemPrompt.set(data.systemPrompt());
+        aiRequestTimeoutSeconds.set(data.timeoutSeconds());
+        aiShowApiKey.set(data.showApiKey());
+        aiEnableRemotePlanner.set(data.enableRemotePlanner());
+        aiAutoLayoutBeforeApply.set(data.autoLayoutBeforeApply());
+        aiIncludeGraphContext.set(data.includeGraphContext());
+        aiPreviewOnlyMode.set(data.previewOnlyMode());
+        aiPatchApplyMode.set(data.patchApplyMode());
+        aiPatchRemoveScopedConnections.set(data.patchRemoveScopedConnections());
     }
 
     private void renderAiPlanPreviewSection() {
@@ -2245,7 +2149,7 @@ public class PropertyPanelComponent implements EditorComponent {
             ImGui.treePop();
         }
 
-        GraphDiffSummary diff = buildGraphDiffSummary(pendingAiPlan);
+        AiGraphDiffService.GraphDiffSummary diff = buildGraphDiffSummary(pendingAiPlan);
         if (ImGui.treeNode("Graph Diff (Heuristic)")) {
             ImGui.textDisabled("Compared by node type+params signature and typed connection signature.");
             ImGui.text("Potential additions: nodes=" + diff.nodeAdditions() + ", connections=" + diff.connectionAdditions());
@@ -2259,7 +2163,7 @@ public class PropertyPanelComponent implements EditorComponent {
             ImGui.treePop();
         }
 
-    MappedDiffSummary mappedDiff = buildMappedDiffSummary(pendingAiPlan);
+    AiGraphDiffService.MappedDiffSummary mappedDiff = buildMappedDiffSummary(pendingAiPlan);
     if (ImGui.treeNode("Mapped Diff (Preview)")) {
         ImGui.textDisabled("Greedy matching by type+params, then type fallback. Estimates reusable vs new nodes.");
         ImGui.text("Reusable matches=" + mappedDiff.reusableNodeMatches()
@@ -2321,8 +2225,8 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        GraphDiffSummary heuristic = buildGraphDiffSummary(pendingAiPlan);
-        MappedDiffSummary mapped = buildMappedDiffSummary(pendingAiPlan);
+        AiGraphDiffService.GraphDiffSummary heuristic = buildGraphDiffSummary(pendingAiPlan);
+        AiGraphDiffService.MappedDiffSummary mapped = buildMappedDiffSummary(pendingAiPlan);
 
         StringBuilder report = new StringBuilder(512);
         report.append("Dry run only (no graph mutation). ")
@@ -2363,133 +2267,35 @@ public class PropertyPanelComponent implements EditorComponent {
         ImGui.treePop();
     }
 
-    private GraphDiffSummary buildGraphDiffSummary(AiGraphPlan plan) {
-        NodeGraph graph = getNodeGraph();
-        if (graph == null) {
-            return new GraphDiffSummary(0, 0, 0, 0, List.of(), List.of(), List.of(), List.of());
-        }
-
-        Map<String, Integer> currentNodeCounts = buildCurrentNodeSignatureCounts(graph);
-        Map<String, Integer> plannedNodeCounts = buildPlannedNodeSignatureCounts(plan);
-
-        Map<String, Integer> currentConnectionCounts = buildCurrentConnectionSignatureCounts(graph);
-        Map<String, Integer> plannedConnectionCounts = buildPlannedConnectionSignatureCounts(plan);
-
-        List<String> nodeAdds = new ArrayList<>();
-        List<String> nodeMissing = new ArrayList<>();
-        int nodeAddTotal = collectMultisetDelta(plannedNodeCounts, currentNodeCounts, nodeAdds, true);
-        int nodeMissingTotal = collectMultisetDelta(currentNodeCounts, plannedNodeCounts, nodeMissing, false);
-
-        List<String> connAdds = new ArrayList<>();
-        List<String> connMissing = new ArrayList<>();
-        int connAddTotal = collectMultisetDelta(plannedConnectionCounts, currentConnectionCounts, connAdds, false);
-        int connMissingTotal = collectMultisetDelta(currentConnectionCounts, plannedConnectionCounts, connMissing, false);
-
-        return new GraphDiffSummary(
-                nodeAddTotal,
-                nodeMissingTotal,
-                connAddTotal,
-                connMissingTotal,
-                nodeAdds,
-                nodeMissing,
-                connAdds,
-                connMissing
-        );
+    private AiGraphDiffService.GraphDiffSummary buildGraphDiffSummary(AiGraphPlan plan) {
+        return AiGraphDiffService.buildGraphDiffSummary(toDiffGraphPlan(plan), getNodeGraph());
     }
 
-    private Map<String, Integer> buildCurrentNodeSignatureCounts(NodeGraph graph) {
-        Map<String, Integer> counts = new HashMap<>();
-        for (INode node : graph.getNodes()) {
-            Object state = node instanceof BaseNode baseNode ? baseNode.getNodeState() : null;
-            String signature = buildNodeSignature(node.getTypeId(), state);
-            counts.merge(signature, 1, Integer::sum);
-        }
-        return counts;
+    private AiGraphDiffService.MappedDiffSummary buildMappedDiffSummary(AiGraphPlan plan) {
+        return AiGraphDiffService.buildMappedDiffSummary(toDiffGraphPlan(plan), getNodeGraph());
     }
 
-    private Map<String, Integer> buildPlannedNodeSignatureCounts(AiGraphPlan plan) {
-        Map<String, Integer> counts = new HashMap<>();
+    private AiGraphDiffService.GraphPlan toDiffGraphPlan(AiGraphPlan plan) {
+        if (plan == null) {
+            return new AiGraphDiffService.GraphPlan(List.of(), List.of());
+        }
+
+        List<AiGraphDiffService.PlanNode> nodes = new ArrayList<>();
         for (AiPlanNode node : plan.nodes()) {
-            String signature = buildNodeSignature(node.typeId(), node.nodeState());
-            counts.merge(signature, 1, Integer::sum);
-        }
-        return counts;
-    }
-
-    private Map<String, Integer> buildCurrentConnectionSignatureCounts(NodeGraph graph) {
-        Map<String, Integer> counts = new HashMap<>();
-        for (NodeGraph.Connection conn : graph.getConnections()) {
-            String signature = buildConnectionSignature(
-                    conn.sourceNode.getTypeId(),
-                    conn.sourcePort.getId(),
-                    conn.targetNode.getTypeId(),
-                    conn.targetPort.getId()
-            );
-            counts.merge(signature, 1, Integer::sum);
-        }
-        return counts;
-    }
-
-    private Map<String, Integer> buildPlannedConnectionSignatureCounts(AiGraphPlan plan) {
-        Map<String, String> refToType = new HashMap<>();
-        for (AiPlanNode node : plan.nodes()) {
-            refToType.put(node.ref(), node.typeId());
+            nodes.add(new AiGraphDiffService.PlanNode(node.ref(), node.typeId(), node.nodeState()));
         }
 
-        Map<String, Integer> counts = new HashMap<>();
-        for (AiPlanConnection conn : plan.connections()) {
-            String sourceType = refToType.getOrDefault(conn.sourceRef(), "unknown");
-            String targetType = refToType.getOrDefault(conn.targetRef(), "unknown");
-            String signature = buildConnectionSignature(
-                    sourceType,
-                    conn.sourcePortId(),
-                    targetType,
-                    conn.targetPortId()
-            );
-            counts.merge(signature, 1, Integer::sum);
+        List<AiGraphDiffService.PlanConnection> connections = new ArrayList<>();
+        for (AiPlanConnection connection : plan.connections()) {
+            connections.add(new AiGraphDiffService.PlanConnection(
+                    connection.sourceRef(),
+                    connection.sourcePortId(),
+                    connection.targetRef(),
+                    connection.targetPortId()
+            ));
         }
-        return counts;
-    }
 
-    private int collectMultisetDelta(
-            Map<String, Integer> lhs,
-            Map<String, Integer> rhs,
-            List<String> samples,
-            boolean nodeSignature
-    ) {
-        int total = 0;
-        List<String> keys = new ArrayList<>(lhs.keySet());
-        Collections.sort(keys);
-
-        for (String key : keys) {
-            int delta = lhs.getOrDefault(key, 0) - rhs.getOrDefault(key, 0);
-            if (delta <= 0) {
-                continue;
-            }
-            total += delta;
-            if (samples.size() < 12) {
-                String label = nodeSignature ? simplifyNodeSignature(key) : key;
-                samples.add(delta + " x " + truncateForDiagnostics(label, 180));
-            }
-        }
-        return total;
-    }
-
-    private String buildNodeSignature(String typeId, Object state) {
-        return nullToEmpty(typeId) + "|" + normalizeStateForSignature(state);
-    }
-
-    private String simplifyNodeSignature(String signature) {
-        if (signature == null || signature.isBlank()) {
-            return "(empty)";
-        }
-        int split = signature.indexOf('|');
-        if (split < 0) {
-            return signature;
-        }
-        String type = signature.substring(0, split);
-        String state = signature.substring(split + 1);
-        return type + " params=" + truncateForDiagnostics(state, 120);
+        return new AiGraphDiffService.GraphPlan(nodes, connections);
     }
 
     private String normalizeStateForSignature(Object state) {
@@ -2528,183 +2334,6 @@ public class PropertyPanelComponent implements EditorComponent {
         return String.valueOf(value);
     }
 
-    private String buildConnectionSignature(String sourceType, String sourcePort, String targetType, String targetPort) {
-        return nullToEmpty(sourceType) + "." + nullToEmpty(sourcePort)
-                + " -> " + nullToEmpty(targetType) + "." + nullToEmpty(targetPort);
-    }
-
-    private MappedDiffSummary buildMappedDiffSummary(AiGraphPlan plan) {
-        NodeGraph graph = getNodeGraph();
-        if (graph == null) {
-            return new MappedDiffSummary(0, plan.nodes().size(), 0, 0, plan.connections().size(), 0, 0,
-                    List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
-        }
-
-        List<CurrentNodeInfo> currentNodes = new ArrayList<>();
-        Map<UUID, String> currentTypeById = new HashMap<>();
-        for (INode node : graph.getNodes()) {
-            Object state = node instanceof BaseNode baseNode ? baseNode.getNodeState() : null;
-            String signature = normalizeStateForSignature(state);
-            currentNodes.add(new CurrentNodeInfo(node.getId(), node.getTypeId(), signature));
-            currentTypeById.put(node.getId(), node.getTypeId());
-        }
-
-        Map<String, List<CurrentNodeInfo>> byType = new HashMap<>();
-        for (CurrentNodeInfo info : currentNodes) {
-            byType.computeIfAbsent(info.typeId(), key -> new ArrayList<>()).add(info);
-        }
-
-        Set<UUID> usedCurrent = new HashSet<>();
-        Map<String, CurrentNodeInfo> refToMatched = new HashMap<>();
-        Set<String> newRefs = new HashSet<>();
-        List<String> reuseSamples = new ArrayList<>();
-        List<String> createSamples = new ArrayList<>();
-        List<String> paramUpdateSamples = new ArrayList<>();
-
-        int unchanged = 0;
-        int paramUpdates = 0;
-
-        for (AiPlanNode planned : plan.nodes()) {
-            CurrentNodeInfo matched = matchCurrentNode(planned, byType, usedCurrent);
-            if (matched == null) {
-                newRefs.add(planned.ref());
-                if (createSamples.size() < 12) {
-                    createSamples.add(planned.ref() + " -> " + planned.typeId());
-                }
-                continue;
-            }
-
-            refToMatched.put(planned.ref(), matched);
-            usedCurrent.add(matched.id());
-            if (reuseSamples.size() < 12) {
-                reuseSamples.add(planned.ref() + " -> existing " + shortUuid(matched.id()) + " (" + matched.typeId() + ")");
-            }
-
-            String plannedSig = normalizeStateForSignature(planned.nodeState());
-            if (plannedSig.equals(matched.paramSignature())) {
-                unchanged++;
-            } else {
-                paramUpdates++;
-                if (paramUpdateSamples.size() < 12) {
-                    paramUpdateSamples.add(planned.ref() + " -> " + matched.typeId());
-                }
-            }
-        }
-
-        Set<String> currentConnAll = new HashSet<>();
-        Set<String> currentConnScoped = new HashSet<>();
-        for (NodeGraph.Connection conn : graph.getConnections()) {
-            String sig = buildMappedConnectionSignature(
-                    "CUR:" + conn.sourceNode.getId(),
-                    conn.sourcePort.getId(),
-                    "CUR:" + conn.targetNode.getId(),
-                    conn.targetPort.getId()
-            );
-            currentConnAll.add(sig);
-
-            if (usedCurrent.contains(conn.sourceNode.getId()) && usedCurrent.contains(conn.targetNode.getId())) {
-                currentConnScoped.add(sig);
-            }
-        }
-
-        Set<String> plannedConnMappedAll = new HashSet<>();
-        Set<String> plannedConnMappedScoped = new HashSet<>();
-        List<String> incomingReplacementSamples = new ArrayList<>();
-        int incomingReplacementCandidates = 0;
-        for (AiPlanConnection conn : plan.connections()) {
-            String sourceToken = tokenForPlanRef(conn.sourceRef(), refToMatched);
-            String targetToken = tokenForPlanRef(conn.targetRef(), refToMatched);
-            String mapped = buildMappedConnectionSignature(sourceToken, conn.sourcePortId(), targetToken, conn.targetPortId());
-            plannedConnMappedAll.add(mapped);
-
-            if (sourceToken.startsWith("CUR:") && targetToken.startsWith("CUR:")) {
-                plannedConnMappedScoped.add(mapped);
-            }
-
-            if (targetToken.startsWith("CUR:")) {
-                UUID targetId = parseCurrentTokenUuid(targetToken);
-                UUID sourceId = parseCurrentTokenUuid(sourceToken);
-                if (targetId != null && sourceId != null) {
-                    INode targetNode = graph.getNode(targetId);
-                    IPort targetPort = findInputPortById(targetNode, conn.targetPortId());
-                    if (targetPort != null && !targetPort.allowsMultipleIncomingConnections()) {
-                        UUID oldSourceNodeId = graph.getConnectedOutputNodeId(targetId, targetPort.getId());
-                        String oldSourcePortId = graph.getConnectedOutputPortId(targetId, targetPort.getId());
-                        boolean replaceNeeded = oldSourceNodeId != null
-                                && oldSourcePortId != null
-                                && (!oldSourceNodeId.equals(sourceId) || !oldSourcePortId.equals(conn.sourcePortId()));
-                        if (replaceNeeded) {
-                            incomingReplacementCandidates++;
-                            if (incomingReplacementSamples.size() < 12) {
-                                incomingReplacementSamples.add(
-                                        shortUuid(oldSourceNodeId) + "." + oldSourcePortId
-                                                + " => " + shortUuid(sourceId) + "." + conn.sourcePortId()
-                                                + " @ " + shortUuid(targetId) + "." + conn.targetPortId()
-                                );
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        List<String> connectionAddSamples = new ArrayList<>();
-        int connAdd = 0;
-        List<String> sortedPlannedConn = new ArrayList<>(plannedConnMappedAll);
-        Collections.sort(sortedPlannedConn);
-        for (String conn : sortedPlannedConn) {
-            if (currentConnAll.contains(conn)) {
-                continue;
-            }
-            connAdd++;
-            if (connectionAddSamples.size() < 12) {
-                connectionAddSamples.add(formatMappedConnectionForDisplay(conn, currentTypeById));
-            }
-        }
-
-        List<String> connectionRemoveSamples = new ArrayList<>();
-        int connRemove = 0;
-        List<String> sortedCurrentScoped = new ArrayList<>(currentConnScoped);
-        Collections.sort(sortedCurrentScoped);
-        for (String conn : sortedCurrentScoped) {
-            if (plannedConnMappedScoped.contains(conn)) {
-                continue;
-            }
-            connRemove++;
-            if (connectionRemoveSamples.size() < 12) {
-                connectionRemoveSamples.add(formatMappedConnectionForDisplay(conn, currentTypeById));
-            }
-        }
-
-        return new MappedDiffSummary(
-                refToMatched.size(),
-                newRefs.size(),
-                unchanged,
-                paramUpdates,
-                connAdd,
-                connRemove,
-                incomingReplacementCandidates,
-                reuseSamples,
-                createSamples,
-                paramUpdateSamples,
-                connectionAddSamples,
-                connectionRemoveSamples,
-                incomingReplacementSamples
-        );
-    }
-
-    private UUID parseCurrentTokenUuid(String token) {
-        if (token == null || !token.startsWith("CUR:")) {
-            return null;
-        }
-        String raw = token.substring(4);
-        try {
-            return UUID.fromString(raw);
-        } catch (IllegalArgumentException ignored) {
-            return null;
-        }
-    }
-
     private CurrentNodeInfo matchCurrentNode(
             AiPlanNode planned,
             Map<String, List<CurrentNodeInfo>> byType,
@@ -2729,55 +2358,9 @@ public class PropertyPanelComponent implements EditorComponent {
         return null;
     }
 
-    private String tokenForPlanRef(String ref, Map<String, CurrentNodeInfo> refToMatched) {
-        CurrentNodeInfo matched = refToMatched.get(ref);
-        if (matched != null) {
-            return "CUR:" + matched.id();
-        }
-        return "NEW:" + nullToEmpty(ref);
-    }
-
     private String buildMappedConnectionSignature(String sourceToken, String sourcePort, String targetToken, String targetPort) {
         return nullToEmpty(sourceToken) + "." + nullToEmpty(sourcePort)
                 + " -> " + nullToEmpty(targetToken) + "." + nullToEmpty(targetPort);
-    }
-
-    private String formatMappedConnectionForDisplay(String signature, Map<UUID, String> currentTypeById) {
-        if (signature == null || signature.isBlank()) {
-            return "(empty)";
-        }
-        String[] halves = signature.split(" -> ", 2);
-        if (halves.length != 2) {
-            return signature;
-        }
-        return decorateMappedEndpoint(halves[0], currentTypeById) + " -> " + decorateMappedEndpoint(halves[1], currentTypeById);
-    }
-
-    private String decorateMappedEndpoint(String endpoint, Map<UUID, String> currentTypeById) {
-        if (endpoint == null || endpoint.isBlank()) {
-            return "?";
-        }
-        int dot = endpoint.lastIndexOf('.');
-        if (dot < 0) {
-            return endpoint;
-        }
-
-        String token = endpoint.substring(0, dot);
-        String port = endpoint.substring(dot + 1);
-        if (token.startsWith("CUR:")) {
-            String raw = token.substring(4);
-            try {
-                UUID id = UUID.fromString(raw);
-                String type = currentTypeById.getOrDefault(id, "unknown");
-                return "CUR(" + type + ":" + shortUuid(id) + ")." + port;
-            } catch (IllegalArgumentException ignored) {
-                return token + "." + port;
-            }
-        }
-        if (token.startsWith("NEW:")) {
-            return token + "." + port;
-        }
-        return endpoint;
     }
 
     private String shortUuid(UUID id) {
@@ -3075,7 +2658,7 @@ public class PropertyPanelComponent implements EditorComponent {
                     .append(node.getTypeId());
 
             if (node instanceof BaseNode baseNode) {
-                Map<String, Object> state = baseNode.getNodeState();
+                Map<String, Object> state = (Map<String, Object>) baseNode.getNodeState();
                 String stateSummary = summarizeNodeState(state);
                 if (!stateSummary.isBlank()) {
                     sb.append(" ").append(stateSummary);
