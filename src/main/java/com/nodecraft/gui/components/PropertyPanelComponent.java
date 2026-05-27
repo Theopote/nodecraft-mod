@@ -2473,9 +2473,10 @@ public class PropertyPanelComponent implements EditorComponent {
             aiPlanStatusMessage = "Patch apply failed: current graph is unavailable.";
             return;
         }
-        List<AiGraphApplyService.ApplyNode> applyNodes = new ArrayList<>(nodesToApply.size());
+
+        List<AiGraphApplyAdapterService.PlanNode> patchNodes = new ArrayList<>(nodesToApply.size());
         for (AiPlanNode node : nodesToApply) {
-            applyNodes.add(new AiGraphApplyService.ApplyNode(
+            patchNodes.add(new AiGraphApplyAdapterService.PlanNode(
                     node.ref(),
                     node.typeId(),
                     node.offsetX(),
@@ -2484,9 +2485,9 @@ public class PropertyPanelComponent implements EditorComponent {
             ));
         }
 
-        List<AiGraphApplyService.ApplyConnection> applyConnections = new ArrayList<>(pendingAiPlan.connections().size());
+        List<AiGraphApplyAdapterService.PlanConnection> patchConnections = new ArrayList<>(pendingAiPlan.connections().size());
         for (AiPlanConnection connection : pendingAiPlan.connections()) {
-            applyConnections.add(new AiGraphApplyService.ApplyConnection(
+            patchConnections.add(new AiGraphApplyAdapterService.PlanConnection(
                     connection.sourceRef(),
                     connection.sourcePortId(),
                     connection.targetRef(),
@@ -2494,11 +2495,14 @@ public class PropertyPanelComponent implements EditorComponent {
             ));
         }
 
+        AiGraphApplyAdapterService.PatchPayload payload =
+                AiGraphApplyAdapterService.toPatchPayload(patchNodes, patchConnections);
+
         AiGraphApplyService.ApplyResult result = AiGraphApplyService.applyPatch(
                 editor,
                 graph,
-                applyNodes,
-                applyConnections,
+                payload.nodes(),
+                payload.connections(),
                 anchor,
                 aiPatchRemoveScopedConnections.get()
         );
