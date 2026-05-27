@@ -7,7 +7,6 @@ import com.google.gson.JsonObject;
 import com.nodecraft.gui.ai.*;
 import com.nodecraft.core.NodeCraft; // For logging
 import com.nodecraft.nodesystem.api.INode;
-import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.datatypes.LSystemRule;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -35,7 +34,6 @@ import com.nodecraft.nodesystem.datatypes.TetrahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.TorusGeometryData;
 import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.output.preview.GeometryViewerNode;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
@@ -57,7 +55,6 @@ import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import imgui.type.ImString;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.*;
@@ -69,6 +66,7 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import org.joml.Vector3d;
+import org.jspecify.annotations.NonNull;
 
 public class PropertyPanelComponent implements EditorComponent {
 
@@ -2005,23 +2003,19 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private String buildAiDiagnosticsExportText(boolean includeFullPayloads) {
-        StringBuilder sb = new StringBuilder(2048);
-        sb.append("[AI Debug Diagnostics]\n");
-        sb.append("category: ").append(nullToEmpty(aiLastRemoteErrorCategory)).append("\n");
-        sb.append("statusCode: ").append(aiLastRemoteStatusCode).append("\n");
-        sb.append("attempts: ").append(aiLastRemoteAttempts).append("\n");
-        sb.append("errorMessage: ").append(nullToEmpty(aiLastRemoteErrorMessage)).append("\n");
-        sb.append("statusMessage: ").append(nullToEmpty(aiPlanStatusMessage)).append("\n\n");
 
-        sb.append("[Request Snapshot]\n");
-        sb.append(formatDiagnosticsSection(aiLastRemoteRequestSnapshot, includeFullPayloads)).append("\n");
-
-        sb.append("[Model Text]\n");
-        sb.append(formatDiagnosticsSection(aiLastRemoteModelText, includeFullPayloads)).append("\n");
-
-        sb.append("[Raw Response]\n");
-        sb.append(formatDiagnosticsSection(aiLastRemoteRawResponse, includeFullPayloads)).append("\n");
-        return sb.toString();
+        return "[AI Debug Diagnostics]\n" +
+                "category: " + nullToEmpty(aiLastRemoteErrorCategory) + "\n" +
+                "statusCode: " + aiLastRemoteStatusCode + "\n" +
+                "attempts: " + aiLastRemoteAttempts + "\n" +
+                "errorMessage: " + nullToEmpty(aiLastRemoteErrorMessage) + "\n" +
+                "statusMessage: " + nullToEmpty(aiPlanStatusMessage) + "\n\n" +
+                "[Request Snapshot]\n" +
+                formatDiagnosticsSection(aiLastRemoteRequestSnapshot, includeFullPayloads) + "\n" +
+                "[Model Text]\n" +
+                formatDiagnosticsSection(aiLastRemoteModelText, includeFullPayloads) + "\n" +
+                "[Raw Response]\n" +
+                formatDiagnosticsSection(aiLastRemoteRawResponse, includeFullPayloads) + "\n";
     }
 
     private String formatDiagnosticsSection(String value, boolean includeFullPayloads) {
@@ -2583,18 +2577,16 @@ public class PropertyPanelComponent implements EditorComponent {
             String userPromptPayload,
             int schemaCount
     ) {
-        StringBuilder sb = new StringBuilder(512);
-        sb.append("baseUrl: ").append(nullToEmpty(config.apiBaseUrl())).append("\n");
-        sb.append("apiKeyMasked: ").append(maskSecret(config.apiKey())).append("\n");
-        sb.append("model: ").append(nullToEmpty(config.model())).append("\n");
-        sb.append("timeoutSeconds: ").append(config.timeoutSeconds()).append("\n");
-        sb.append("selectionContextEnabled: ").append(aiUseSelectionContext.get()).append("\n");
-        sb.append("schemaCountInjected: ").append(schemaCount).append("\n");
-        sb.append("systemPromptLength: ").append(config.systemPrompt() == null ? 0 : config.systemPrompt().length()).append("\n");
-        sb.append("userPromptLength: ").append(userPrompt == null ? 0 : userPrompt.length()).append("\n");
-        sb.append("payloadLength: ").append(userPromptPayload == null ? 0 : userPromptPayload.length()).append("\n");
-        sb.append("\nuserPrompt:\n").append(userPrompt == null ? "" : userPrompt).append("\n");
-        return sb.toString();
+        return "baseUrl: " + nullToEmpty(config.apiBaseUrl()) + "\n" +
+                "apiKeyMasked: " + maskSecret(config.apiKey()) + "\n" +
+                "model: " + nullToEmpty(config.model()) + "\n" +
+                "timeoutSeconds: " + config.timeoutSeconds() + "\n" +
+                "selectionContextEnabled: " + aiUseSelectionContext.get() + "\n" +
+                "schemaCountInjected: " + schemaCount + "\n" +
+                "systemPromptLength: " + (config.systemPrompt() == null ? 0 : config.systemPrompt().length()) + "\n" +
+                "userPromptLength: " + (userPrompt == null ? 0 : userPrompt.length()) + "\n" +
+                "payloadLength: " + (userPromptPayload == null ? 0 : userPromptPayload.length()) + "\n" +
+                "\nuserPrompt:\n" + (userPrompt == null ? "" : userPrompt) + "\n";
     }
 
     private String maskSecret(String secret) {
@@ -2605,7 +2597,7 @@ public class PropertyPanelComponent implements EditorComponent {
         if (len <= 6) {
             return "***";
         }
-        String prefix = secret.substring(0, Math.min(4, len));
+        String prefix = secret.substring(0, 4);
         String suffix = secret.substring(Math.max(0, len - 2));
         return prefix + "***" + suffix;
     }
@@ -2634,6 +2626,13 @@ public class PropertyPanelComponent implements EditorComponent {
         }
         root.add("nodes", nodesArray);
 
+        JsonArray connectionsArray = getJsonElements(plan);
+        root.add("connections", connectionsArray);
+
+        return AI_SETTINGS_GSON.toJson(root);
+    }
+
+    private static @NonNull JsonArray getJsonElements(AiGraphPlan plan) {
         JsonArray connectionsArray = new JsonArray();
         for (AiPlanConnection connection : plan.connections()) {
             JsonObject connObj = new JsonObject();
@@ -2650,9 +2649,7 @@ public class PropertyPanelComponent implements EditorComponent {
             connObj.add("to", toObj);
             connectionsArray.add(connObj);
         }
-        root.add("connections", connectionsArray);
-
-        return AI_SETTINGS_GSON.toJson(root);
+        return connectionsArray;
     }
 
     private AiGraphPlan buildPlanFromDsl(AiGraphDslSupport.DslGraph dslGraph) {
@@ -2770,7 +2767,7 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private double parsePromptNumber(String text, String... aliases) {
-        if (text == null || text.isBlank() || aliases == null || aliases.length == 0) {
+        if (text == null || text.isBlank() || aliases == null) {
             return -1.0d;
         }
 
@@ -2998,7 +2995,7 @@ public class PropertyPanelComponent implements EditorComponent {
         return state;
     }
 
-    private int rollbackAiApply(ImGuiNodeEditor editor, int undoSteps) {
+    private void rollbackAiApply(ImGuiNodeEditor editor, int undoSteps) {
         int undone = 0;
         for (int i = 0; i < undoSteps; i++) {
             if (!editor.undo()) {
@@ -3006,7 +3003,6 @@ public class PropertyPanelComponent implements EditorComponent {
             }
             undone++;
         }
-        return undone;
     }
 
     private void undoLastAiApply() {
@@ -3089,6 +3085,10 @@ public class PropertyPanelComponent implements EditorComponent {
             layerMap.computeIfAbsent(layer, ignored -> new ArrayList<>()).add(node);
         }
 
+        return getAiPlanNodes(layerMap);
+    }
+
+    private static @NonNull List<AiPlanNode> getAiPlanNodes(Map<Integer, List<AiPlanNode>> layerMap) {
         float layerSpacingX = 320.0f;
         float layerSpacingY = 180.0f;
         List<AiPlanNode> arranged = new ArrayList<>();
@@ -3103,9 +3103,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 arranged.add(new AiPlanNode(node.ref(), node.typeId(), x, y, node.nodeState()));
             }
         }
-
         return arranged;
     }
+
     private void renderNodeInfo() {
         String typeId = selectedNode.getTypeId();
         String categoryName = NodeStatusPresenter.getCategoryNameForNode(typeId);
