@@ -367,23 +367,19 @@ public class LayoutRenderer {
                     // 为非画布组件创建Child窗口
                     String childId = "child_" + component.getComponentId();
 
-                    // 判断是否是属性面板，决定是否有边框
-                    boolean hasBorder = component instanceof PropertyPanelComponent;
-
+                    // 判断是否是属性面板，决定是否有边框和滚动行为
                     boolean isPropertyPanel = component instanceof PropertyPanelComponent;
+                    boolean hasBorder = isPropertyPanel;
+                    int childFlags = 0;
                     if (isPropertyPanel) {
-                        float baseScrollbarSize = ImGui.getStyle().getScrollbarSize();
-                        ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ScrollbarSize, baseScrollbarSize * 0.5f);
+                        childFlags = imgui.flag.ImGuiWindowFlags.NoScrollbar | imgui.flag.ImGuiWindowFlags.NoScrollWithMouse;
                     }
 
                     // 非画布组件可以有滚动条，根据类型决定是否有边框
                     boolean childBegun;
                     try {
-                        childBegun = ImGui.beginChild(childId, dims.width(), dims.height(), hasBorder);
+                        childBegun = ImGui.beginChild(childId, dims.width(), dims.height(), hasBorder, childFlags);
                     } finally {
-                        if (isPropertyPanel) {
-                            ImGui.popStyleVar();
-                        }
                     }
 
                     try {
