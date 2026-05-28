@@ -10,6 +10,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -50,11 +52,20 @@ public class AiRemotePlannerService {
         }
     }
 
-    public CompletableFuture<RemotePlanResult> requestPlanAsync(PlannerConfig config, String userPrompt) {
-        return CompletableFuture.supplyAsync(() -> requestPlan(config, userPrompt), EXECUTOR);
+    public record ConversationMessage(String role, String content) {
     }
 
-    private RemotePlanResult requestPlan(PlannerConfig config, String userPrompt) {
+    public CompletableFuture<RemotePlanResult> requestPlanAsync(PlannerConfig config, String userPrompt) {
+        List<ConversationMessage> conversation = new ArrayList<>();
+        conversation.add(new ConversationMessage("user", userPrompt));
+        return requestPlanAsync(config, conversation);
+    }
+
+    public CompletableFuture<RemotePlanResult> requestPlanAsync(PlannerConfig config, List<ConversationMessage> conversation) {
+        return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation), EXECUTOR);
+    }
+
+    private RemotePlanResult requestPlan(PlannerConfig config, List<ConversationMessage> conversation) {
         if (config == null) {
             return RemotePlanResult.fail("Remote planner config is null.", -1, "", "config", 1);
         }
@@ -68,6 +79,11 @@ public class AiRemotePlannerService {
             return RemotePlanResult.fail("Model is empty.", -1, "", "config", 1);
         }
 
+        List<ConversationMessage> normalizedConversation = normalizeConversation(conversation);
+        if (normalizedConversation.isEmpty()) {
+            return RemotePlanResult.fail("Conversation payload is empty.", -1, "", "request", 1);
+        }
+
         String baseUrl = config.apiBaseUrl().trim();
         int timeoutSeconds = Math.max(5, Math.min(600, config.timeoutSeconds()));
 
@@ -79,8 +95,8 @@ public class AiRemotePlannerService {
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 RemotePlanResult result = isAnthropicEndpoint(baseUrl)
-                        ? requestAnthropic(client, config, userPrompt, timeoutSeconds, attempt)
-                        : requestOpenAICompatible(client, config, userPrompt, timeoutSeconds, attempt);
+                        ? requestAnthropic(client, config, normalizedConversation, timeoutSeconds, attempt)
+                        : requestOpenAICompatible(client, config, normalizedConversation, timeoutSeconds, attempt);
 
                 if (result.success()) {
                     return result;
@@ -121,7 +137,13 @@ public class AiRemotePlannerService {
                 : RemotePlanResult.fail("Remote planner request failed with unknown cause.", -1, "", "unknown", MAX_ATTEMPTS);
     }
 
-    private RemotePlanResult requestOpenAICompatible(HttpClient client, PlannerConfig config, String userPrompt, int timeoutSeconds, int attempt)
+        private RemotePlanResult requestOpenAICompatible(
+            HttpClient client,
+            PlannerConfig config,
+            List<ConversationMessage> conversation,
+            int timeoutSeconds,
+            int attempt
+        )
             throws IOException, InterruptedException {
         String endpoint = normalizeEndpoint(config.apiBaseUrl(), "/chat/completions");
 
@@ -135,10 +157,12 @@ public class AiRemotePlannerService {
         system.addProperty("content", config.systemPrompt());
         messages.add(system);
 
-        JsonObject user = new JsonObject();
-        user.addProperty("role", "user");
-        user.addProperty("content", userPrompt);
-        messages.add(user);
+        for (ConversationMessage message : conversation) {
+            JsonObject item = new JsonObject();
+            item.addProperty("role", normalizeRoleForOpenAI(message.role()));
+            item.addProperty("content", nullToEmpty(message.content()));
+            messages.add(item);
+        }
 
         body.add("messages", messages);
 
@@ -173,7 +197,13 @@ public class AiRemotePlannerService {
         return RemotePlanResult.ok(content, response.statusCode(), response.body(), attempt);
     }
 
-    private RemotePlanResult requestAnthropic(HttpClient client, PlannerConfig config, String userPrompt, int timeoutSeconds, int attempt)
+        private RemotePlanResult requestAnthropic(
+            HttpClient client,
+            PlannerConfig config,
+            List<ConversationMessage> conversation,
+            int timeoutSeconds,
+            int attempt
+        )
             throws IOException, InterruptedException {
         String endpoint = normalizeAnthropicEndpoint(config.apiBaseUrl());
 
@@ -184,17 +214,19 @@ public class AiRemotePlannerService {
         body.addProperty("system", config.systemPrompt());
 
         JsonArray messages = new JsonArray();
-        JsonObject user = new JsonObject();
-        user.addProperty("role", "user");
+        for (ConversationMessage message : conversation) {
+            JsonObject item = new JsonObject();
+            item.addProperty("role", normalizeRoleForAnthropic(message.role()));
 
-        JsonArray content = new JsonArray();
-        JsonObject textPart = new JsonObject();
-        textPart.addProperty("type", "text");
-        textPart.addProperty("text", userPrompt);
-        content.add(textPart);
-        user.add("content", content);
+            JsonArray content = new JsonArray();
+            JsonObject textPart = new JsonObject();
+            textPart.addProperty("type", "text");
+            textPart.addProperty("text", nullToEmpty(message.content()));
+            content.add(textPart);
+            item.add("content", content);
 
-        messages.add(user);
+            messages.add(item);
+        }
         body.add("messages", messages);
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
@@ -339,6 +371,41 @@ public class AiRemotePlannerService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private List<ConversationMessage> normalizeConversation(List<ConversationMessage> conversation) {
+        List<ConversationMessage> normalized = new ArrayList<>();
+        if (conversation == null) {
+            return normalized;
+        }
+
+        for (ConversationMessage message : conversation) {
+            if (message == null || isBlank(message.content())) {
+                continue;
+            }
+            normalized.add(new ConversationMessage(normalizeRoleForOpenAI(message.role()), message.content()));
+        }
+        return normalized;
+    }
+
+    private String normalizeRoleForOpenAI(String role) {
+        if (role == null) {
+            return "user";
+        }
+        String value = role.toLowerCase(Locale.ROOT);
+        if ("assistant".equals(value) || "system".equals(value) || "user".equals(value)) {
+            return value;
+        }
+        return "user";
+    }
+
+    private String normalizeRoleForAnthropic(String role) {
+        String value = normalizeRoleForOpenAI(role);
+        return "assistant".equals(value) ? "assistant" : "user";
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private String truncate(String text) {

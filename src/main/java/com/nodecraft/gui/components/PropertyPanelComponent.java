@@ -2185,6 +2185,8 @@ public class PropertyPanelComponent implements EditorComponent {
                 getNodeGraph()
             )
         );
+        List<AiRemotePlannerService.ConversationMessage> conversationHistory =
+                buildConversationHistory(userPrompt, userPromptPayload);
         AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
                 aiApiBaseUrl.get(),
                 aiApiKey.get(),
@@ -2202,7 +2204,80 @@ public class PropertyPanelComponent implements EditorComponent {
         aiLastRemoteStatusCode = 0;
         aiLastRemoteAttempts = 0;
         aiPlanStatusMessage = "Remote planner request submitted...";
-        aiRemotePlanFuture = aiRemotePlannerService.requestPlanAsync(config, userPromptPayload);
+        aiRemotePlanFuture = aiRemotePlannerService.requestPlanAsync(config, conversationHistory);
+    }
+
+    private List<AiRemotePlannerService.ConversationMessage> buildConversationHistory(
+            String newUserPrompt,
+            String userPromptPayload
+    ) {
+        List<AiRemotePlannerService.ConversationMessage> history = new ArrayList<>();
+
+        List<AiChatMessage> recent = getRecentPlanningMessages(6, newUserPrompt);
+        for (AiChatMessage message : recent) {
+            history.add(new AiRemotePlannerService.ConversationMessage(message.role(), message.content()));
+        }
+
+        String latestUserMessage = userPromptPayload;
+        if (pendingAiPlan != null) {
+            String currentPlanJson = AiPlanDslWorkflowService.toDslJson(toServiceGraphPlanForHistory(pendingAiPlan));
+            latestUserMessage = "Current plan in effect:\n```json\n"
+                    + currentPlanJson
+                    + "\n```\n\n"
+                    + "User follow-up:\n"
+                    + userPromptPayload;
+        }
+
+        history.add(new AiRemotePlannerService.ConversationMessage("user", latestUserMessage));
+        return history;
+    }
+
+    private List<AiChatMessage> getRecentPlanningMessages(int limit, String latestUserPrompt) {
+        if (aiChatMessages.isEmpty() || limit <= 0) {
+            return List.of();
+        }
+
+        List<AiChatMessage> recent = new ArrayList<>();
+        boolean skippedCurrentUserPrompt = false;
+        String normalizedPrompt = latestUserPrompt == null ? "" : latestUserPrompt.trim();
+
+        for (int i = aiChatMessages.size() - 1; i >= 0 && recent.size() < limit; i--) {
+            AiChatMessage message = aiChatMessages.get(i);
+            if (message == null || message.content() == null || message.content().isBlank()) {
+                continue;
+            }
+
+            if (!skippedCurrentUserPrompt
+                    && "user".equalsIgnoreCase(message.role())
+                    && message.content().trim().equals(normalizedPrompt)) {
+                skippedCurrentUserPrompt = true;
+                continue;
+            }
+
+            if (isPureStatusMessage(message.content())) {
+                continue;
+            }
+
+            recent.add(0, message);
+        }
+
+        return recent;
+    }
+
+    private boolean isPureStatusMessage(String text) {
+        if (text == null || text.isBlank()) {
+            return true;
+        }
+
+        String normalized = text.trim();
+        return normalized.startsWith("Remote planner request submitted")
+                || normalized.startsWith("Retrying last request")
+                || normalized.startsWith("Remote planner request canceled")
+                || normalized.startsWith("Plan JSON validated")
+                || normalized.startsWith("Remote planner fallback applied")
+                || normalized.startsWith("Undo completed")
+                || normalized.startsWith("Applied AI plan")
+                || normalized.startsWith("Patch apply completed");
     }
 
     private void pollRemotePlannerResultIfReady() {
@@ -2365,6 +2440,40 @@ public class PropertyPanelComponent implements EditorComponent {
         String prefix = secret.substring(0, 4);
         String suffix = secret.substring(Math.max(0, len - 2));
         return prefix + "***" + suffix;
+    }
+
+    private AiGraphPlanDslAdapterService.GraphPlan toServiceGraphPlanForHistory(AiGraphPlan plan) {
+        if (plan == null) {
+            return new AiGraphPlanDslAdapterService.GraphPlan("", List.of(), List.of(), List.of());
+        }
+
+        List<AiGraphPlanDslAdapterService.PlanNode> nodes = new ArrayList<>(plan.nodes().size());
+        for (AiPlanNode node : plan.nodes()) {
+            nodes.add(new AiGraphPlanDslAdapterService.PlanNode(
+                    node.ref(),
+                    node.typeId(),
+                    node.offsetX(),
+                    node.offsetY(),
+                    node.nodeState()
+            ));
+        }
+
+        List<AiGraphPlanDslAdapterService.PlanConnection> connections = new ArrayList<>(plan.connections().size());
+        for (AiPlanConnection connection : plan.connections()) {
+            connections.add(new AiGraphPlanDslAdapterService.PlanConnection(
+                    connection.sourceRef(),
+                    connection.sourcePortId(),
+                    connection.targetRef(),
+                    connection.targetPortId()
+            ));
+        }
+
+        return new AiGraphPlanDslAdapterService.GraphPlan(
+                plan.summary(),
+                nodes,
+                connections,
+                plan.validationErrors() == null ? List.of() : plan.validationErrors()
+        );
     }
 
     private AiGraphPlan fromServiceGraphPlan(AiGraphPlanDslAdapterService.GraphPlan plan) {
