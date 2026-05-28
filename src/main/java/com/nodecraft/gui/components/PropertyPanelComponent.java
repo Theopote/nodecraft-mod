@@ -122,6 +122,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImBoolean aiPatchApplyMode = new ImBoolean(true);
     private final ImBoolean aiPatchRemoveScopedConnections = new ImBoolean(false);
     private final Path aiSettingsPath;
+    private final Path aiSessionStatePath;
     private final AiRemotePlannerService aiRemotePlannerService = new AiRemotePlannerService();
     private CompletableFuture<AiRemotePlannerService.RemotePlanResult> aiRemotePlanFuture = null;
     private String aiRemotePendingPrompt = "";
@@ -134,6 +135,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private int aiLastRemoteStatusCode = 0;
     private int aiLastRemoteAttempts = 0;
     private AiGraphPlan pendingAiPlan = null;
+    private boolean aiSessionRestoreInProgress = false;
     private int lastAiUndoStepCount = 0;
     private String aiPlanStatusMessage = "";
     private String aiSettingsStatusMessage = "";
@@ -186,7 +188,9 @@ public class PropertyPanelComponent implements EditorComponent {
             }
         });
         this.aiSettingsPath = resolveAiSettingsPath();
+        this.aiSessionStatePath = resolveAiSessionStatePath();
         loadAiSettingsFromDisk();
+        loadAiSessionStateFromDisk();
     }
 
     private void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
@@ -1542,6 +1546,7 @@ public class PropertyPanelComponent implements EditorComponent {
         clearAllTempValues();
         propertyInspector.clearCache();
         saveAiSettingsToDisk();
+        saveAiSessionStateToDisk();
         if (aiRemotePlanFuture != null && !aiRemotePlanFuture.isDone()) {
             aiRemotePlanFuture.cancel(true);
         }
@@ -1922,6 +1927,10 @@ public class PropertyPanelComponent implements EditorComponent {
         return AiSettingsStore.resolveSettingsPath();
     }
 
+    private Path resolveAiSessionStatePath() {
+        return AiSessionStateStore.resolveSessionStatePath(aiSettingsPath);
+    }
+
     private void loadAiSettingsFromDisk() {
         AiSettingsStore.LoadResult result = AiSettingsStore.load(aiSettingsPath);
         applyAiSettingsData(result.data());
@@ -1930,6 +1939,95 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private void saveAiSettingsToDisk() {
         aiSettingsStatusMessage = AiSettingsStore.save(aiSettingsPath, collectAiSettingsData());
+    }
+
+    private void loadAiSessionStateFromDisk() {
+        AiSessionStateStore.LoadResult result = AiSessionStateStore.load(aiSessionStatePath);
+        applyAiSessionStateData(result.data());
+        if (result.statusMessage() != null && !result.statusMessage().isBlank()) {
+            aiSettingsStatusMessage = result.statusMessage();
+        }
+    }
+
+    private void saveAiSessionStateToDisk() {
+        if (aiSessionRestoreInProgress) {
+            return;
+        }
+        AiSessionStateStore.AiSessionStateData data = collectAiSessionStateData();
+        AiSessionStateStore.save(aiSessionStatePath, data);
+    }
+
+    private AiSessionStateStore.AiSessionStateData collectAiSessionStateData() {
+        List<AiSessionStateStore.ChatMessageData> messages = new ArrayList<>(aiChatMessages.size());
+        for (AiChatMessage message : aiChatMessages) {
+            if (message == null || message.content() == null || message.content().isBlank()) {
+                continue;
+            }
+            messages.add(new AiSessionStateStore.ChatMessageData(
+                    message.role() == null ? "assistant" : message.role(),
+                    message.content(),
+                    message.timestampMs()
+            ));
+        }
+
+        String pendingPlanDslJson = "";
+        if (pendingAiPlan != null) {
+            pendingPlanDslJson = AiPlanDslWorkflowService.toDslJson(toServiceGraphPlanForHistory(pendingAiPlan));
+        }
+
+        return new AiSessionStateStore.AiSessionStateData(messages, pendingPlanDslJson);
+    }
+
+    private void applyAiSessionStateData(AiSessionStateStore.AiSessionStateData data) {
+        aiSessionRestoreInProgress = true;
+        try {
+            aiChatMessages.clear();
+            pendingAiPlan = null;
+
+            if (data == null) {
+                return;
+            }
+
+            List<AiSessionStateStore.ChatMessageData> messages = data.chatMessages();
+            if (messages != null) {
+                for (AiSessionStateStore.ChatMessageData message : messages) {
+                    if (message == null || message.content() == null || message.content().isBlank()) {
+                        continue;
+                    }
+                    aiChatMessages.add(new AiChatMessage(
+                            message.role() == null ? "assistant" : message.role(),
+                            message.content(),
+                            message.timestampMs()
+                    ));
+                }
+            }
+
+            String pendingPlanDslJson = data.pendingPlanDslJson();
+            if (pendingPlanDslJson != null && !pendingPlanDslJson.isBlank()) {
+                AiGraphDslSupport.ParseValidationResult parsed =
+                        AiGraphDslSupport.parseAndValidate(pendingPlanDslJson, NodeRegistry.getInstance());
+                if (parsed.isSuccess() && parsed.graph() != null) {
+                    pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph()));
+                } else {
+                    aiPlanStatusMessage = "Stored pending plan skipped due to validation failure.";
+                }
+            }
+        } finally {
+            aiSessionRestoreInProgress = false;
+        }
+    }
+
+    private void addAiChatMessage(String role, String content) {
+        if (content == null || content.isBlank()) {
+            return;
+        }
+        aiChatMessages.add(new AiChatMessage(role == null ? "assistant" : role, content, System.currentTimeMillis()));
+        saveAiSessionStateToDisk();
+    }
+
+    private void setPendingAiPlan(AiGraphPlan plan) {
+        pendingAiPlan = plan;
+        saveAiSessionStateToDisk();
     }
 
     private AiSettingsStore.AiSettingsData collectAiSettingsData() {
@@ -2062,7 +2160,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 mapped
         );
         aiPlanStatusMessage = reportText;
-        aiChatMessages.add(new AiChatMessage("assistant", reportText, System.currentTimeMillis()));
+        addAiChatMessage("assistant", reportText);
     }
 
     private AiGraphDiffService.GraphDiffSummary buildGraphDiffSummary(AiGraphPlan plan) {
@@ -2131,7 +2229,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private void submitAiPromptWithText(String trimmedPrompt) {
         aiLastSubmittedPrompt = trimmedPrompt;
-        aiChatMessages.add(new AiChatMessage("user", trimmedPrompt, System.currentTimeMillis()));
+        addAiChatMessage("user", trimmedPrompt);
 
         if (aiEnableRemotePlanner.get()) {
             startRemotePlannerRequest(trimmedPrompt);
@@ -2168,7 +2266,7 @@ public class PropertyPanelComponent implements EditorComponent {
         String validation = validateAiSettings();
         if (validation.startsWith("Validation failed")) {
             aiPlanStatusMessage = validation;
-            aiChatMessages.add(new AiChatMessage("assistant", validation, System.currentTimeMillis()));
+            addAiChatMessage("assistant", validation);
             return;
         }
 
@@ -2295,7 +2393,7 @@ public class PropertyPanelComponent implements EditorComponent {
         } catch (Exception e) {
             String error = "Remote planner failed: " + e.getMessage();
             aiPlanStatusMessage = error;
-            aiChatMessages.add(new AiChatMessage("assistant", error, System.currentTimeMillis()));
+            addAiChatMessage("assistant", error);
             aiRemotePlanFuture = null;
             aiRemotePendingPrompt = "";
             return;
@@ -2314,7 +2412,7 @@ public class PropertyPanelComponent implements EditorComponent {
         if (!result.success()) {
             String error = formatRemoteErrorMessage(result);
             aiPlanStatusMessage = error;
-            aiChatMessages.add(new AiChatMessage("assistant", error, System.currentTimeMillis()));
+            addAiChatMessage("assistant", error);
             fallbackToLocalPlan(prompt, "remote request failed");
             return;
         }
@@ -2327,9 +2425,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 AiGraphDslSupport.parseAndValidate(dslOrModelResponse, NodeRegistry.getInstance());
 
         if (!parsed.isSuccess() || parsed.graph() == null) {
-            pendingAiPlan = null;
+            setPendingAiPlan(null);
             String errorMessage = "Plan JSON validation failed: " + String.join("; ", parsed.errors());
-            aiChatMessages.add(new AiChatMessage("assistant", errorMessage, System.currentTimeMillis()));
+            addAiChatMessage("assistant", errorMessage);
             aiPlanStatusMessage = errorMessage;
             if ("remote".equals(source)) {
                 fallbackToLocalPlan(prompt, "remote JSON invalid");
@@ -2337,22 +2435,21 @@ public class PropertyPanelComponent implements EditorComponent {
             return;
         }
 
-        pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph()));
+        setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
         String warningSuffix = formatValidationWarningSuffix(parsed.warnings());
-        aiChatMessages.add(new AiChatMessage(
-            "assistant",
-            AiPromptContextService.buildAiPlanReply(
-                prompt,
-                source,
-                aiUseSelectionContext.get(),
-                selectedNode,
-                pendingAiPlan.nodes().size(),
-                pendingAiPlan.connections().size(),
-                pendingAiPlan.isValid(),
-                pendingAiPlan.validationErrors()
-            ) + warningSuffix,
-            System.currentTimeMillis()
-        ));
+        addAiChatMessage(
+                "assistant",
+                AiPromptContextService.buildAiPlanReply(
+                        prompt,
+                        source,
+                        aiUseSelectionContext.get(),
+                        selectedNode,
+                        pendingAiPlan.nodes().size(),
+                        pendingAiPlan.connections().size(),
+                        pendingAiPlan.isValid(),
+                        pendingAiPlan.validationErrors()
+                ) + warningSuffix
+        );
         aiPlanStatusMessage = "Plan JSON validated (" + source + "). Review and click Apply Plan." + warningSuffix;
     }
 
@@ -2365,14 +2462,14 @@ public class PropertyPanelComponent implements EditorComponent {
 
         if (!localParsed.isSuccess() || localParsed.graph() == null) {
             aiPlanStatusMessage = "Local fallback also failed: " + String.join("; ", localParsed.errors());
-            aiChatMessages.add(new AiChatMessage("assistant", aiPlanStatusMessage, System.currentTimeMillis()));
+            addAiChatMessage("assistant", aiPlanStatusMessage);
             return;
         }
 
-        pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(localParsed.graph()));
+        setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(localParsed.graph())));
         String warningSuffix = formatValidationWarningSuffix(localParsed.warnings());
         aiPlanStatusMessage = "Remote planner fallback applied (" + reason + "). Review and click Apply Plan." + warningSuffix;
-        aiChatMessages.add(new AiChatMessage("assistant", aiPlanStatusMessage, System.currentTimeMillis()));
+        addAiChatMessage("assistant", aiPlanStatusMessage);
     }
 
     private String formatValidationWarningSuffix(List<String> warnings) {
@@ -2393,7 +2490,7 @@ public class PropertyPanelComponent implements EditorComponent {
         aiRemotePlanFuture = null;
         aiRemotePendingPrompt = "";
         aiPlanStatusMessage = "Remote planner request canceled.";
-        aiChatMessages.add(new AiChatMessage("assistant", aiPlanStatusMessage, System.currentTimeMillis()));
+        addAiChatMessage("assistant", aiPlanStatusMessage);
     }
 
     private String formatRemoteErrorMessage(AiRemotePlannerService.RemotePlanResult result) {
