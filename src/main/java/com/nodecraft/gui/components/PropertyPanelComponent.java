@@ -161,6 +161,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImBoolean aiPatchRemoveScopedConnections = new ImBoolean(false);
     private final Path aiSettingsPath;
     private String aiLastSubmittedPrompt = "";
+    private String aiLastDetectedProviderLabel = "";
     private int lastAiUndoStepCount = 0;
     private String aiPlanStatusMessage = "";
     private String aiSettingsStatusMessage = "";
@@ -1748,14 +1749,18 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private void renderAiSettingsPopup() {
+        String detectedProviderLabel = resolveDetectedProviderLabel(aiApiBaseUrl.get());
+        String[] suggestedModels = resolveSuggestedModels(aiApiBaseUrl.get());
+        maybeAutofillModelByProviderChange(detectedProviderLabel, suggestedModels);
+
         AiAssistantSettingsPopupRenderer.renderSettingsPopup(
                 new AiAssistantSettingsPopupRenderer.State(
                         aiEnableRemotePlanner,
                         aiApiBaseUrl,
                         aiApiKey,
                         aiModel,
-                        resolveDetectedProviderLabel(aiApiBaseUrl.get()),
-                        resolveSuggestedModels(aiApiBaseUrl.get()),
+                        detectedProviderLabel,
+                        suggestedModels,
                     aiProviderStrategyIndex,
                         aiSystemPrompt,
                         aiMaxOutputTokens,
@@ -2582,6 +2587,45 @@ public class PropertyPanelComponent implements EditorComponent {
             return "";
         }
         return baseUrl.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private void maybeAutofillModelByProviderChange(String detectedProviderLabel, String[] suggestedModels) {
+        if (detectedProviderLabel == null) {
+            detectedProviderLabel = "";
+        }
+        if (suggestedModels == null || suggestedModels.length == 0) {
+            aiLastDetectedProviderLabel = detectedProviderLabel;
+            return;
+        }
+
+        if (detectedProviderLabel.equals(aiLastDetectedProviderLabel)) {
+            return;
+        }
+
+        String currentModel = aiModel.get();
+        boolean shouldAutofill = currentModel == null
+                || currentModel.isBlank()
+                || !isModelInSuggestions(currentModel, suggestedModels);
+
+        if (shouldAutofill) {
+            aiModel.set(suggestedModels[0]);
+            aiSettingsStatusMessage = "Provider changed to " + detectedProviderLabel
+                    + ", model auto-filled: " + suggestedModels[0];
+        }
+
+        aiLastDetectedProviderLabel = detectedProviderLabel;
+    }
+
+    private boolean isModelInSuggestions(String model, String[] suggestedModels) {
+        if (model == null || suggestedModels == null) {
+            return false;
+        }
+        for (String suggestion : suggestedModels) {
+            if (suggestion != null && suggestion.equalsIgnoreCase(model)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private AiGraphPlanDslAdapterService.GraphPlan toServiceGraphPlanForHistory(AiGraphPlan plan) {
