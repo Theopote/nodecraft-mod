@@ -1,7 +1,7 @@
 package com.nodecraft.gui.screens;
 
 import com.nodecraft.core.NodeCraft;
-import com.nodecraft.gui.components.CanvasComponent;
+import com.nodecraft.gui.components.panel.CanvasComponent;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.minecraft.client.GhostCameraManager;
 import imgui.ImGui;

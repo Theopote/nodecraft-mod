@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.nodecraft.core.NodeCraft;
-import com.nodecraft.gui.components.CanvasComponent;
+import com.nodecraft.gui.components.panel.CanvasComponent;
 import com.nodecraft.gui.components.EditorComponent;
-import com.nodecraft.gui.components.NodeLibraryComponent;
+import com.nodecraft.gui.components.panel.NodeLibraryComponent;
 import com.nodecraft.gui.components.PropertyPanelComponent;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.layout.LayoutConstraints;

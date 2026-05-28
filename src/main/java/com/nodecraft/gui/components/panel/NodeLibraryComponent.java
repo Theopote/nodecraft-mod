@@ -1,4 +1,6 @@
-package com.nodecraft.gui.components;
+package com.nodecraft.gui.components.panel;
+
+import com.nodecraft.gui.components.EditorComponent;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -18,6 +20,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import com.nodecraft.gui.node.NodeInfo;
 import com.nodecraft.nodesystem.registry.NodeRegistry.NodeCategory;
+import com.nodecraft.gui.components.NodeCategoryPresentationMapper;
 import com.nodecraft.gui.components.NodeCategoryPresentationMapper.CategoryPresentation;
 import com.nodecraft.gui.utils.NodeIconManager;
 import com.nodecraft.gui.utils.UserPreferences;

@@ -6,7 +6,7 @@ import java.util.UUID;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
-import com.nodecraft.gui.components.CanvasComponent;
+import com.nodecraft.gui.components.panel.CanvasComponent;
 import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 
 import imgui.ImGui;

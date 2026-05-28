@@ -1,4 +1,6 @@
-package com.nodecraft.gui.components;
+package com.nodecraft.gui.components.panel;
+
+import com.nodecraft.gui.components.EditorComponent;
 
 import java.util.Map;
 import java.util.Objects; // 导入 Objects

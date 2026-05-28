@@ -5,8 +5,8 @@ import java.nio.file.Paths;
 import java.util.function.BooleanSupplier;
 
 import com.nodecraft.core.NodeCraft;
-import com.nodecraft.gui.components.CanvasComponent;
-import com.nodecraft.gui.components.NodeLibraryComponent;
+import com.nodecraft.gui.components.panel.CanvasComponent;
+import com.nodecraft.gui.components.panel.NodeLibraryComponent;
 import com.nodecraft.gui.dialogs.ConfirmationDialog;
 import com.nodecraft.gui.dialogs.FileDialogManager;
 import com.nodecraft.gui.dialogs.MessageDialog;

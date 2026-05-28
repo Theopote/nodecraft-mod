@@ -1,8 +1,8 @@
 package com.nodecraft.gui.screens;
 
 import com.nodecraft.core.NodeCraft;
-import com.nodecraft.gui.components.CanvasComponent;
-import com.nodecraft.gui.components.NodeLibraryComponent;
+import com.nodecraft.gui.components.panel.CanvasComponent;
+import com.nodecraft.gui.components.panel.NodeLibraryComponent;
 import com.nodecraft.gui.editor.NodeEditorFactory;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.nodesystem.api.INode;
