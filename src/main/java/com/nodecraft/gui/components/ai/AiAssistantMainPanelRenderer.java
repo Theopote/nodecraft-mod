@@ -1,5 +1,6 @@
 package com.nodecraft.gui.components.ai;
 
+import com.nodecraft.gui.components.ai.AiAssistantComponent.AiChatMessage;
 import imgui.ImGui;
 import imgui.flag.ImGuiInputTextFlags;
 import imgui.type.ImBoolean;
