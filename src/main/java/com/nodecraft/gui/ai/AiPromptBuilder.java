@@ -30,22 +30,23 @@ public final class AiPromptBuilder {
 
         String schemaText = GSON.toJson(schemaJson);
 
-        return "You are NodeCraft AI planner. Convert user request into a strict node-graph JSON DSL.\\n"
-                + "Rules:\\n"
-                + "1) Output JSON only. No markdown, no explanation.\\n"
-                + "2) Use only nodes and ports listed in AVAILABLE_NODES.\\n"
-                + "3) Connections must use compatible port data types.\\n"
-                + "4) Graph must include at least one output.* category node.\\n"
-                + "5) If impossible, return {\\\"error\\\":\\\"reason\\\"}.\\n"
-                + "6) Prefer minimal graph that satisfies user intent.\\n"
-                + "JSON format:\\n"
-                + "{\\n"
-                + "  \\\"description\\\": \\\"...\\\",\\n"
-                + "  \\\"nodes\\\": [{\\\"id\\\":\\\"n1\\\",\\\"type\\\":\\\"...\\\",\\\"params\\\":{},\\\"position\\\":{\\\"x\\\":0,\\\"y\\\":0}}],\\n"
-                + "  \\\"connections\\\": [{\\\"from\\\":{\\\"nodeId\\\":\\\"n1\\\",\\\"port\\\":\\\"...\\\"},\\\"to\\\":{\\\"nodeId\\\":\\\"n2\\\",\\\"port\\\":\\\"...\\\"}}]\\n"
-                + "}\\n"
-                + "AVAILABLE_NODES:\\n"
-                + schemaText;
+        return """
+            You are NodeCraft AI planner. Convert user request into a strict node-graph JSON DSL.
+            Rules:
+            1) Output JSON only. No markdown, no explanation.
+            2) Use only nodes and ports listed in AVAILABLE_NODES.
+            3) Connections must use compatible port data types.
+            4) Graph must include at least one output.* category node.
+            5) If impossible, return {"error":"reason"}.
+            6) Prefer minimal graph that satisfies user intent.
+            JSON format:
+            {
+              "description": "...",
+              "nodes": [{"id":"n1","type":"...","params":{},"position":{"x":0,"y":0}}],
+              "connections": [{"from":{"nodeId":"n1","port":"..."},"to":{"nodeId":"n2","port":"..."}}]
+            }
+            AVAILABLE_NODES:
+            """ + schemaText;
     }
 
     private static @NonNull JsonObject getJsonObject(AiNodeSchemaCatalog.NodeSchema schema) {
@@ -91,10 +92,10 @@ public final class AiPromptBuilder {
         String context = selectionContext == null || selectionContext.isBlank()
                 ? "No selection context provided."
                 : selectionContext;
-        return "User request:\\n"
-                + prompt + "\\n\\n"
-                + "Editor context:\\n"
-                + context + "\\n\\n"
+        return "User request:\n"
+            + prompt + "\n\n"
+            + "Editor context:\n"
+            + context + "\n\n"
                 + "Return JSON only.";
     }
 }
