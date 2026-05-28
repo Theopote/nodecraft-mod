@@ -427,6 +427,7 @@ public class AiRemotePlannerService {
 
             JsonArray content = new JsonArray();
             String text = nullToEmpty(message.content());
+            String currentToolUseId = null;
             
             // Check if content looks like a structured DSL plan
             boolean isJsonDsl = text.trim().startsWith("{") && text.contains("\"nodes\"");
@@ -436,8 +437,8 @@ public class AiRemotePlannerService {
                 // We simulate a tool call sequence to keep history valid and contextually rich.
                 JsonObject toolUse = new JsonObject();
                 toolUse.addProperty("type", "tool_use");
-                String toolId = "call_hist_" + Math.abs(text.hashCode()) + "_" + messages.size();
-                toolUse.addProperty("id", toolId);
+                currentToolUseId = "call_hist_" + Math.abs(text.hashCode()) + "_" + messages.size();
+                toolUse.addProperty("id", currentToolUseId);
                 toolUse.addProperty("name", "create_node_graph");
                 try {
                     toolUse.add("input", JsonParser.parseString(text).getAsJsonObject());
@@ -448,6 +449,7 @@ public class AiRemotePlannerService {
                     textPart.addProperty("text", text);
                     content.add(textPart);
                     isJsonDsl = false; // Treat as text if parsing fails
+                    currentToolUseId = null;
                 }
             } else {
                 JsonObject textPart = new JsonObject();
@@ -460,15 +462,13 @@ public class AiRemotePlannerService {
             messages.add(item);
             
             // Every tool_use must be followed by a tool_result in the conversation history
-            if ("assistant".equals(role) && isJsonDsl) {
+            if ("assistant".equals(role) && isJsonDsl && currentToolUseId != null) {
                 JsonObject toolResultItem = new JsonObject();
                 toolResultItem.addProperty("role", "user");
                 JsonArray resultContents = new JsonArray();
                 JsonObject toolResult = new JsonObject();
                 toolResult.addProperty("type", "tool_result");
-                // Extract ID from the previously added tool_use part
-                String toolId = item.getAsJsonArray("content").get(0).getAsJsonObject().get("id").getAsString();
-                toolResult.addProperty("tool_use_id", toolId);
+                toolResult.addProperty("tool_use_id", currentToolUseId);
                 toolResult.addProperty("content", "Success: Graph plan received and initialized in editor.");
                 resultContents.add(toolResult);
                 toolResultItem.add("content", resultContents);

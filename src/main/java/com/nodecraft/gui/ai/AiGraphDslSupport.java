@@ -105,26 +105,111 @@ public final class AiGraphDslSupport {
         }
 
         String trimmed = response.trim();
-        int fenceStart = trimmed.indexOf("```");
-        if (fenceStart >= 0) {
-            int jsonStart = trimmed.indexOf('{', fenceStart);
-            int fenceEnd = trimmed.indexOf("```", fenceStart + 3);
-            if (jsonStart >= 0 && fenceEnd > jsonStart) {
-                String candidate = trimmed.substring(jsonStart, fenceEnd).trim();
-                int objStart = candidate.indexOf('{');
-                int objEnd = candidate.lastIndexOf('}');
-                if (objStart >= 0 && objEnd > objStart) {
-                    return candidate.substring(objStart, objEnd + 1);
+        String fencedCandidate = extractBestJsonFromFencedBlocks(trimmed);
+        if (!fencedCandidate.isBlank()) {
+            return fencedCandidate;
+        }
+        return extractLargestValidJsonObject(trimmed);
+    }
+
+    private static String extractBestJsonFromFencedBlocks(String text) {
+        int searchFrom = 0;
+        String best = "";
+        while (true) {
+            int fenceStart = text.indexOf("```", searchFrom);
+            if (fenceStart < 0) {
+                break;
+            }
+            int blockStart = fenceStart + 3;
+            if (blockStart < text.length() && text.charAt(blockStart) != '\n' && text.charAt(blockStart) != '\r') {
+                int lineBreak = text.indexOf('\n', blockStart);
+                if (lineBreak > 0) {
+                    blockStart = lineBreak + 1;
+                }
+            }
+
+            int fenceEnd = text.indexOf("```", blockStart);
+            if (fenceEnd < 0) {
+                break;
+            }
+
+            String block = text.substring(blockStart, fenceEnd);
+            String candidate = extractLargestValidJsonObject(block);
+            if (candidate.length() > best.length()) {
+                best = candidate;
+            }
+            searchFrom = fenceEnd + 3;
+        }
+        return best;
+    }
+
+    private static String extractLargestValidJsonObject(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+
+        int depth = 0;
+        int objectStart = -1;
+        boolean inString = false;
+        boolean escaped = false;
+        String best = "";
+
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                    continue;
+                }
+                if (ch == '\\') {
+                    escaped = true;
+                    continue;
+                }
+                if (ch == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+
+            if (ch == '"') {
+                inString = true;
+                continue;
+            }
+
+            if (ch == '{') {
+                if (depth == 0) {
+                    objectStart = i;
+                }
+                depth++;
+                continue;
+            }
+
+            if (ch == '}') {
+                if (depth <= 0) {
+                    continue;
+                }
+                depth--;
+                if (depth == 0 && objectStart >= 0) {
+                    String candidate = text.substring(objectStart, i + 1);
+                    if (isValidJsonObject(candidate) && candidate.length() > best.length()) {
+                        best = candidate;
+                    }
+                    objectStart = -1;
                 }
             }
         }
 
-        int start = trimmed.indexOf('{');
-        int end = trimmed.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            return "";
+        return best;
+    }
+
+    private static boolean isValidJsonObject(String candidate) {
+        try {
+            JsonElement parsed = JsonParser.parseString(candidate);
+            return parsed != null && parsed.isJsonObject();
+        } catch (Exception ignored) {
+            return false;
         }
-        return trimmed.substring(start, end + 1);
     }
 
     private static List<DslNode> parseNodes(JsonObject root, List<String> errors) {
