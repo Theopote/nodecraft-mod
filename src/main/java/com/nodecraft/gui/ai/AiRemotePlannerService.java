@@ -22,10 +22,10 @@ import java.util.concurrent.Executors;
  */
 public class AiRemotePlannerService {
 
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool();
     private static final int MAX_ATTEMPTS = 3;
     private static final String OPENAI_MAX_TOKENS_FIELD = "max_tokens";
     private static final String OPENAI_MAX_COMPLETION_TOKENS_FIELD = "max_completion_tokens";
+    private final ExecutorService executor = Executors.newCachedThreadPool();
 
     public record PlannerConfig(
             String apiBaseUrl,
@@ -71,7 +71,16 @@ public class AiRemotePlannerService {
     }
 
     public CompletableFuture<RemotePlanResult> requestPlanAsync(PlannerConfig config, List<ConversationMessage> conversation) {
-        return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation), EXECUTOR);
+        if (executor.isShutdown()) {
+            return CompletableFuture.completedFuture(
+                    RemotePlanResult.fail("Remote planner is shut down.", -1, "", "canceled", 1)
+            );
+        }
+        return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation), executor);
+    }
+
+    public void shutdown() {
+        executor.shutdownNow();
     }
 
     private RemotePlanResult requestPlan(PlannerConfig config, List<ConversationMessage> conversation) {

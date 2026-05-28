@@ -92,6 +92,7 @@ public class AiAssistantComponent implements EditorComponent {
         pendingPlan = null;
         selectedNodeId = null;
         cancelRemotePlannerRequest();
+        remotePlannerService.shutdown();
         clearRemoteDebugState();
         sessionRestoreInProgress = false;
         sessionSaveDirty = false;
