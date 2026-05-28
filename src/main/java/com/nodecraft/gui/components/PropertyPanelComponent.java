@@ -566,22 +566,7 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
-    private static final PropertyRenderer PRISM_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            PrismGeometryData prism = (PrismGeometryData) prop.getter.invoke(node);
-            if (prism == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Base Vertices: " + prism.getBaseVertices().size());
-            ImGui.text("Side Count: " + prism.getSideCount());
-            ImGui.text(String.format("Height: %.2f", prism.getHeight()));
-            ImGui.text("Extrusion: " + formatVector3d(prism.getExtrusionVector()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer PRISM_GEOMETRY_RENDERER = PrismGeometryPropertyRenderer.RENDERER;
 
     private static final PropertyRenderer SQUARE_PYRAMID_RENDERER = (panel, node, prop, isDisabled) -> {
         try {
@@ -618,140 +603,21 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
-    private static final PropertyRenderer CONE_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            ConeGeometryData cone = (ConeGeometryData) prop.getter.invoke(node);
-            if (cone == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer CONE_GEOMETRY_RENDERER = ConeGeometryPropertyRenderer.RENDERER;
 
-            ImGui.text("Base Center: " + formatVector3d(cone.getBaseCenter()));
-            ImGui.text("Apex: " + formatVector3d(cone.getApex()));
-            ImGui.text("Axis: " + formatVector3d(cone.getAxisVector()));
-            ImGui.text(String.format("Height: %.2f", cone.getHeight()));
-            ImGui.text(String.format("Base Radius: %.2f", cone.getBaseRadius()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer FRUSTUM_CONE_GEOMETRY_RENDERER = FrustumConeGeometryPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer FRUSTUM_CONE_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            FrustumConeGeometryData frustum = (FrustumConeGeometryData) prop.getter.invoke(node);
-            if (frustum == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer CYLINDER_GEOMETRY_RENDERER = CylinderGeometryPropertyRenderer.RENDERER;
 
-            ImGui.text("Base Center: " + formatVector3d(frustum.getBaseCenter()));
-            ImGui.text("Top Center: " + formatVector3d(frustum.getTopCenter()));
-            ImGui.text("Axis: " + formatVector3d(frustum.getAxisVector()));
-            ImGui.text(String.format("Height: %.2f", frustum.getHeight()));
-            ImGui.text(String.format("Base Radius: %.2f", frustum.getBaseRadius()));
-            ImGui.text(String.format("Top Radius: %.2f", frustum.getTopRadius()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer HEMISPHERE_GEOMETRY_RENDERER = HemisphereGeometryPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer CYLINDER_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            CylinderGeometryData cylinder = (CylinderGeometryData) prop.getter.invoke(node);
-            if (cylinder == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer ICOSAHEDRON_GEOMETRY_RENDERER = IcosahedronGeometryPropertyRenderer.RENDERER;
 
-            Vector3d axis = cylinder.getEnd().sub(cylinder.getStart(), new Vector3d());
-            ImGui.text("Start: " + formatVector3d(cylinder.getStart()));
-            ImGui.text("End: " + formatVector3d(cylinder.getEnd()));
-            ImGui.text("Axis: " + formatVector3d(axis));
-            ImGui.text(String.format("Length: %.2f", axis.length()));
-            ImGui.text(String.format("Radius: %.2f", cylinder.getRadius()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer DODECAHEDRON_GEOMETRY_RENDERER = DodecahedronGeometryPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer HEMISPHERE_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            HemisphereGeometryData hemisphere = (HemisphereGeometryData) prop.getter.invoke(node);
-            if (hemisphere == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer ELLIPSOID_GEOMETRY_RENDERER = EllipsoidGeometryPropertyRenderer.RENDERER;
 
-            ImGui.text("Center: " + formatVector3d(hemisphere.getCenter()));
-            ImGui.text("Axis: " + formatVector3d(hemisphere.getAxis()));
-            ImGui.text(String.format("Radius: %.2f", hemisphere.getRadius()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer ICOSAHEDRON_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            IcosahedronGeometryData icosa = (IcosahedronGeometryData) prop.getter.invoke(node);
-            if (icosa == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-            ImGui.text("Center: " + formatVector3d(icosa.getCenter()));
-            ImGui.text(String.format("Edge Length: %.2f", icosa.getEdgeLength()));
-            ImGui.text(String.format("Circumradius: %.2f", icosa.getCircumradius()));
-            ImGui.text("Vertices: " + icosa.getVertices().size());
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer DODECAHEDRON_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            DodecahedronGeometryData dod = (DodecahedronGeometryData) prop.getter.invoke(node);
-            if (dod == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-            ImGui.text("Center: " + formatVector3d(dod.getCenter()));
-            ImGui.text(String.format("Edge Length: %.2f", dod.getEdgeLength()));
-            ImGui.text(String.format("Circumradius: %.2f", dod.getCircumradius()));
-            ImGui.text("Vertices: " + dod.getVertices().size());
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer ELLIPSOID_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            EllipsoidGeometryData ellipsoid = (EllipsoidGeometryData) prop.getter.invoke(node);
-            if (ellipsoid == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Center: " + formatVector3d(ellipsoid.getCenter()));
-            ImGui.text("Radii: " + formatVector3d(ellipsoid.getRadii()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer OCTAHEDRON_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            OctahedronGeometryData octahedron = (OctahedronGeometryData) prop.getter.invoke(node);
-            if (octahedron == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Center: " + formatVector3d(octahedron.getCenter()));
-            ImGui.text(String.format("Vertex Radius: %.2f", octahedron.getVertexRadius()));
-            ImGui.text("Vertices: " + octahedron.getVertices().size());
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer OCTAHEDRON_RENDERER = OctahedronGeometryPropertyRenderer.RENDERER;
 
     private static final PropertyRenderer TORUS_GEOMETRY_RENDERER = (panel, node, prop, isDisabled) -> {
         try {
