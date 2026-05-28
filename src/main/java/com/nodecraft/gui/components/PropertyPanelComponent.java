@@ -53,6 +53,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
@@ -139,7 +140,7 @@ public class PropertyPanelComponent implements EditorComponent {
         );
     }
 
-    private void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
+    void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
         prop.setter.invoke(node, value);
         if (node instanceof BaseCustomUINode customUINode) {
             customUINode.markDirty();
@@ -486,107 +487,7 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
-    // 为Vec3添加渲染器
-    private static final PropertyRenderer VEC3_RENDERER = (panel, node, prop, isDisabled) -> {
-        if (isDisabled) {
-            ImGui.textDisabled("(已禁用)");
-            if (ImGui.isItemHovered()) {
-                ImGui.setTooltip("属性 '" + prop.displayName + "' 因频繁错误已被禁用");
-            }
-            return;
-        }
-
-        try {
-            Vec3 vec = (Vec3) prop.getter.invoke(node);
-            if (vec == null) {
-                ImGui.textDisabled("(空)");
-                return;
-            }
-
-            boolean isReadOnly = prop.setter == null;
-
-            // 使用三个单独的浮点数组作为临时值，并与ImString同步
-            String tempXKey = panel.getTempValueKey(node, prop.name + "_x");
-            String tempYKey = panel.getTempValueKey(node, prop.name + "_y");
-            String tempZKey = panel.getTempValueKey(node, prop.name + "_z");
-
-            ImString xStr = (ImString) panel.tempValues.computeIfAbsent(tempXKey, k -> new ImString(String.format("%.3f", vec.getX()), 32));
-            ImString yStr = (ImString) panel.tempValues.computeIfAbsent(tempYKey, k -> new ImString(String.format("%.3f", vec.getY()), 32));
-            ImString zStr = (ImString) panel.tempValues.computeIfAbsent(tempZKey, k -> new ImString(String.format("%.3f", vec.getZ()), 32));
-
-            // 同步值，但仅当未被编辑时
-            if (!panel.isPropertyBeingEdited(node, prop.name + "_x")) xStr.set(String.format("%.3f", vec.getX()));
-            if (!panel.isPropertyBeingEdited(node, prop.name + "_y")) yStr.set(String.format("%.3f", vec.getY()));
-            if (!panel.isPropertyBeingEdited(node, prop.name + "_z")) zStr.set(String.format("%.3f", vec.getZ()));
-
-            boolean changed = false;
-            if (isReadOnly) ImGui.beginDisabled();
-
-            float width = ImGui.getContentRegionAvailX() / 3 - ImGui.getStyle().getItemSpacingX(); // 确保留有间距
-
-            ImGui.pushID("vec3_" + prop.name); // 为整个Vec3控件提供一个独立的ID空间
-
-            // X
-            ImGui.pushItemWidth(width);
-            if (ImGui.inputText("X", xStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
-                changed = true;
-            }
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_x");
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_x");
-            ImGui.popItemWidth();
-
-            ImGui.sameLine();
-            // Y
-            ImGui.pushItemWidth(width);
-            if (ImGui.inputText("Y", yStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
-                changed = true;
-            }
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_y");
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_y");
-            ImGui.popItemWidth();
-
-            ImGui.sameLine();
-            // Z
-            ImGui.pushItemWidth(width);
-            if (ImGui.inputText("Z", zStr, ImGuiInputTextFlags.CharsDecimal | ImGuiInputTextFlags.EnterReturnsTrue)) {
-                changed = true;
-            }
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name + "_z");
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name + "_z");
-            ImGui.popItemWidth();
-
-            ImGui.popID(); // 结束Vec3控件的ID空间
-
-            // 如果值改变且存在setter，应用更改
-            if (changed && !isReadOnly) {
-                try {
-                    Vec3 newVec = new Vec3(Double.parseDouble(xStr.get()),
-                            Double.parseDouble(yStr.get()),
-                            Double.parseDouble(zStr.get()));
-                    // 只有当实际值发生变化时才调用setter
-                    if (!newVec.equals(vec)) {
-                        panel.applyPropertyValue(node, prop, newVec);
-                        NodeCraft.LOGGER.debug("自动保存属性 '{}' 到节点 {}: {}", prop.name, node.getId(), newVec);
-                    }
-                } catch (NumberFormatException e) {
-                    ImGui.textColored(1.0f, 0.3f, 0.3f, 1.0f, "无效坐标");
-                }
-            }
-
-            if (isReadOnly) ImGui.endDisabled();
-
-            // 显示向量长度作为工具提示
-            if (ImGui.isItemHovered()) {
-                double length = vec.length();
-                ImGui.setTooltip(String.format("长度: %.2f", length));
-            }
-
-            // 重置该属性的错误计数
-            panel.errorCounts.remove(prop.name);
-        } catch (Throwable e) { // 统一捕获 Throwable
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer VEC3_RENDERER = Vec3PropertyRenderer.RENDERER;
 
     private static final PropertyRenderer PLANE_RENDERER = (panel, node, prop, isDisabled) -> {
         if (isDisabled) {
@@ -1046,189 +947,13 @@ public class PropertyPanelComponent implements EditorComponent {
         }
     };
 
-    private static final PropertyRenderer VECTOR3D_RENDERER = (panel, node, prop, isDisabled) -> {
-        if (isDisabled) {
-            ImGui.textDisabled("(宸茬鐢?");
-            return;
-        }
+    private static final PropertyRenderer VECTOR3D_RENDERER = Vector3dPropertyRenderer.RENDERER;
 
-        try {
-            Vector3d vec = (Vector3d) prop.getter.invoke(node);
-            if (vec == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer BLOCK_POS_RENDERER = BlockPosPropertyRenderer.RENDERER;
 
-            boolean isReadOnly = prop.setter == null;
-            String tempKey = panel.getTempValueKey(node, prop.name + "_vector3d");
-            float[] values = (float[]) panel.tempValues.computeIfAbsent(
-                    tempKey, k -> new float[]{(float) vec.x, (float) vec.y, (float) vec.z});
+    private static final PropertyRenderer COLOR_RENDERER = ColorPropertyRenderer.COLOR_DATA_RENDERER;
 
-            if (!panel.isPropertyBeingEdited(node, prop.name)) {
-                values[0] = (float) vec.x;
-                values[1] = (float) vec.y;
-                values[2] = (float) vec.z;
-            }
-
-            if (isReadOnly) ImGui.beginDisabled();
-            boolean changed = false;
-            float[] xValue = {values[0]};
-            float[] yValue = {values[1]};
-            float[] zValue = {values[2]};
-            changed |= ImGui.dragFloat("X##" + prop.name, xValue, 0.01f);
-            values[0] = xValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            changed |= ImGui.dragFloat("Y##" + prop.name, yValue, 0.01f);
-            values[1] = yValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            changed |= ImGui.dragFloat("Z##" + prop.name, zValue, 0.01f);
-            values[2] = zValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
-            if (isReadOnly) ImGui.endDisabled();
-
-            if (!isReadOnly && changed) {
-                panel.applyPropertyValue(node, prop, new Vector3d(values[0], values[1], values[2]));
-            }
-
-            panel.errorCounts.remove(prop.name);
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer BLOCK_POS_RENDERER = (panel, node, prop, isDisabled) -> {
-        if (isDisabled) {
-            ImGui.textDisabled("(宸茬鐢?");
-            return;
-        }
-
-        try {
-            BlockPos pos = (BlockPos) prop.getter.invoke(node);
-            if (pos == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            boolean isReadOnly = prop.setter == null;
-            String tempKey = panel.getTempValueKey(node, prop.name + "_blockpos");
-            int[] values = (int[]) panel.tempValues.computeIfAbsent(
-                    tempKey, k -> new int[]{pos.getX(), pos.getY(), pos.getZ()});
-
-            if (!panel.isPropertyBeingEdited(node, prop.name)) {
-                values[0] = pos.getX();
-                values[1] = pos.getY();
-                values[2] = pos.getZ();
-            }
-
-            if (isReadOnly) ImGui.beginDisabled();
-            boolean changed = false;
-            int[] xValue = {values[0]};
-            int[] yValue = {values[1]};
-            int[] zValue = {values[2]};
-            changed |= ImGui.dragInt("X##" + prop.name, xValue, 1);
-            values[0] = xValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            changed |= ImGui.dragInt("Y##" + prop.name, yValue, 1);
-            values[1] = yValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            changed |= ImGui.dragInt("Z##" + prop.name, zValue, 1);
-            values[2] = zValue[0];
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
-            if (isReadOnly) ImGui.endDisabled();
-
-            if (!isReadOnly && changed) {
-                panel.applyPropertyValue(node, prop, new BlockPos(values[0], values[1], values[2]));
-            }
-
-            panel.errorCounts.remove(prop.name);
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer COLOR_RENDERER = (panel, node, prop, isDisabled) -> {
-        if (isDisabled) {
-            ImGui.textDisabled("(宸茬鐢?");
-            return;
-        }
-
-        try {
-            ColorData color = (ColorData) prop.getter.invoke(node);
-            if (color == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            boolean isReadOnly = prop.setter == null;
-            String tempKey = panel.getTempValueKey(node, prop.name + "_color");
-            float[] values = (float[]) panel.tempValues.computeIfAbsent(
-                    tempKey, k -> new float[]{color.r(), color.g(), color.b(), color.a()});
-
-            if (!panel.isPropertyBeingEdited(node, prop.name)) {
-                values[0] = color.r();
-                values[1] = color.g();
-                values[2] = color.b();
-                values[3] = color.a();
-            }
-
-            if (isReadOnly) ImGui.beginDisabled();
-            boolean changed = ImGui.colorEdit4("##" + prop.name, values);
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
-            if (isReadOnly) ImGui.endDisabled();
-
-            if (!isReadOnly && changed) {
-                panel.applyPropertyValue(node, prop, new ColorData(values[0], values[1], values[2], values[3]));
-            }
-
-            panel.errorCounts.remove(prop.name);
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer NODE_COLOR_RENDERER = (panel, node, prop, isDisabled) -> {
-        if (isDisabled) {
-            ImGui.textDisabled("(宸茬鐢?");
-            return;
-        }
-
-        try {
-            Color color = (Color) prop.getter.invoke(node);
-            if (color == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            boolean isReadOnly = prop.setter == null;
-            String tempKey = panel.getTempValueKey(node, prop.name + "_node_color");
-            float[] values = (float[]) panel.tempValues.computeIfAbsent(
-                    tempKey, k -> new float[]{color.getRed(), color.getGreen(), color.getBlue(), color.getAlpha()});
-
-            if (!panel.isPropertyBeingEdited(node, prop.name)) {
-                values[0] = color.getRed();
-                values[1] = color.getGreen();
-                values[2] = color.getBlue();
-                values[3] = color.getAlpha();
-            }
-
-            if (isReadOnly) ImGui.beginDisabled();
-            boolean changed = ImGui.colorEdit4("##" + prop.name, values);
-            if (ImGui.isItemActive()) panel.markPropertyBeingEdited(node, prop.name);
-            if (ImGui.isItemDeactivated()) panel.markPropertyEditingFinished(node, prop.name);
-            if (isReadOnly) ImGui.endDisabled();
-
-            if (!isReadOnly && changed) {
-                panel.applyPropertyValue(node, prop, new Color(values[0], values[1], values[2], values[3]));
-            }
-
-            panel.errorCounts.remove(prop.name);
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer NODE_COLOR_RENDERER = ColorPropertyRenderer.NODE_COLOR_RENDERER;
 
     private static final PropertyRenderer POINT_RENDERER = (panel, node, prop, isDisabled) -> {
         try {
@@ -1414,7 +1139,7 @@ public class PropertyPanelComponent implements EditorComponent {
         return String.format("(%.2f, %.2f, %.2f)", vec.x, vec.y, vec.z);
     }
 
-    private void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
+    void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
         // 根据错误类型选择日志级别
         boolean isSevere = false;
         String errorType;
@@ -1794,7 +1519,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param node 节点
      * @param propName 属性名
      */
-    private void markPropertyBeingEdited(INode node, String propName) {
+    void markPropertyBeingEdited(INode node, String propName) {
         editorState.markPropertyBeingEdited(node, propName);
     }
 
@@ -1803,7 +1528,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param node 节点
      * @param propName 属性名
      */
-    private void markPropertyEditingFinished(INode node, String propName) {
+    void markPropertyEditingFinished(INode node, String propName) {
         editorState.markPropertyEditingFinished(node, propName);
         String key = getTempValueKey(node, propName);
         NodeCraft.LOGGER.trace("属性 {} 标记为编辑完成。", key);
@@ -1815,7 +1540,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param propName 属性名
      * @return 是否正在被编辑
      */
-    private boolean isPropertyBeingEdited(INode node, String propName) {
+    boolean isPropertyBeingEdited(INode node, String propName) {
         return editorState.isPropertyBeingEdited(node, propName);
     }
 
@@ -1828,8 +1553,17 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     // 修改为使用节点ID和属性名作为键
-    private String getTempValueKey(INode node, String propName) {
+    String getTempValueKey(INode node, String propName) {
         return editorState.getTempValueKey(node, propName);
+    }
+
+    @SuppressWarnings("unchecked")
+    <T> T getOrCreateTempValue(String key, Supplier<T> supplier) {
+        return (T) tempValues.computeIfAbsent(key, k -> supplier.get());
+    }
+
+    void clearPropertyError(String propName) {
+        errorCounts.remove(propName);
     }
 
     private boolean shouldDisplayProperty(INode node, PropertyDescriptor prop) {

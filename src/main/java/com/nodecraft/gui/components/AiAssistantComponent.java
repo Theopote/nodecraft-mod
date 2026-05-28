@@ -3,7 +3,6 @@ package com.nodecraft.gui.components;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.ai.AiRemotePlannerService;
 import com.nodecraft.gui.ai.AiSessionStateStore;
-import com.nodecraft.gui.ai.AiSettingsStore;
 import org.jspecify.annotations.NonNull;
 
 import java.nio.file.Path;

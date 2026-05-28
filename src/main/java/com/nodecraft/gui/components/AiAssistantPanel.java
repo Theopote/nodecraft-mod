@@ -1048,9 +1048,6 @@ final class AiAssistantPanel {
         if (normalized.contains("groq")) {
             return "Groq";
         }
-        if (normalized.contains("openai")) {
-            return "OpenAI-Compatible";
-        }
         return "OpenAI-Compatible";
     }
 
