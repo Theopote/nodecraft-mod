@@ -37,6 +37,13 @@ import com.nodecraft.nodesystem.util.Color;
 import com.nodecraft.nodesystem.util.Curve;
 import com.nodecraft.gui.components.ai.AiAssistantComponent;
 import com.nodecraft.gui.components.ai.AiAssistantPanel;
+import com.nodecraft.gui.components.property.core.PropertyDescriptor;
+import com.nodecraft.gui.components.property.core.PropertyEditorState;
+import com.nodecraft.gui.components.property.core.PropertyInspector;
+import com.nodecraft.gui.components.property.core.PropertyRenderer;
+import com.nodecraft.gui.components.property.core.PropertyRendererRegistry;
+import com.nodecraft.gui.components.property.core.PropertySectionOrganizer;
+import com.nodecraft.gui.components.property.renderers.*;
 import com.nodecraft.gui.components.port.PortDataRenderer;
 import com.nodecraft.gui.components.port.PortTableRenderer;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
@@ -142,7 +149,7 @@ public class PropertyPanelComponent implements EditorComponent {
         );
     }
 
-    void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
+    public void applyPropertyValue(INode node, PropertyDescriptor prop, Object value) throws Throwable {
         prop.setter.invoke(node, value);
         if (node instanceof BaseCustomUINode customUINode) {
             customUINode.markDirty();
@@ -560,7 +567,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private static final PropertyRenderer LIST_RENDERER = ListPropertyRenderer.RENDERER;
 
     // 改进的异常处理方法
-    void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
+    public void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
         // 根据错误类型选择日志级别
         boolean isSevere = false;
         String errorType;
@@ -916,7 +923,7 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     // 增强List渲染，根据列表项类型使用专门的渲染逻辑
-    void renderList(List<?> list, String label) {
+    public void renderList(List<?> list, String label) {
         portDataRenderer.renderList(list, label);
     }
 
@@ -956,7 +963,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param node 节点
      * @param propName 属性名
      */
-    void markPropertyBeingEdited(INode node, String propName) {
+    public void markPropertyBeingEdited(INode node, String propName) {
         editorState.markPropertyBeingEdited(node, propName);
     }
 
@@ -965,7 +972,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param node 节点
      * @param propName 属性名
      */
-    void markPropertyEditingFinished(INode node, String propName) {
+    public void markPropertyEditingFinished(INode node, String propName) {
         editorState.markPropertyEditingFinished(node, propName);
         String key = getTempValueKey(node, propName);
         NodeCraft.LOGGER.trace("属性 {} 标记为编辑完成。", key);
@@ -977,7 +984,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param propName 属性名
      * @return 是否正在被编辑
      */
-    boolean isPropertyBeingEdited(INode node, String propName) {
+    public boolean isPropertyBeingEdited(INode node, String propName) {
         return editorState.isPropertyBeingEdited(node, propName);
     }
 
@@ -990,16 +997,16 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     // 修改为使用节点ID和属性名作为键
-    String getTempValueKey(INode node, String propName) {
+    public String getTempValueKey(INode node, String propName) {
         return editorState.getTempValueKey(node, propName);
     }
 
     @SuppressWarnings("unchecked")
-    <T> T getOrCreateTempValue(String key, Supplier<T> supplier) {
+    public <T> T getOrCreateTempValue(String key, Supplier<T> supplier) {
         return (T) tempValues.computeIfAbsent(key, k -> supplier.get());
     }
 
-    void clearPropertyError(String propName) {
+    public void clearPropertyError(String propName) {
         errorCounts.remove(propName);
     }
 
@@ -1284,7 +1291,7 @@ public class PropertyPanelComponent implements EditorComponent {
      * @param type 需要获取渲染器的类型
      * @return 对应的渲染器，如果没有注册则返回null
      */
-    PropertyRenderer getRendererForType(Class<?> type) {
+    public PropertyRenderer getRendererForType(Class<?> type) {
         return PropertyRendererRegistry.getRendererForType(type, ENUM_RENDERER);
     }
 
