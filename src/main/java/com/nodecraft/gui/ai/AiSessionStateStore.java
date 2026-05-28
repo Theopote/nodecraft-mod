@@ -5,6 +5,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.nodecraft.core.NodeCraft;
+import org.jspecify.annotations.NonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -83,10 +84,10 @@ public final class AiSessionStateStore {
         }
     }
 
-    public static String save(Path sessionPath, AiSessionStateData data) {
+    public static void save(Path sessionPath, AiSessionStateData data) {
         try {
             if (sessionPath == null || data == null) {
-                return "Failed to save AI session state: invalid path or data.";
+                return;
             }
 
             Path parent = sessionPath.getParent();
@@ -94,29 +95,32 @@ public final class AiSessionStateStore {
                 Files.createDirectories(parent);
             }
 
-            JsonObject root = new JsonObject();
-            JsonArray messageArray = new JsonArray();
-            if (data.chatMessages() != null) {
-                for (ChatMessageData message : data.chatMessages()) {
-                    if (message == null || message.content() == null || message.content().isBlank()) {
-                        continue;
-                    }
-                    JsonObject messageObj = new JsonObject();
-                    messageObj.addProperty("role", message.role() == null ? "assistant" : message.role());
-                    messageObj.addProperty("content", message.content());
-                    messageObj.addProperty("timestampMs", message.timestampMs());
-                    messageArray.add(messageObj);
-                }
-            }
-            root.add("chatMessages", messageArray);
+            JsonObject root = getJsonObject(data);
             root.addProperty("pendingPlanDslJson", data.pendingPlanDslJson() == null ? "" : data.pendingPlanDslJson());
             root.addProperty("savedAtMs", System.currentTimeMillis());
 
             Files.writeString(sessionPath, GSON.toJson(root), StandardCharsets.UTF_8);
-            return "AI session state saved.";
         } catch (Exception e) {
             NodeCraft.LOGGER.error("Failed to save AI session state", e);
-            return "Failed to save AI session state: " + e.getMessage();
         }
+    }
+
+    private static @NonNull JsonObject getJsonObject(AiSessionStateData data) {
+        JsonObject root = new JsonObject();
+        JsonArray messageArray = new JsonArray();
+        if (data.chatMessages() != null) {
+            for (ChatMessageData message : data.chatMessages()) {
+                if (message == null || message.content() == null || message.content().isBlank()) {
+                    continue;
+                }
+                JsonObject messageObj = new JsonObject();
+                messageObj.addProperty("role", message.role() == null ? "assistant" : message.role());
+                messageObj.addProperty("content", message.content());
+                messageObj.addProperty("timestampMs", message.timestampMs());
+                messageArray.add(messageObj);
+            }
+        }
+        root.add("chatMessages", messageArray);
+        return root;
     }
 }
