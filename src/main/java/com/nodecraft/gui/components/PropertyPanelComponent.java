@@ -79,6 +79,32 @@ public class PropertyPanelComponent implements EditorComponent {
             AiSettingsStore.PROVIDER_OPENAI_COMPAT,
             AiSettingsStore.PROVIDER_ANTHROPIC
         };
+            private static final String[] OPENAI_MODELS = {
+                "gpt-4.1-mini",
+                "gpt-4.1",
+                "gpt-4o-mini",
+                "gpt-4o"
+            };
+            private static final String[] ANTHROPIC_MODELS = {
+                "claude-3-5-haiku-latest",
+                "claude-3-7-sonnet-latest",
+                "claude-sonnet-4-0"
+            };
+            private static final String[] DEEPSEEK_MODELS = {
+                "deepseek-chat",
+                "deepseek-reasoner"
+            };
+            private static final String[] QWEN_MODELS = {
+                "qwen-max",
+                "qwen-plus",
+                "qwen-turbo",
+                "qwen3-32b"
+            };
+            private static final String[] GROQ_MODELS = {
+                "llama-3.3-70b-versatile",
+                "llama-3.1-8b-instant",
+                "qwen/qwen3-32b"
+            };
     private static final Gson AI_SETTINGS_GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final Set<String> HIDDEN_NODE_PROPERTIES = Set.of(
             "cachedHeight",
@@ -1728,6 +1754,8 @@ public class PropertyPanelComponent implements EditorComponent {
                         aiApiBaseUrl,
                         aiApiKey,
                         aiModel,
+                        resolveDetectedProviderLabel(aiApiBaseUrl.get()),
+                        resolveSuggestedModels(aiApiBaseUrl.get()),
                     aiProviderStrategyIndex,
                         aiSystemPrompt,
                         aiMaxOutputTokens,
@@ -2502,6 +2530,58 @@ public class PropertyPanelComponent implements EditorComponent {
             }
         }
         return 0;
+    }
+
+    private String resolveDetectedProviderLabel(String baseUrl) {
+        String normalized = normalizeProviderInput(baseUrl);
+        if (normalized.isBlank()) {
+            return "Unknown";
+        }
+
+        if (normalized.contains("deepseek")) {
+            return "DeepSeek";
+        }
+        if (normalized.contains("dashscope") || normalized.contains("aliyuncs") || normalized.contains("qwen")) {
+            return "Qwen (DashScope)";
+        }
+        if (normalized.contains("anthropic")) {
+            return "Anthropic";
+        }
+        if (normalized.contains("groq")) {
+            return "Groq";
+        }
+        if (normalized.contains("openai")) {
+            return "OpenAI-Compatible";
+        }
+        return "OpenAI-Compatible";
+    }
+
+    private String[] resolveSuggestedModels(String baseUrl) {
+        String normalized = normalizeProviderInput(baseUrl);
+        if (normalized.isBlank()) {
+            return OPENAI_MODELS;
+        }
+
+        if (normalized.contains("deepseek")) {
+            return DEEPSEEK_MODELS;
+        }
+        if (normalized.contains("dashscope") || normalized.contains("aliyuncs") || normalized.contains("qwen")) {
+            return QWEN_MODELS;
+        }
+        if (normalized.contains("anthropic")) {
+            return ANTHROPIC_MODELS;
+        }
+        if (normalized.contains("groq")) {
+            return GROQ_MODELS;
+        }
+        return OPENAI_MODELS;
+    }
+
+    private String normalizeProviderInput(String baseUrl) {
+        if (baseUrl == null) {
+            return "";
+        }
+        return baseUrl.trim().toLowerCase(Locale.ROOT);
     }
 
     private AiGraphPlanDslAdapterService.GraphPlan toServiceGraphPlanForHistory(AiGraphPlan plan) {
