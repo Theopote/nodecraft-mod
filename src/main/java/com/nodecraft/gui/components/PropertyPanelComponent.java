@@ -59,7 +59,6 @@ import imgui.type.ImString;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.minecraft.util.math.BlockPos;
@@ -128,22 +127,8 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImBoolean aiPatchApplyMode = new ImBoolean(true);
     private final ImBoolean aiPatchRemoveScopedConnections = new ImBoolean(false);
     private final Path aiSettingsPath;
-    private final Path aiSessionStatePath;
-    private final AiRemotePlannerService aiRemotePlannerService = new AiRemotePlannerService();
-    private CompletableFuture<AiRemotePlannerService.RemotePlanResult> aiRemotePlanFuture = null;
-    private String aiRemotePendingPrompt = "";
     private String aiLastSubmittedPrompt = "";
-    private String aiLastRemoteRawResponse = "";
-    private String aiLastRemoteModelText = "";
-    private String aiLastRemoteRequestSnapshot = "";
-    private String aiLastRemoteErrorCategory = "";
-    private String aiLastRemoteErrorMessage = "";
-    private int aiLastRemoteStatusCode = 0;
-    private int aiLastRemoteAttempts = 0;
     private AiGraphPlan pendingAiPlan = null;
-    private boolean aiSessionRestoreInProgress = false;
-    private boolean aiSessionSaveDirty = false;
-    private long aiSessionSaveDueAtMs = 0L;
     private int lastAiUndoStepCount = 0;
     private String aiPlanStatusMessage = "";
     private String aiSettingsStatusMessage = "";
@@ -185,7 +170,7 @@ public class PropertyPanelComponent implements EditorComponent {
             }
         });
         this.aiSettingsPath = resolveAiSettingsPath();
-        this.aiSessionStatePath = resolveAiSessionStatePath();
+        this.aiAssistantComponent.initializeSessionStore(aiSettingsPath);
         loadAiSettingsFromDisk();
         loadAiSessionStateFromDisk();
     }
@@ -1545,18 +1530,6 @@ public class PropertyPanelComponent implements EditorComponent {
         saveAiSettingsToDisk();
         saveAiSessionStateToDiskNow();
         aiAssistantComponent.cleanup();
-        if (aiRemotePlanFuture != null && !aiRemotePlanFuture.isDone()) {
-            aiRemotePlanFuture.cancel(true);
-        }
-        aiRemotePlanFuture = null;
-        aiRemotePendingPrompt = "";
-        aiLastRemoteRawResponse = "";
-        aiLastRemoteModelText = "";
-        aiLastRemoteRequestSnapshot = "";
-        aiLastRemoteErrorCategory = "";
-        aiLastRemoteErrorMessage = "";
-        aiLastRemoteStatusCode = 0;
-        aiLastRemoteAttempts = 0;
         // 移除未保存更改相关的清理
         selectedNode = null;
         aiChatMessages.clear();
@@ -1775,11 +1748,11 @@ public class PropertyPanelComponent implements EditorComponent {
 
         AiAssistantDebugConsoleRenderer.renderDebugConsolePopup(
                 new AiAssistantDebugConsoleRenderer.State(
-                        aiLastRemoteErrorCategory,
-                        aiLastRemoteAttempts,
-                        aiLastRemoteRawResponse,
-                        aiLastRemoteModelText,
-                        aiLastRemoteRequestSnapshot,
+                aiAssistantComponent.getLastRemoteErrorCategory(),
+                aiAssistantComponent.getLastRemoteAttempts(),
+                aiAssistantComponent.getLastRemoteRawResponse(),
+                aiAssistantComponent.getLastRemoteModelText(),
+                aiAssistantComponent.getLastRemoteRequestSnapshot(),
                         compactDiagnostics,
                         fullDiagnostics
                 ),
@@ -1788,10 +1761,10 @@ public class PropertyPanelComponent implements EditorComponent {
                     public void renderFailureSummarySection() {
                         AiAssistantFailurePanelRenderer.renderFailureSummaryCard(
                                 new AiAssistantFailurePanelRenderer.State(
-                                        aiLastRemoteErrorCategory,
-                                        aiLastRemoteStatusCode,
-                                        aiLastRemoteAttempts,
-                                        aiLastRemoteErrorMessage,
+                                    aiAssistantComponent.getLastRemoteErrorCategory(),
+                                    aiAssistantComponent.getLastRemoteStatusCode(),
+                                    aiAssistantComponent.getLastRemoteAttempts(),
+                                    aiAssistantComponent.getLastRemoteErrorMessage(),
                                         aiLastSubmittedPrompt != null && !aiLastSubmittedPrompt.isBlank(),
                                         isRemotePlannerBusy(),
                                         aiEnableRemotePlanner.get()
@@ -1832,19 +1805,19 @@ public class PropertyPanelComponent implements EditorComponent {
 
                     @Override
                     public void copyRawResponse() {
-                        copyToClipboard(aiLastRemoteRawResponse == null ? "" : aiLastRemoteRawResponse);
+                        copyToClipboard(aiAssistantComponent.getLastRemoteRawResponse());
                         aiPlanStatusMessage = "Raw response copied to clipboard.";
                     }
 
                     @Override
                     public void copyModelText() {
-                        copyToClipboard(aiLastRemoteModelText == null ? "" : aiLastRemoteModelText);
+                        copyToClipboard(aiAssistantComponent.getLastRemoteModelText());
                         aiPlanStatusMessage = "Model text copied to clipboard.";
                     }
 
                     @Override
                     public void copyRequestSnapshot() {
-                        copyToClipboard(aiLastRemoteRequestSnapshot == null ? "" : aiLastRemoteRequestSnapshot);
+                        copyToClipboard(aiAssistantComponent.getLastRemoteRequestSnapshot());
                         aiPlanStatusMessage = "Request snapshot copied to clipboard.";
                     }
 
@@ -1864,10 +1837,10 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private boolean hasAiDebugData() {
-        return (aiLastRemoteRawResponse != null && !aiLastRemoteRawResponse.isBlank())
-                || (aiLastRemoteModelText != null && !aiLastRemoteModelText.isBlank())
-                || (aiLastRemoteRequestSnapshot != null && !aiLastRemoteRequestSnapshot.isBlank())
-                || (aiLastRemoteErrorMessage != null && !aiLastRemoteErrorMessage.isBlank());
+        return (aiAssistantComponent.getLastRemoteRawResponse() != null && !aiAssistantComponent.getLastRemoteRawResponse().isBlank())
+            || (aiAssistantComponent.getLastRemoteModelText() != null && !aiAssistantComponent.getLastRemoteModelText().isBlank())
+            || (aiAssistantComponent.getLastRemoteRequestSnapshot() != null && !aiAssistantComponent.getLastRemoteRequestSnapshot().isBlank())
+            || (aiAssistantComponent.getLastRemoteErrorMessage() != null && !aiAssistantComponent.getLastRemoteErrorMessage().isBlank());
     }
 
     private void increaseAiTimeoutSeconds(int deltaSeconds) {
@@ -1881,17 +1854,17 @@ public class PropertyPanelComponent implements EditorComponent {
     private String buildAiDiagnosticsExportText(boolean includeFullPayloads) {
 
         return "[AI Debug Diagnostics]\n" +
-                "category: " + nullToEmpty(aiLastRemoteErrorCategory) + "\n" +
-                "statusCode: " + aiLastRemoteStatusCode + "\n" +
-                "attempts: " + aiLastRemoteAttempts + "\n" +
-                "errorMessage: " + nullToEmpty(aiLastRemoteErrorMessage) + "\n" +
+                "category: " + nullToEmpty(aiAssistantComponent.getLastRemoteErrorCategory()) + "\n" +
+                "statusCode: " + aiAssistantComponent.getLastRemoteStatusCode() + "\n" +
+                "attempts: " + aiAssistantComponent.getLastRemoteAttempts() + "\n" +
+                "errorMessage: " + nullToEmpty(aiAssistantComponent.getLastRemoteErrorMessage()) + "\n" +
                 "statusMessage: " + nullToEmpty(aiPlanStatusMessage) + "\n\n" +
                 "[Request Snapshot]\n" +
-                formatDiagnosticsSection(aiLastRemoteRequestSnapshot, includeFullPayloads) + "\n" +
+                formatDiagnosticsSection(aiAssistantComponent.getLastRemoteRequestSnapshot(), includeFullPayloads) + "\n" +
                 "[Model Text]\n" +
-                formatDiagnosticsSection(aiLastRemoteModelText, includeFullPayloads) + "\n" +
+                formatDiagnosticsSection(aiAssistantComponent.getLastRemoteModelText(), includeFullPayloads) + "\n" +
                 "[Raw Response]\n" +
-                formatDiagnosticsSection(aiLastRemoteRawResponse, includeFullPayloads) + "\n";
+                formatDiagnosticsSection(aiAssistantComponent.getLastRemoteRawResponse(), includeFullPayloads) + "\n";
     }
 
     private String formatDiagnosticsSection(String value, boolean includeFullPayloads) {
@@ -1926,10 +1899,6 @@ public class PropertyPanelComponent implements EditorComponent {
         return AiSettingsStore.resolveSettingsPath();
     }
 
-    private Path resolveAiSessionStatePath() {
-        return AiSessionStateStore.resolveSessionStatePath(aiSettingsPath);
-    }
-
     private void loadAiSettingsFromDisk() {
         AiSettingsStore.LoadResult result = AiSettingsStore.load(aiSettingsPath);
         applyAiSettingsData(result.data());
@@ -1941,105 +1910,40 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private void loadAiSessionStateFromDisk() {
-        AiSessionStateStore.LoadResult result = AiSessionStateStore.load(aiSessionStatePath);
-        applyAiSessionStateData(result.data());
-        if (result.statusMessage() != null && !result.statusMessage().isBlank()) {
-            aiSettingsStatusMessage = result.statusMessage();
+        String status = aiAssistantComponent.loadSessionState(this::deserializePendingPlanFromDsl);
+        pendingAiPlan = aiAssistantComponent.getPendingPlan();
+        if (status != null && !status.isBlank()) {
+            aiSettingsStatusMessage = status;
         }
     }
 
     private void saveAiSessionStateToDisk() {
-        queueAiSessionStateSave();
+        aiAssistantComponent.queueSessionStateSave(AI_SESSION_SAVE_DEBOUNCE_MS);
     }
 
     private void saveAiSessionStateToDiskNow() {
-        if (aiSessionRestoreInProgress) {
-            return;
-        }
-        AiSessionStateStore.AiSessionStateData data = collectAiSessionStateData();
-        AiSessionStateStore.save(aiSessionStatePath, data);
-        aiSessionSaveDirty = false;
-        aiSessionSaveDueAtMs = 0L;
-    }
-
-    private void queueAiSessionStateSave() {
-        if (aiSessionRestoreInProgress) {
-            return;
-        }
-        aiSessionSaveDirty = true;
-        aiSessionSaveDueAtMs = System.currentTimeMillis() + AI_SESSION_SAVE_DEBOUNCE_MS;
+        aiAssistantComponent.saveSessionStateNow(this::serializePendingPlanToDsl);
     }
 
     private void flushAiSessionStateIfDue() {
-        if (!aiSessionSaveDirty) {
-            return;
-        }
-        if (System.currentTimeMillis() < aiSessionSaveDueAtMs) {
-            return;
-        }
-        saveAiSessionStateToDiskNow();
+        aiAssistantComponent.flushSessionStateIfDue(AI_SESSION_SAVE_DEBOUNCE_MS, this::serializePendingPlanToDsl);
     }
 
-    private AiSessionStateStore.AiSessionStateData collectAiSessionStateData() {
-        List<AiSessionStateStore.ChatMessageData> messages = new ArrayList<>(aiChatMessages.size());
-        for (AiChatMessage message : aiChatMessages) {
-            if (message == null || message.content() == null || message.content().isBlank()) {
-                continue;
-            }
-            messages.add(new AiSessionStateStore.ChatMessageData(
-                    message.role() == null ? "assistant" : message.role(),
-                    message.content(),
-                    message.timestampMs()
-            ));
+    private String serializePendingPlanToDsl(AiGraphPlan plan) {
+        if (plan == null) {
+            return "";
         }
-
-        String pendingPlanDslJson = "";
-        if (pendingAiPlan != null) {
-            pendingPlanDslJson = AiPlanDslWorkflowService.toDslJson(toServiceGraphPlanForHistory(pendingAiPlan));
-        }
-
-        return new AiSessionStateStore.AiSessionStateData(messages, pendingPlanDslJson);
+        return AiPlanDslWorkflowService.toDslJson(toServiceGraphPlanForHistory(plan));
     }
 
-    private void applyAiSessionStateData(AiSessionStateStore.AiSessionStateData data) {
-        aiSessionRestoreInProgress = true;
-        try {
-            aiChatMessages.clear();
-            pendingAiPlan = null;
-            aiAssistantComponent.setPendingPlan(null);
-
-            if (data == null) {
-                return;
-            }
-
-            List<AiSessionStateStore.ChatMessageData> messages = data.chatMessages();
-            if (messages != null) {
-                for (AiSessionStateStore.ChatMessageData message : messages) {
-                    if (message == null || message.content() == null || message.content().isBlank()) {
-                        continue;
-                    }
-                    aiChatMessages.add(new AiChatMessage(
-                            message.role() == null ? "assistant" : message.role(),
-                            message.content(),
-                            message.timestampMs()
-                    ));
-                }
-            }
-
-            String pendingPlanDslJson = data.pendingPlanDslJson();
-            if (pendingPlanDslJson != null && !pendingPlanDslJson.isBlank()) {
-                AiGraphDslSupport.ParseValidationResult parsed =
-                        AiGraphDslSupport.parseAndValidate(pendingPlanDslJson, NodeRegistry.getInstance());
-                if (parsed.isSuccess() && parsed.graph() != null) {
-                    pendingAiPlan = fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph()));
-                    aiAssistantComponent.setPendingPlan(pendingAiPlan);
-                } else {
-                    aiPlanStatusMessage = "Stored pending plan skipped due to validation failure.";
-                }
-            }
-        } finally {
-            aiSessionRestoreInProgress = false;
+    private AiGraphPlan deserializePendingPlanFromDsl(String pendingPlanDslJson) {
+        AiGraphDslSupport.ParseValidationResult parsed =
+                AiGraphDslSupport.parseAndValidate(pendingPlanDslJson, NodeRegistry.getInstance());
+        if (!parsed.isSuccess() || parsed.graph() == null) {
+            aiPlanStatusMessage = "Stored pending plan skipped due to validation failure.";
+            return null;
         }
+        return fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph()));
     }
 
     private void addAiChatMessage(String role, String content) {
@@ -2326,16 +2230,9 @@ public class PropertyPanelComponent implements EditorComponent {
                 aiRequestTimeoutSeconds.get()
         );
 
-        aiRemotePendingPrompt = userPrompt;
-        aiLastRemoteRawResponse = "";
-        aiLastRemoteModelText = "";
-        aiLastRemoteRequestSnapshot = buildRemoteRequestSnapshot(config, userPrompt, userPromptPayload, relevantSchemas.size());
-        aiLastRemoteErrorCategory = "";
-        aiLastRemoteErrorMessage = "";
-        aiLastRemoteStatusCode = 0;
-        aiLastRemoteAttempts = 0;
+        String requestSnapshot = buildRemoteRequestSnapshot(config, userPrompt, userPromptPayload, relevantSchemas.size());
         aiPlanStatusMessage = "Remote planner request submitted...";
-        aiRemotePlanFuture = aiRemotePlannerService.requestPlanAsync(config, conversationHistory);
+        aiAssistantComponent.submitRemotePlannerRequest(userPrompt, config, conversationHistory, requestSnapshot);
     }
 
     private List<AiRemotePlannerService.ConversationMessage> buildConversationHistory(
@@ -2409,31 +2306,26 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private void pollRemotePlannerResultIfReady() {
-        if (aiRemotePlanFuture == null || !aiRemotePlanFuture.isDone()) {
+        AiAssistantComponent.RemotePollResult pollResult = aiAssistantComponent.pollRemotePlannerResultIfReady();
+        if (pollResult == null) {
             return;
         }
 
-        AiRemotePlannerService.RemotePlanResult result;
-        try {
-            result = aiRemotePlanFuture.join();
-        } catch (Exception e) {
-            String error = "Remote planner failed: " + e.getMessage();
+        if (pollResult.hasException()) {
+            String error = "Remote planner failed: " + pollResult.exceptionMessage();
             aiPlanStatusMessage = error;
             addAiChatMessage("assistant", error);
-            aiRemotePlanFuture = null;
-            aiRemotePendingPrompt = "";
             return;
         }
 
-        aiRemotePlanFuture = null;
-        String prompt = aiRemotePendingPrompt;
-        aiRemotePendingPrompt = "";
-        aiLastRemoteAttempts = result.attempts();
-        aiLastRemoteErrorCategory = result.errorCategory();
-        aiLastRemoteErrorMessage = result.errorMessage() == null ? "" : result.errorMessage();
-        aiLastRemoteStatusCode = result.statusCode();
-        aiLastRemoteRawResponse = result.rawResponse() == null ? "" : result.rawResponse();
-        aiLastRemoteModelText = result.modelContent() == null ? "" : result.modelContent();
+        String prompt = pollResult.prompt();
+        AiRemotePlannerService.RemotePlanResult result = pollResult.result();
+        if (result == null) {
+            String error = "Remote planner failed: unknown error";
+            aiPlanStatusMessage = error;
+            addAiChatMessage("assistant", error);
+            return;
+        }
 
         if (!result.success()) {
             String error = formatRemoteErrorMessage(result);
@@ -2506,15 +2398,11 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     private boolean isRemotePlannerBusy() {
-        return aiRemotePlanFuture != null && !aiRemotePlanFuture.isDone();
+        return aiAssistantComponent.isRemotePlannerBusy();
     }
 
     private void cancelRemotePlannerRequest() {
-        if (aiRemotePlanFuture != null && !aiRemotePlanFuture.isDone()) {
-            aiRemotePlanFuture.cancel(true);
-        }
-        aiRemotePlanFuture = null;
-        aiRemotePendingPrompt = "";
+        aiAssistantComponent.cancelRemotePlannerRequest();
         aiPlanStatusMessage = "Remote planner request canceled.";
         addAiChatMessage("assistant", aiPlanStatusMessage);
     }
