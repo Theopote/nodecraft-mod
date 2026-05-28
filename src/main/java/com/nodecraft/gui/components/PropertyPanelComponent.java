@@ -1743,22 +1743,21 @@ public class PropertyPanelComponent implements EditorComponent {
 
         if (isRemotePlannerBusy()) ImGui.beginDisabled();
 
-        // Calculate dynamic height: base height for 1 line, expanding to 4 lines max.
-        String currentInput = aiPromptInput.get();
-        int lineCount = (currentInput == null || currentInput.isEmpty()) ? 1 : 
-                        (int) (currentInput.chars().filter(ch -> ch == '\n').count() + 1);
-        float inputHeight = Math.min(4, Math.max(1, lineCount)) * ImGui.getFrameHeight();
+        // Force line count calculation for dynamic height adjustment
+        String rawInput = aiPromptInput.get();
+        long newlines = (rawInput == null) ? 0 : rawInput.chars().filter(c -> c == '\n').count();
+        int activeLineCount = Math.min(4, (int) newlines + 1);
+        float lineH = ImGui.getFrameHeight(); 
+        float dynamicHeight = activeLineCount * lineH;
 
-        ImGui.pushItemWidth(-85.0f);
-        // Multiline with smart return: Enter to submit, Ctrl+Enter or Shift+Enter for new line
-        // Note: ImGuiInputTextFlags.EnterReturnsTrue paired with Multiline usually requires custom handling
-        // for better UX, but here we prioritize the 'expansion' feel.
-        boolean submitted = ImGui.inputTextMultiline("##ai_prompt", aiPromptInput, ImGui.getContentRegionAvailX() - 85.0f, inputHeight, 
+        ImGui.pushItemWidth(ImGui.getContentRegionAvailX() - 85.0f);
+        // Use a clearer ID and ensure height is passed correctly every frame
+        boolean submitted = ImGui.inputTextMultiline("##ai_input_multiline", aiPromptInput, ImGui.getContentRegionAvailX() - 85.0f, dynamicHeight, 
                 ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.CtrlEnterForNewLine);
         ImGui.popItemWidth();
 
         ImGui.sameLine();
-        if (ImGui.button("Send", 80.0f, inputHeight) || submitted) {
+        if (ImGui.button("Send", 80.0f, dynamicHeight) || submitted) {
             submitAiPrompt();
         }
         if (isRemotePlannerBusy()) ImGui.endDisabled();
