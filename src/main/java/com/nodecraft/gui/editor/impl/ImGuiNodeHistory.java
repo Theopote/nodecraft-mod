@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 
@@ -367,6 +368,99 @@ public class ImGuiNodeHistory {
     private void markEditorDirty() {
         if (editor instanceof ImGuiNodeEditor nodeEditor) {
             nodeEditor.notifyGraphStructureChanged();
+        }
+    }
+
+    public void recordAiPatch(String summary, Map<UUID, Object> previousStates, int undoStepsTaken) {
+        if (!isRecording) return;
+        
+        AiPatchAction action = new AiPatchAction(summary, previousStates, undoStepsTaken);
+        addAction(action);
+    }
+
+    private static class AiPatchAction extends HistoryAction {
+        private final String summary;
+        private final Map<UUID, Object> previousStates;
+        private final Map<UUID, Object> postStates;
+        private final int undoStepsTaken;
+
+        public AiPatchAction(String summary, Map<UUID, Object> previousStates, int undoStepsTaken) {
+            this.summary = summary;
+            this.previousStates = new HashMap<>(previousStates);
+            this.postStates = new HashMap<>(); // Captured during first undo or setup
+            this.undoStepsTaken = undoStepsTaken;
+        }
+
+        @Override
+        public ActionType getType() {
+            return ActionType.AI_PATCH;
+        }
+
+        @Override
+        public boolean undo(ICanvasEditor editor) {
+            NodeGraph graph = editor.getCurrentGraph();
+            if (graph == null) return false;
+
+            // Capture post-states for redo if not already captured
+            if (postStates.isEmpty()) {
+                for (UUID nodeId : previousStates.keySet()) {
+                    INode node = graph.getNode(nodeId);
+                    if (node instanceof BaseNode baseNode) {
+                        postStates.put(nodeId, deepCopyState(baseNode.getNodeState()));
+                    }
+                }
+            }
+
+            // 1. Rollback structural changes (additions/connections)
+            for (int i = 0; i < undoStepsTaken; i++) {
+                if (!editor.undo()) {
+                    NodeCraft.LOGGER.warn("AI Patch undo partially failed during structural rollback at step {}", i);
+                    break;
+                }
+            }
+
+            // 2. Restore reused node states
+            for (Map.Entry<UUID, Object> entry : previousStates.entrySet()) {
+                INode node = graph.getNode(entry.getKey());
+                if (node instanceof BaseNode baseNode) {
+                    baseNode.setNodeState(deepCopyState(entry.getValue()));
+                }
+            }
+            
+            NodeCraft.LOGGER.info("AI Patch undone: {}", summary);
+            return true;
+        }
+
+        @Override
+        public boolean redo(ICanvasEditor editor) {
+            // 1. Re-apply structural changes
+            for (int i = 0; i < undoStepsTaken; i++) {
+                if (!editor.redo()) break;
+            }
+
+            // 2. Restore post-patch states
+            NodeGraph graph = editor.getCurrentGraph();
+            if (graph != null && !postStates.isEmpty()) {
+                for (Map.Entry<UUID, Object> entry : postStates.entrySet()) {
+                    INode node = graph.getNode(entry.getKey());
+                    if (node instanceof BaseNode baseNode) {
+                        baseNode.setNodeState(deepCopyState(entry.getValue()));
+                    }
+                }
+            }
+
+            NodeCraft.LOGGER.info("AI Patch redone: {}", summary);
+            return true;
+        }
+        
+        private Object deepCopyState(Object state) {
+            if (state == null) return null;
+            try {
+                com.google.gson.Gson gson = new com.google.gson.Gson();
+                return gson.fromJson(gson.toJson(state), Object.class);
+            } catch (Exception e) {
+                return state;
+            }
         }
     }
     
@@ -759,7 +853,8 @@ public class ImGuiNodeHistory {
         REMOVE_NODE,
         REMOVE_NODES,
         ADD_CONNECTION,
-        REMOVE_CONNECTION
+        REMOVE_CONNECTION,
+        AI_PATCH
     }
     
     /**

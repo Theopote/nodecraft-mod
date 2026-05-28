@@ -230,10 +230,12 @@ public final class AiGraphApplyService {
                     + ", connected " + successfulConnections
                     + ", replacedIncoming " + replacedIncomingConnections
                     + ", removedScoped " + removedScopedConnectionsCount
-                    + ". Undo steps available: " + undoSteps + "."
-                    + (updatedNodes > 0
-                    ? " Note: parameter/state updates on reused nodes are currently not tracked in undo stack."
-                    : "");
+                    + ". Undo steps available: " + (undoSteps + (previousStates.isEmpty() ? 0 : 1)) + ".";
+
+            if (editor.getHistory() != null) {
+                editor.getHistory().recordAiPatch(status, previousStates, undoSteps);
+            }
+
             return new ApplyResult(true, undoSteps, status);
         } catch (Exception e) {
             rollbackAiApply(editor, undoSteps);

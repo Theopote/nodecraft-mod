@@ -418,24 +418,59 @@ public class AiRemotePlannerService {
 
         JsonArray messages = new JsonArray();
         for (ConversationMessage message : conversation) {
-            // Anthropic tool-use protocol can reject follow-up turns if prior assistant
-            // tool_use/tool_result blocks are not replayed in strict order.
-            // Short-term safety: keep only user history in Anthropic requests.
-            if (!"user".equals(normalizeRoleForOpenAI(message.role()))) {
-                continue;
-            }
-
+            String role = normalizeRoleForOpenAI(message.role());
             JsonObject item = new JsonObject();
-            item.addProperty("role", normalizeRoleForAnthropic(message.role()));
+            item.addProperty("role", normalizeRoleForAnthropic(role));
 
             JsonArray content = new JsonArray();
-            JsonObject textPart = new JsonObject();
-            textPart.addProperty("type", "text");
-            textPart.addProperty("text", nullToEmpty(message.content()));
-            content.add(textPart);
-            item.add("content", content);
+            String text = nullToEmpty(message.content());
+            
+            // Check if content looks like a structured DSL plan
+            boolean isJsonDsl = text.trim().startsWith("{") && text.contains("\"nodes\"");
 
+            if ("assistant".equals(role) && isJsonDsl) {
+                // Anthropic requires that assistant messages containing tool calls must match the tool_use format.
+                // We simulate a tool call sequence to keep history valid and contextually rich.
+                JsonObject toolUse = new JsonObject();
+                toolUse.addProperty("type", "tool_use");
+                String toolId = "call_hist_" + Math.abs(text.hashCode()) + "_" + messages.size();
+                toolUse.addProperty("id", toolId);
+                toolUse.addProperty("name", "create_node_graph");
+                try {
+                    toolUse.add("input", JsonParser.parseString(text).getAsJsonObject());
+                    content.add(toolUse);
+                } catch (Exception e) {
+                    JsonObject textPart = new JsonObject();
+                    textPart.addProperty("type", "text");
+                    textPart.addProperty("text", text);
+                    content.add(textPart);
+                    isJsonDsl = false; // Treat as text if parsing fails
+                }
+            } else {
+                JsonObject textPart = new JsonObject();
+                textPart.addProperty("type", "text");
+                textPart.addProperty("text", text);
+                content.add(textPart);
+            }
+
+            item.add("content", content);
             messages.add(item);
+            
+            // Every tool_use must be followed by a tool_result in the conversation history
+            if ("assistant".equals(role) && isJsonDsl) {
+                JsonObject toolResultItem = new JsonObject();
+                toolResultItem.addProperty("role", "user");
+                JsonArray resultContents = new JsonArray();
+                JsonObject toolResult = new JsonObject();
+                toolResult.addProperty("type", "tool_result");
+                // Extract ID from the previously added tool_use part
+                String toolId = item.getAsJsonArray("content").get(0).getAsJsonObject().get("id").getAsString();
+                toolResult.addProperty("tool_use_id", toolId);
+                toolResult.addProperty("content", "Success: Graph plan received and initialized in editor.");
+                resultContents.add(toolResult);
+                toolResultItem.add("content", resultContents);
+                messages.add(toolResultItem);
+            }
         }
         body.add("messages", messages);
 
