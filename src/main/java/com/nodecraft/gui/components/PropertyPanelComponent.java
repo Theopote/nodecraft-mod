@@ -490,22 +490,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private static final PropertyRenderer L_SYSTEM_RULE_RENDERER = LSystemRulePropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer POLYLINE_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            PolylineData polyline = (PolylineData) prop.getter.invoke(node);
-            if (polyline == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Points: " + polyline.getPointCount());
-            ImGui.text("Segments: " + polyline.getSegmentCount());
-            ImGui.text(String.format("Length: %.2f", polyline.getLength()));
-            ImGui.text("Closed: " + (polyline.isClosed() ? "Yes" : "No"));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer POLYLINE_RENDERER = PolylinePropertyRenderer.RENDERER;
 
     private static final PropertyRenderer REGION_RENDERER = RegionPropertyRenderer.RENDERER;
 
@@ -513,94 +498,17 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private static final PropertyRenderer BOX_GEOMETRY_RENDERER = BoxGeometryPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer BOX_FACE_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            BoxFaceData face = (BoxFaceData) prop.getter.invoke(node);
-            if (face == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer BOX_FACE_RENDERER = BoxFacePropertyRenderer.RENDERER;
 
-            ImGui.text("Face: " + face.getName() + " (#" + face.getIndex() + ")");
-            ImGui.text("Center: " + PropertyValueFormatters.formatVector3d(face.getCenter()));
-            ImGui.text("Normal: " + PropertyValueFormatters.formatVector3d(face.getNormal()));
-            ImGui.text("Corners: " + face.getCorners().size());
-            ImGui.text("Edges: " + face.getEdgeCount());
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer POLYGON_PROFILE_RENDERER = PolygonProfilePropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer POLYGON_PROFILE_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            PolygonProfileData profile = (PolygonProfileData) prop.getter.invoke(node);
-            if (profile == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Center: " + PropertyValueFormatters.formatVector3d(profile.getCenter()));
-            ImGui.text("Edges: " + profile.getEdgeCount());
-            ImGui.text("Unique Points: " + profile.getUniquePoints().size());
-            ImGui.text("Plane Normal: " + PropertyValueFormatters.formatVector3d(profile.getPlane().getNormal()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer SURFACE_STRIP_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            SurfaceStripData strip = (SurfaceStripData) prop.getter.invoke(node);
-            if (strip == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Sections: " + strip.getSectionCount());
-            ImGui.text("Points / Section: " + strip.getPointsPerSection());
-            ImGui.text("Flattened Points: " + strip.getFlattenedPoints().size());
-            ImGui.text("All Closed: " + (strip.areAllSectionsClosed() ? "Yes" : "No"));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer SURFACE_STRIP_RENDERER = SurfaceStripPropertyRenderer.RENDERER;
 
     private static final PropertyRenderer PRISM_GEOMETRY_RENDERER = PrismGeometryPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer SQUARE_PYRAMID_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            SquarePyramidGeometryData pyramid = (SquarePyramidGeometryData) prop.getter.invoke(node);
-            if (pyramid == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
+    private static final PropertyRenderer SQUARE_PYRAMID_RENDERER = SquarePyramidGeometryPropertyRenderer.RENDERER;
 
-            ImGui.text("Base Center: " + PropertyValueFormatters.formatVector3d(pyramid.getBaseCenter()));
-            ImGui.text("Apex: " + PropertyValueFormatters.formatVector3d(pyramid.getApex()));
-            ImGui.text(String.format("Base Size: %.2f", pyramid.getBaseSize()));
-            ImGui.text(String.format("Height: %.2f", pyramid.getHeight()));
-            ImGui.text("Normal: " + PropertyValueFormatters.formatVector3d(pyramid.getNormal()));
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
-
-    private static final PropertyRenderer TETRAHEDRON_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            TetrahedronGeometryData tetrahedron = (TetrahedronGeometryData) prop.getter.invoke(node);
-            if (tetrahedron == null) {
-                ImGui.textDisabled("(绌?");
-                return;
-            }
-
-            ImGui.text("Center: " + PropertyValueFormatters.formatVector3d(tetrahedron.getCenter()));
-            ImGui.text(String.format("Edge Length: %.2f", tetrahedron.getEdgeLength()));
-            ImGui.text(String.format("Circumradius: %.2f", tetrahedron.getCircumradius()));
-            ImGui.text("Vertices: " + tetrahedron.getVertices().size());
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer TETRAHEDRON_RENDERER = TetrahedronGeometryPropertyRenderer.RENDERER;
 
     private static final PropertyRenderer CONE_GEOMETRY_RENDERER = ConeGeometryPropertyRenderer.RENDERER;
 
@@ -644,23 +552,7 @@ public class PropertyPanelComponent implements EditorComponent {
 
     private static final PropertyRenderer PLANT_BLOCK_RENDERER = PlantBlockPropertyRenderer.RENDERER;
 
-    private static final PropertyRenderer LIST_RENDERER = (panel, node, prop, isDisabled) -> {
-        try {
-            Object value = prop.getter.invoke(node);
-            if (!(value instanceof List<?> list)) {
-                if (value == null) {
-                    ImGui.textDisabled("(绌?");
-                } else {
-                    ImGui.textWrapped(value.toString());
-                }
-                return;
-            }
-
-            panel.renderList(list, prop.displayName);
-        } catch (Throwable e) {
-            panel.handlePropertyError(prop, e);
-        }
-    };
+    private static final PropertyRenderer LIST_RENDERER = ListPropertyRenderer.RENDERER;
 
     // 改进的异常处理方法
     void handlePropertyError(PropertyDescriptor prop, Throwable e) { // 统一捕获 Throwable
@@ -1003,7 +895,7 @@ public class PropertyPanelComponent implements EditorComponent {
     }
 
     // 增强List渲染，根据列表项类型使用专门的渲染逻辑
-    private void renderList(List<?> list, String label) {
+    void renderList(List<?> list, String label) {
         portDataRenderer.renderList(list, label);
     }
 
