@@ -21,6 +21,7 @@ final class AiAssistantSettingsPopupRenderer {
             ImString model,
             ImInt providerStrategyIndex,
             ImString systemPrompt,
+            ImInt maxOutputTokens,
             ImInt requestTimeoutSeconds,
             ImInt conversationHistoryTurns,
             ImBoolean showApiKey,
@@ -74,6 +75,13 @@ final class AiAssistantSettingsPopupRenderer {
         ImGui.pushItemWidth(120.0f);
         if (ImGui.inputInt("##ai_timeout_seconds", state.requestTimeoutSeconds())) {
             state.requestTimeoutSeconds().set(Math.max(5, Math.min(600, state.requestTimeoutSeconds().get())));
+        }
+        ImGui.popItemWidth();
+
+        ImGui.text("Max Output Tokens");
+        ImGui.pushItemWidth(120.0f);
+        if (ImGui.inputInt("##ai_max_output_tokens", state.maxOutputTokens())) {
+            state.maxOutputTokens().set(Math.max(512, Math.min(4096, state.maxOutputTokens().get())));
         }
         ImGui.popItemWidth();
 

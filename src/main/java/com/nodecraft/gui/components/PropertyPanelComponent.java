@@ -124,6 +124,7 @@ public class PropertyPanelComponent implements EditorComponent {
     private final ImString aiModel = new ImString("gpt-4.1-mini", 128);
     private final ImInt aiProviderStrategyIndex = new ImInt(0);
     private final ImString aiSystemPrompt = new ImString("You are a NodeCraft graph planning assistant.", 2048);
+    private final ImInt aiMaxOutputTokens = new ImInt(2048);
     private final ImInt aiRequestTimeoutSeconds = new ImInt(60);
     private final ImInt aiConversationHistoryTurns = new ImInt(6);
     private final ImBoolean aiShowApiKey = new ImBoolean(false);
@@ -1721,6 +1722,7 @@ public class PropertyPanelComponent implements EditorComponent {
                         aiModel,
                     aiProviderStrategyIndex,
                         aiSystemPrompt,
+                        aiMaxOutputTokens,
                         aiRequestTimeoutSeconds,
                         aiConversationHistoryTurns,
                         aiShowApiKey,
@@ -1974,6 +1976,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 aiModel.get(),
             providerStrategyFromIndex(aiProviderStrategyIndex.get()),
                 aiSystemPrompt.get(),
+                aiMaxOutputTokens.get(),
                 aiRequestTimeoutSeconds.get(),
                 aiConversationHistoryTurns.get(),
                 aiShowApiKey.get(),
@@ -1995,6 +1998,7 @@ public class PropertyPanelComponent implements EditorComponent {
         aiModel.set(data.model());
         aiProviderStrategyIndex.set(indexFromProviderStrategy(data.providerStrategy()));
         aiSystemPrompt.set(data.systemPrompt());
+        aiMaxOutputTokens.set(data.maxOutputTokens());
         aiRequestTimeoutSeconds.set(data.timeoutSeconds());
         aiConversationHistoryTurns.set(data.conversationHistoryTurns());
         aiShowApiKey.set(data.showApiKey());
@@ -2238,6 +2242,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 aiModel.get(),
             providerStrategyFromIndex(aiProviderStrategyIndex.get()),
                 systemPrompt,
+                aiMaxOutputTokens.get(),
                 aiRequestTimeoutSeconds.get()
         );
 
@@ -2449,6 +2454,7 @@ public class PropertyPanelComponent implements EditorComponent {
                 "apiKeyMasked: " + maskSecret(config.apiKey()) + "\n" +
                 "model: " + nullToEmpty(config.model()) + "\n" +
             "providerStrategy: " + nullToEmpty(config.providerStrategy()) + "\n" +
+                "maxOutputTokens: " + config.maxOutputTokens() + "\n" +
                 "timeoutSeconds: " + config.timeoutSeconds() + "\n" +
                 "selectionContextEnabled: " + aiUseSelectionContext.get() + "\n" +
                 "schemaCountInjected: " + schemaCount + "\n" +

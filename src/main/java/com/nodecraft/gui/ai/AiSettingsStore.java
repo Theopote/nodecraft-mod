@@ -28,6 +28,7 @@ public final class AiSettingsStore {
             String model,
             String providerStrategy,
             String systemPrompt,
+            int maxOutputTokens,
             int timeoutSeconds,
             int conversationHistoryTurns,
             boolean showApiKey,
@@ -50,6 +51,7 @@ public final class AiSettingsStore {
                 "gpt-4.1-mini",
                 PROVIDER_AUTO,
                 "You are a NodeCraft graph planning assistant.",
+                2048,
                 60,
                 6,
                 false,
@@ -93,6 +95,9 @@ public final class AiSettingsStore {
                             ? sanitizeProviderStrategy(root.get("providerStrategy").getAsString())
                             : current.providerStrategy(),
                     root.has("systemPrompt") ? root.get("systemPrompt").getAsString() : current.systemPrompt(),
+                        root.has("maxOutputTokens")
+                            ? clampMaxOutputTokens(root.get("maxOutputTokens").getAsInt())
+                            : current.maxOutputTokens(),
                     root.has("timeoutSeconds") ? clampTimeout(root.get("timeoutSeconds").getAsInt()) : current.timeoutSeconds(),
                         root.has("conversationHistoryTurns")
                             ? clampConversationHistoryTurns(root.get("conversationHistoryTurns").getAsInt())
@@ -130,6 +135,7 @@ public final class AiSettingsStore {
             root.addProperty("model", safe(data.model()));
             root.addProperty("providerStrategy", sanitizeProviderStrategy(data.providerStrategy()));
             root.addProperty("systemPrompt", safe(data.systemPrompt()));
+            root.addProperty("maxOutputTokens", clampMaxOutputTokens(data.maxOutputTokens()));
             root.addProperty("timeoutSeconds", clampTimeout(data.timeoutSeconds()));
             root.addProperty("conversationHistoryTurns", clampConversationHistoryTurns(data.conversationHistoryTurns()));
             root.addProperty("showApiKey", data.showApiKey());
@@ -164,6 +170,9 @@ public final class AiSettingsStore {
         if (isBlank(data.model())) {
             return "Validation failed: Model is required when remote planner is enabled.";
         }
+        if (data.maxOutputTokens() < 512 || data.maxOutputTokens() > 4096) {
+            return "Validation failed: Max output tokens must be between 512 and 4096.";
+        }
         String provider = sanitizeProviderStrategy(data.providerStrategy());
         if (!PROVIDER_AUTO.equals(provider)
                 && !PROVIDER_OPENAI_COMPAT.equals(provider)
@@ -185,7 +194,8 @@ public final class AiSettingsStore {
         String provider = sanitizeProviderStrategy(data.providerStrategy());
         String keyStatus = isBlank(data.apiKey()) ? "API Key: missing" : "API Key: set";
         String layoutMode = data.autoLayoutBeforeApply() ? "Layout: Auto" : "Layout: Plan";
-        return plannerMode + " | Provider: " + provider + " | Model: " + modelName + " | " + keyStatus + " | " + layoutMode;
+        return plannerMode + " | Provider: " + provider + " | Model: " + modelName + " | MaxTokens: "
+            + clampMaxOutputTokens(data.maxOutputTokens()) + " | " + keyStatus + " | " + layoutMode;
     }
 
     private static String safe(String text) {
@@ -198,6 +208,10 @@ public final class AiSettingsStore {
 
     private static int clampConversationHistoryTurns(int turns) {
         return Math.max(1, Math.min(20, turns));
+    }
+
+    private static int clampMaxOutputTokens(int maxOutputTokens) {
+        return Math.max(512, Math.min(4096, maxOutputTokens));
     }
 
     private static boolean isBlank(String text) {
