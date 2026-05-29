@@ -696,6 +696,7 @@ public final class AiAssistantPanel {
     private void submitAiPrompt() {
         String prompt = aiPromptInput.get();
         if (prompt == null || prompt.isBlank()) {
+            aiPlanStatusMessage = "Prompt is empty. Please enter a request.";
             return;
         }
 
@@ -704,18 +705,25 @@ public final class AiAssistantPanel {
     }
 
     private void submitAiPromptWithText(String trimmedPrompt) {
-        aiLastSubmittedPrompt = trimmedPrompt;
-        addAiChatMessage("user", trimmedPrompt);
+        try {
+            aiLastSubmittedPrompt = trimmedPrompt;
+            addAiChatMessage("user", trimmedPrompt);
+            aiPlanStatusMessage = "Processing prompt...";
 
-        if (aiEnableRemotePlanner.get()) {
-            startRemotePlannerRequest(trimmedPrompt);
-            return;
+            if (aiEnableRemotePlanner.get()) {
+                startRemotePlannerRequest(trimmedPrompt);
+                return;
+            }
+
+            String dslJson = AiPlanDslWorkflowService.toDslJson(
+                    AiPlanDslWorkflowService.buildMockGraphPlan(trimmedPrompt)
+            );
+            applyDslResponse(trimmedPrompt, dslJson, "local-template");
+        } catch (Exception e) {
+            String error = "Failed to submit prompt: " + e.getMessage();
+            aiPlanStatusMessage = error;
+            addAiChatMessage("assistant", error);
         }
-
-        String dslJson = AiPlanDslWorkflowService.toDslJson(
-                AiPlanDslWorkflowService.buildMockGraphPlan(trimmedPrompt)
-        );
-        applyDslResponse(trimmedPrompt, dslJson, "local-template");
     }
 
     private void retryLastAiRequest() {
@@ -1003,7 +1011,7 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        AiPlanNode node = plan.nodes().getFirst();
+        AiPlanNode node = plan.nodes().get(0);
         return node != null && "world.selection.selected_block".equalsIgnoreCase(node.typeId());
     }
 
