@@ -37,7 +37,8 @@ public final class AiSettingsStore {
             boolean includeGraphContext,
             boolean previewOnlyMode,
             boolean patchApplyMode,
-            boolean patchRemoveScopedConnections
+                boolean patchRemoveScopedConnections,
+                boolean enterToSend
     ) {
     }
 
@@ -60,7 +61,8 @@ public final class AiSettingsStore {
                 true,
                 false,
                 true,
-                false
+                false,
+                true
         );
     }
 
@@ -108,7 +110,8 @@ public final class AiSettingsStore {
                     !root.has("includeGraphContext") || root.get("includeGraphContext").getAsBoolean(),
                     root.has("previewOnlyMode") && root.get("previewOnlyMode").getAsBoolean(),
                     !root.has("patchApplyMode") || root.get("patchApplyMode").getAsBoolean(),
-                    root.has("patchRemoveScopedConnections") && root.get("patchRemoveScopedConnections").getAsBoolean()
+                        root.has("patchRemoveScopedConnections") && root.get("patchRemoveScopedConnections").getAsBoolean(),
+                        !root.has("enterToSend") || root.get("enterToSend").getAsBoolean()
             );
 
             return new LoadResult(current, "AI settings loaded from disk.");
@@ -145,6 +148,7 @@ public final class AiSettingsStore {
             root.addProperty("previewOnlyMode", data.previewOnlyMode());
             root.addProperty("patchApplyMode", data.patchApplyMode());
             root.addProperty("patchRemoveScopedConnections", data.patchRemoveScopedConnections());
+            root.addProperty("enterToSend", data.enterToSend());
 
             Files.writeString(settingsPath, GSON.toJson(root), StandardCharsets.UTF_8);
             return "AI settings saved.";

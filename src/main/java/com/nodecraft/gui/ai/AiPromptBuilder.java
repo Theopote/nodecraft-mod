@@ -35,6 +35,12 @@ public final class AiPromptBuilder {
             # OUTPUT_SPEC
             - Output ONLY raw JSON. Do NOT use markdown code blocks (```json).
             - No conversational fillers, no explanations. Just the JSON object.
+
+            # LANGUAGE_NORMALIZATION
+            - The user may write in any language. You MUST support multilingual input.
+            - Internally normalize user intent to concise English before planning.
+            - Preserve proper nouns, IDs, literal strings, numeric values, and code-like tokens exactly.
+            - Do NOT translate the final DSL keys/fields; keep valid DSL JSON only.
             
             # RULES
             1. Connection Logic: Verify that 'from' and 'to' port IDs exist in the library and have compatible 'dataType'.
@@ -121,10 +127,12 @@ public final class AiPromptBuilder {
         String context = selectionContext == null || selectionContext.isBlank()
                 ? "No selection context provided."
                 : selectionContext;
-        return "User request:\n"
-            + prompt + "\n\n"
-            + "Editor context:\n"
-            + context + "\n\n"
-                + "Return JSON only.";
+      String userRequest = prompt == null ? "" : prompt;
+      return "User request (original language, do not assume English):\n"
+        + userRequest + "\n\n"
+        + "Instruction: First normalize intent to English internally, then plan with DSL strictly.\n\n"
+        + "Editor context:\n"
+        + context + "\n\n"
+        + "Return JSON only.";
     }
 }

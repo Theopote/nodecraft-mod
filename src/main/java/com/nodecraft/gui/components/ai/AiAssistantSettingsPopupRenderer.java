@@ -43,10 +43,15 @@ final class AiAssistantSettingsPopupRenderer {
     }
 
     static void renderSettingsPopup(State state, Actions actions) {
-        int flags = ImGuiWindowFlags.AlwaysAutoResize;
+        int flags = 0;
         if (!ImGui.beginPopupModal("AI Settings", flags)) {
             return;
         }
+
+        float availableWidth = Math.max(260.0f, ImGui.getContentRegionAvailX());
+        float wideFieldWidth = Math.max(260.0f, Math.min(520.0f, availableWidth));
+        float mediumFieldWidth = Math.max(200.0f, Math.min(320.0f, availableWidth));
+        boolean compactActions = availableWidth < 560.0f;
 
         ImGui.text("Remote Planner Connection");
         ImGui.separator();
@@ -54,19 +59,19 @@ final class AiAssistantSettingsPopupRenderer {
         ImGui.checkbox("Enable remote planner", state.enableRemotePlanner());
 
         ImGui.text("API Base URL");
-        ImGui.pushItemWidth(420.0f);
+        ImGui.pushItemWidth(wideFieldWidth);
         ImGui.inputText("##ai_api_base_url", state.apiBaseUrl());
         ImGui.popItemWidth();
 
         ImGui.text("API Key");
         int keyFlags = state.showApiKey().get() ? ImGuiInputTextFlags.None : ImGuiInputTextFlags.Password;
-        ImGui.pushItemWidth(420.0f);
+        ImGui.pushItemWidth(wideFieldWidth);
         ImGui.inputText("##ai_api_key", state.apiKey(), keyFlags);
         ImGui.popItemWidth();
         ImGui.checkbox("Show API key", state.showApiKey());
 
         ImGui.text("Model");
-        ImGui.pushItemWidth(240.0f);
+        ImGui.pushItemWidth(mediumFieldWidth);
         ImGui.inputText("##ai_model", state.model());
         ImGui.popItemWidth();
 
@@ -79,7 +84,7 @@ final class AiAssistantSettingsPopupRenderer {
             ImInt modelIndex = new ImInt(Math.max(0, selectedModelIndex));
 
             ImGui.text("Suggested Models");
-            ImGui.pushItemWidth(300.0f);
+            ImGui.pushItemWidth(mediumFieldWidth);
             if (ImGui.combo("##ai_suggested_model_combo", modelIndex, state.suggestedModels())) {
                 int index = Math.max(0, Math.min(state.suggestedModels().length - 1, modelIndex.get()));
                 state.model().set(state.suggestedModels()[index]);
@@ -88,7 +93,7 @@ final class AiAssistantSettingsPopupRenderer {
         }
 
         ImGui.text("Provider Strategy");
-        ImGui.pushItemWidth(240.0f);
+        ImGui.pushItemWidth(mediumFieldWidth);
         ImGui.combo("##ai_provider_strategy", state.providerStrategyIndex(), new String[]{"AUTO", "OPENAI_COMPAT", "ANTHROPIC"});
         ImGui.popItemWidth();
 
@@ -116,27 +121,27 @@ final class AiAssistantSettingsPopupRenderer {
         ImGui.checkbox("Auto layout before apply", state.autoLayoutBeforeApply());
 
         ImGui.text("System Prompt");
-        ImGui.pushItemWidth(420.0f);
-        ImGui.inputTextMultiline("##ai_system_prompt", state.systemPrompt(), 420.0f, 100.0f);
+        ImGui.pushItemWidth(wideFieldWidth);
+        ImGui.inputTextMultiline("##ai_system_prompt", state.systemPrompt(), wideFieldWidth, 100.0f);
         ImGui.popItemWidth();
 
         ImGui.separator();
         if (ImGui.button("Validate (Local)")) {
             actions.onValidateLocal();
         }
-        ImGui.sameLine();
+        if (!compactActions) ImGui.sameLine();
         if (ImGui.button("Test Remote API")) {
             actions.onTestRemoteConnection();
         }
-        ImGui.sameLine();
+        if (!compactActions) ImGui.sameLine();
         if (ImGui.button("Save Settings")) {
             actions.onSaveSettings();
         }
-        ImGui.sameLine();
+        if (!compactActions) ImGui.sameLine();
         if (ImGui.button("Reload Settings")) {
             actions.onReloadSettings();
         }
-        ImGui.sameLine();
+        if (!compactActions) ImGui.sameLine();
         if (ImGui.button("Close")) {
             ImGui.closeCurrentPopup();
         }

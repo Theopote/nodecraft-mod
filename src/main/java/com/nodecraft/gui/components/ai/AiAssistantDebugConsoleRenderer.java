@@ -34,7 +34,7 @@ final class AiAssistantDebugConsoleRenderer {
     }
 
     static void renderDebugConsolePopup(State state, Actions actions) {
-        int flags = ImGuiWindowFlags.AlwaysAutoResize;
+        int flags = 0;
         if (!ImGui.beginPopupModal("AI Debug Console", flags)) {
             return;
         }
@@ -48,10 +48,9 @@ final class AiAssistantDebugConsoleRenderer {
         ImGui.textDisabled("Category: " + categoryText + " | Attempts: " + state.attempts());
         ImGui.separator();
 
-        float width = Math.max(620.0f, ImGui.getContentRegionAvailX());
         if (ImGui.beginTabBar("aiDebugConsoleTabs")) {
             if (ImGui.beginTabItem("Raw Response")) {
-                if (ImGui.beginChild("aiDebugRawBody", width, 280.0f, true)) {
+                if (ImGui.beginChild("aiDebugRawBody", 0.0f, 280.0f, true)) {
                     if (state.rawResponse() == null || state.rawResponse().isBlank()) {
                         ImGui.textDisabled("No raw response available.");
                     } else {
@@ -66,7 +65,7 @@ final class AiAssistantDebugConsoleRenderer {
             }
 
             if (ImGui.beginTabItem("Model Text")) {
-                if (ImGui.beginChild("aiDebugModelTextBody", width, 280.0f, true)) {
+                if (ImGui.beginChild("aiDebugModelTextBody", 0.0f, 280.0f, true)) {
                     if (state.modelText() == null || state.modelText().isBlank()) {
                         ImGui.textDisabled("No extracted model text available.");
                     } else {
@@ -82,7 +81,7 @@ final class AiAssistantDebugConsoleRenderer {
 
             if (ImGui.beginTabItem("Request Snapshot")) {
                 ImGui.textDisabled("API key is masked for safety.");
-                if (ImGui.beginChild("aiDebugRequestSnapshotBody", width, 260.0f, true)) {
+                if (ImGui.beginChild("aiDebugRequestSnapshotBody", 0.0f, 260.0f, true)) {
                     if (state.requestSnapshot() == null || state.requestSnapshot().isBlank()) {
                         ImGui.textDisabled("No request snapshot available.");
                     } else {
@@ -97,7 +96,7 @@ final class AiAssistantDebugConsoleRenderer {
             }
 
             if (ImGui.beginTabItem("Export")) {
-                if (ImGui.beginChild("aiDebugExportBody", width, 260.0f, true)) {
+                if (ImGui.beginChild("aiDebugExportBody", 0.0f, 260.0f, true)) {
                     ImGui.textDisabled("Preview (compact):");
                     ImGui.textWrapped(state.compactDiagnostics() == null ? "" : state.compactDiagnostics());
                 }

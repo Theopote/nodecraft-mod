@@ -119,7 +119,7 @@ final class AiAssistantFailurePanelRenderer {
             case "network" -> "Check connectivity, proxy/firewall rules, and whether the base URL is reachable.";
             case "server" -> "Retry later or switch provider/model temporarily if 5xx errors persist.";
             case "request" -> "Check model name, endpoint path, and payload constraints for this provider.";
-            case "response-format" -> "Inspect raw response and tighten system prompt to force strict JSON output.";
+            case "response-format" -> "Inspect raw response and tighten system prompt to force strict JSON output. If needed, add a one-line English paraphrase of the request.";
             case "canceled" -> "No action required; resend request when ready.";
             default -> "Open raw response and request snapshot for manual diagnosis.";
         };

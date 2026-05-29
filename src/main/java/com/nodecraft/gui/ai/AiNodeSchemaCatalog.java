@@ -312,17 +312,44 @@ public final class AiNodeSchemaCatalog {
         }
 
         // Color intent
-        if (containsAny(prompt, "颜色", "彩色", "红", "绿", "蓝", "color", "red", "green", "blue", "rgb", "hsv")) {
+        if (containsAny(prompt,
+            "颜色", "彩色", "红", "绿", "蓝",
+            "color", "red", "green", "blue", "rgb", "hsv",
+            "цвет", "красный", "зеленый", "синий",
+            "color", "rojo", "verde", "azul",
+            "cor", "vermelho", "verde", "azul",
+            "couleur", "rouge", "vert", "bleu",
+            "farbe", "rot", "grün", "blau",
+            "色", "赤", "緑", "青",
+            "색", "빨강", "초록", "파랑")) {
             if (typeId.contains("color") || category.contains("color")) score += 7;
         }
 
         // Logic & Math intent
-        if (containsAny(prompt, "计算", "数学", "加", "减", "乘", "除", "比较", "math", "add", "sub", "mul", "div", "logic", "compare")) {
+        if (containsAny(prompt,
+            "计算", "数学", "加", "减", "乘", "除", "比较",
+            "math", "add", "sub", "mul", "div", "logic", "compare",
+            "матем", "логик", "слож", "вычит", "умнож", "делен", "сравн",
+            "matem", "lógica", "sumar", "restar", "multiplicar", "dividir", "comparar",
+            "matem", "logica", "somar", "subtrair", "multiplicar", "dividir", "comparar",
+            "math", "logique", "addition", "soustraction", "multiplication", "division", "comparer",
+            "mathe", "logik", "addieren", "subtrahieren", "multiplizieren", "dividieren", "vergleichen",
+            "数学", "加算", "減算", "乗算", "除算", "比較",
+            "수학", "논리", "더하기", "빼기", "곱하기", "나누기", "비교")) {
             if (category.startsWith("math.") || category.startsWith("logic.")) score += 6;
         }
 
         // Entity & Player intent
-        if (containsAny(prompt, "玩家", "实体", "生物", "player", "entity", "mob", "living")) {
+        if (containsAny(prompt,
+            "玩家", "实体", "生物",
+            "player", "entity", "mob", "living",
+            "игрок", "сущност", "моб",
+            "jugador", "entidad", "mob", "criatura",
+            "jogador", "entidade", "mob", "criatura",
+            "joueur", "entité", "mob", "créature",
+            "spieler", "entität", "mob", "kreatur",
+            "プレイヤー", "エンティティ", "モブ",
+            "플레이어", "엔티티", "몹")) {
             if (typeId.contains("player") || typeId.contains("entity") || category.contains("input.world")) score += 6;
         }
 
@@ -333,25 +360,57 @@ public final class AiNodeSchemaCatalog {
         Set<String> tokens = new HashSet<>(baseTokens == null ? Set.of() : baseTokens);
         String text = prompt == null ? "" : prompt.toLowerCase(Locale.ROOT);
 
-        if (containsAny(text, "球", "圆球", "sphere", "ball", "spherical")) {
+        if (containsAny(text,
+            "球", "圆球", "sphere", "ball", "spherical",
+            "сфера", "шар",
+            "esfera", "bola",
+            "esfera", "bola",
+            "sphère", "balle",
+            "kugel", "sphäre",
+            "球体", "スフィア",
+            "구", "구체")) {
             tokens.add("sphere");
             tokens.add("geometry");
             tokens.add("mesh");
         }
 
-        if (containsAny(text, "玩家", "player", "角色", "entity")) {
+        if (containsAny(text,
+            "玩家", "player", "角色", "entity",
+            "игрок", "сущност",
+            "jugador", "entidad",
+            "jogador", "entidade",
+            "joueur", "entité",
+            "spieler", "entität",
+            "プレイヤー", "エンティティ",
+            "플레이어", "엔티티")) {
             tokens.add("player");
             tokens.add("entity");
             tokens.add("position");
         }
 
-        if (containsAny(text, "头上", "头顶", "上方", "above", "overhead")) {
+        if (containsAny(text,
+            "头上", "头顶", "上方", "above", "overhead",
+            "над", "сверху",
+            "encima", "arriba", "sobre",
+            "acima", "sobre",
+            "au-dessus", "dessus",
+            "oben", "über",
+            "上", "上方",
+            "위", "위쪽")) {
             tokens.add("offset");
             tokens.add("position");
             tokens.add("translate");
         }
 
-        if (containsAny(text, "生成", "放置", "输出", "烘焙", "bake", "spawn", "produce", "output", "create")) {
+        if (containsAny(text,
+            "生成", "放置", "输出", "烘焙", "bake", "spawn", "produce", "output", "create",
+            "создать", "сгенер", "вывод", "запечь",
+            "crear", "generar", "salida", "hornear",
+            "criar", "gerar", "saida", "assar",
+            "créer", "générer", "sortie",
+            "erstellen", "generieren", "ausgabe",
+            "生成", "出力", "作成",
+            "생성", "출력", "만들")) {
             tokens.add("output");
             tokens.add("bake");
             tokens.add("preview");
@@ -361,15 +420,39 @@ public final class AiNodeSchemaCatalog {
     }
 
     private static boolean hasGenerationIntent(String prompt) {
-        return containsAny(prompt, "生成", "放置", "输出", "烘焙", "spawn", "produce", "output", "create", "bake");
+        return containsAny(prompt,
+            "生成", "放置", "输出", "烘焙", "spawn", "produce", "output", "create", "bake",
+            "создать", "сгенер", "вывод", "запечь",
+            "crear", "generar", "salida",
+            "criar", "gerar", "saida",
+            "créer", "générer", "sortie",
+            "erstellen", "generieren", "ausgabe",
+            "出力", "作成",
+            "생성", "출력", "만들");
     }
 
     private static boolean hasGeometryIntent(String prompt) {
-        return containsAny(prompt, "几何", "模型", "球", "圆球", "sphere", "mesh", "geometry", "shape");
+        return containsAny(prompt,
+            "几何", "模型", "球", "圆球", "sphere", "mesh", "geometry", "shape",
+            "геометр", "сфера", "форма",
+            "geometr", "esfera", "forma",
+            "geometr", "esfera", "forma",
+            "géométr", "sphère", "forme",
+            "geometr", "kugel", "form",
+            "幾何", "球体", "形状",
+            "기하", "구체", "형상");
     }
 
     private static boolean hasSpatialIntent(String prompt) {
-        return containsAny(prompt, "位置", "坐标", "头上", "头顶", "上方", "position", "offset", "above", "overhead");
+        return containsAny(prompt,
+            "位置", "坐标", "头上", "头顶", "上方", "position", "offset", "above", "overhead",
+            "позици", "координ", "смещ", "над",
+            "posición", "coordenad", "desplaz", "encima",
+            "posição", "coordenad", "desloc", "acima",
+            "position", "coordonnée", "décalage", "au-dessus",
+            "position", "koordinate", "versatz", "oben",
+            "位置", "座標", "上方",
+            "위치", "좌표", "오프셋", "위");
     }
 
     private static boolean containsAny(String text, String... keywords) {
@@ -395,7 +478,8 @@ public final class AiNodeSchemaCatalog {
             return tokens;
         }
 
-        String[] split = text.split("[^a-zA-Z0-9_\\u4e00-\\u9fa5]+");
+        // Unicode-aware tokenization: supports multilingual words (e.g., Latin/CJK/Cyrillic/etc.).
+        String[] split = text.split("[^\\p{L}\\p{N}_]+");
         for (String token : split) {
             if (token != null && token.length() >= 2) {
                 tokens.add(token.toLowerCase(Locale.ROOT));

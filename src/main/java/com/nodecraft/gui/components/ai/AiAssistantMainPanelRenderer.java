@@ -23,6 +23,7 @@ final class AiAssistantMainPanelRenderer {
             ImBoolean previewOnlyMode,
             ImBoolean patchApplyMode,
             ImBoolean patchRemoveScopedConnections,
+            ImBoolean enterToSend,
             String selectedNodeDisplayName,
             String selectedNodeTypeId,
             List<AiChatMessage> chatMessages,
@@ -62,7 +63,7 @@ final class AiAssistantMainPanelRenderer {
     }
 
     private static void renderHeader(State state, Actions actions) {
-        ImGui.textWrapped("Describe what you want to build, and AI will generate a node graph plan.");
+        ImGui.textWrapped("Describe what you want to build (any language), and AI will generate a node graph plan.");
         if (ImGui.smallButton("AI Settings")) {
             actions.openSettingsPopup();
         }
@@ -94,6 +95,7 @@ final class AiAssistantMainPanelRenderer {
         ImGui.checkbox("Include current canvas graph summary", state.includeGraphContext());
         ImGui.checkbox("Preview-only mode (do not mutate graph)", state.previewOnlyMode());
         ImGui.checkbox("Patch apply mode (reuse matching nodes)", state.patchApplyMode());
+        ImGui.checkbox("Press Enter to send", state.enterToSend());
         if (!state.patchApplyMode().get()) {
             return;
         }
@@ -187,14 +189,19 @@ final class AiAssistantMainPanelRenderer {
         float dynamicHeight = activeLineCount * lineH;
 
         ImGui.pushItemWidth(ImGui.getContentRegionAvailX() - 85.0f);
+        int inputFlags = ImGuiInputTextFlags.CtrlEnterForNewLine;
+        if (state.enterToSend().get()) {
+            inputFlags |= ImGuiInputTextFlags.EnterReturnsTrue;
+        }
+
         boolean submitted = ImGui.inputTextMultiline("##ai_input_multiline", state.promptInput(),
                 ImGui.getContentRegionAvailX() - 85.0f,
                 dynamicHeight,
-                ImGuiInputTextFlags.EnterReturnsTrue | ImGuiInputTextFlags.CtrlEnterForNewLine);
+            inputFlags);
         ImGui.popItemWidth();
 
         ImGui.sameLine();
-        if (ImGui.button("Send", 80.0f, dynamicHeight) || submitted) {
+        if (ImGui.button("Send", 80.0f, dynamicHeight) || (state.enterToSend().get() && submitted)) {
             actions.onSubmitPrompt();
         }
 

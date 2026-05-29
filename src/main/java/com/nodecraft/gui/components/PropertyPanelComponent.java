@@ -657,7 +657,7 @@ public class PropertyPanelComponent implements EditorComponent {
         if (!visible) return;
 
         float baseScrollbarSize = ImGui.getStyle().getScrollbarSize();
-        ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ScrollbarSize, baseScrollbarSize);
+        ImGui.pushStyleVar(imgui.flag.ImGuiStyleVar.ScrollbarSize, baseScrollbarSize * 0.5f);
         try {
             checkAndCleanExpiredEditLocks();
             aiAssistantPanel.flushSessionStateIfDue();
