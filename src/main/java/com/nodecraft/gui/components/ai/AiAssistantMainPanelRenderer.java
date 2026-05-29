@@ -24,6 +24,8 @@ final class AiAssistantMainPanelRenderer {
             ImBoolean patchApplyMode,
             ImBoolean patchRemoveScopedConnections,
             ImBoolean enterToSend,
+            String inputLanguageDetected,
+            String normalizedIntentPreview,
             String selectedNodeDisplayName,
             String selectedNodeTypeId,
             List<AiChatMessage> chatMessages,
@@ -52,12 +54,13 @@ final class AiAssistantMainPanelRenderer {
         renderBusyStatus(state, actions);
         renderModeOptions(state);
         renderSelectionContext(state);
-        renderQuickPrompts(actions);
+        renderQuickPrompts(state, actions);
 
         actions.renderPlanPreviewSection();
 
         int chatCount = renderChatHistory(state);
         renderPromptInput(state, actions);
+        renderLanguageDiagnostics(state);
         renderModeHint(state);
         return chatCount;
     }
@@ -126,9 +129,14 @@ final class AiAssistantMainPanelRenderer {
         ImGui.textDisabled("Context: No node selected");
     }
 
-    private static void renderQuickPrompts(Actions actions) {
+    private static void renderQuickPrompts(State state, Actions actions) {
         ImGui.separator();
         ImGui.text("Quick prompts:");
+
+        if (state.busy()) {
+            ImGui.beginDisabled();
+        }
+
         if (ImGui.smallButton("Generate from selection")) {
             actions.onQuickPrompt("Generate a node graph based on current selection and keep existing style.");
         }
@@ -142,6 +150,10 @@ final class AiAssistantMainPanelRenderer {
         ImGui.sameLine();
         if (ImGui.smallButton("Mobius ring example")) {
             actions.onQuickPrompt("Build a parametrized Mobius ring above selected position with radius/width/thickness controls.");
+        }
+
+        if (state.busy()) {
+            ImGui.endDisabled();
         }
     }
 
@@ -214,5 +226,16 @@ final class AiAssistantMainPanelRenderer {
         ImGui.textDisabled(state.remotePlannerEnabled()
                 ? "Current mode: remote planner + DSL validation + apply/undo"
                 : "Current mode: local mock planner + DSL validation + apply/undo");
+    }
+
+    private static void renderLanguageDiagnostics(State state) {
+        String language = state.inputLanguageDetected();
+        String intent = state.normalizedIntentPreview();
+        if ((language == null || language.isBlank()) && (intent == null || intent.isBlank())) {
+            return;
+        }
+
+        ImGui.textDisabled("Input language: " + (language == null || language.isBlank() ? "unknown" : language));
+        ImGui.textDisabled("Normalized intent: " + (intent == null || intent.isBlank() ? "general-request" : intent));
     }
 }

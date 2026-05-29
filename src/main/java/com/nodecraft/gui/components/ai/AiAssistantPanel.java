@@ -141,6 +141,8 @@ public final class AiAssistantPanel {
 
         String selectedNodeDisplayName = selectedNode == null ? "" : selectedNode.getDisplayName();
         String selectedNodeTypeId = selectedNode == null ? "" : selectedNode.getTypeId();
+        String inputLanguageDetected = detectInputLanguage(aiPromptInput.get());
+        String normalizedIntentPreview = buildNormalizedIntentPreview(aiPromptInput.get());
 
         lastRenderedChatCount = AiAssistantMainPanelRenderer.renderMainPanel(
                 new AiAssistantMainPanelRenderer.State(
@@ -154,6 +156,8 @@ public final class AiAssistantPanel {
                         aiPatchApplyMode,
                         aiPatchRemoveScopedConnections,
                         aiEnterToSend,
+                        inputLanguageDetected,
+                        normalizedIntentPreview,
                         selectedNodeDisplayName,
                         selectedNodeTypeId,
                         aiChatMessages,
