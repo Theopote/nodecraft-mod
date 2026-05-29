@@ -21,6 +21,7 @@ final class AiAssistantPlanPreviewRenderer {
             AiGraphDiffService.MappedDiffSummary mappedDiff,
             boolean canApply,
             boolean canUndo,
+                String undoDisabledReason,
             String statusMessage
     ) {
     }
@@ -126,6 +127,10 @@ final class AiAssistantPlanPreviewRenderer {
             actions.undoLastApply();
         }
         if (!state.canUndo()) ImGui.endDisabled();
+
+        if (!state.canUndo() && state.undoDisabledReason() != null && !state.undoDisabledReason().isBlank()) {
+            ImGui.textDisabled(state.undoDisabledReason());
+        }
 
         if (state.statusMessage() != null && !state.statusMessage().isBlank()) {
             ImGui.textWrapped(state.statusMessage());

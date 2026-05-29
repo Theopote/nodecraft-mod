@@ -6,6 +6,7 @@ import com.nodecraft.gui.components.ai.AiAssistantComponent.AiGraphPlan;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiPlanConnection;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiPlanNode;
 import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
 import com.nodecraft.gui.editor.impl.NodePosition;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -91,6 +92,7 @@ public final class AiAssistantPanel {
     private CompletableFuture<AiRemotePlannerService.RemotePlanResult> aiConnectionTestFuture = null;
     private int lastRenderedChatCount = 0;
     private int lastAiUndoStepCount = 0;
+    private boolean lastAiApplyWasPatch = false;
     private String aiPlanStatusMessage = "";
     private String aiSettingsStatusMessage = "";
 
@@ -126,6 +128,7 @@ public final class AiAssistantPanel {
         aiPromptInput.clear();
         aiApiKey.clear();
         lastAiUndoStepCount = 0;
+        lastAiApplyWasPatch = false;
         aiPlanStatusMessage = "";
         aiSettingsStatusMessage = "";
         selectedNode = null;
@@ -507,6 +510,8 @@ public final class AiAssistantPanel {
         AiGraphDiffService.GraphDiffSummary heuristicDiff = hasPlan ? buildGraphDiffSummary(plan) : null;
         AiGraphDiffService.MappedDiffSummary mappedDiff = hasPlan ? buildMappedDiffSummary(plan) : null;
         boolean canApply = hasPlan && plan.isValid() && !plan.nodes().isEmpty();
+        String undoUnavailableReason = resolveUndoUnavailableReason();
+        boolean canUndoLastAiApply = undoUnavailableReason.isBlank();
 
         AiAssistantPlanPreviewRenderer.renderPlanPreviewSection(
                 new AiAssistantPlanPreviewRenderer.State(
@@ -520,7 +525,8 @@ public final class AiAssistantPanel {
                         heuristicDiff,
                         mappedDiff,
                         canApply,
-                        lastAiUndoStepCount > 0,
+                        canUndoLastAiApply,
+                        undoUnavailableReason,
                         aiPlanStatusMessage
                 ),
                 new AiAssistantPlanPreviewRenderer.Actions() {
@@ -544,6 +550,30 @@ public final class AiAssistantPanel {
                     }
                 }
         );
+    }
+
+    private String resolveUndoUnavailableReason() {
+        if (lastAiUndoStepCount <= 0) {
+            return "No recent AI apply to undo.";
+        }
+
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        if (editor == null || editor.getHistory() == null) {
+            return "Editor history is unavailable.";
+        }
+
+        if (lastAiApplyWasPatch) {
+            if (!editor.getHistory().isUndoTopActionType(ImGuiNodeHistory.ActionType.AI_PATCH)) {
+                return "Latest history action is no longer this AI patch apply.";
+            }
+            return "";
+        }
+
+        if (!editor.getHistory().canUndo()) {
+            return "Undo stack is empty.";
+        }
+
+        return "";
     }
 
     private List<String> buildPlannedNodePreviewLines(AiGraphPlan plan) {
@@ -1224,6 +1254,10 @@ public final class AiAssistantPanel {
 
         if (result.success()) {
             lastAiUndoStepCount = result.undoSteps();
+            lastAiApplyWasPatch = false;
+        } else {
+            lastAiUndoStepCount = 0;
+            lastAiApplyWasPatch = false;
         }
 
         aiPlanStatusMessage = result.statusMessage()
@@ -1270,23 +1304,39 @@ public final class AiAssistantPanel {
                 anchor,
                 aiPatchRemoveScopedConnections.get()
         );
-        lastAiUndoStepCount = result.undoSteps();
+        if (result.success()) {
+            // Patch apply records one aggregate AI_PATCH action; undo should be one step.
+            lastAiUndoStepCount = 1;
+            lastAiApplyWasPatch = true;
+        } else {
+            lastAiUndoStepCount = 0;
+            lastAiApplyWasPatch = false;
+        }
         aiPlanStatusMessage = result.statusMessage()
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled for new nodes)" : "");
     }
 
     private void undoLastAiApply() {
-        if (lastAiUndoStepCount <= 0) {
-            aiPlanStatusMessage = "No AI apply operation to undo.";
+        String undoUnavailableReason = resolveUndoUnavailableReason();
+        if (!undoUnavailableReason.isBlank()) {
+            aiPlanStatusMessage = "Undo unavailable: " + undoUnavailableReason;
+            if (lastAiApplyWasPatch) {
+                lastAiUndoStepCount = 0;
+                lastAiApplyWasPatch = false;
+            }
             return;
         }
 
         ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+
         int expectedUndoSteps = lastAiUndoStepCount;
-        int undone = AiPlanApplyCoordinatorService.undo(editor, expectedUndoSteps);
+        int undone = lastAiApplyWasPatch
+            ? (editor.undo() ? 1 : 0)
+            : AiPlanApplyCoordinatorService.undo(editor, expectedUndoSteps);
 
         aiPlanStatusMessage = "Undo completed: " + undone + " / " + expectedUndoSteps + " steps.";
         lastAiUndoStepCount = 0;
+        lastAiApplyWasPatch = false;
     }
 
     private float[] resolveAiPlanAnchorPosition(ImGuiNodeEditor editor) {

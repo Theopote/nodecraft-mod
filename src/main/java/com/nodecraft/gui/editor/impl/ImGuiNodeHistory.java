@@ -86,6 +86,16 @@ public class ImGuiNodeHistory {
     public boolean canRedo() {
         return !redoStack.isEmpty();
     }
+
+    /**
+     * Checks whether the top action in undo stack matches the specified type.
+     */
+    public boolean isUndoTopActionType(ActionType actionType) {
+        if (actionType == null || undoStack.isEmpty()) {
+            return false;
+        }
+        return undoStack.peek().getType() == actionType;
+    }
     
     /**
      * 执行撤销操作

@@ -104,7 +104,6 @@ public class PropertyPanelComponent implements EditorComponent {
     // 临时值存储, Key: nodeId_propertyName
     private final Map<String, Object> tempValues = new ConcurrentHashMap<>();
 
-    // 正在编辑的属性集合：Key: nodeId_propertyName -> 最后活跃时间戳
     // 用于防止节点计算覆盖用户正在输入的值，并支持精确的超时清理
     private final Map<String, Long> propertiesBeingEdited = new ConcurrentHashMap<>();
 

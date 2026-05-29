@@ -230,7 +230,7 @@ public final class AiGraphApplyService {
                     + ", connected " + successfulConnections
                     + ", replacedIncoming " + replacedIncomingConnections
                     + ", removedScoped " + removedScopedConnectionsCount
-                    + ". Undo steps available: " + (undoSteps + (previousStates.isEmpty() ? 0 : 1)) + ".";
+                    + ". Undo available: 1 grouped AI patch action.";
 
             if (editor.getHistory() != null) {
                 editor.getHistory().recordAiPatch(status, previousStates, undoSteps);
