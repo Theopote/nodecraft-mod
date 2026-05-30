@@ -1228,8 +1228,8 @@ public final class AiAssistantPanel {
             String userPromptPayload,
             int schemaCount
     ) {
-        String detectedLanguage = detectInputLanguage(userPrompt);
-        String normalizedIntentPreview = buildNormalizedIntentPreview(userPrompt);
+        String detectedLanguage = AiIntentAnalysisService.detectInputLanguage(userPrompt);
+        String normalizedIntentPreview = AiIntentAnalysisService.buildNormalizedIntentPreview(userPrompt);
         String promptPreview = sanitizeUserPromptForSnapshot(userPrompt);
         String promptFingerprint = computePromptFingerprint(userPrompt);
 

@@ -4,6 +4,7 @@ import com.nodecraft.gui.ai.AiGraphPlanDslAdapterService.GraphPlan;
 import com.nodecraft.gui.components.ai.AiAssistantComponent;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiGraphPlan;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
+import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -71,6 +72,14 @@ public final class AiSessionPlanCodecService {
             }
         }
 
+        List<AiAssistantComponent.AiPlanConnection> connections = getAiPlanConnections(plan);
+
+        List<String> errors = plan == null || plan.validationErrors() == null ? List.of() : plan.validationErrors();
+        String summary = plan == null ? "" : plan.summary();
+        return new AiGraphPlan(summary, nodes, connections, errors);
+    }
+
+    private static @NonNull List<AiAssistantComponent.AiPlanConnection> getAiPlanConnections(GraphPlan plan) {
         List<AiAssistantComponent.AiPlanConnection> connections = new ArrayList<>();
         if (plan != null) {
             for (AiGraphPlanDslAdapterService.PlanConnection connection : plan.connections()) {
@@ -82,9 +91,6 @@ public final class AiSessionPlanCodecService {
                 ));
             }
         }
-
-        List<String> errors = plan == null || plan.validationErrors() == null ? List.of() : plan.validationErrors();
-        String summary = plan == null ? "" : plan.summary();
-        return new AiGraphPlan(summary, nodes, connections, errors);
+        return connections;
     }
 }
