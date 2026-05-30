@@ -27,7 +27,7 @@ import java.util.UUID;
     id = "geometry.architectural_primitives.window_array",
     displayName = "Window Array",
     description = "Generates a rectangular array of inset window opening boxes on a box face",
-    category = "geometry.profiles",
+    category = "geometry.architectural_primitives",
     order = 0
 )
 public class WindowArrayNode extends BaseNode {
