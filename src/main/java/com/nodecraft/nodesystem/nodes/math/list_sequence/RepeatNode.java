@@ -25,7 +25,6 @@ public class RepeatNode extends BaseNode {
     
     // ---              ?---
     private int defaultCount = 3; //                    ?
-    private String description; //                    ?
     
     // ---       ?              D ---
     private static final String INPUT_DATA_ID = "input_data";
@@ -39,9 +38,6 @@ public class RepeatNode extends BaseNode {
     public RepeatNode() {
         //                                        UID.randomUUID()              D
         super(UUID.randomUUID(), "math.sequence.repeat");
-        
-        //                    ?
-        this.description = "Repeats a single data item or list multiple times";
         
         //                    ?
         IPort dataInput = new BasePort(INPUT_DATA_ID, "Data", 
@@ -60,15 +56,6 @@ public class RepeatNode extends BaseNode {
         IPort lengthOutput = new BasePort(OUTPUT_LENGTH_ID, "Length", 
                 "Length of the resulting list", NodeDataType.INTEGER, this);
         addOutputPort(lengthOutput);
-    }
-    
-    /**
-     *         ode            tDescription      ?
-     * @return              ?
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
     }
     
     /**
@@ -125,8 +112,11 @@ public class RepeatNode extends BaseNode {
     }
     
     public void setDefaultCount(int count) {
-        this.defaultCount = Math.max(0, count);
-        markDirty();
+        int resolved = Math.max(0, count);
+        if (this.defaultCount != resolved) {
+            this.defaultCount = resolved;
+            markDirty();
+        }
     }
     
     // ---                         ?---

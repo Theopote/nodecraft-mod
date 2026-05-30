@@ -25,7 +25,6 @@ public class GetItemNode extends BaseNode {
     // ---              ?---
     private boolean allowNegativeIndex = true; //                                                              ?
     private boolean wrapIndex = false; //                                     ?
-    private String description = "Gets an item from a list at a specified index"; //              ?
     
     // ---       ?              D ---
     private static final String INPUT_LIST_ID = "input_list";
@@ -57,15 +56,6 @@ public class GetItemNode extends BaseNode {
         IPort foundOutput = new BasePort(OUTPUT_FOUND_ID, "Found", 
                 "Whether an item was found at the specified index", NodeDataType.BOOLEAN, this);
         addOutputPort(foundOutput);
-    }
-    
-    /**
-     *         ode            tDescription      ?
-     * @return              ?
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
     }
     
     /**
@@ -120,8 +110,10 @@ public class GetItemNode extends BaseNode {
     }
     
     public void setAllowNegativeIndex(boolean allow) {
-        this.allowNegativeIndex = allow;
-        markDirty();
+        if (this.allowNegativeIndex != allow) {
+            this.allowNegativeIndex = allow;
+            markDirty();
+        }
     }
     
     public boolean isWrapIndex() {
@@ -129,8 +121,10 @@ public class GetItemNode extends BaseNode {
     }
     
     public void setWrapIndex(boolean wrap) {
-        this.wrapIndex = wrap;
-        markDirty();
+        if (this.wrapIndex != wrap) {
+            this.wrapIndex = wrap;
+            markDirty();
+        }
     }
     
     // ---                         ?---

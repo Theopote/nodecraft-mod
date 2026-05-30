@@ -26,7 +26,6 @@ public class SubListNode extends BaseNode {
     // ---              ?---
     private boolean allowNegativeIndex = true; //                                                              ?
     private boolean clampToList = true; //                                           ?
-    private String description; //                    ?
     
     // ---       ?              D ---
     private static final String INPUT_LIST_ID = "input_list";
@@ -40,9 +39,6 @@ public class SubListNode extends BaseNode {
     public SubListNode() {
         //                                        UID.randomUUID()              D
         super(UUID.randomUUID(), "math.list.sub_list");
-        
-        //                    ?
-        this.description = "Gets a portion of a list between start and end indexes";
         
         //                    ?
         IPort listInput = new BasePort(INPUT_LIST_ID, "List", 
@@ -61,15 +57,6 @@ public class SubListNode extends BaseNode {
         IPort sublistOutput = new BasePort(OUTPUT_SUBLIST_ID, "Sub List", 
                 "The resulting sub list", NodeDataType.LIST, this);
         addOutputPort(sublistOutput);
-    }
-    
-    /**
-     *         ode            tDescription      ?
-     * @return              ?
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
     }
     
     /**
@@ -126,12 +113,8 @@ public class SubListNode extends BaseNode {
                 if (clampToList) {
                     endIndex = Math.max(startIndex, Math.min(endIndex, listSize));
                 } else if (endIndex < startIndex || endIndex > listSize) {
-                    //                                                              ?
-                    if (endIndex < startIndex) {
-                        outputValues.put(OUTPUT_SUBLIST_ID, resultList);
-                        return;
-                    }
-                    endIndex = Math.min(endIndex, listSize);
+                    outputValues.put(OUTPUT_SUBLIST_ID, resultList);
+                    return;
                 }
             }
             
@@ -152,8 +135,10 @@ public class SubListNode extends BaseNode {
     }
     
     public void setAllowNegativeIndex(boolean allow) {
-        this.allowNegativeIndex = allow;
-        markDirty();
+        if (this.allowNegativeIndex != allow) {
+            this.allowNegativeIndex = allow;
+            markDirty();
+        }
     }
     
     public boolean isClampToList() {
@@ -161,8 +146,10 @@ public class SubListNode extends BaseNode {
     }
     
     public void setClampToList(boolean clamp) {
-        this.clampToList = clamp;
-        markDirty();
+        if (this.clampToList != clamp) {
+            this.clampToList = clamp;
+            markDirty();
+        }
     }
     
     // ---                         ?---
