@@ -49,11 +49,6 @@ public class DropdownSelectorNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Selects one value from user-defined option list and outputs index + text value.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         List<String> optionList = resolveOptions(inputValues.get(INPUT_OPTIONS_ID));
         if (optionList.isEmpty()) {
@@ -88,10 +83,34 @@ public class DropdownSelectorNode extends BaseNode {
             return;
         }
         if (map.get("options") instanceof String text) {
-            options = text;
+            setOptions(text);
         }
         if (map.get("selectedIndex") instanceof Number n) {
-            selectedIndex = n.intValue();
+            setSelectedIndex(n.intValue());
+        }
+    }
+
+    public String getOptions() {
+        return options;
+    }
+
+    public void setOptions(String value) {
+        String resolved = value != null ? value : "";
+        if (!resolved.equals(options)) {
+            options = resolved;
+            markDirty();
+        }
+    }
+
+    public int getSelectedIndex() {
+        return selectedIndex;
+    }
+
+    public void setSelectedIndex(int value) {
+        int resolved = Math.max(0, value);
+        if (selectedIndex != resolved) {
+            selectedIndex = resolved;
+            markDirty();
         }
     }
 

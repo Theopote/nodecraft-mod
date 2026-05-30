@@ -53,16 +53,6 @@ public class ZipListsNode extends BaseNode {
     }
 
     @Override
-    public String getDisplayName() {
-        return "Zip Lists";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Pairs two lists by index and outputs tuples as entry maps.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object leftObj = inputValues.get(INPUT_LEFT_ID);
         Object rightObj = inputValues.get(INPUT_RIGHT_ID);
@@ -130,11 +120,33 @@ public class ZipListsNode extends BaseNode {
         }
         Object useLongestValue = map.get("useLongest");
         if (useLongestValue instanceof Boolean value) {
-            useLongest = value;
+            setUseLongest(value);
         }
         Object fillMissingValue = map.get("fillMissingWithNull");
         if (fillMissingValue instanceof Boolean value) {
+            setFillMissingWithNull(value);
+        }
+    }
+
+    public boolean isUseLongest() {
+        return useLongest;
+    }
+
+    public void setUseLongest(boolean value) {
+        if (useLongest != value) {
+            useLongest = value;
+            markDirty();
+        }
+    }
+
+    public boolean isFillMissingWithNull() {
+        return fillMissingWithNull;
+    }
+
+    public void setFillMissingWithNull(boolean value) {
+        if (fillMissingWithNull != value) {
             fillMissingWithNull = value;
+            markDirty();
         }
     }
 }

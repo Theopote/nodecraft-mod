@@ -51,6 +51,7 @@ public class ExportWorldEditNode extends BaseCustomUINode {
     private static final String OUTPUT_COUNT_ID = "output_count";
     private static final String OUTPUT_FORMAT_ID = "output_format";
     private static final String OUTPUT_VERSION_ID = "output_version";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
     public ExportWorldEditNode() {
         super(UUID.randomUUID(), "output.export.export_worldedit");
@@ -68,17 +69,13 @@ public class ExportWorldEditNode extends BaseCustomUINode {
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Block Count", "Number of exported blocks", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_FORMAT_ID, "Format", "Export format id", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_VERSION_ID, "Format Version", "Export format version", NodeDataType.INTEGER, this));
-    }
-
-    @Override
-    public String getDescription() {
-        return "Exports placements to a Sponge schematic file for WorldEdit";
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when export fails", NodeDataType.STRING, this));
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         if (inputValues.get(INPUT_TRIGGER_ID) == null) {
-            publishOutputs(false, "", 0);
+            publishOutputs(false, "", 0, "trigger not connected");
             return;
         }
 
@@ -89,20 +86,20 @@ public class ExportWorldEditNode extends BaseCustomUINode {
 
         List<BlockPlacementData> placements = resolvePlacements(defaultBlock);
         if (placements.isEmpty()) {
-            publishOutputs(false, "", 0);
+            publishOutputs(false, "", 0, "empty placements");
             return;
         }
 
+        Path outputPath = normalizeOutputPath(rawPath);
         try {
-            Path outputPath = normalizeOutputPath(rawPath);
             Files.createDirectories(outputPath.getParent());
 
             NbtCompound root = buildSpongeSchematicNbt(placements, name, author);
             NbtIo.write(root, outputPath);
 
-            publishOutputs(true, outputPath.toString(), placements.size());
+            publishOutputs(true, outputPath.toString(), placements.size(), "");
         } catch (Exception e) {
-            publishOutputs(false, e.getMessage() != null ? e.getMessage() : rawPath, 0);
+            publishOutputs(false, outputPath.toString(), 0, e.getMessage() != null ? e.getMessage() : "export failed");
         }
     }
 
@@ -225,12 +222,13 @@ public class ExportWorldEditNode extends BaseCustomUINode {
         return (value instanceof String text && !text.isBlank()) ? text : fallback;
     }
 
-    private void publishOutputs(boolean success, String path, int count) {
+    private void publishOutputs(boolean success, String path, int count, String error) {
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_PATH_ID, path);
         outputValues.put(OUTPUT_COUNT_ID, count);
         outputValues.put(OUTPUT_FORMAT_ID, "worldedit:schem");
         outputValues.put(OUTPUT_VERSION_ID, SPONGE_SCHEM_VERSION);
+        outputValues.put(OUTPUT_ERROR_ID, error != null ? error : "");
     }
 
     @Override

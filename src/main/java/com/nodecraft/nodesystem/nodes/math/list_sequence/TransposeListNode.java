@@ -51,16 +51,6 @@ public class TransposeListNode extends BaseNode {
     }
 
     @Override
-    public String getDisplayName() {
-        return "Transpose List of Lists";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Transposes a list of lists by swapping rows and columns.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object matrixObj = inputValues.get(INPUT_LIST_ID);
         if (!(matrixObj instanceof List<?> outer)) {
@@ -144,15 +134,48 @@ public class TransposeListNode extends BaseNode {
         }
         Object useLongestRowValue = map.get("useLongestRow");
         if (useLongestRowValue instanceof Boolean value) {
-            useLongestRow = value;
+            setUseLongestRow(value);
         }
         Object fillMissingValue = map.get("fillMissingWithNull");
         if (fillMissingValue instanceof Boolean value) {
-            fillMissingWithNull = value;
+            setFillMissingWithNull(value);
         }
         Object ignoreNonListRowsValue = map.get("ignoreNonListRows");
         if (ignoreNonListRowsValue instanceof Boolean value) {
+            setIgnoreNonListRows(value);
+        }
+    }
+
+    public boolean isUseLongestRow() {
+        return useLongestRow;
+    }
+
+    public void setUseLongestRow(boolean value) {
+        if (useLongestRow != value) {
+            useLongestRow = value;
+            markDirty();
+        }
+    }
+
+    public boolean isFillMissingWithNull() {
+        return fillMissingWithNull;
+    }
+
+    public void setFillMissingWithNull(boolean value) {
+        if (fillMissingWithNull != value) {
+            fillMissingWithNull = value;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNonListRows() {
+        return ignoreNonListRows;
+    }
+
+    public void setIgnoreNonListRows(boolean value) {
+        if (ignoreNonListRows != value) {
             ignoreNonListRows = value;
+            markDirty();
         }
     }
 }

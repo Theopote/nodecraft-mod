@@ -13,7 +13,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "output.execute.clear_preview",
     displayName = "Clear Preview",
-    description = "Clears all active previews in the current world",
+    description = "Clears all active previews",
     category = "output.execute",
     order = 1
 )
@@ -22,8 +22,6 @@ public class ClearAllPreviewsNode extends BaseCustomUINode {
     private static final String INPUT_TRIGGER_ID = "input_trigger";
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_CLEARED_COUNT_ID = "output_cleared_count";
-
-    private int lastClearedCount = 0;
 
     public ClearAllPreviewsNode() {
         super(UUID.randomUUID(), "output.execute.clear_preview");
@@ -41,7 +39,6 @@ public class ClearAllPreviewsNode extends BaseCustomUINode {
             try {
                 clearedCount = PreviewManager.getActivePreviewCount();
                 PreviewManager.clearAllPreviews();
-                lastClearedCount = clearedCount;
                 success = true;
             } catch (Exception e) {
                 System.err.println("Error clearing previews: " + e.getMessage());

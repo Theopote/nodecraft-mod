@@ -68,11 +68,6 @@ public class ExportDataNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Exports list/coordinates data to CSV or JSON file.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         if (inputValues.get(INPUT_TRIGGER_ID) == null) {
             publish(false, "", 0, resolvedFormat().name().toLowerCase(), "trigger not connected");
