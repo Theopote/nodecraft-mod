@@ -127,9 +127,14 @@ final class AiAssistantPlanPreviewRenderer {
         if (ImGui.treeNode("Graph Topology Preview")) {
             ImGui.textDisabled("Auto-layout + drag nodes to adjust manually");
             if (ImGui.smallButton("Reset Topology Layout")) {
-                topologyPreviewState.reset();
+                state.topologyPreviewState().reset();
             }
-            String selectedNodeRef = renderTopologyPreview(state.planNodes(), state.planConnections(), state.focusedNodeRef(), topologyPreviewState);
+            String selectedNodeRef = renderTopologyPreview(
+                    state.planNodes(),
+                    state.planConnections(),
+                    state.focusedNodeRef(),
+                    state.topologyPreviewState()
+            );
             if (selectedNodeRef != null && !selectedNodeRef.isBlank()) {
                 actions.onTopologyNodeSelected(selectedNodeRef);
             }
