@@ -2,7 +2,6 @@ package com.nodecraft.nodesystem.nodes.geometry.architectural_primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -26,7 +25,7 @@ import java.util.UUID;
     category = "geometry.architectural_primitives",
     order = 6
 )
-public class FacadePanelArrayNode extends BaseNode {
+public class FacadePanelArrayNode extends AbstractFaceArrayNode {
 
     private static final String INPUT_FACE_ID = "input_face";
     private static final String INPUT_COLUMNS_ID = "input_columns";
@@ -72,17 +71,16 @@ public class FacadePanelArrayNode extends BaseNode {
         boolean valid = false;
 
         if (faceObj instanceof BoxFaceData face) {
-            ArchitecturalPrimitiveSupport.FaceFrame frame = ArchitecturalPrimitiveSupport.resolveFaceFrame(face);
-            if (frame != null) {
-                int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 3);
-                int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 3);
-                double panelWidth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_PANEL_WIDTH_ID), 1.0d);
-                double panelHeight = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_PANEL_HEIGHT_ID), 1.0d);
-                double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
-                double thickness = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_THICKNESS_ID), 0.15d);
-                double offset = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_OFFSET_ID), 0.0d);
-
-                List<BoxGeometryData> panels = buildPanels(frame, columns, rows, panelWidth, panelHeight, margin, thickness, offset);
+            int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 3);
+            int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 3);
+            double panelWidth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_PANEL_WIDTH_ID), 1.0d);
+            double panelHeight = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_PANEL_HEIGHT_ID), 1.0d);
+            double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
+            double thickness = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_THICKNESS_ID), 0.15d);
+            double offset = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_OFFSET_ID), 0.0d);
+            FaceArrayLayout layout = resolveFaceArrayLayout(face, columns, rows, panelWidth, panelHeight, margin, VerticalAnchor.BOTTOM);
+            if (layout != null) {
+                List<BoxGeometryData> panels = buildPanels(layout, thickness, offset);
                 if (!panels.isEmpty()) {
                     geometry = new CompositeGeometryData(new ArrayList<>(panels));
                     count = panels.size();
@@ -97,46 +95,15 @@ public class FacadePanelArrayNode extends BaseNode {
     }
 
     private List<BoxGeometryData> buildPanels(
-        ArchitecturalPrimitiveSupport.FaceFrame frame,
-        int columns,
-        int rows,
-        double panelWidth,
-        double panelHeight,
-        double margin,
+        FaceArrayLayout layout,
         double thickness,
         double offset
     ) {
-        double availableWidth = frame.width() - 2.0d * margin;
-        double availableHeight = frame.height() - 2.0d * margin;
-        if (availableWidth < panelWidth || availableHeight < panelHeight) {
-            return List.of();
-        }
-
-        double spacingX = columns > 1 ? (availableWidth - columns * panelWidth) / (columns - 1) : 0.0d;
-        double spacingY = rows > 1 ? (availableHeight - rows * panelHeight) / (rows - 1) : 0.0d;
-        if (spacingX < -1.0e-9d || spacingY < -1.0e-9d) {
-            return List.of();
-        }
-
-        double startX = -frame.width() / 2.0d + margin + panelWidth / 2.0d;
-        double startY = -frame.height() / 2.0d + margin + panelHeight / 2.0d;
-        Vector3d normalOffset = new Vector3d(frame.zAxis()).mul(offset + thickness / 2.0d);
-        List<BoxGeometryData> panels = new ArrayList<>(columns * rows);
-
-        for (int row = 0; row < rows; row++) {
-            double offsetY = startY + row * (panelHeight + spacingY);
-            for (int column = 0; column < columns; column++) {
-                double offsetX = startX + column * (panelWidth + spacingX);
-                Vector3d center = new Vector3d(frame.center())
-                    .fma(offsetX, frame.xAxis())
-                    .fma(offsetY, frame.yAxis())
-                    .add(normalOffset);
-
-                Vector3d halfExtents = new Vector3d(panelWidth / 2.0d, panelHeight / 2.0d, thickness / 2.0d);
-                panels.add(ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, frame.xAxis(), frame.yAxis(), frame.zAxis()));
-            }
-        }
-
-        return List.copyOf(panels);
+        Vector3d normalOffset = new Vector3d(layout.frame().zAxis()).mul(offset + thickness / 2.0d);
+        return buildFaceArray(layout, placement -> {
+            Vector3d center = placement.centerOnFace().add(normalOffset);
+            Vector3d halfExtents = new Vector3d(layout.elementWidth() / 2.0d, layout.elementHeight() / 2.0d, thickness / 2.0d);
+            return ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, layout.frame().xAxis(), layout.frame().yAxis(), layout.frame().zAxis());
+        });
     }
 }

@@ -2,7 +2,6 @@ package com.nodecraft.nodesystem.nodes.geometry.architectural_primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -26,7 +25,7 @@ import java.util.UUID;
     category = "geometry.architectural_primitives",
     order = 1
 )
-public class DoorArrayNode extends BaseNode {
+public class DoorArrayNode extends AbstractFaceArrayNode {
 
     private static final String INPUT_FACE_ID = "input_face";
     private static final String INPUT_COLUMNS_ID = "input_columns";
@@ -70,16 +69,15 @@ public class DoorArrayNode extends BaseNode {
         boolean valid = false;
 
         if (faceObj instanceof BoxFaceData face) {
-            ArchitecturalPrimitiveSupport.FaceFrame frame = ArchitecturalPrimitiveSupport.resolveFaceFrame(face);
-            if (frame != null) {
-                int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 1);
-                int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 1);
-                double doorWidth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DOOR_WIDTH_ID), 1.0d);
-                double doorHeight = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DOOR_HEIGHT_ID), 2.0d);
-                double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
-                double depth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DEPTH_ID), 1.0d);
-
-                List<BoxGeometryData> openings = buildOpeningBoxes(frame, columns, rows, doorWidth, doorHeight, margin, depth);
+            int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 1);
+            int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 1);
+            double doorWidth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DOOR_WIDTH_ID), 1.0d);
+            double doorHeight = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DOOR_HEIGHT_ID), 2.0d);
+            double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
+            double depth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_DEPTH_ID), 1.0d);
+            FaceArrayLayout layout = resolveFaceArrayLayout(face, columns, rows, doorWidth, doorHeight, margin, VerticalAnchor.BOTTOM);
+            if (layout != null) {
+                List<BoxGeometryData> openings = buildOpeningBoxes(layout, depth);
                 if (!openings.isEmpty()) {
                     geometry = new CompositeGeometryData(new ArrayList<>(openings));
                     count = openings.size();
@@ -94,45 +92,13 @@ public class DoorArrayNode extends BaseNode {
     }
 
     private List<BoxGeometryData> buildOpeningBoxes(
-        ArchitecturalPrimitiveSupport.FaceFrame frame,
-        int columns,
-        int rows,
-        double doorWidth,
-        double doorHeight,
-        double margin,
+        FaceArrayLayout layout,
         double depth
     ) {
-        double availableWidth = frame.width() - 2.0d * margin;
-        double availableHeight = frame.height() - 2.0d * margin;
-        if (availableWidth < doorWidth || availableHeight < doorHeight) {
-            return List.of();
-        }
-
-        double spacingX = columns > 1 ? (availableWidth - columns * doorWidth) / (columns - 1) : 0.0d;
-        double spacingY = rows > 1 ? (availableHeight - rows * doorHeight) / (rows - 1) : 0.0d;
-        if (spacingX < -1.0e-9d || spacingY < -1.0e-9d) {
-            return List.of();
-        }
-
-        double startX = -frame.width() / 2.0d + margin + doorWidth / 2.0d;
-        double startY = -frame.height() / 2.0d + margin + doorHeight / 2.0d;
-        Vector3d inwardNormal = new Vector3d(frame.zAxis()).negate();
-        List<BoxGeometryData> openings = new ArrayList<>(columns * rows);
-
-        for (int row = 0; row < rows; row++) {
-            double offsetY = startY + row * (doorHeight + spacingY);
-            for (int column = 0; column < columns; column++) {
-                double offsetX = startX + column * (doorWidth + spacingX);
-                Vector3d center = new Vector3d(frame.center())
-                    .fma(offsetX, frame.xAxis())
-                    .fma(offsetY, frame.yAxis())
-                    .fma(depth / 2.0d, inwardNormal);
-
-                Vector3d halfExtents = new Vector3d(doorWidth / 2.0d, doorHeight / 2.0d, depth / 2.0d);
-                openings.add(ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, frame.xAxis(), frame.yAxis(), frame.zAxis()));
-            }
-        }
-
-        return List.copyOf(openings);
+        return buildFaceArray(layout, placement -> {
+            Vector3d center = placement.centerOnFace().fma(-depth / 2.0d, layout.frame().zAxis());
+            Vector3d halfExtents = new Vector3d(layout.elementWidth() / 2.0d, layout.elementHeight() / 2.0d, depth / 2.0d);
+            return ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, layout.frame().xAxis(), layout.frame().yAxis(), layout.frame().zAxis());
+        });
     }
 }

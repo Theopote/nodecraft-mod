@@ -3,7 +3,6 @@ package com.nodecraft.nodesystem.nodes.geometry.architectural_primitives;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -11,7 +10,6 @@ import com.nodecraft.nodesystem.datatypes.CompositeGeometryData;
 import com.nodecraft.nodesystem.datatypes.GeometryData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
-import org.joml.Matrix3d;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
@@ -30,7 +28,7 @@ import java.util.UUID;
     category = "geometry.architectural_primitives",
     order = 0
 )
-public class WindowArrayNode extends BaseNode {
+public class WindowArrayNode extends AbstractFaceArrayNode {
 
     private static final String INPUT_FACE_ID = "input_face";
     private static final String INPUT_COLUMNS_ID = "input_columns";
@@ -95,8 +93,9 @@ public class WindowArrayNode extends BaseNode {
             double margin = resolveNonNegativeDouble(marginObj, 0.0d);
             double depth = resolvePositiveDouble(depthObj, defaultDepth);
 
-            List<BoxGeometryData> openings = buildOpeningBoxes(face, columns, rows, windowWidth, windowHeight, margin, depth);
-            if (!openings.isEmpty()) {
+            FaceArrayLayout layout = resolveFaceArrayLayout(face, columns, rows, windowWidth, windowHeight, margin, VerticalAnchor.TOP);
+            if (layout != null) {
+                List<BoxGeometryData> openings = buildOpeningBoxes(layout, depth);
                 geometry = new CompositeGeometryData(new ArrayList<>(openings));
                 count = openings.size();
                 valid = true;
@@ -109,104 +108,14 @@ public class WindowArrayNode extends BaseNode {
     }
 
     private List<BoxGeometryData> buildOpeningBoxes(
-        BoxFaceData face,
-        int columns,
-        int rows,
-        double windowWidth,
-        double windowHeight,
-        double margin,
+        FaceArrayLayout layout,
         double depth
     ) {
-        List<Vector3d> corners = face.getCorners();
-        if (corners.size() < 4) {
-            return List.of();
-        }
-
-        Vector3d c0 = corners.get(0);
-        Vector3d c1 = corners.get(1);
-        Vector3d c3 = corners.get(3);
-
-        Vector3d xAxis = new Vector3d(c1).sub(c0);
-        Vector3d yHint = new Vector3d(c3).sub(c0);
-        double faceWidth = xAxis.length();
-        double faceHeight = yHint.length();
-        if (faceWidth <= 1.0e-9d || faceHeight <= 1.0e-9d) {
-            return List.of();
-        }
-
-        xAxis.normalize();
-        Vector3d zAxis = new Vector3d(xAxis).cross(yHint);
-        if (zAxis.lengthSquared() <= 1.0e-12d) {
-            return List.of();
-        }
-        zAxis.normalize();
-        Vector3d faceNormal = face.getNormal();
-        if (zAxis.dot(faceNormal) < 0.0d) {
-            zAxis.negate();
-        }
-        Vector3d yAxis = new Vector3d(zAxis).cross(xAxis).normalize();
-
-        double availableWidth = faceWidth - 2.0d * margin;
-        double availableHeight = faceHeight - 2.0d * margin;
-        if (availableWidth < windowWidth || availableHeight < windowHeight) {
-            return List.of();
-        }
-
-        double spacingX = columns > 1 ? (availableWidth - columns * windowWidth) / (columns - 1) : 0.0d;
-        double spacingY = rows > 1 ? (availableHeight - rows * windowHeight) / (rows - 1) : 0.0d;
-        if (spacingX < -1.0e-9d || spacingY < -1.0e-9d) {
-            return List.of();
-        }
-
-        double startX = -faceWidth / 2.0d + margin + windowWidth / 2.0d;
-        double startY = faceHeight / 2.0d - margin - windowHeight / 2.0d;
-
-        Matrix3d orientation = new Matrix3d(
-            xAxis.x, yAxis.x, zAxis.x,
-            xAxis.y, yAxis.y, zAxis.y,
-            xAxis.z, yAxis.z, zAxis.z
-        );
-
-        Vector3d faceCenter = face.getCenter();
-        Vector3d inwardNormal = new Vector3d(zAxis).negate();
-        List<BoxGeometryData> openings = new ArrayList<>(columns * rows);
-
-        for (int row = 0; row < rows; row++) {
-            double offsetY = startY - row * (windowHeight + spacingY);
-            for (int column = 0; column < columns; column++) {
-                double offsetX = startX + column * (windowWidth + spacingX);
-                Vector3d center = new Vector3d(faceCenter)
-                    .fma(offsetX, xAxis)
-                    .fma(offsetY, yAxis)
-                    .fma(depth / 2.0d, inwardNormal);
-
-                Vector3d halfExtents = new Vector3d(windowWidth / 2.0d, windowHeight / 2.0d, depth / 2.0d);
-                openings.add(new BoxGeometryData(center, halfExtents, orientation, true));
-            }
-        }
-
-        return List.copyOf(openings);
-    }
-
-    private int resolvePositiveInt(Object value, int fallback) {
-        if (value instanceof Number number) {
-            return Math.max(1, number.intValue());
-        }
-        return fallback;
-    }
-
-    private double resolvePositiveDouble(Object value, double fallback) {
-        if (value instanceof Number number) {
-            return Math.max(1.0e-6d, number.doubleValue());
-        }
-        return fallback;
-    }
-
-    private double resolveNonNegativeDouble(Object value, double fallback) {
-        if (value instanceof Number number) {
-            return Math.max(0.0d, number.doubleValue());
-        }
-        return fallback;
+        return buildFaceArray(layout, placement -> {
+            Vector3d center = placement.centerOnFace().fma(-depth / 2.0d, layout.frame().zAxis());
+            Vector3d halfExtents = new Vector3d(layout.elementWidth() / 2.0d, layout.elementHeight() / 2.0d, depth / 2.0d);
+            return ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, layout.frame().xAxis(), layout.frame().yAxis(), layout.frame().zAxis());
+        });
     }
 
     public double getDefaultDepth() {

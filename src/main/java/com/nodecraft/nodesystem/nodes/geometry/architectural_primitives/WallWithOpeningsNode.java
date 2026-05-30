@@ -2,7 +2,6 @@ package com.nodecraft.nodesystem.nodes.geometry.architectural_primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -26,7 +25,7 @@ import java.util.UUID;
     category = "geometry.architectural_primitives",
     order = 8
 )
-public class WallWithOpeningsNode extends BaseNode {
+public class WallWithOpeningsNode extends AbstractFaceArrayNode {
 
     private static final String INPUT_FACE_ID = "input_face";
     private static final String INPUT_COLUMNS_ID = "input_columns";
@@ -80,10 +79,13 @@ public class WallWithOpeningsNode extends BaseNode {
                 double openingHeight = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_OPENING_HEIGHT_ID), 1.5d);
                 double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
                 double openingDepth = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_OPENING_DEPTH_ID), wallThickness);
+                FaceArrayLayout layout = resolveFaceArrayLayout(frame, columns, rows, openingWidth, openingHeight, margin, VerticalAnchor.BOTTOM);
 
                 List<GeometryData> pieces = new ArrayList<>();
                 pieces.add(createWall(frame, wallThickness));
-                pieces.addAll(buildOpenings(frame, columns, rows, openingWidth, openingHeight, margin, openingDepth));
+                if (layout != null) {
+                    pieces.addAll(buildOpenings(layout, openingDepth));
+                }
 
                 geometry = new CompositeGeometryData(pieces);
                 count = pieces.size();
@@ -103,44 +105,14 @@ public class WallWithOpeningsNode extends BaseNode {
     }
 
     private List<GeometryData> buildOpenings(
-        ArchitecturalPrimitiveSupport.FaceFrame frame,
-        int columns,
-        int rows,
-        double openingWidth,
-        double openingHeight,
-        double margin,
+        FaceArrayLayout layout,
         double openingDepth
     ) {
-        double availableWidth = frame.width() - 2.0d * margin;
-        double availableHeight = frame.height() - 2.0d * margin;
-        if (availableWidth < openingWidth || availableHeight < openingHeight) {
-            return List.of();
-        }
-
-        double spacingX = columns > 1 ? (availableWidth - columns * openingWidth) / (columns - 1) : 0.0d;
-        double spacingY = rows > 1 ? (availableHeight - rows * openingHeight) / (rows - 1) : 0.0d;
-        if (spacingX < -1.0e-9d || spacingY < -1.0e-9d) {
-            return List.of();
-        }
-
-        double startX = -frame.width() / 2.0d + margin + openingWidth / 2.0d;
-        double startY = -frame.height() / 2.0d + margin + openingHeight / 2.0d;
-        Vector3d inwardNormal = new Vector3d(frame.zAxis()).mul(openingDepth / 2.0d);
-
-        List<GeometryData> openings = new ArrayList<>(columns * rows);
-        for (int row = 0; row < rows; row++) {
-            double offsetY = startY + row * (openingHeight + spacingY);
-            for (int column = 0; column < columns; column++) {
-                double offsetX = startX + column * (openingWidth + spacingX);
-                Vector3d center = new Vector3d(frame.center())
-                    .fma(offsetX, frame.xAxis())
-                    .fma(offsetY, frame.yAxis())
-                    .add(inwardNormal);
-                Vector3d halfExtents = new Vector3d(openingWidth / 2.0d, openingHeight / 2.0d, openingDepth / 2.0d);
-                openings.add(ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, frame.xAxis(), frame.yAxis(), frame.zAxis()));
-            }
-        }
-
-        return List.copyOf(openings);
+        Vector3d inwardNormal = new Vector3d(layout.frame().zAxis()).mul(openingDepth / 2.0d);
+        return buildFaceArray(layout, placement -> {
+            Vector3d center = placement.centerOnFace().add(inwardNormal);
+            Vector3d halfExtents = new Vector3d(layout.elementWidth() / 2.0d, layout.elementHeight() / 2.0d, openingDepth / 2.0d);
+            return ArchitecturalPrimitiveSupport.createOrientedBox(center, halfExtents, layout.frame().xAxis(), layout.frame().yAxis(), layout.frame().zAxis());
+        });
     }
 }

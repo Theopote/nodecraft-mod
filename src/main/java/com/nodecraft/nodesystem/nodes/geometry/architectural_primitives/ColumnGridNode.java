@@ -2,7 +2,6 @@ package com.nodecraft.nodesystem.nodes.geometry.architectural_primitives;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
-import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
@@ -29,7 +28,7 @@ import java.util.UUID;
     category = "geometry.architectural_primitives",
     order = 2
 )
-public class ColumnGridNode extends BaseNode {
+public class ColumnGridNode extends AbstractFaceArrayNode {
 
     private static final String INPUT_FACE_ID = "input_face";
     private static final String INPUT_COLUMNS_ID = "input_columns";
@@ -75,17 +74,16 @@ public class ColumnGridNode extends BaseNode {
         boolean valid = false;
 
         if (faceObj instanceof BoxFaceData face) {
-            ArchitecturalPrimitiveSupport.FaceFrame frame = ArchitecturalPrimitiveSupport.resolveFaceFrame(face);
-            if (frame != null) {
-                int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 1);
-                int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 1);
-                double radius = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_RADIUS_ID), 0.5d);
-                double height = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_HEIGHT_ID), 3.0d);
-                double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
-                double topScale = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_TOP_SCALE_ID), 1.0d);
-                String shape = resolveShape(inputValues.get(INPUT_SHAPE_ID));
-
-                List<GeometryData> columnsGeometry = buildColumns(frame, columns, rows, radius, height, margin, topScale, shape);
+            int columns = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_COLUMNS_ID), 1);
+            int rows = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_ROWS_ID), 1);
+            double radius = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_RADIUS_ID), 0.5d);
+            double height = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_HEIGHT_ID), 3.0d);
+            double margin = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_MARGIN_ID), 0.0d);
+            double topScale = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_TOP_SCALE_ID), 1.0d);
+            String shape = resolveShape(inputValues.get(INPUT_SHAPE_ID));
+            FaceArrayLayout layout = resolveFaceArrayLayout(face, columns, rows, radius * 2.0d, radius * 2.0d, margin, VerticalAnchor.BOTTOM);
+            if (layout != null) {
+                List<GeometryData> columnsGeometry = buildColumns(layout, radius, height, topScale, shape);
                 if (!columnsGeometry.isEmpty()) {
                     geometry = new CompositeGeometryData(columnsGeometry);
                     count = columnsGeometry.size();
@@ -100,45 +98,17 @@ public class ColumnGridNode extends BaseNode {
     }
 
     private List<GeometryData> buildColumns(
-        ArchitecturalPrimitiveSupport.FaceFrame frame,
-        int columns,
-        int rows,
+        FaceArrayLayout layout,
         double radius,
         double height,
-        double margin,
         double topScale,
         String shape
     ) {
-        double availableWidth = frame.width() - 2.0d * margin;
-        double availableHeight = frame.height() - 2.0d * margin;
-        if (availableWidth < radius * 2.0d || availableHeight < radius * 2.0d) {
-            return List.of();
-        }
-
-        double spacingX = columns > 1 ? (availableWidth - columns * radius * 2.0d) / (columns - 1) : 0.0d;
-        double spacingY = rows > 1 ? (availableHeight - rows * radius * 2.0d) / (rows - 1) : 0.0d;
-        if (spacingX < -1.0e-9d || spacingY < -1.0e-9d) {
-            return List.of();
-        }
-
-        double startX = -frame.width() / 2.0d + margin + radius;
-        double startY = -frame.height() / 2.0d + margin + radius;
-        List<GeometryData> results = new ArrayList<>(columns * rows);
-
-        for (int row = 0; row < rows; row++) {
-            double offsetY = startY + row * (radius * 2.0d + spacingY);
-            for (int column = 0; column < columns; column++) {
-                double offsetX = startX + column * (radius * 2.0d + spacingX);
-                Vector3d base = new Vector3d(frame.center())
-                    .fma(offsetX, frame.xAxis())
-                    .fma(offsetY, frame.yAxis());
-                Vector3d top = new Vector3d(base).fma(height, frame.zAxis());
-
-                results.add(createColumnGeometry(base, top, radius, topScale, shape, frame));
-            }
-        }
-
-        return List.copyOf(results);
+        return buildFaceArray(layout, placement -> {
+            Vector3d base = placement.centerOnFace();
+            Vector3d top = new Vector3d(base).fma(height, layout.frame().zAxis());
+            return createColumnGeometry(base, top, radius, topScale, shape, layout.frame());
+        });
     }
 
     private GeometryData createColumnGeometry(
