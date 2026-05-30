@@ -69,16 +69,23 @@ public class CapsuleByAxisRadiusNode extends BaseNode {
 
         Vector3d start = resolvePoint(startInput);
         Vector3d end = resolvePoint(endInput);
-        if ((start == null || end == null) && startInput instanceof LineData axisLineInput) {
-            Vec3d lineStart = axisLineInput.getStart();
-            Vec3d lineEnd = axisLineInput.getEnd();
-            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
-            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
-        } else if ((start == null || end == null) && endInput instanceof LineData axisLineInput) {
-            Vec3d lineStart = axisLineInput.getStart();
-            Vec3d lineEnd = axisLineInput.getEnd();
-            start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
-            end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        if (start == null || end == null) {
+            LineData axisLineInput = null;
+            if (startInput instanceof LineData line) {
+                axisLineInput = line;
+            } else if (endInput instanceof LineData line) {
+                axisLineInput = line;
+            }
+            if (axisLineInput != null) {
+                Vec3d lineStart = axisLineInput.getStart();
+                Vec3d lineEnd = axisLineInput.getEnd();
+                if (start == null) {
+                    start = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+                }
+                if (end == null) {
+                    end = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+                }
+            }
         }
         Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
         if (start == null || end == null || !(radiusObj instanceof Number rn)) {

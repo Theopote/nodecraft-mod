@@ -66,16 +66,23 @@ public class FrustumByTwoCentersRadiiNode extends BaseNode {
 
         Vector3d base = resolvePoint(baseInput);
         Vector3d top = resolvePoint(topInput);
-        if ((base == null || top == null) && baseInput instanceof LineData axisLineInput) {
-            Vec3d lineStart = axisLineInput.getStart();
-            Vec3d lineEnd = axisLineInput.getEnd();
-            base = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
-            top = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
-        } else if ((base == null || top == null) && topInput instanceof LineData axisLineInput) {
-            Vec3d lineStart = axisLineInput.getStart();
-            Vec3d lineEnd = axisLineInput.getEnd();
-            base = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
-            top = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+        if (base == null || top == null) {
+            LineData axisLineInput = null;
+            if (baseInput instanceof LineData line) {
+                axisLineInput = line;
+            } else if (topInput instanceof LineData line) {
+                axisLineInput = line;
+            }
+            if (axisLineInput != null) {
+                Vec3d lineStart = axisLineInput.getStart();
+                Vec3d lineEnd = axisLineInput.getEnd();
+                if (base == null) {
+                    base = new Vector3d(lineStart.x, lineStart.y, lineStart.z);
+                }
+                if (top == null) {
+                    top = new Vector3d(lineEnd.x, lineEnd.y, lineEnd.z);
+                }
+            }
         }
         Object baseRadObj = inputValues.get(INPUT_BASE_RADIUS_ID);
         Object topRadObj = inputValues.get(INPUT_TOP_RADIUS_ID);
