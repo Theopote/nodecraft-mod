@@ -64,9 +64,6 @@ public class PrintToChatNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() { return "将输入数据显示到游戏聊天框"; }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
         String message = "";

@@ -46,11 +46,6 @@ public class ValueMonitorNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() {
-        return "将任意输出连到输入，在面板上查看该输出的数据和类型";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object value = inputValues.get(INPUT_VALUE_ID);
         typeLabel = getDataTypeLabel(value);

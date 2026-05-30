@@ -15,6 +15,7 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -45,6 +46,7 @@ public class PanelNode extends BaseCustomUINode {
     private int maxDisplayLength = 2000;
 
     private volatile String panelContent = "";
+    private volatile String panelDataType = "null";
 
     private static final String INPUT_DATA_ID = "input_data";
     private static final String INPUT_FORMAT_ID = "input_format";
@@ -66,16 +68,14 @@ public class PanelNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() { return "显示连接到其输入端口的原始数据（文本形式）"; }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object dataObj = inputValues.get(INPUT_DATA_ID);
         Object formatObj = inputValues.get(INPUT_FORMAT_ID);
         Object maxLengthObj = inputValues.get(INPUT_MAX_LENGTH_ID);
+        Object refreshObj = inputValues.get(INPUT_REFRESH_ID);
 
         boolean fmt = this.useFormatting;
-        if (formatObj instanceof Boolean) fmt = (Boolean) formatObj;
+        if (formatObj != null) fmt = coerceBoolean(formatObj);
         int maxLen = this.maxDisplayLength;
         if (maxLengthObj instanceof Number) maxLen = Math.max(10, ((Number) maxLengthObj).intValue());
 
@@ -85,10 +85,15 @@ public class PanelNode extends BaseCustomUINode {
             dataType = getDataTypeName(dataObj);
             displayText = formatDataToString(dataObj, fmt, maxLen);
         }
-        panelContent = displayText;
-        outputValues.put(OUTPUT_TEXT_ID, displayText);
-        outputValues.put(OUTPUT_TEXT_LENGTH_ID, displayText.length());
-        outputValues.put(OUTPUT_DATA_TYPE_ID, dataType);
+
+        if (autoRefresh || refreshObj != null) {
+            panelContent = displayText;
+            panelDataType = dataType;
+        }
+
+        outputValues.put(OUTPUT_TEXT_ID, panelContent);
+        outputValues.put(OUTPUT_TEXT_LENGTH_ID, panelContent.length());
+        outputValues.put(OUTPUT_DATA_TYPE_ID, panelDataType);
     }
 
     @Override
@@ -137,14 +142,18 @@ public class PanelNode extends BaseCustomUINode {
                 if (childOpen) {
                     ImGui.pushStyleColor(ImGuiCol.Text, 0xFFCCCCCC);
                     String preview = panelContent.isEmpty() ? "(无数据)" : panelContent;
-                    String[] lines = preview.split("\n", 5);
-                    for (int i = 0; i < 4; i++) {
-                        if (i < lines.length) {
-                            String line = lines[i];
-                            if (line.length() > 50) line = line.substring(0, 47) + "...";
-                            ImGui.text(line);
-                        } else {
-                            ImGui.text("");
+                    if (wrapText) {
+                        ImGui.textWrapped(preview);
+                    } else {
+                        String[] lines = preview.split("\n", 5);
+                        for (int i = 0; i < 4; i++) {
+                            if (i < lines.length) {
+                                String line = lines[i];
+                                if (line.length() > 50) line = line.substring(0, 47) + "...";
+                                ImGui.text(line);
+                            } else {
+                                ImGui.text("");
+                            }
                         }
                     }
                     ImGui.popStyleColor();
@@ -180,6 +189,26 @@ public class PanelNode extends BaseCustomUINode {
         String result = data.toString();
         if (result.length() > maxLen) result = result.substring(0, maxLen) + "...";
         return result;
+    }
+
+    private boolean coerceBoolean(Object value) {
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue() != 0.0d;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim();
+            if (normalized.isEmpty()) {
+                return false;
+            }
+            return switch (normalized.toLowerCase(Locale.ROOT)) {
+                case "true", "yes", "1", "on" -> true;
+                default -> false;
+            };
+        }
+        return true;
     }
 
     public String getPanelContent() { return panelContent; }

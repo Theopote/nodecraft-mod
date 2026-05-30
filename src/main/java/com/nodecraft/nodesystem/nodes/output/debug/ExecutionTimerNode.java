@@ -12,6 +12,7 @@ import imgui.flag.ImGuiCol;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -72,9 +73,6 @@ public class ExecutionTimerNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() { return "测量连接到此节点的计算分支所花费的时间"; }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object startObj = inputValues.get(INPUT_START_ID);
         Object stopObj = inputValues.get(INPUT_STOP_ID);
@@ -82,7 +80,7 @@ public class ExecutionTimerNode extends BaseCustomUINode {
         Object autoResetObj = inputValues.get(INPUT_AUTO_RESET_ID);
 
         boolean ar = this.autoReset;
-        if (autoResetObj instanceof Boolean) ar = (Boolean) autoResetObj;
+        if (autoResetObj != null) ar = coerceBoolean(autoResetObj);
 
         if (resetObj != null) resetTimer();
         if (startObj != null) {
@@ -153,11 +151,32 @@ public class ExecutionTimerNode extends BaseCustomUINode {
     }
 
     private String formatDuration(long duration) {
+        String format = "%." + precision + "f";
         if (duration < 1000 || showMilliseconds) {
-            return String.format("%." + precision + "f ms", (float) duration);
+            return String.format(Locale.ROOT, format + " ms", (float) duration);
         } else {
-            return String.format("%." + precision + "f s", duration / 1000.0f);
+            return String.format(Locale.ROOT, format + " s", duration / 1000.0f);
         }
+    }
+
+    private boolean coerceBoolean(Object value) {
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue() != 0.0d;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim();
+            if (normalized.isEmpty()) {
+                return false;
+            }
+            return switch (normalized.toLowerCase(Locale.ROOT)) {
+                case "true", "yes", "1", "on" -> true;
+                default -> false;
+            };
+        }
+        return true;
     }
 
     private void resetTimer() {
