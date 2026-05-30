@@ -63,16 +63,6 @@ public class ReduceListNode extends BaseNode {
     }
 
     @Override
-    public String getDisplayName() {
-        return "Reduce List";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Reduces a list into a single value using a selected operation.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object listObj = inputValues.get(INPUT_LIST_ID);
         Object initialObj = inputValues.get(INPUT_INITIAL_ID);
@@ -245,22 +235,68 @@ public class ReduceListNode extends BaseNode {
         Object operationValue = map.get("operation");
         if (operationValue instanceof String text) {
             try {
-                operation = Operation.valueOf(text);
+                setOperation(Operation.valueOf(text));
             } catch (IllegalArgumentException ignored) {
-                operation = Operation.SUM;
+                setOperation(Operation.SUM);
             }
         }
         Object ignoreNonNumericValue = map.get("ignoreNonNumeric");
         if (ignoreNonNumericValue instanceof Boolean value) {
-            ignoreNonNumeric = value;
+            setIgnoreNonNumeric(value);
         }
         Object ignoreNullsValue = map.get("ignoreNulls");
         if (ignoreNullsValue instanceof Boolean value) {
-            ignoreNulls = value;
+            setIgnoreNulls(value);
         }
         Object separatorValue = map.get("separator");
         if (separatorValue instanceof String text) {
-            separator = text;
+            setSeparator(text);
+        }
+    }
+
+    public Operation getOperation() {
+        return operation;
+    }
+
+    public void setOperation(Operation value) {
+        Operation resolved = value != null ? value : Operation.SUM;
+        if (operation != resolved) {
+            operation = resolved;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNonNumeric() {
+        return ignoreNonNumeric;
+    }
+
+    public void setIgnoreNonNumeric(boolean value) {
+        if (ignoreNonNumeric != value) {
+            ignoreNonNumeric = value;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNulls() {
+        return ignoreNulls;
+    }
+
+    public void setIgnoreNulls(boolean value) {
+        if (ignoreNulls != value) {
+            ignoreNulls = value;
+            markDirty();
+        }
+    }
+
+    public String getSeparator() {
+        return separator;
+    }
+
+    public void setSeparator(String value) {
+        String resolved = value != null ? value : "";
+        if (!resolved.equals(separator)) {
+            separator = resolved;
+            markDirty();
         }
     }
 }

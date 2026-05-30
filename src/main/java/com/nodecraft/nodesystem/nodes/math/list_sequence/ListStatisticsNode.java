@@ -55,16 +55,6 @@ public class ListStatisticsNode extends BaseNode {
     }
 
     @Override
-    public String getDisplayName() {
-        return "List Statistics";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Computes min, max, sum, average, and median for a numeric list.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object listObj = inputValues.get(INPUT_LIST_ID);
         if (!(listObj instanceof List<?> inputList)) {
@@ -166,11 +156,33 @@ public class ListStatisticsNode extends BaseNode {
         }
         Object ignoreNonNumericValue = map.get("ignoreNonNumeric");
         if (ignoreNonNumericValue instanceof Boolean value) {
-            ignoreNonNumeric = value;
+            setIgnoreNonNumeric(value);
         }
         Object ignoreNullsValue = map.get("ignoreNulls");
         if (ignoreNullsValue instanceof Boolean value) {
+            setIgnoreNulls(value);
+        }
+    }
+
+    public boolean isIgnoreNonNumeric() {
+        return ignoreNonNumeric;
+    }
+
+    public void setIgnoreNonNumeric(boolean value) {
+        if (ignoreNonNumeric != value) {
+            ignoreNonNumeric = value;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNulls() {
+        return ignoreNulls;
+    }
+
+    public void setIgnoreNulls(boolean value) {
+        if (ignoreNulls != value) {
             ignoreNulls = value;
+            markDirty();
         }
     }
 }

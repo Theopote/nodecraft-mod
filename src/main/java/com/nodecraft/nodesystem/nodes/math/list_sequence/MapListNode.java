@@ -71,16 +71,6 @@ public class MapListNode extends BaseNode {
     }
 
     @Override
-    public String getDisplayName() {
-        return "Map List";
-    }
-
-    @Override
-    public String getDescription() {
-        return "Applies a scalar operation to each numeric item in a list.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object listObj = inputValues.get(INPUT_LIST_ID);
         if (!(listObj instanceof List<?> inputList)) {
@@ -125,7 +115,15 @@ public class MapListNode extends BaseNode {
                 continue;
             }
 
-            mapped.add(applyOperation(value, operand, min, max));
+            double mappedValue = applyOperation(value, operand, min, max);
+            if (!Double.isFinite(mappedValue)) {
+                outputValues.put(OUTPUT_LIST_ID, List.of());
+                outputValues.put(OUTPUT_CHANGED_COUNT_ID, 0);
+                outputValues.put(OUTPUT_VALID_ID, false);
+                return;
+            }
+
+            mapped.add(mappedValue);
             changedCount++;
         }
 
@@ -192,18 +190,52 @@ public class MapListNode extends BaseNode {
         Object operationValue = map.get("operation");
         if (operationValue instanceof String text) {
             try {
-                operation = Operation.valueOf(text);
+                setOperation(Operation.valueOf(text));
             } catch (IllegalArgumentException ignored) {
-                operation = Operation.ADD;
+                setOperation(Operation.ADD);
             }
         }
         Object ignoreNonNumericValue = map.get("ignoreNonNumeric");
         if (ignoreNonNumericValue instanceof Boolean value) {
-            ignoreNonNumeric = value;
+            setIgnoreNonNumeric(value);
         }
         Object ignoreNullsValue = map.get("ignoreNulls");
         if (ignoreNullsValue instanceof Boolean value) {
+            setIgnoreNulls(value);
+        }
+    }
+
+    public Operation getOperation() {
+        return operation;
+    }
+
+    public void setOperation(Operation value) {
+        Operation resolved = value != null ? value : Operation.ADD;
+        if (operation != resolved) {
+            operation = resolved;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNonNumeric() {
+        return ignoreNonNumeric;
+    }
+
+    public void setIgnoreNonNumeric(boolean value) {
+        if (ignoreNonNumeric != value) {
+            ignoreNonNumeric = value;
+            markDirty();
+        }
+    }
+
+    public boolean isIgnoreNulls() {
+        return ignoreNulls;
+    }
+
+    public void setIgnoreNulls(boolean value) {
+        if (ignoreNulls != value) {
             ignoreNulls = value;
+            markDirty();
         }
     }
 }
