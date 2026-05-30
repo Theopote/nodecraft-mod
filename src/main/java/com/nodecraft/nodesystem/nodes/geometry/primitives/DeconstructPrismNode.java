@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -72,7 +71,7 @@ public class DeconstructPrismNode extends BaseNode {
         double height = prism.getHeight();
         int sideCount = prism.getSideCount();
         RegionData region = GeometryVoxelizer.createBoundingRegion(prism);
-        BoundingBoxData boundingBox = createBoundingBox(region);
+        BoundingBoxData boundingBox = GeometryVoxelizer.createBoundingBox(region);
 
         outputValues.put(OUTPUT_BASE_POINTS_ID, basePoints);
         outputValues.put(OUTPUT_TOP_POINTS_ID, topPoints);
@@ -96,19 +95,5 @@ public class DeconstructPrismNode extends BaseNode {
         outputValues.put(OUTPUT_BOUNDING_BOX_ID, null);
         outputValues.put(OUTPUT_VALID_ID, false);
     }
-
-    private BoundingBoxData createBoundingBox(RegionData region) {
-        if (region == null || !region.isComplete()) {
-            return null;
-        }
-        BlockPos minCorner = region.getMinCorner();
-        BlockPos maxCorner = region.getMaxCorner();
-        if (minCorner == null || maxCorner == null) {
-            return null;
-        }
-        return new BoundingBoxData(
-            new Vector3d(minCorner.getX(), minCorner.getY(), minCorner.getZ()),
-            new Vector3d(maxCorner.getX() + 1.0d, maxCorner.getY() + 1.0d, maxCorner.getZ() + 1.0d)
-        );
-    }
 }
+

@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.util;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.nodesystem.datatypes.BoundingBoxData;
 import com.nodecraft.nodesystem.datatypes.BoxGeometryData;
 import com.nodecraft.nodesystem.datatypes.ConeGeometryData;
 import com.nodecraft.nodesystem.datatypes.FrustumConeGeometryData;
@@ -215,6 +216,23 @@ public final class GeometryVoxelizer {
             return TorusBlockGenerator.createBoundingRegion(torusGeometry);
         }
         return null;
+    }
+
+    public static @Nullable BoundingBoxData createBoundingBox(@Nullable RegionData region) {
+        if (region == null || !region.isComplete()) {
+            return null;
+        }
+
+        BlockPos minCorner = region.getMinCorner();
+        BlockPos maxCorner = region.getMaxCorner();
+        if (minCorner == null || maxCorner == null) {
+            return null;
+        }
+
+        return new BoundingBoxData(
+            new Vector3d(minCorner.getX(), minCorner.getY(), minCorner.getZ()),
+            new Vector3d(maxCorner.getX() + 1.0d, maxCorner.getY() + 1.0d, maxCorner.getZ() + 1.0d)
+        );
     }
 
     public static @Nullable RegionData unionBoundingRegions(@Nullable RegionData first, @Nullable RegionData second) {

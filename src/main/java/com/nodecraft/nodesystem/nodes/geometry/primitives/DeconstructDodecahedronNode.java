@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.DodecahedronGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
@@ -51,7 +50,7 @@ public class DeconstructDodecahedronNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_VOLUME_ID, "Volume", "Interior volume", NodeDataType.DOUBLE, this));
         addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding block region", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_BOUNDING_BOX_ID, "Bounding Box", "Axis-aligned bounds", NodeDataType.BOUNDING_BOX, this));
-        addOutputPort(new BasePort(OUTPUT_ORIENTATION_ID, "Orientation", "Rotation matrix (local vertex frame â†’ world)", NodeDataType.MATRIX3, this));
+        addOutputPort(new BasePort(OUTPUT_ORIENTATION_ID, "Orientation", "Rotation matrix (local vertex frame â†?world)", NodeDataType.MATRIX3, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when input is present", NodeDataType.BOOLEAN, this));
     }
 
@@ -72,7 +71,7 @@ public class DeconstructDodecahedronNode extends BaseNode {
         double surface = 3.0d * Math.sqrt(25.0d + 10.0d * Math.sqrt(5.0d)) * a * a;
         double volume = ((15.0d + 7.0d * Math.sqrt(5.0d)) / 4.0d) * a * a * a;
         RegionData region = GeometryVoxelizer.createBoundingRegion(dodeca);
-        BoundingBoxData boundingBox = createBoundingBox(region);
+        BoundingBoxData boundingBox = GeometryVoxelizer.createBoundingBox(region);
 
         outputValues.put(OUTPUT_CENTER_ID, dodeca.getCenter());
         outputValues.put(OUTPUT_EDGE_LENGTH_ID, a);
@@ -98,19 +97,5 @@ public class DeconstructDodecahedronNode extends BaseNode {
         outputValues.put(OUTPUT_ORIENTATION_ID, new Matrix3d().identity());
         outputValues.put(OUTPUT_VALID_ID, false);
     }
-
-    private BoundingBoxData createBoundingBox(RegionData region) {
-        if (region == null || !region.isComplete()) {
-            return null;
-        }
-        BlockPos minCorner = region.getMinCorner();
-        BlockPos maxCorner = region.getMaxCorner();
-        if (minCorner == null || maxCorner == null) {
-            return null;
-        }
-        return new BoundingBoxData(
-            new Vector3d(minCorner.getX(), minCorner.getY(), minCorner.getZ()),
-            new Vector3d(maxCorner.getX() + 1.0d, maxCorner.getY() + 1.0d, maxCorner.getZ() + 1.0d)
-        );
-    }
 }
+

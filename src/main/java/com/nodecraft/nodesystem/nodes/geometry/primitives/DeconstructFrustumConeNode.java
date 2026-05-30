@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.FrustumConeGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -93,7 +92,7 @@ public class DeconstructFrustumConeNode extends BaseNode {
         double volume = (Math.PI * height / 3.0d) * (rb * rb + rb * rt + rt * rt);
 
         RegionData region = GeometryVoxelizer.createBoundingRegion(frustum);
-        BoundingBoxData boundingBox = createBoundingBox(region);
+        BoundingBoxData boundingBox = GeometryVoxelizer.createBoundingBox(region);
 
         outputValues.put(OUTPUT_BASE_CENTER_ID, baseCenter);
         outputValues.put(OUTPUT_TOP_CENTER_ID, topCenter);
@@ -129,19 +128,5 @@ public class DeconstructFrustumConeNode extends BaseNode {
         outputValues.put(OUTPUT_BOUNDING_BOX_ID, null);
         outputValues.put(OUTPUT_VALID_ID, false);
     }
-
-    private BoundingBoxData createBoundingBox(RegionData region) {
-        if (region == null || !region.isComplete()) {
-            return null;
-        }
-        BlockPos minCorner = region.getMinCorner();
-        BlockPos maxCorner = region.getMaxCorner();
-        if (minCorner == null || maxCorner == null) {
-            return null;
-        }
-        return new BoundingBoxData(
-            new Vector3d(minCorner.getX(), minCorner.getY(), minCorner.getZ()),
-            new Vector3d(maxCorner.getX() + 1.0d, maxCorner.getY() + 1.0d, maxCorner.getZ() + 1.0d)
-        );
-    }
 }
+

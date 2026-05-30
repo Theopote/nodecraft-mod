@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.EllipsoidGeometryData;
 import com.nodecraft.nodesystem.datatypes.RegionData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.GeometryVoxelizer;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -69,7 +68,7 @@ public class DeconstructEllipsoidNode extends BaseNode {
         double volume = (4.0d / 3.0d) * Math.PI * radii.x * radii.y * radii.z;
         double surfaceArea = approximateSurfaceArea(radii.x, radii.y, radii.z);
         RegionData region = GeometryVoxelizer.createBoundingRegion(ellipsoid);
-        BoundingBoxData boundingBox = createBoundingBox(region);
+        BoundingBoxData boundingBox = GeometryVoxelizer.createBoundingBox(region);
 
         outputValues.put(OUTPUT_CENTER_ID, center);
         outputValues.put(OUTPUT_RADII_ID, radii);
@@ -92,21 +91,6 @@ public class DeconstructEllipsoidNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
-    private BoundingBoxData createBoundingBox(RegionData region) {
-        if (region == null || !region.isComplete()) {
-            return null;
-        }
-        BlockPos minCorner = region.getMinCorner();
-        BlockPos maxCorner = region.getMaxCorner();
-        if (minCorner == null || maxCorner == null) {
-            return null;
-        }
-        return new BoundingBoxData(
-            new Vector3d(minCorner.getX(), minCorner.getY(), minCorner.getZ()),
-            new Vector3d(maxCorner.getX() + 1.0d, maxCorner.getY() + 1.0d, maxCorner.getZ() + 1.0d)
-        );
-    }
-
     private double approximateSurfaceArea(double a, double b, double c) {
         // Knud Thomsen approximation with p = 1.6075
         double p = 1.6075d;
@@ -116,3 +100,4 @@ public class DeconstructEllipsoidNode extends BaseNode {
         return 4.0d * Math.PI * Math.pow((ap + bp + cp) / 3.0d, 1.0d / p);
     }
 }
+
