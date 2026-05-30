@@ -47,7 +47,7 @@ public class AiRemotePlannerService {
         private int sequence = 1;
 
         @Override
-        public synchronized Thread newThread(Runnable runnable) {
+        public synchronized Thread newThread(@NonNull Runnable runnable) {
             Thread thread = new Thread(runnable, "ai-remote-planner-" + sequence++);
             thread.setDaemon(true);
             return thread;
@@ -574,16 +574,8 @@ public class AiRemotePlannerService {
             messages.add(item);
             
             // Every tool_use must be followed by a tool_result in the conversation history
-            if ("assistant".equals(role) && isJsonDsl && currentToolUseId != null) {
-                JsonObject toolResultItem = new JsonObject();
-                toolResultItem.addProperty("role", "user");
-                JsonArray resultContents = new JsonArray();
-                JsonObject toolResult = new JsonObject();
-                toolResult.addProperty("type", "tool_result");
-                toolResult.addProperty("tool_use_id", currentToolUseId);
-                toolResult.addProperty("content", "Success: Graph plan received and initialized in editor.");
-                resultContents.add(toolResult);
-                toolResultItem.add("content", resultContents);
+            if ("assistant".equals(role) && isJsonDsl) {
+                JsonObject toolResultItem = getJsonObject(currentToolUseId);
                 messages.add(toolResultItem);
             }
         }
@@ -662,6 +654,19 @@ public class AiRemotePlannerService {
             );
         }
         return RemotePlanResult.ok(result, response.statusCode(), raw, attempt);
+    }
+
+    private static @NonNull JsonObject getJsonObject(String currentToolUseId) {
+        JsonObject toolResultItem = new JsonObject();
+        toolResultItem.addProperty("role", "user");
+        JsonArray resultContents = new JsonArray();
+        JsonObject toolResult = new JsonObject();
+        toolResult.addProperty("type", "tool_result");
+        toolResult.addProperty("tool_use_id", currentToolUseId);
+        toolResult.addProperty("content", "Success: Graph plan received and initialized in editor.");
+        resultContents.add(toolResult);
+        toolResultItem.add("content", resultContents);
+        return toolResultItem;
     }
 
     private boolean isRetryable(RemotePlanResult result) {
