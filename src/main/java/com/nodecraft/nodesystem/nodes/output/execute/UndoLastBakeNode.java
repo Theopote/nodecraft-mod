@@ -36,11 +36,6 @@ public class UndoLastBakeNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() {
-        return "Reverts the most recent recorded bake or apply-changes operation";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
         int restoredCount = 0;

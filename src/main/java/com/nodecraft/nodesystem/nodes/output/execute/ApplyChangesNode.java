@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -130,7 +131,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
         Object notifyObj = inputValues.get(INPUT_NOTIFY_ID);
 
-        boolean notify = (notifyObj instanceof Boolean) ? (Boolean) notifyObj : notifyOnComplete;
+        boolean notify = notifyObj != null ? coerceBoolean(notifyObj) : notifyOnComplete;
         String blockType = (blockTypeObj instanceof String) ? (String) blockTypeObj : "minecraft:stone";
 
         if (triggerObj == null) {
@@ -211,6 +212,26 @@ public class ApplyChangesNode extends BaseCustomUINode {
         outputValues.put(OUTPUT_OPERATION_COUNT_ID, operationCount);
         outputValues.put(OUTPUT_EXECUTION_TIME_ID, executionTime);
         outputValues.put(OUTPUT_STATUS_ID, status);
+    }
+
+    private boolean coerceBoolean(Object value) {
+        if (value instanceof Boolean booleanValue) {
+            return booleanValue;
+        }
+        if (value instanceof Number number) {
+            return number.doubleValue() != 0.0d;
+        }
+        if (value instanceof String text) {
+            String normalized = text.trim();
+            if (normalized.isEmpty()) {
+                return false;
+            }
+            return switch (normalized.toLowerCase(Locale.ROOT)) {
+                case "true", "yes", "1", "on" -> true;
+                default -> false;
+            };
+        }
+        return true;
     }
 
     private List<BlockPlacementData> resolvePlacements(Object placementsObj) {

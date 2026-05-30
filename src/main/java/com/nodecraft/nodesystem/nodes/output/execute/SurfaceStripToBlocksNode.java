@@ -50,11 +50,6 @@ public class SurfaceStripToBlocksNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Bakes a surface strip into block coordinates for final execution";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object surfaceStripObj = inputValues.get(INPUT_SURFACE_STRIP_ID);
         BlockPosList blocks = new BlockPosList();

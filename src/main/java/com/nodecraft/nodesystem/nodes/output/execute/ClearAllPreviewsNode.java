@@ -33,11 +33,6 @@ public class ClearAllPreviewsNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() {
-        return "Clears all active previews in the current world";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
         int clearedCount = 0;

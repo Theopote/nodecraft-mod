@@ -49,11 +49,6 @@ public class GeometryToBlocksNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Bakes any supported geometry into Minecraft block coordinates for final execution";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object geometryObj = inputValues.get(INPUT_GEOMETRY_ID);
         BlockPosList blocks = new BlockPosList();

@@ -189,7 +189,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 if (refreshPreview(context, blocksList, effectiveBlockType, trans, color, outlineColor)) {
                     cachePreviewState(geometrySignature, trans, color, outlineColor, effectiveBlockType);
                 } else {
-                    cachedPreviewBackend = null;
+                    clearAllPreviewState(context);
                 }
             } else if (hasWorldContext) {
                 statusMessage = buildSteadyStateStatus(context);
@@ -566,11 +566,6 @@ public class GeometryViewerNode extends BaseCustomUINode {
             previewSolidGeometry = value;
             markDirty();
         }
-    }
-
-    @Override
-    public void markDirty() {
-        super.markDirty();
     }
 
     @Override
