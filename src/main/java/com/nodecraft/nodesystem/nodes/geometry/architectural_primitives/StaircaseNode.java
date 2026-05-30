@@ -36,6 +36,7 @@ public class StaircaseNode extends BaseNode {
     private static final String INPUT_LINE_ID = "input_line";
     private static final String INPUT_LAYOUT_ID = "input_layout";
     private static final String INPUT_STEP_COUNT_ID = "input_step_count";
+    private static final String INPUT_FIRST_FLIGHT_STEPS_ID = "input_first_flight_steps";
     private static final String INPUT_STEP_RUN_ID = "input_step_run";
     private static final String INPUT_STEP_RISE_ID = "input_step_rise";
     private static final String INPUT_WIDTH_ID = "input_width";
@@ -56,8 +57,9 @@ public class StaircaseNode extends BaseNode {
         super(UUID.randomUUID(), "geometry.architectural_primitives.staircase");
 
         addInputPort(new BasePort(INPUT_LINE_ID, "Line", "Straight path used for the staircase run", NodeDataType.LINE, this));
-        addInputPort(new BasePort(INPUT_LAYOUT_ID, "Layout", "Stair layout: straight, u, or spiral", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_LAYOUT_ID, "Layout", "Stair layout: straight, u, double_run, switchback, or spiral", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_STEP_COUNT_ID, "Step Count", "Number of steps to generate", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_FIRST_FLIGHT_STEPS_ID, "First Flight Steps", "Optional step count used before the landing in U/double-run layouts", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_STEP_RUN_ID, "Step Run", "Horizontal run of each step", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_STEP_RISE_ID, "Step Rise", "Vertical rise of each step", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_WIDTH_ID, "Width", "Stair width measured across the run", NodeDataType.DOUBLE, this));
@@ -77,7 +79,7 @@ public class StaircaseNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Generates straight, U-shaped, or spiral staircases from a path line";
+        return "Generates straight, U-shaped, double-run, switchback, or spiral staircases from a path line";
     }
 
     @Override
@@ -95,13 +97,14 @@ public class StaircaseNode extends BaseNode {
             if (frame != null) {
                 String layout = resolveLayout(inputValues.get(INPUT_LAYOUT_ID));
                 int stepCount = ArchitecturalPrimitiveSupport.resolvePositiveInt(inputValues.get(INPUT_STEP_COUNT_ID), 1);
+                int firstFlightSteps = resolveFirstFlightSteps(inputValues.get(INPUT_FIRST_FLIGHT_STEPS_ID), stepCount);
                 double stepRun = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_STEP_RUN_ID), 1.0d);
                 double stepRise = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_STEP_RISE_ID), 0.2d);
                 double width = ArchitecturalPrimitiveSupport.resolvePositiveDouble(inputValues.get(INPUT_WIDTH_ID), 1.0d);
                 double landingLength = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_LANDING_LENGTH_ID), 0.0d);
 
                 List<GeometryData> steps = switch (layout) {
-                    case "u" -> buildUStairs(frame, stepCount, stepRun, stepRise, width, landingLength);
+                    case "u", "double_run", "switchback" -> buildDoubleRunStairs(frame, stepCount, firstFlightSteps, stepRun, stepRise, width, landingLength);
                     case "spiral" -> buildSpiralStairs(frame, stepCount, stepRun, stepRise, width);
                     default -> buildStraightStairs(frame, stepCount, stepRun, stepRise, width, landingLength);
                 };
@@ -148,15 +151,15 @@ public class StaircaseNode extends BaseNode {
         return List.copyOf(results);
     }
 
-    private List<GeometryData> buildUStairs(
+    private List<GeometryData> buildDoubleRunStairs(
         ArchitecturalPrimitiveSupport.LineFrame frame,
         int stepCount,
+        int firstFlightCount,
         double stepRun,
         double stepRise,
         double width,
         double landingLength
     ) {
-        int firstFlightCount = Math.max(1, (stepCount + 1) / 2);
         int secondFlightCount = Math.max(1, stepCount - firstFlightCount);
         double turnGap = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_TURN_GAP_ID), 0.0d);
         double turnDirection = resolveTurnDirection(inputValues.get(INPUT_TURN_DIRECTION_ID));
@@ -259,6 +262,16 @@ public class StaircaseNode extends BaseNode {
             return stringValue.trim().toLowerCase(Locale.ROOT);
         }
         return "straight";
+    }
+
+    private int resolveFirstFlightSteps(Object value, int totalSteps) {
+        if (totalSteps <= 1) {
+            return 1;
+        }
+        if (value instanceof Number number) {
+            return Math.max(1, Math.min(totalSteps - 1, number.intValue()));
+        }
+        return Math.max(1, Math.min(totalSteps - 1, (totalSteps + 1) / 2));
     }
 
     private double resolveTurnDirection(Object value) {

@@ -170,8 +170,8 @@
 | Door Array | `geometry.architectural_primitives.door_array` | Generates a rectangular array of inset door opening boxes on a box face | `DoorArrayNode` |
 | Column Grid | `geometry.architectural_primitives.column_grid` | Generates a rectangular grid of columns on a box face | `ColumnGridNode` |
 | Railing | `geometry.architectural_primitives.railing` | Generates a straight railing or balustrade along a line segment | `RailingNode` |
-| Staircase | `geometry.architectural_primitives.staircase` | Generates a straight staircase from a line segment | `StaircaseNode` |
-| Roof Generator | `geometry.architectural_primitives.roof_generator` | Generates a simple roof volume from a box face footprint | `RoofGeneratorNode` |
+| Staircase | `geometry.architectural_primitives.staircase` | Generates straight, U-shaped, double-run/switchback, or spiral staircases from a path line, with landing split, turn-gap, direction, radius, and spiral height controls | `StaircaseNode` |
+| Roof Generator | `geometry.architectural_primitives.roof_generator` | Generates flat, shed, gable, asymmetric gable, hip, cross-gable, or M-shaped roofs from a box face footprint, with ridge direction, ridge ratio, inset, overhang, eave drop, peak ratio, valley drop, and secondary wing controls | `RoofGeneratorNode` |
 | Facade Panel Array | `geometry.architectural_primitives.facade_panel_array` | Generates a rectangular array of facade panels on a box face | `FacadePanelArrayNode` |
 | Arch Opening | `geometry.architectural_primitives.arch_opening` | Generates a rectangular, round, or pointed arch opening volume | `ArchOpeningNode` |
 | Wall With Openings | `geometry.architectural_primitives.wall_with_openings` | Generates a wall slab with an opening grid | `WallWithOpeningsNode` |

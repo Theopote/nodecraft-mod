@@ -19,12 +19,12 @@ import java.util.Locale;
 import java.util.UUID;
 
 /**
- * Generates a simple roof volume from a box face footprint.
+ * Generates configurable roof volumes from a box face footprint.
  */
 @NodeInfo(
     id = "geometry.architectural_primitives.roof_generator",
     displayName = "Roof Generator",
-    description = "Generates a simple roof volume from a box face footprint",
+    description = "Generates configurable roof volumes from a box face footprint",
     category = "geometry.architectural_primitives",
     order = 5
 )
@@ -39,6 +39,12 @@ public class RoofGeneratorNode extends BaseNode {
     private static final String INPUT_RIDGE_RATIO_ID = "input_ridge_ratio";
     private static final String INPUT_INSET_ID = "input_inset";
     private static final String INPUT_EAVE_DROP_ID = "input_eave_drop";
+    private static final String INPUT_M_PEAK_RATIO_ID = "input_m_peak_ratio";
+    private static final String INPUT_VALLEY_DROP_ID = "input_valley_drop";
+    private static final String INPUT_ASYMMETRIC_LEFT_HEIGHT_RATIO_ID = "input_asymmetric_left_height_ratio";
+    private static final String INPUT_ASYMMETRIC_RIGHT_HEIGHT_RATIO_ID = "input_asymmetric_right_height_ratio";
+    private static final String INPUT_CROSS_GABLE_RATIO_ID = "input_cross_gable_ratio";
+    private static final String INPUT_SECONDARY_HEIGHT_RATIO_ID = "input_secondary_height_ratio";
 
     private static final String OUTPUT_GEOMETRY_ID = "output_geometry";
     private static final String OUTPUT_VALID_ID = "output_valid";
@@ -47,7 +53,7 @@ public class RoofGeneratorNode extends BaseNode {
         super(UUID.randomUUID(), "geometry.architectural_primitives.roof_generator");
 
         addInputPort(new BasePort(INPUT_FACE_ID, "Face", "Box face used as the roof footprint", NodeDataType.BOX_FACE, this));
-        addInputPort(new BasePort(INPUT_ROOF_TYPE_ID, "Roof Type", "Roof type: flat, shed, gable, or hip", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_ROOF_TYPE_ID, "Roof Type", "Roof type: flat, shed, gable, asymmetric_gable, hip, cross_gable, or m", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_HEIGHT_ID, "Height", "Roof peak height above the footprint", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_THICKNESS_ID, "Thickness", "Thickness used for flat roof slabs", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_OVERHANG_ID, "Overhang", "Extra overhang beyond the footprint edges", NodeDataType.DOUBLE, this));
@@ -55,6 +61,12 @@ public class RoofGeneratorNode extends BaseNode {
         addInputPort(new BasePort(INPUT_RIDGE_RATIO_ID, "Ridge Ratio", "Normalized ridge placement used for hip roofs (0.1-0.9)", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_INSET_ID, "Inset", "Inset applied to hip roof eaves before rising to the ridge", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_EAVE_DROP_ID, "Eave Drop", "Drops the eave edge below the footprint plane", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_M_PEAK_RATIO_ID, "M Peak Ratio", "Normalized peak placement for M roofs (0.1-0.45 per side)", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_VALLEY_DROP_ID, "Valley Drop", "Vertical drop from the M-roof peak to its center valley", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_ASYMMETRIC_LEFT_HEIGHT_RATIO_ID, "Asymmetric Left Height Ratio", "Height ratio for the left peak of an asymmetric gable roof", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_ASYMMETRIC_RIGHT_HEIGHT_RATIO_ID, "Asymmetric Right Height Ratio", "Height ratio for the right peak of an asymmetric gable roof", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_CROSS_GABLE_RATIO_ID, "Cross Gable Ratio", "Relative footprint scale used for the crossing gable wing", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_SECONDARY_HEIGHT_RATIO_ID, "Secondary Height Ratio", "Relative height of the crossing gable wing", NodeDataType.DOUBLE, this));
 
         addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Generated roof geometry", NodeDataType.GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when a valid roof could be generated", NodeDataType.BOOLEAN, this));
@@ -62,7 +74,7 @@ public class RoofGeneratorNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Generates a simple roof volume from a box face footprint";
+        return "Generates configurable roof volumes from a box face footprint";
     }
 
     @Override
@@ -82,8 +94,30 @@ public class RoofGeneratorNode extends BaseNode {
                 double ridgeRatio = resolveRidgeRatio(inputValues.get(INPUT_RIDGE_RATIO_ID));
                 double inset = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_INSET_ID), 0.0d);
                 double eaveDrop = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_EAVE_DROP_ID), 0.0d);
+                double mPeakRatio = resolveMPeakRatio(inputValues.get(INPUT_M_PEAK_RATIO_ID));
+                double valleyDrop = ArchitecturalPrimitiveSupport.resolveNonNegativeDouble(inputValues.get(INPUT_VALLEY_DROP_ID), height * 0.5d);
+                double asymmetricLeftHeightRatio = resolveHeightRatio(inputValues.get(INPUT_ASYMMETRIC_LEFT_HEIGHT_RATIO_ID), 1.0d);
+                double asymmetricRightHeightRatio = resolveHeightRatio(inputValues.get(INPUT_ASYMMETRIC_RIGHT_HEIGHT_RATIO_ID), 0.65d);
+                double crossGableRatio = resolveCrossGableRatio(inputValues.get(INPUT_CROSS_GABLE_RATIO_ID));
+                double secondaryHeightRatio = resolveHeightRatio(inputValues.get(INPUT_SECONDARY_HEIGHT_RATIO_ID), 0.85d);
 
-                geometry = buildRoof(frame, roofType, height, thickness, overhang, ridgeDirection, ridgeRatio, inset, eaveDrop);
+                geometry = buildRoof(
+                    frame,
+                    roofType,
+                    height,
+                    thickness,
+                    overhang,
+                    ridgeDirection,
+                    ridgeRatio,
+                    inset,
+                    eaveDrop,
+                    mPeakRatio,
+                    valleyDrop,
+                    asymmetricLeftHeightRatio,
+                    asymmetricRightHeightRatio,
+                    crossGableRatio,
+                    secondaryHeightRatio
+                );
                 valid = geometry != null;
             }
         }
@@ -101,7 +135,13 @@ public class RoofGeneratorNode extends BaseNode {
         String ridgeDirection,
         double ridgeRatio,
         double inset,
-        double eaveDrop
+        double eaveDrop,
+        double mPeakRatio,
+        double valleyDrop,
+        double asymmetricLeftHeightRatio,
+        double asymmetricRightHeightRatio,
+        double crossGableRatio,
+        double secondaryHeightRatio
     ) {
         double roofWidth = frame.width() + 2.0d * overhang;
         double roofDepth = frame.height() + 2.0d * overhang;
@@ -125,7 +165,29 @@ public class RoofGeneratorNode extends BaseNode {
                 new Vector3d(frame.xAxis()).mul(roofWidth)
             );
             case "gable" -> buildGableRoof(frame, eaveCenter, roofWidth, roofDepth, height, ridgeDirection);
+            case "asymmetric_gable" -> buildAsymmetricGableRoof(
+                frame,
+                eaveCenter,
+                roofWidth,
+                roofDepth,
+                height,
+                ridgeDirection,
+                ridgeRatio,
+                asymmetricLeftHeightRatio,
+                asymmetricRightHeightRatio
+            );
             case "hip" -> buildHipRoof(frame, eaveCenter, roofWidth, roofDepth, height, ridgeDirection, ridgeRatio, inset);
+            case "cross_gable" -> buildCrossGableRoof(
+                frame,
+                eaveCenter,
+                roofWidth,
+                roofDepth,
+                height,
+                ridgeDirection,
+                crossGableRatio,
+                secondaryHeightRatio
+            );
+            case "m" -> buildMRoof(frame, eaveCenter, roofWidth, roofDepth, height, ridgeDirection, mPeakRatio, valleyDrop);
             default -> null;
         };
     }
@@ -192,9 +254,109 @@ public class RoofGeneratorNode extends BaseNode {
         return new PrismGeometryData(profile, new Vector3d(frame.xAxis()).mul(roofWidth - 2.0d * insetX));
     }
 
+    private GeometryData buildAsymmetricGableRoof(
+        ArchitecturalPrimitiveSupport.FaceFrame frame,
+        Vector3d eaveCenter,
+        double roofWidth,
+        double roofDepth,
+        double height,
+        String ridgeDirection,
+        double ridgeRatio,
+        double leftHeightRatio,
+        double rightHeightRatio
+    ) {
+        double ridgeHalfWidth = Math.max(Math.min(roofWidth, roofDepth) * 0.04d, 0.05d);
+        double leftHeight = height * leftHeightRatio;
+        double rightHeight = height * rightHeightRatio;
+        if ("y".equals(ridgeDirection)) {
+            double ridgeCenter = (-roofWidth / 2.0d) + roofWidth * ridgeRatio;
+            double leftPeak = Math.max(-roofWidth / 2.0d + ridgeHalfWidth, ridgeCenter - ridgeHalfWidth);
+            double rightPeak = Math.min(roofWidth / 2.0d - ridgeHalfWidth, ridgeCenter + ridgeHalfWidth);
+            return new PrismGeometryData(
+                List.of(
+                    new Vector3d(eaveCenter).fma(-roofWidth / 2.0d, frame.xAxis()),
+                    new Vector3d(eaveCenter).fma(leftPeak, frame.xAxis()).fma(leftHeight, frame.zAxis()),
+                    new Vector3d(eaveCenter).fma(rightPeak, frame.xAxis()).fma(rightHeight, frame.zAxis()),
+                    new Vector3d(eaveCenter).fma(roofWidth / 2.0d, frame.xAxis())
+                ),
+                new Vector3d(frame.yAxis()).mul(roofDepth)
+            );
+        }
+
+        double ridgeCenter = (-roofDepth / 2.0d) + roofDepth * ridgeRatio;
+        double leftPeak = Math.max(-roofDepth / 2.0d + ridgeHalfWidth, ridgeCenter - ridgeHalfWidth);
+        double rightPeak = Math.min(roofDepth / 2.0d - ridgeHalfWidth, ridgeCenter + ridgeHalfWidth);
+        return new PrismGeometryData(
+            List.of(
+                new Vector3d(eaveCenter).fma(-roofDepth / 2.0d, frame.yAxis()),
+                new Vector3d(eaveCenter).fma(leftPeak, frame.yAxis()).fma(leftHeight, frame.zAxis()),
+                new Vector3d(eaveCenter).fma(rightPeak, frame.yAxis()).fma(rightHeight, frame.zAxis()),
+                new Vector3d(eaveCenter).fma(roofDepth / 2.0d, frame.yAxis())
+            ),
+            new Vector3d(frame.xAxis()).mul(roofWidth)
+        );
+    }
+
+    private GeometryData buildCrossGableRoof(
+        ArchitecturalPrimitiveSupport.FaceFrame frame,
+        Vector3d eaveCenter,
+        double roofWidth,
+        double roofDepth,
+        double height,
+        String ridgeDirection,
+        double crossGableRatio,
+        double secondaryHeightRatio
+    ) {
+        GeometryData primary = buildGableRoof(frame, eaveCenter, roofWidth, roofDepth, height, ridgeDirection);
+        String secondaryDirection = "y".equals(ridgeDirection) ? "x" : "y";
+        GeometryData secondary = buildGableRoof(
+            frame,
+            eaveCenter,
+            roofWidth * crossGableRatio,
+            roofDepth * crossGableRatio,
+            height * secondaryHeightRatio,
+            secondaryDirection
+        );
+        return new CompositeGeometryData(List.of(primary, secondary));
+    }
+
+    private GeometryData buildMRoof(
+        ArchitecturalPrimitiveSupport.FaceFrame frame,
+        Vector3d eaveCenter,
+        double roofWidth,
+        double roofDepth,
+        double height,
+        String ridgeDirection,
+        double mPeakRatio,
+        double valleyDrop
+    ) {
+        double valleyHeight = Math.max(0.0d, height - valleyDrop);
+        if ("y".equals(ridgeDirection)) {
+            double ridgeOffset = roofWidth * mPeakRatio;
+            List<Vector3d> profile = List.of(
+                new Vector3d(eaveCenter).fma(-roofWidth / 2.0d, frame.xAxis()),
+                new Vector3d(eaveCenter).fma(-ridgeOffset, frame.xAxis()).fma(height, frame.zAxis()),
+                new Vector3d(eaveCenter).fma(valleyHeight, frame.zAxis()),
+                new Vector3d(eaveCenter).fma(ridgeOffset, frame.xAxis()).fma(height, frame.zAxis()),
+                new Vector3d(eaveCenter).fma(roofWidth / 2.0d, frame.xAxis())
+            );
+            return new PrismGeometryData(profile, new Vector3d(frame.yAxis()).mul(roofDepth));
+        }
+
+        double ridgeOffset = roofDepth * mPeakRatio;
+        List<Vector3d> profile = List.of(
+            new Vector3d(eaveCenter).fma(-roofDepth / 2.0d, frame.yAxis()),
+            new Vector3d(eaveCenter).fma(-ridgeOffset, frame.yAxis()).fma(height, frame.zAxis()),
+            new Vector3d(eaveCenter).fma(valleyHeight, frame.zAxis()),
+            new Vector3d(eaveCenter).fma(ridgeOffset, frame.yAxis()).fma(height, frame.zAxis()),
+            new Vector3d(eaveCenter).fma(roofDepth / 2.0d, frame.yAxis())
+        );
+        return new PrismGeometryData(profile, new Vector3d(frame.xAxis()).mul(roofWidth));
+    }
+
     private String resolveRoofType(Object value) {
         if (value instanceof String stringValue && !stringValue.isBlank()) {
-            return stringValue.trim().toLowerCase(Locale.ROOT);
+            return stringValue.trim().toLowerCase(Locale.ROOT).replace('-', '_').replace(' ', '_');
         }
         return "gable";
     }
@@ -214,5 +376,26 @@ public class RoofGeneratorNode extends BaseNode {
             return Math.max(0.1d, Math.min(0.9d, number.doubleValue()));
         }
         return 0.5d;
+    }
+
+    private double resolveMPeakRatio(Object value) {
+        if (value instanceof Number number) {
+            return Math.max(0.1d, Math.min(0.45d, number.doubleValue()));
+        }
+        return 0.25d;
+    }
+
+    private double resolveHeightRatio(Object value, double defaultValue) {
+        if (value instanceof Number number) {
+            return Math.max(0.25d, Math.min(1.5d, number.doubleValue()));
+        }
+        return defaultValue;
+    }
+
+    private double resolveCrossGableRatio(Object value) {
+        if (value instanceof Number number) {
+            return Math.max(0.25d, Math.min(0.95d, number.doubleValue()));
+        }
+        return 0.6d;
     }
 }
