@@ -1,7 +1,5 @@
 package com.nodecraft.nodesystem.nodes.geometry.curves;
 
-import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
-
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -52,26 +50,24 @@ public class InfinityCurveOnPlaneNode extends AbstractCurveNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d center = PlaneProjectionUtils.resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Object sizeObj = inputValues.get(INPUT_SIZE_ID);
-        Object segmentsObj = inputValues.get(INPUT_SEGMENTS_ID);
+        Vector3d center = resolveInputPoint(inputValues.get(INPUT_CENTER_ID));
         Object planeObj = inputValues.get(INPUT_PLANE_ID);
         Object preferredAxisObj = inputValues.get(INPUT_AXIS_ID);
 
-        if (center == null || !(sizeObj instanceof Number sN) || !(segmentsObj instanceof Number segN)) {
-            writeInvalid();
+        if (center == null) {
+            writeInvalidOutputs();
             return;
         }
-        double size = sN.doubleValue();
-        int segments = Math.max(8, segN.intValue());
+        double size = readDoubleInput(INPUT_SIZE_ID, Double.NaN);
+        int segments = Math.max(8, readIntInput(INPUT_SEGMENTS_ID, 0));
         if (!Double.isFinite(size) || size <= 0.0d) {
-            writeInvalid();
+            writeInvalidOutputs();
             return;
         }
 
-        PlaneProjectionUtils.Basis basis = resolvePlaneBasis(planeObj, preferredAxisObj, PlaneData.XY_PLANE);
+        var basis = resolvePlaneBasis(planeObj, preferredAxisObj, PlaneData.XY_PLANE);
         if (basis == null) {
-            writeInvalid();
+            writeInvalidOutputs();
             return;
         }
 
@@ -92,11 +88,4 @@ public class InfinityCurveOnPlaneNode extends AbstractCurveNode {
         outputValues.put(OUTPUT_POINTS_ID, List.copyOf(pts));
         outputValues.put(OUTPUT_VALID_ID, true);
     }
-
-    private void writeInvalid() {
-        putNullOutputs(OUTPUT_CURVE_ID, OUTPUT_POLYLINE_ID);
-        putEmptyListOutputs(OUTPUT_POINTS_ID);
-        putBooleanOutputs(false, OUTPUT_VALID_ID);
-    }
-
 }

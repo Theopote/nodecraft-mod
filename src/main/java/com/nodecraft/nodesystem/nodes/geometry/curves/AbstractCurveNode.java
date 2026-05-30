@@ -6,8 +6,10 @@ import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 import com.nodecraft.nodesystem.util.Curve;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 abstract class AbstractCurveNode extends BaseNode {
@@ -46,6 +48,32 @@ abstract class AbstractCurveNode extends BaseNode {
         }
     }
 
+    protected final void writeInvalidOutputs() {
+        putNullOutputs("output_curve", "output_polyline");
+        putEmptyListOutputs("output_points");
+        putBooleanOutputs(false, "output_valid");
+    }
+
+    protected final int readIntInput(String portId, int fallback) {
+        Object value = inputValues.get(portId);
+        return value instanceof Number number ? number.intValue() : fallback;
+    }
+
+    protected final double readDoubleInput(String portId, double fallback) {
+        Object value = inputValues.get(portId);
+        return value instanceof Number number ? number.doubleValue() : fallback;
+    }
+
+    protected final void markDirtyIfChanged(@Nullable Object oldValue, @Nullable Object newValue) {
+        if (!Objects.equals(oldValue, newValue)) {
+            markDirty();
+        }
+    }
+
+    protected final @Nullable Vector3d resolveInputPoint(@Nullable Object value) {
+        return PlaneProjectionUtils.resolvePoint(value);
+    }
+
     protected final Curve buildLinearCurve(List<Vec3d> points) {
         Curve curve = new Curve(Curve.CurveType.LINEAR, 2);
         for (Vec3d point : points) {
@@ -58,6 +86,6 @@ abstract class AbstractCurveNode extends BaseNode {
                                                                             @Nullable Object preferredAxisObj,
                                                                             PlaneData fallbackPlane) {
         PlaneData plane = planeObj instanceof PlaneData p ? p : fallbackPlane;
-        return PlaneProjectionUtils.createBasis(plane, PlaneProjectionUtils.resolvePoint(preferredAxisObj));
+        return PlaneProjectionUtils.createBasis(plane, resolveInputPoint(preferredAxisObj));
     }
 }

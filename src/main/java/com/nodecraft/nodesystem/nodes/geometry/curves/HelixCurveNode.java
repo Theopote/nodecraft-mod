@@ -1,7 +1,5 @@
 package com.nodecraft.nodesystem.nodes.geometry.curves;
 
-import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
-
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -57,13 +55,9 @@ public class HelixCurveNode extends AbstractCurveNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d center = PlaneProjectionUtils.resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
-        Object pitchObj = inputValues.get(INPUT_PITCH_ID);
-        Object turnsObj = inputValues.get(INPUT_TURNS_ID);
-        Vector3d axisIn = PlaneProjectionUtils.resolvePoint(inputValues.get(INPUT_AXIS_ID));
-        if (center == null || axisIn == null || !(radiusObj instanceof Number radiusN)
-            || !(pitchObj instanceof Number pitchN) || !(turnsObj instanceof Number turnsN)) {
+        Vector3d center = resolveInputPoint(inputValues.get(INPUT_CENTER_ID));
+        Vector3d axisIn = resolveInputPoint(inputValues.get(INPUT_AXIS_ID));
+        if (center == null || axisIn == null) {
             writeInvalid();
             return;
         }
@@ -75,11 +69,11 @@ public class HelixCurveNode extends AbstractCurveNode {
         }
         axis.normalize();
 
-        double radius = radiusN.doubleValue();
-        double pitch = pitchN.doubleValue();
-        double turns = turnsN.doubleValue();
-        int segmentsPerTurn = Math.max(6, getInt(INPUT_SEGMENTS_PER_TURN_ID, 32));
-        double startAngle = Math.toRadians(getDouble(INPUT_START_ANGLE_ID, 0.0d));
+        double radius = readDoubleInput(INPUT_RADIUS_ID, Double.NaN);
+        double pitch = readDoubleInput(INPUT_PITCH_ID, Double.NaN);
+        double turns = readDoubleInput(INPUT_TURNS_ID, Double.NaN);
+        int segmentsPerTurn = Math.max(6, readIntInput(INPUT_SEGMENTS_PER_TURN_ID, 32));
+        double startAngle = Math.toRadians(readDoubleInput(INPUT_START_ANGLE_ID, 0.0d));
         if (!Double.isFinite(radius) || radius <= 0.0d || !Double.isFinite(pitch) || !Double.isFinite(turns) || turns <= 0.0d) {
             writeInvalid();
             return;
@@ -107,10 +101,7 @@ public class HelixCurveNode extends AbstractCurveNode {
             length += pts.get(i - 1).distanceTo(pts.get(i));
         }
 
-        Curve curve = new Curve(Curve.CurveType.LINEAR, 2);
-        for (Vec3d p : pts) {
-            curve.addControlPoint(p);
-        }
+        Curve curve = buildLinearCurve(pts);
         outputValues.put(OUTPUT_CURVE_ID, curve);
         outputValues.put(OUTPUT_POLYLINE_ID, new PolylineData(pts));
         outputValues.put(OUTPUT_POINTS_ID, List.copyOf(pts));
@@ -119,11 +110,8 @@ public class HelixCurveNode extends AbstractCurveNode {
     }
 
     private void writeInvalid() {
-        outputValues.put(OUTPUT_CURVE_ID, null);
-        outputValues.put(OUTPUT_POLYLINE_ID, null);
-        outputValues.put(OUTPUT_POINTS_ID, List.of());
-        outputValues.put(OUTPUT_LENGTH_ID, 0.0d);
-        outputValues.put(OUTPUT_VALID_ID, false);
+        writeInvalidOutputs();
+        putDoubleOutputs(0.0d, OUTPUT_LENGTH_ID);
     }
 
     private Vector3d fallbackAxis(Vector3d axis) {
@@ -136,13 +124,4 @@ public class HelixCurveNode extends AbstractCurveNode {
         return u.normalize();
     }
 
-    private double getDouble(String portId, double fallback) {
-        Object v = inputValues.get(portId);
-        return v instanceof Number n ? n.doubleValue() : fallback;
-    }
-
-    private int getInt(String portId, int fallback) {
-        Object v = inputValues.get(portId);
-        return v instanceof Number n ? n.intValue() : fallback;
-    }
 }

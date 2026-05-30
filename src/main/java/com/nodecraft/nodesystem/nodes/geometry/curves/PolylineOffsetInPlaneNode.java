@@ -228,4 +228,29 @@ public class PolylineOffsetInPlaneNode extends AbstractCurveNode {
         return out;
     }
 
+    /**
+     * Compatibility wrapper kept for nodes that still reference PolylineOffsetInPlaneNode.PlaneAxes.
+     * New code should use PlaneProjectionUtils.PlaneAxes directly.
+     */
+    @Deprecated
+    public static final class PlaneAxes {
+        private final PlaneProjectionUtils.PlaneAxes delegate;
+
+        private PlaneAxes(PlaneProjectionUtils.PlaneAxes delegate) {
+            this.delegate = delegate;
+        }
+
+        public static PlaneAxes from(PlaneData plane) {
+            return new PlaneAxes(PlaneProjectionUtils.PlaneAxes.from(plane));
+        }
+
+        public Vector2d to2d(Vector3d p) {
+            return delegate.to2d(p);
+        }
+
+        public Vector3d from2d(Vector2d p) {
+            return delegate.from2d(p);
+        }
+    }
+
 }

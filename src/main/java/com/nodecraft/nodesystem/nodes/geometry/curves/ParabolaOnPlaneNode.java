@@ -1,5 +1,4 @@
 package com.nodecraft.nodesystem.nodes.geometry.curves;
-import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -55,31 +54,26 @@ public class ParabolaOnPlaneNode extends AbstractCurveNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d vertex = PlaneProjectionUtils.resolvePoint(inputValues.get(INPUT_VERTEX_ID));
-        Object curvatureObj = inputValues.get(INPUT_CURVATURE_ID);
-        Object minObj = inputValues.get(INPUT_X_MIN_ID);
-        Object maxObj = inputValues.get(INPUT_X_MAX_ID);
-        Object segmentsObj = inputValues.get(INPUT_SEGMENTS_ID);
+        Vector3d vertex = resolveInputPoint(inputValues.get(INPUT_VERTEX_ID));
         Object planeObj = inputValues.get(INPUT_PLANE_ID);
         Object preferredAxisObj = inputValues.get(INPUT_AXIS_ID);
 
-        if (vertex == null || !(curvatureObj instanceof Number cN) || !(minObj instanceof Number minN)
-            || !(maxObj instanceof Number maxN) || !(segmentsObj instanceof Number segN)) {
-            writeInvalid();
+        if (vertex == null) {
+            writeInvalidOutputs();
             return;
         }
-        double curvature = cN.doubleValue();
-        double xMin = minN.doubleValue();
-        double xMax = maxN.doubleValue();
-        int segments = Math.max(2, segN.intValue());
+        double curvature = readDoubleInput(INPUT_CURVATURE_ID, Double.NaN);
+        double xMin = readDoubleInput(INPUT_X_MIN_ID, Double.NaN);
+        double xMax = readDoubleInput(INPUT_X_MAX_ID, Double.NaN);
+        int segments = Math.max(2, readIntInput(INPUT_SEGMENTS_ID, 0));
         if (!Double.isFinite(curvature) || !Double.isFinite(xMin) || !Double.isFinite(xMax) || Math.abs(xMax - xMin) < 1.0e-9d) {
-            writeInvalid();
+            writeInvalidOutputs();
             return;
         }
 
-        PlaneProjectionUtils.Basis basis = resolvePlaneBasis(planeObj, preferredAxisObj, PlaneData.XY_PLANE);
+        var basis = resolvePlaneBasis(planeObj, preferredAxisObj, PlaneData.XY_PLANE);
         if (basis == null) {
-            writeInvalid();
+            writeInvalidOutputs();
             return;
         }
 
@@ -100,11 +94,4 @@ public class ParabolaOnPlaneNode extends AbstractCurveNode {
         outputValues.put(OUTPUT_POINTS_ID, List.copyOf(pts));
         outputValues.put(OUTPUT_VALID_ID, true);
     }
-
-    private void writeInvalid() {
-        putNullOutputs(OUTPUT_CURVE_ID, OUTPUT_POLYLINE_ID);
-        putEmptyListOutputs(OUTPUT_POINTS_ID);
-        putBooleanOutputs(false, OUTPUT_VALID_ID);
-    }
-
 }
