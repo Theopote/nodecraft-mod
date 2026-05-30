@@ -4,17 +4,14 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PlaneData;
+import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
-import com.nodecraft.nodesystem.util.SpatialValueResolver;
-import com.nodecraft.core.NodeCraft;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
-import org.jspecify.annotations.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,21 +76,23 @@ public class ArcNode extends AbstractCurveNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d center = resolveCenter(inputValues.get(INPUT_CENTER_ID));
-        Vector3d normal = resolveNormal(inputValues.get(INPUT_PLANE_ID), inputValues.get(INPUT_NORMAL_ID));
-        double radius = getInputDouble(INPUT_RADIUS_ID, defaultRadius);
-        double startDegrees = getInputDouble(INPUT_START_ANGLE_ID, 0.0d);
-        double endDegrees = getInputDouble(INPUT_END_ANGLE_ID, 90.0d);
-        int resolution = Math.max(2, getInputInt(defaultResolution));
+        Vector3d center = PlaneProjectionUtils.resolvePointOrDefault(inputValues.get(INPUT_CENTER_ID), defaultCenterCoords);
+        Vector3d normal = PlaneProjectionUtils.resolveNormal(
+            inputValues.get(INPUT_PLANE_ID),
+            inputValues.get(INPUT_NORMAL_ID),
+            defaultPlaneType
+        );
+        double radius = readDoubleInput(INPUT_RADIUS_ID, defaultRadius);
+        double startDegrees = readDoubleInput(INPUT_START_ANGLE_ID, 0.0d);
+        double endDegrees = readDoubleInput(INPUT_END_ANGLE_ID, 90.0d);
+        int resolution = Math.max(2, readIntInput(INPUT_RESOLUTION_ID, defaultResolution));
 
         // Validate inputs: center and normal are required
         if (normal == null || normal.lengthSquared() <= EPSILON) {
-            NodeCraft.LOGGER.warn("ArcNode: normal is null or zero; cannot build arc");
             writeInvalid();
             return;
         }
         if (radius <= EPSILON) {
-            NodeCraft.LOGGER.warn("ArcNode: radius must be positive");
             writeInvalid();
             return;
         }
@@ -221,55 +220,6 @@ public class ArcNode extends AbstractCurveNode {
         putBooleanOutputs(false, OUTPUT_VALID_ID);
     }
 
-    private @NonNull Vector3d resolveCenter(@Nullable Object value) {
-        // If input is provided, try to resolve it
-        Vector3d resolved = SpatialValueResolver.resolveVector3d(value);
-        if (resolved != null) {
-            return resolved;
-        }
-
-        // Otherwise, use default center coordinates (typically "0,0,0")
-        try {
-            String[] parts = defaultCenterCoords.trim().split(",");
-            if (parts.length == 3) {
-                double x = Double.parseDouble(parts[0].trim());
-                double y = Double.parseDouble(parts[1].trim());
-                double z = Double.parseDouble(parts[2].trim());
-                return new Vector3d(x, y, z);
-            }
-        } catch (NumberFormatException e) {
-            NodeCraft.LOGGER.warn("ArcNode: invalid defaultCenterCoords format '{}'; using 0,0,0", defaultCenterCoords);
-        }
-
-        // Fallback to origin
-        return new Vector3d(0.0d, 0.0d, 0.0d);
-    }
-
-    private @Nullable Vector3d resolveNormal(@Nullable Object planeValue, @Nullable Object normalValue) {
-        // Priority 1: If PlaneData is provided, extract normal
-        if (planeValue instanceof PlaneData plane) {
-            return plane.getNormal();
-        }
-
-        // Priority 2: If Normal vector is provided directly, use it
-        Vector3d resolved = SpatialValueResolver.resolveVector3d(normalValue);
-        if (resolved != null) {
-            return resolved;
-        }
-
-        // Priority 3: Use default plane based on defaultPlaneType property
-        PlaneData defaultPlane = getDefaultPlane(defaultPlaneType);
-        return defaultPlane.getNormal();
-    }
-
-    private PlaneData getDefaultPlane(String planeType) {
-        return switch (planeType) {
-            case "XY" -> PlaneData.XY_PLANE;
-            case "YZ" -> PlaneData.YZ_PLANE;
-            default -> PlaneData.XZ_PLANE;  // Default to XZ plane
-        };
-    }
-
     private @Nullable Basis buildBasis(Vector3d normal) {
         Vector3d reference = Math.abs(normal.y) < 0.99d
             ? new Vector3d(0.0d, 1.0d, 0.0d)
@@ -288,16 +238,6 @@ public class ArcNode extends AbstractCurveNode {
             return null;
         }
         return new Basis(xAxis, yAxis.normalize());
-    }
-
-    private double getInputDouble(String portId, double fallback) {
-        Object value = inputValues.get(portId);
-        return value instanceof Number number ? number.doubleValue() : fallback;
-    }
-
-    private int getInputInt(int fallback) {
-        Object value = inputValues.get(ArcNode.INPUT_RESOLUTION_ID);
-        return value instanceof Number number ? number.intValue() : fallback;
     }
 
     private record Basis(Vector3d xAxis, Vector3d yAxis) {
