@@ -1,4 +1,6 @@
+package com.nodecraft.nodesystem.nodes.geometry.curves;
 
+import com.nodecraft.nodesystem.nodes.geometry.curves.util.CurveMathUtils;
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
 import com.nodecraft.nodesystem.api.NodeDataType;
