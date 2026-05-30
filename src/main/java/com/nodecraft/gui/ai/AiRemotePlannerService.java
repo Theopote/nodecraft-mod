@@ -21,6 +21,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * Remote AI planner client with OpenAI-compatible and Anthropic-compatible request formats.
@@ -100,13 +101,21 @@ public class AiRemotePlannerService {
     }
 
     public CompletableFuture<RemotePlanResult> requestPlanAsync(PlannerConfig config, List<ConversationMessage> conversation) {
+        return requestPlanAsync(config, conversation, null);
+        }
+
+        public CompletableFuture<RemotePlanResult> requestPlanAsync(
+            PlannerConfig config,
+            List<ConversationMessage> conversation,
+            Consumer<String> onToken
+        ) {
         if (executor.isShutdown()) {
             return CompletableFuture.completedFuture(
                     RemotePlanResult.fail("Remote planner is shut down.", -1, "", "canceled", 1)
             );
         }
         try {
-            return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation), executor);
+            return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation, onToken), executor);
         } catch (RejectedExecutionException e) {
             return CompletableFuture.completedFuture(
                     RemotePlanResult.fail("Remote planner is busy. Please retry shortly.", -1, "", "request", 1)
@@ -246,7 +255,11 @@ public class AiRemotePlannerService {
         return body;
     }
 
-    private RemotePlanResult requestPlan(PlannerConfig config, List<ConversationMessage> conversation) {
+        private RemotePlanResult requestPlan(
+            PlannerConfig config,
+            List<ConversationMessage> conversation,
+            Consumer<String> onToken
+        ) {
         if (config == null) {
             return RemotePlanResult.fail("Remote planner config is null.", -1, "", "config", 1);
         }
@@ -277,8 +290,8 @@ public class AiRemotePlannerService {
             try {
                 boolean useAnthropic = shouldUseAnthropic(config, baseUrl);
                 RemotePlanResult result = useAnthropic
-                        ? requestAnthropic(client, config, normalizedConversation, timeoutSeconds, attempt)
-                        : requestOpenAICompatible(client, config, normalizedConversation, timeoutSeconds, attempt);
+                    ? requestAnthropicStreaming(client, config, normalizedConversation, timeoutSeconds, attempt, onToken)
+                    : requestOpenAICompatibleStreaming(client, config, normalizedConversation, timeoutSeconds, attempt, onToken);
 
                 if (result.success()) {
                     return result;
@@ -319,12 +332,13 @@ public class AiRemotePlannerService {
                 : RemotePlanResult.fail("Remote planner request failed with unknown cause.", -1, "", "unknown", MAX_ATTEMPTS);
     }
 
-        private RemotePlanResult requestOpenAICompatible(
+        private RemotePlanResult requestOpenAICompatibleStreaming(
             HttpClient client,
             PlannerConfig config,
             List<ConversationMessage> conversation,
             int timeoutSeconds,
-            int attempt
+            int attempt,
+            Consumer<String> onToken
         )
             throws IOException, InterruptedException {
         String endpoint = normalizeEndpoint(config.apiBaseUrl(), "/chat/completions");
@@ -349,10 +363,47 @@ public class AiRemotePlannerService {
         }
 
         body.add("messages", messages);
+        body.addProperty("stream", true);
 
-        HttpResponse<String> response = sendOpenAIRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
+        HttpResponse<java.util.stream.Stream<String>> response = sendOpenAIStreamingRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
+        StringBuilder rawResponse = new StringBuilder();
+        StringBuilder streamedText = new StringBuilder();
+        StringBuilder streamedToolInput = new StringBuilder();
+
+        try (java.util.stream.Stream<String> lines = response.body()) {
+            lines.forEach(line -> {
+                if (line == null || line.isBlank()) {
+                    return;
+                }
+                if (!line.startsWith("data:")) {
+                    return;
+                }
+                String payload = line.substring(5).trim();
+                if (payload.isBlank()) {
+                    return;
+                }
+                rawResponse.append(payload).append('\n');
+                if ("[DONE]".equals(payload)) {
+                    return;
+                }
+
+                String toolDelta = extractOpenAIStreamingToolArguments(payload);
+                if (!toolDelta.isBlank()) {
+                    streamedToolInput.append(toolDelta);
+                    emitToken(onToken, toolDelta);
+                }
+
+                String token = extractOpenAIStreamingToken(payload);
+                if (!token.isBlank()) {
+                    streamedText.append(token);
+                    emitToken(onToken, token);
+                }
+            });
+        }
+
+        String raw = rawResponse.toString();
         if (response.statusCode() >= 300) {
-            if (response.statusCode() == 400 && isOpenAITokenFieldCompatibilityError(response.body())) {
+            if (response.statusCode() == 400 && isOpenAITokenFieldCompatibilityError(raw)) {
             body.remove(OPENAI_MAX_TOKENS_FIELD);
             body.addProperty(OPENAI_MAX_COMPLETION_TOKENS_FIELD, maxTokens);
             HttpResponse<String> fallbackResponse = sendOpenAIRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
@@ -380,25 +431,30 @@ public class AiRemotePlannerService {
             }
 
             return RemotePlanResult.fail(
-                "HTTP " + response.statusCode() + ": " + truncate(response.body()),
+                "HTTP " + response.statusCode() + ": " + truncate(raw),
                 response.statusCode(),
-                response.body(),
+                raw,
                 classifyErrorCategory(response.statusCode()),
                 attempt
             );
         }
 
-        String content = extractOpenAIContent(response.body());
+        String streamedTool = streamedToolInput.toString();
+        if (!isBlank(streamedTool)) {
+            return RemotePlanResult.okStructured(streamedTool, response.statusCode(), raw, attempt);
+        }
+
+        String content = streamedText.toString();
         if (isBlank(content)) {
             return RemotePlanResult.fail(
-                    "OpenAI-compatible response did not include message content.",
+                    "OpenAI-compatible streaming response did not include message content.",
                     response.statusCode(),
-                    response.body(),
+                    raw,
                     "response-format",
                     attempt
             );
         }
-        return RemotePlanResult.ok(content, response.statusCode(), response.body(), attempt);
+        return RemotePlanResult.ok(content, response.statusCode(), raw, attempt);
     }
 
     private HttpResponse<String> sendOpenAIRequest(
@@ -417,6 +473,23 @@ public class AiRemotePlannerService {
         return client.send(request, HttpResponse.BodyHandlers.ofString());
     }
 
+            private HttpResponse<java.util.stream.Stream<String>> sendOpenAIStreamingRequest(
+                HttpClient client,
+                String endpoint,
+                String apiKey,
+                JsonObject body,
+                int timeoutSeconds
+            ) throws IOException, InterruptedException {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(timeoutSeconds))
+                .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream")
+                .header("Authorization", "Bearer " + apiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .build();
+            return client.send(request, HttpResponse.BodyHandlers.ofLines());
+            }
+
     private boolean isOpenAITokenFieldCompatibilityError(String responseBody) {
         if (responseBody == null || responseBody.isBlank()) {
             return false;
@@ -431,12 +504,13 @@ public class AiRemotePlannerService {
         return mentionsTokenField && indicatesInvalidField;
     }
 
-        private RemotePlanResult requestAnthropic(
+        private RemotePlanResult requestAnthropicStreaming(
             HttpClient client,
             PlannerConfig config,
             List<ConversationMessage> conversation,
             int timeoutSeconds,
-            int attempt
+            int attempt,
+            Consumer<String> onToken
         )
             throws IOException, InterruptedException {
         String endpoint = normalizeAnthropicEndpoint(config.apiBaseUrl());
@@ -455,6 +529,7 @@ public class AiRemotePlannerService {
         toolChoice.addProperty("type", "tool");
         toolChoice.addProperty("name", "create_node_graph");
         body.add("tool_choice", toolChoice);
+        body.addProperty("stream", true);
 
         JsonArray messages = new JsonArray();
         for (ConversationMessage message : conversation) {
@@ -517,42 +592,76 @@ public class AiRemotePlannerService {
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                 .timeout(Duration.ofSeconds(timeoutSeconds))
                 .header("Content-Type", "application/json")
+                .header("Accept", "text/event-stream")
                 .header("x-api-key", config.apiKey())
                 .header("anthropic-version", "2023-06-01")
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                 .build();
 
-        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        HttpResponse<java.util.stream.Stream<String>> response = client.send(request, HttpResponse.BodyHandlers.ofLines());
+        StringBuilder rawResponse = new StringBuilder();
+        StringBuilder streamedText = new StringBuilder();
+        StringBuilder streamedToolInput = new StringBuilder();
+
+        try (java.util.stream.Stream<String> lines = response.body()) {
+            lines.forEach(line -> {
+                if (line == null || line.isBlank()) {
+                    return;
+                }
+                if (!line.startsWith("data:")) {
+                    return;
+                }
+                String payload = line.substring(5).trim();
+                if (payload.isBlank()) {
+                    return;
+                }
+                rawResponse.append(payload).append('\n');
+
+                String toolDelta = extractAnthropicStreamingToolDelta(payload);
+                if (!toolDelta.isBlank()) {
+                    streamedToolInput.append(toolDelta);
+                    emitToken(onToken, toolDelta);
+                }
+
+                String token = extractAnthropicStreamingTextToken(payload);
+                if (!token.isBlank()) {
+                    streamedText.append(token);
+                    emitToken(onToken, token);
+                }
+            });
+        }
+
+        String raw = rawResponse.toString();
         if (response.statusCode() >= 300) {
             return RemotePlanResult.fail(
-                    "HTTP " + response.statusCode() + ": " + truncate(response.body()),
+                    "HTTP " + response.statusCode() + ": " + truncate(raw),
                     response.statusCode(),
-                    response.body(),
+                    raw,
                     classifyErrorCategory(response.statusCode()),
                     attempt
             );
         }
 
-        String toolInput = extractAnthropicToolInput(response.body());
+        String toolInput = streamedToolInput.toString();
         if (!isBlank(toolInput)) {
-            return RemotePlanResult.okStructured(toolInput, response.statusCode(), response.body(), attempt);
+            return RemotePlanResult.okStructured(toolInput, response.statusCode(), raw, attempt);
         }
 
-        String result = toolInput;
+        String result = streamedText.toString();
         if (isBlank(result)) {
-            // Fallback for legacy providers or non-tool responses.
-            result = extractAnthropicContent(response.body());
+            // Fallback for providers that return non-stream JSON chunks.
+            result = extractAnthropicContent(raw);
         }
         if (isBlank(result)) {
             return RemotePlanResult.fail(
-                    "Anthropic response did not include tool input or text content.",
+                    "Anthropic streaming response did not include tool input or text content.",
                     response.statusCode(),
-                    response.body(),
+                    raw,
                     "response-format",
                     attempt
             );
         }
-        return RemotePlanResult.ok(result, response.statusCode(), response.body(), attempt);
+        return RemotePlanResult.ok(result, response.statusCode(), raw, attempt);
     }
 
     private boolean isRetryable(RemotePlanResult result) {
@@ -649,6 +758,113 @@ public class AiRemotePlannerService {
         } catch (Exception ignored) {
         }
         return "";
+    }
+
+    private String extractOpenAIStreamingToken(String payload) {
+        try {
+            JsonObject root = JsonParser.parseString(payload).getAsJsonObject();
+            JsonArray choices = root.getAsJsonArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                return "";
+            }
+            JsonObject delta = choices.get(0).getAsJsonObject().getAsJsonObject("delta");
+            if (delta == null || !delta.has("content")) {
+                return "";
+            }
+            if (delta.get("content").isJsonPrimitive()) {
+                return delta.get("content").getAsString();
+            }
+            if (delta.get("content").isJsonArray()) {
+                JsonArray content = delta.getAsJsonArray("content");
+                StringBuilder token = new StringBuilder();
+                for (int i = 0; i < content.size(); i++) {
+                    JsonObject part = content.get(i).getAsJsonObject();
+                    if (part.has("text")) {
+                        token.append(part.get("text").getAsString());
+                    }
+                }
+                return token.toString();
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private String extractOpenAIStreamingToolArguments(String payload) {
+        try {
+            JsonObject root = JsonParser.parseString(payload).getAsJsonObject();
+            JsonArray choices = root.getAsJsonArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                return "";
+            }
+            JsonObject delta = choices.get(0).getAsJsonObject().getAsJsonObject("delta");
+            if (delta == null || !delta.has("tool_calls")) {
+                return "";
+            }
+            JsonArray toolCalls = delta.getAsJsonArray("tool_calls");
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < toolCalls.size(); i++) {
+                JsonObject call = toolCalls.get(i).getAsJsonObject();
+                if (!call.has("function")) {
+                    continue;
+                }
+                JsonObject function = call.getAsJsonObject("function");
+                if (function.has("arguments")) {
+                    args.append(function.get("arguments").getAsString());
+                }
+            }
+            return args.toString();
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private String extractAnthropicStreamingTextToken(String payload) {
+        try {
+            JsonObject root = JsonParser.parseString(payload).getAsJsonObject();
+            if (!root.has("type")) {
+                return "";
+            }
+            String type = root.get("type").getAsString();
+            if (!"content_block_delta".equals(type) || !root.has("delta")) {
+                return "";
+            }
+            JsonObject delta = root.getAsJsonObject("delta");
+            if (delta.has("text")) {
+                return delta.get("text").getAsString();
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private String extractAnthropicStreamingToolDelta(String payload) {
+        try {
+            JsonObject root = JsonParser.parseString(payload).getAsJsonObject();
+            if (!root.has("type")) {
+                return "";
+            }
+            String type = root.get("type").getAsString();
+            if (!"content_block_delta".equals(type) || !root.has("delta")) {
+                return "";
+            }
+            JsonObject delta = root.getAsJsonObject("delta");
+            if (delta.has("partial_json")) {
+                return delta.get("partial_json").getAsString();
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    private void emitToken(Consumer<String> onToken, String token) {
+        if (onToken == null || token == null || token.isBlank()) {
+            return;
+        }
+        try {
+            onToken.accept(token);
+        } catch (Exception ignored) {
+        }
     }
 
     private JsonObject buildNodeGraphToolSchema() {

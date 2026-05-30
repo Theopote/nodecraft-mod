@@ -26,6 +26,7 @@ final class AiAssistantMainPanelRenderer {
             ImBoolean enterToSend,
             String inputLanguageDetected,
             String normalizedIntentPreview,
+            String streamingPreview,
             String selectedNodeDisplayName,
             String selectedNodeTypeId,
             List<AiChatMessage> chatMessages,
@@ -90,6 +91,12 @@ final class AiAssistantMainPanelRenderer {
         ImGui.sameLine();
         if (ImGui.smallButton("Cancel")) {
             actions.cancelRequest();
+        }
+
+        String preview = state.streamingPreview();
+        if (preview != null && !preview.isBlank()) {
+            ImGui.textDisabled("Streaming preview:");
+            ImGui.textWrapped(preview);
         }
     }
 

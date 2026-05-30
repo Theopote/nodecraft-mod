@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -39,9 +40,10 @@ public final class AiAssistantPanel {
     private static final int AI_HISTORY_MAX_TOTAL_CHARS = 9000;
     private static final int AI_LATEST_USER_MESSAGE_MAX_CHARS = 7000;
     private static final String MODIFY_PARAM_SYSTEM_HINT =
-            "If the user asks to modify a specific parameter value on an existing node,\n"
-            + "return only the affected node with its updated params. Keep all other nodes and connections unchanged.\n"
-            + "Use the same node ids as in the \"Current plan in effect\" JSON.";
+            """
+                    If the user asks to modify a specific parameter value on an existing node,
+                    return only the affected node with its updated params. Keep all other nodes and connections unchanged.
+                    Use the same node ids as in the "Current plan in effect" JSON.""";
     private static final String[] AI_PROVIDER_STRATEGY_OPTIONS = {
             AiSettingsStore.PROVIDER_AUTO,
             AiSettingsStore.PROVIDER_OPENAI_COMPAT,
@@ -78,8 +80,6 @@ public final class AiAssistantPanel {
     private final Supplier<NodeGraph> nodeGraphSupplier;
     private final Consumer<String> clipboardCopier;
 
-    private INode selectedNode;
-
     private final ImString aiPromptInput = new ImString("", 2048);
     private final ImBoolean aiUseSelectionContext = new ImBoolean(true);
     private final ImBoolean aiIncludeGraphContext = new ImBoolean(true);
@@ -108,6 +108,8 @@ public final class AiAssistantPanel {
     private boolean lastAiApplyWasPatch = false;
     private String aiPlanStatusMessage = "";
     private String aiSettingsStatusMessage = "";
+    private String aiPreviewFocusedNodeRef = "";
+    private boolean aiPreviewFocusScrollPending = false;
 
     public AiAssistantPanel(
             AiAssistantComponent aiAssistantComponent,
@@ -125,7 +127,6 @@ public final class AiAssistantPanel {
     }
 
     public void onSelectedNodeChanged(INode node) {
-        this.selectedNode = node;
         aiAssistantComponent.handleEvent("nodeSelected", node == null ? null : node.getId());
     }
 
@@ -144,13 +145,13 @@ public final class AiAssistantPanel {
         lastAiApplyWasPatch = false;
         aiPlanStatusMessage = "";
         aiSettingsStatusMessage = "";
-        selectedNode = null;
     }
 
     public void render() {
         pollRemotePlannerResultIfReady();
         pollConnectionTestResultIfReady();
 
+        INode selectedNode = getSelectedNode();
         String selectedNodeDisplayName = selectedNode == null ? "" : selectedNode.getDisplayName();
         String selectedNodeTypeId = selectedNode == null ? "" : selectedNode.getTypeId();
         String inputLanguageDetected = detectInputLanguage(aiPromptInput.get());
@@ -170,6 +171,7 @@ public final class AiAssistantPanel {
                         aiEnterToSend,
                         inputLanguageDetected,
                         normalizedIntentPreview,
+                        aiAssistantComponent.getRemoteStreamingBuffer(),
                         selectedNodeDisplayName,
                         selectedNodeTypeId,
                         aiChatMessages,
@@ -532,6 +534,7 @@ public final class AiAssistantPanel {
         AiGraphDiffService.GraphDiffSummary heuristicDiff = hasPlan ? buildGraphDiffSummary(plan) : null;
         AiGraphDiffService.MappedDiffSummary mappedDiff = hasPlan ? buildMappedDiffSummary(plan) : null;
         boolean canApply = hasPlan && plan.isValid() && !plan.nodes().isEmpty() && !plannerBusy;
+        String applyModeHint = resolveApplyModeHint();
         String undoUnavailableReason = resolveUndoUnavailableReason();
         if (plannerBusy && undoUnavailableReason.isBlank()) {
             undoUnavailableReason = "AI is generating a plan. Wait for completion before undo.";
@@ -542,11 +545,16 @@ public final class AiAssistantPanel {
                 new AiAssistantPlanPreviewRenderer.State(
                         hasPlan,
                         hasPlan ? plan.summary() : "",
+                        applyModeHint,
+                        aiPreviewFocusedNodeRef,
+                        aiPreviewFocusScrollPending,
                         hasPlan ? plan.nodes().size() : 0,
                         hasPlan ? plan.connections().size() : 0,
                         hasPlan ? plan.validationErrors() : List.of(),
                         hasPlan ? buildPlannedNodePreviewLines(plan) : List.of(),
                         hasPlan ? buildPlannedConnectionPreviewLines(plan) : List.of(),
+                        hasPlan ? plan.nodes() : List.of(),
+                        hasPlan ? plan.connections() : List.of(),
                         heuristicDiff,
                         mappedDiff,
                         canApply,
@@ -570,8 +578,28 @@ public final class AiAssistantPanel {
                     }
 
                     @Override
+                    public void saveAsTemplate() {
+                        savePendingPlanAsTemplate();
+                    }
+
+                    @Override
                     public void undoLastApply() {
                         undoLastAiApply();
+                    }
+
+                    @Override
+                    public void onTopologyNodeSelected(String nodeRef) {
+                        if (nodeRef == null || nodeRef.isBlank()) {
+                            return;
+                        }
+                        aiPreviewFocusedNodeRef = nodeRef;
+                        aiPreviewFocusScrollPending = true;
+                        aiPlanStatusMessage = "Preview focus: node " + nodeRef;
+                    }
+
+                    @Override
+                    public void onTopologyFocusScrollConsumed() {
+                        aiPreviewFocusScrollPending = false;
                     }
                 }
         );
@@ -599,6 +627,22 @@ public final class AiAssistantPanel {
         }
 
         return "";
+    }
+
+    private String resolveApplyModeHint() {
+        if (aiPreviewOnlyMode.get()) {
+            return "Apply mode: Preview only (dry-run report, no graph mutation).";
+        }
+
+        if (!aiPatchApplyMode.get()) {
+            return "Apply mode: Exact replace/apply.";
+        }
+
+        UserIntent intent = classifyIntent(aiLastSubmittedPrompt);
+        if (intent == UserIntent.MODIFY_PARAM) {
+            return "Apply mode: Patch + parameter merge (partial params keep existing fields).";
+        }
+        return "Apply mode: Patch + replace node state.";
     }
 
     private List<String> buildPlannedNodePreviewLines(AiGraphPlan plan) {
@@ -650,6 +694,52 @@ public final class AiAssistantPanel {
         );
         aiPlanStatusMessage = reportText;
         addAiChatMessage("assistant", reportText);
+    }
+
+    private void savePendingPlanAsTemplate() {
+        AiGraphPlan pendingAiPlan = getPendingAiPlan();
+        if (pendingAiPlan == null) {
+            aiPlanStatusMessage = "Save template skipped: no pending plan available.";
+            return;
+        }
+
+        try {
+            String dslJson = AiPlanDslWorkflowService.toDslJson(toServiceGraphPlanForHistory(pendingAiPlan));
+            String suggestedName = buildTemplateFileStem(pendingAiPlan.summary());
+            Path savedPath = AiTemplateLibrary.saveTemplate(suggestedName, dslJson);
+            aiPlanStatusMessage = "Template saved: " + savedPath.getFileName();
+            addAiChatMessage("assistant", "Template saved to " + toDisplayPath(savedPath));
+        } catch (Exception e) {
+            aiPlanStatusMessage = "Save template failed: " + e.getMessage();
+            NodeCraft.LOGGER.warn("[AI_TEMPLATE] Failed to save template", e);
+        }
+    }
+
+    private String buildTemplateFileStem(String summary) {
+        String base = summary == null ? "" : summary.trim().toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9_\\-]+", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_+|_+$", "");
+        if (base.isBlank()) {
+            return "template";
+        }
+        return base.length() > 48 ? base.substring(0, 48) : base;
+    }
+
+    private String toDisplayPath(Path path) {
+        if (path == null) {
+            return "(unknown)";
+        }
+        try {
+            Path cwd = Path.of("").toAbsolutePath().normalize();
+            Path normalized = path.toAbsolutePath().normalize();
+            if (normalized.startsWith(cwd)) {
+                return cwd.relativize(normalized).toString().replace('\\', '/');
+            }
+            return normalized.toString().replace('\\', '/');
+        } catch (Exception ignored) {
+            return path.toString().replace('\\', '/');
+        }
     }
 
     private AiGraphDiffService.GraphDiffSummary buildGraphDiffSummary(AiGraphPlan plan) {
@@ -808,7 +898,7 @@ public final class AiAssistantPanel {
                 AiPromptContextService.buildSelectionContextSummary(
                         aiUseSelectionContext.get(),
                         aiIncludeGraphContext.get(),
-                        selectedNode,
+                getSelectedNode(),
                 resolveSelectedNodePosition(),
                         getNodeGraph()
                 )
@@ -993,7 +1083,10 @@ public final class AiAssistantPanel {
 
         if (!parsed.isSuccess() || parsed.graph() == null) {
             setPendingAiPlan(null);
-            String errorMessage = "Plan JSON validation failed: " + String.join("; ", parsed.errors());
+            String errorMessage = null;
+            if (parsed.errors() != null) {
+                errorMessage = "Plan JSON validation failed: " + String.join("; ", parsed.errors());
+            }
             addAiChatMessage("assistant", errorMessage);
             aiPlanStatusMessage = errorMessage;
             NodeCraft.LOGGER.warn("[AI_SEND] DSL parse failed. source={}, errors={}", source, parsed.errors());
@@ -1004,12 +1097,12 @@ public final class AiAssistantPanel {
         }
 
         setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
+        aiPreviewFocusedNodeRef = "";
+        aiPreviewFocusScrollPending = false;
         AiGraphPlan pendingAiPlan = getPendingAiPlan();
         String warningSuffix = formatValidationWarningSuffix(parsed.warnings());
         UserIntent intent = classifyIntent(prompt);
-        boolean shouldAutoApplyPlacement = intent == UserIntent.MODIFY_PARAM || intent == UserIntent.EXPLAIN
-            ? false
-            : shouldAutoApplyPlacementPlan(prompt, pendingAiPlan);
+        boolean shouldAutoApplyPlacement = intent != UserIntent.MODIFY_PARAM && intent != UserIntent.EXPLAIN && shouldAutoApplyPlacementPlan(prompt, pendingAiPlan);
         boolean autoAppliedPlacement = false;
         if (shouldAutoApplyPlacement) {
             autoAppliedPlacement = applyPlacementPlan(pendingAiPlan);
@@ -1020,19 +1113,25 @@ public final class AiAssistantPanel {
             pendingAiPlan == null || pendingAiPlan.connections() == null ? 0 : pendingAiPlan.connections().size(),
             shouldAutoApplyPlacement,
             autoAppliedPlacement);
-        addAiChatMessage(
-                "assistant",
-                AiPromptContextService.buildAiPlanReply(
-                        prompt,
-                        source,
-                        aiUseSelectionContext.get(),
-                        selectedNode,
-                        pendingAiPlan.nodes().size(),
-                        pendingAiPlan.connections().size(),
-                        pendingAiPlan.isValid(),
-                        pendingAiPlan.validationErrors()
-                ) + warningSuffix
-        );
+        if (pendingAiPlan != null) {
+            if (pendingAiPlan.nodes() != null) {
+                if (pendingAiPlan.connections() != null) {
+                    addAiChatMessage(
+                            "assistant",
+                            AiPromptContextService.buildAiPlanReply(
+                                    prompt,
+                                    source,
+                                    aiUseSelectionContext.get(),
+                                getSelectedNode(),
+                                    pendingAiPlan.nodes().size(),
+                                    pendingAiPlan.connections().size(),
+                                    pendingAiPlan.isValid(),
+                                    pendingAiPlan.validationErrors()
+                            ) + warningSuffix
+                    );
+                }
+            }
+        }
         if (!shouldAutoApplyPlacement) {
             aiPlanStatusMessage = "Plan JSON validated (" + source + "). Review and click Apply Plan." + warningSuffix;
         } else if (!autoAppliedPlacement) {
@@ -1058,6 +1157,8 @@ public final class AiAssistantPanel {
         }
 
         setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(localParsed.graph())));
+        aiPreviewFocusedNodeRef = "";
+        aiPreviewFocusScrollPending = false;
         String warningSuffix = formatValidationWarningSuffix(localParsed.warnings());
         aiPlanStatusMessage = "Remote planner fallback applied (" + reason + "). Review and click Apply Plan." + warningSuffix;
         addAiChatMessage("assistant", aiPlanStatusMessage);
@@ -1074,7 +1175,7 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        AiPlanNode node = plan.nodes().get(0);
+        AiPlanNode node = plan.nodes().getFirst();
         if (node == null || node.typeId() == null || node.typeId().isBlank()) {
             return false;
         }
@@ -1643,11 +1744,10 @@ public final class AiAssistantPanel {
 
         if (result.success()) {
             lastAiUndoStepCount = result.undoSteps();
-            lastAiApplyWasPatch = false;
         } else {
             lastAiUndoStepCount = 0;
-            lastAiApplyWasPatch = false;
         }
+        lastAiApplyWasPatch = false;
 
         aiPlanStatusMessage = result.statusMessage()
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled)" : "");
@@ -1703,7 +1803,11 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = 0;
             lastAiApplyWasPatch = false;
         }
+        String patchModeDetail = mergeExistingNodeState
+                ? " (parameter merge mode)"
+                : " (state replace mode)";
         aiPlanStatusMessage = result.statusMessage()
+                + patchModeDetail
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled for new nodes)" : "");
     }
 
@@ -1731,6 +1835,7 @@ public final class AiAssistantPanel {
     }
 
     private float[] resolveAiPlanAnchorPosition(ImGuiNodeEditor editor) {
+        INode selectedNode = getSelectedNode();
         if (selectedNode != null) {
             NodePosition selectedPosition = editor.getNodePosition(selectedNode.getId());
             if (selectedPosition != null) {
@@ -1771,6 +1876,7 @@ public final class AiAssistantPanel {
     }
 
     private NodePosition resolveSelectedNodePosition() {
+        INode selectedNode = getSelectedNode();
         if (selectedNode == null) {
             return null;
         }
@@ -1781,6 +1887,19 @@ public final class AiAssistantPanel {
         }
 
         return editor.getNodePosition(selectedNode.getId());
+    }
+
+    private INode getSelectedNode() {
+        UUID selectedNodeId = aiAssistantComponent.getSelectedNodeId();
+        if (selectedNodeId == null) {
+            return null;
+        }
+
+        NodeGraph graph = getNodeGraph();
+        if (graph == null) {
+            return null;
+        }
+        return graph.getNode(selectedNodeId);
     }
 
     private static String nullToEmpty(String value) {

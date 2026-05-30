@@ -4,6 +4,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.ai.AiRemotePlannerService;
 import com.nodecraft.gui.ai.AiSessionStateStore;
 import com.nodecraft.gui.components.EditorComponent;
+import net.minecraft.client.MinecraftClient;
 import org.jspecify.annotations.NonNull;
 
 import java.nio.file.Path;
@@ -24,6 +25,7 @@ public class AiAssistantComponent implements EditorComponent {
     private static final int MAX_CHAT_MESSAGES = 120;
     private static final int MAX_CHAT_TOTAL_CHARS = 50000;
     private static final int MAX_CHAT_MESSAGE_CHARS = 3000;
+    private static final int MAX_STREAMING_BUFFER_CHARS = 6000;
 
     private boolean visible = true;
     private UUID selectedNodeId = null;
@@ -46,6 +48,7 @@ public class AiAssistantComponent implements EditorComponent {
     private String lastRemoteErrorMessage = "";
     private int lastRemoteStatusCode = 0;
     private int lastRemoteAttempts = 0;
+    private final StringBuilder remoteStreamingBuffer = new StringBuilder();
 
     public record AiChatMessage(String role, String content, long timestampMs) {
     }
@@ -97,6 +100,7 @@ public class AiAssistantComponent implements EditorComponent {
         cancelRemotePlannerRequest();
         remotePlannerService.shutdown();
         clearRemoteDebugState();
+        clearStreamingBuffer();
         sessionRestoreInProgress = false;
         sessionSaveDirty = false;
         sessionSaveDueAtMs = 0L;
@@ -342,7 +346,8 @@ public class AiAssistantComponent implements EditorComponent {
         lastRemoteErrorMessage = "";
         lastRemoteStatusCode = 0;
         lastRemoteAttempts = 0;
-        remotePlanFuture = remotePlannerService.requestPlanAsync(config, conversationHistory);
+        clearStreamingBuffer();
+        remotePlanFuture = remotePlannerService.requestPlanAsync(config, conversationHistory, this::appendStreamingTokenOnClientThread);
         return true;
     }
 
@@ -376,6 +381,7 @@ public class AiAssistantComponent implements EditorComponent {
         lastRemoteStatusCode = result.statusCode();
         lastRemoteRawResponse = result.rawResponse() == null ? "" : result.rawResponse();
         lastRemoteModelText = result.modelContent() == null ? "" : result.modelContent();
+        clearStreamingBuffer();
         return new RemotePollResult(prompt, result, null);
     }
 
@@ -389,6 +395,7 @@ public class AiAssistantComponent implements EditorComponent {
         }
         remotePlanFuture = null;
         remotePendingPrompt = "";
+        clearStreamingBuffer();
     }
 
     public void clearRemoteDebugState() {
@@ -399,6 +406,52 @@ public class AiAssistantComponent implements EditorComponent {
         lastRemoteErrorMessage = "";
         lastRemoteStatusCode = 0;
         lastRemoteAttempts = 0;
+        clearStreamingBuffer();
+    }
+
+    public String getRemoteStreamingBuffer() {
+        synchronized (remoteStreamingBuffer) {
+            return remoteStreamingBuffer.toString();
+        }
+    }
+
+    private void appendStreamingToken(String token) {
+        if (token == null || token.isBlank()) {
+            return;
+        }
+        synchronized (remoteStreamingBuffer) {
+            remoteStreamingBuffer.append(token);
+            if (remoteStreamingBuffer.length() > MAX_STREAMING_BUFFER_CHARS) {
+                int excess = remoteStreamingBuffer.length() - MAX_STREAMING_BUFFER_CHARS;
+                remoteStreamingBuffer.delete(0, excess);
+            }
+        }
+    }
+
+    private void appendStreamingTokenOnClientThread(String token) {
+        runOnClientThread(() -> appendStreamingToken(token));
+    }
+
+    private void runOnClientThread(Runnable action) {
+        if (action == null) {
+            return;
+        }
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client == null) {
+            action.run();
+            return;
+        }
+        if (client.isOnThread()) {
+            action.run();
+            return;
+        }
+        client.execute(action);
+    }
+
+    private void clearStreamingBuffer() {
+        synchronized (remoteStreamingBuffer) {
+            remoteStreamingBuffer.setLength(0);
+        }
     }
 
     public String getLastRemoteRawResponse() {

@@ -1,5 +1,11 @@
 package com.nodecraft.gui.ai;
 
+import com.nodecraft.core.NodeCraft;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
+
+import java.util.List;
+import java.util.Optional;
+
 public final class AiPlanDslWorkflowService {
 
     private AiPlanDslWorkflowService() {
@@ -18,6 +24,19 @@ public final class AiPlanDslWorkflowService {
     }
 
     public static AiGraphPlanDslAdapterService.GraphPlan buildMockGraphPlan(String prompt) {
+        List<AiTemplateLibrary.Template> templates = AiTemplateLibrary.loadAll(AiTemplateLibrary.resolveTemplateDir());
+        Optional<AiTemplateLibrary.MatchResult> bestMatch = AiTemplateLibrary.findBestMatch(prompt, templates);
+        if (bestMatch.isPresent()) {
+            AiTemplateLibrary.MatchResult match = bestMatch.get();
+            AiGraphDslSupport.ParseValidationResult parsed =
+                    AiGraphDslSupport.parseAndValidate(match.template().dslJson(), NodeRegistry.getInstance());
+            if (parsed.isSuccess() && parsed.graph() != null) {
+                NodeCraft.LOGGER.info("[AI_TEMPLATE] Using local template '{}' (score={}).", match.template().name(), match.score());
+                return AiGraphPlanDslAdapterService.fromDsl(parsed.graph());
+            }
+            NodeCraft.LOGGER.warn("[AI_TEMPLATE] Matched template '{}' failed DSL validation, falling back to mock.", match.template().name());
+        }
+
         AiMockPlanService.MockPlan mockPlan = AiMockPlanService.buildMockPlan(prompt);
         return AiGraphPlanDslAdapterService.fromMockPlan(mockPlan);
     }
