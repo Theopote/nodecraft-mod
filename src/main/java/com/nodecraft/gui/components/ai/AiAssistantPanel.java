@@ -1,5 +1,6 @@
 package com.nodecraft.gui.components.ai;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.ai.*;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiChatMessage;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiGraphPlan;
@@ -696,13 +697,18 @@ public final class AiAssistantPanel {
 
     private void submitAiPrompt() {
         if (isRemotePlannerBusy()) {
-            aiPlanStatusMessage = "Remote planner is still running. Please wait or click Cancel.";
-            return;
+            cancelRemotePlannerRequest();
+            aiPlanStatusMessage = "Previous remote request canceled. Sending the latest prompt...";
+            NodeCraft.LOGGER.info("[AI_SEND] Busy request canceled before submitting latest prompt.");
         }
 
         String prompt = aiPromptInput.get();
+        int promptLength = prompt == null ? 0 : prompt.trim().length();
+        aiPlanStatusMessage = "Submitting prompt (chars=" + promptLength + ")...";
+        NodeCraft.LOGGER.info("[AI_SEND] Submit clicked. promptLength={}, remoteEnabled={}", promptLength, aiEnableRemotePlanner.get());
         if (prompt == null || prompt.isBlank()) {
             aiPlanStatusMessage = "Prompt is empty. Please enter a request.";
+            NodeCraft.LOGGER.info("[AI_SEND] Submission ignored because prompt is empty.");
             return;
         }
 
@@ -715,6 +721,8 @@ public final class AiAssistantPanel {
             aiLastSubmittedPrompt = trimmedPrompt;
             addAiChatMessage("user", trimmedPrompt);
             aiPlanStatusMessage = "Processing prompt...";
+            NodeCraft.LOGGER.info("[AI_SEND] Processing prompt. chars={}, remoteEnabled={}",
+                    trimmedPrompt.length(), aiEnableRemotePlanner.get());
 
             if (aiEnableRemotePlanner.get()) {
                 startRemotePlannerRequest(trimmedPrompt);
@@ -729,6 +737,7 @@ public final class AiAssistantPanel {
             String error = "Failed to submit prompt: " + e.getMessage();
             aiPlanStatusMessage = error;
             addAiChatMessage("assistant", error);
+            NodeCraft.LOGGER.error("[AI_SEND] Submit failed.", e);
         }
     }
 
@@ -953,12 +962,18 @@ public final class AiAssistantPanel {
         AiGraphDslSupport.ParseValidationResult parsed = isStructured
                 ? AiGraphDslSupport.parseStructured(dslOrModelResponse, NodeRegistry.getInstance())
                 : AiGraphDslSupport.parseAndValidate(dslOrModelResponse, NodeRegistry.getInstance());
+        NodeCraft.LOGGER.info("[AI_SEND] DSL parse result. source={}, success={}, errors={}, warnings={}",
+                source,
+                parsed.isSuccess(),
+                parsed.errors() == null ? 0 : parsed.errors().size(),
+                parsed.warnings() == null ? 0 : parsed.warnings().size());
 
         if (!parsed.isSuccess() || parsed.graph() == null) {
             setPendingAiPlan(null);
             String errorMessage = "Plan JSON validation failed: " + String.join("; ", parsed.errors());
             addAiChatMessage("assistant", errorMessage);
             aiPlanStatusMessage = errorMessage;
+            NodeCraft.LOGGER.warn("[AI_SEND] DSL parse failed. source={}, errors={}", source, parsed.errors());
             if ("remote".equals(source)) {
                 fallbackToLocalPlan(prompt, "remote JSON invalid");
             }
@@ -968,10 +983,17 @@ public final class AiAssistantPanel {
         setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
         AiGraphPlan pendingAiPlan = getPendingAiPlan();
         String warningSuffix = formatValidationWarningSuffix(parsed.warnings());
+        boolean shouldAutoApplyPlacement = shouldAutoApplyPlacementPlan(prompt, pendingAiPlan);
         boolean autoAppliedPlacement = false;
-        if (shouldAutoApplyPlacementPlan(prompt, pendingAiPlan)) {
+        if (shouldAutoApplyPlacement) {
             autoAppliedPlacement = applyPlacementPlan(pendingAiPlan);
         }
+        NodeCraft.LOGGER.info("[AI_SEND] Plan parsed. source={}, nodes={}, connections={}, shouldAutoApplyPlacement={}, autoAppliedPlacement={}",
+            source,
+            pendingAiPlan == null || pendingAiPlan.nodes() == null ? 0 : pendingAiPlan.nodes().size(),
+            pendingAiPlan == null || pendingAiPlan.connections() == null ? 0 : pendingAiPlan.connections().size(),
+            shouldAutoApplyPlacement,
+            autoAppliedPlacement);
         addAiChatMessage(
                 "assistant",
                 AiPromptContextService.buildAiPlanReply(
@@ -985,8 +1007,12 @@ public final class AiAssistantPanel {
                         pendingAiPlan.validationErrors()
                 ) + warningSuffix
         );
-        if (!autoAppliedPlacement) {
+        if (!shouldAutoApplyPlacement) {
             aiPlanStatusMessage = "Plan JSON validated (" + source + "). Review and click Apply Plan." + warningSuffix;
+        } else if (!autoAppliedPlacement) {
+            if (!warningSuffix.isBlank()) {
+                aiPlanStatusMessage = aiPlanStatusMessage + warningSuffix;
+            }
         } else if (!warningSuffix.isBlank()) {
             aiPlanStatusMessage = aiPlanStatusMessage + warningSuffix;
         }
@@ -1047,16 +1073,20 @@ public final class AiAssistantPanel {
 
     private boolean applyPlacementPlan(AiGraphPlan pendingAiPlan) {
         if (pendingAiPlan == null || !pendingAiPlan.isValid() || pendingAiPlan.nodes() == null || pendingAiPlan.nodes().isEmpty()) {
+            NodeCraft.LOGGER.info("[AI_SEND] Placement auto-apply skipped: invalid or empty pending plan.");
             return false;
         }
 
         ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
         if (editor == null) {
             aiPlanStatusMessage = "Placement apply failed: editor is unavailable.";
+            NodeCraft.LOGGER.warn("[AI_SEND] Placement auto-apply failed: editor unavailable.");
             return false;
         }
 
         float[] anchor = resolveAiPlanAnchorPosition(editor);
+        NodeCraft.LOGGER.info("[AI_SEND] Placement auto-apply start. nodes={}, anchor=({}, {})",
+                pendingAiPlan.nodes().size(), anchor[0], anchor[1]);
         List<AiPlanApplyCoordinatorService.PlanNode> applyNodes = new ArrayList<>(pendingAiPlan.nodes().size());
         for (AiPlanNode node : pendingAiPlan.nodes()) {
             applyNodes.add(new AiPlanApplyCoordinatorService.PlanNode(
@@ -1079,12 +1109,15 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = result.undoSteps();
             lastAiApplyWasPatch = false;
             aiPlanStatusMessage = result.statusMessage() + " (placement auto-applied)";
+            NodeCraft.LOGGER.info("[AI_SEND] Placement auto-apply success. createdNodes={}, connectedEdges={}, undoSteps={}, status={}",
+                    result.createdNodes(), result.connectedEdges(), result.undoSteps(), result.statusMessage());
             return true;
         }
 
         lastAiUndoStepCount = 0;
         lastAiApplyWasPatch = false;
         aiPlanStatusMessage = "Placement auto-apply failed: " + result.statusMessage();
+        NodeCraft.LOGGER.warn("[AI_SEND] Placement auto-apply failed. status={}", result.statusMessage());
         return false;
     }
 
