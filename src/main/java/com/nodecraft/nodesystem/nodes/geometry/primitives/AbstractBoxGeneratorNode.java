@@ -182,7 +182,7 @@ public abstract class AbstractBoxGeneratorNode extends BaseNode {
     }
 
     protected int normalizeSignedSize(int value) {
-        return value;
+        return Math.abs(value);
     }
 
     private Vector3d signedCornerOffset(int sizeX, int sizeY, int sizeZ) {

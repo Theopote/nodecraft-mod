@@ -105,22 +105,18 @@ public class FrustumByTwoCentersRadiiNode extends BaseNode {
             return;
         }
 
-        try {
-            FrustumConeGeometryData frustum = new FrustumConeGeometryData(base, top, baseRadius, topRadius);
-            LineData axisLine = new LineData(
-                new Vec3d(base.x, base.y, base.z),
-                new Vec3d(top.x, top.y, top.z)
-            );
+        FrustumConeGeometryData frustum = new FrustumConeGeometryData(base, top, baseRadius, topRadius);
+        LineData axisLine = new LineData(
+            new Vec3d(base.x, base.y, base.z),
+            new Vec3d(top.x, top.y, top.z)
+        );
 
-            outputValues.put(OUTPUT_FRUSTUM_ID, frustum);
-            outputValues.put(OUTPUT_GEOMETRY_ID, frustum);
-            outputValues.put(OUTPUT_AXIS_LINE_ID, axisLine);
-            outputValues.put(OUTPUT_AXIS_VECTOR_ID, axisVector);
-            outputValues.put(OUTPUT_HEIGHT_ID, height);
-            outputValues.put(OUTPUT_VALID_ID, true);
-        } catch (IllegalArgumentException ex) {
-            writeEmptyOutputs();
-        }
+        outputValues.put(OUTPUT_FRUSTUM_ID, frustum);
+        outputValues.put(OUTPUT_GEOMETRY_ID, frustum);
+        outputValues.put(OUTPUT_AXIS_LINE_ID, axisLine);
+        outputValues.put(OUTPUT_AXIS_VECTOR_ID, axisVector);
+        outputValues.put(OUTPUT_HEIGHT_ID, height);
+        outputValues.put(OUTPUT_VALID_ID, true);
     }
 
     private void writeEmptyOutputs() {

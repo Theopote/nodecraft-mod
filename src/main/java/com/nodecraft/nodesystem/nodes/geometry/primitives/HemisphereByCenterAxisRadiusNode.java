@@ -74,18 +74,14 @@ public class HemisphereByCenterAxisRadiusNode extends BaseNode {
             return;
         }
 
-        try {
-            HemisphereGeometryData hemisphere = new HemisphereGeometryData(center, axis, radius);
-            Vector3d axisNorm = hemisphere.getAxis();
+        HemisphereGeometryData hemisphere = new HemisphereGeometryData(center, axis, radius);
+        Vector3d axisNorm = hemisphere.getAxis();
 
-            outputValues.put(OUTPUT_HEMISPHERE_ID, hemisphere);
-            outputValues.put(OUTPUT_GEOMETRY_ID, hemisphere);
-            outputValues.put(OUTPUT_AXIS_NORMALIZED_ID, axisNorm);
-            outputValues.put(OUTPUT_RADIUS_ID, radius);
-            outputValues.put(OUTPUT_VALID_ID, true);
-        } catch (IllegalArgumentException ex) {
-            writeEmptyOutputs();
-        }
+        outputValues.put(OUTPUT_HEMISPHERE_ID, hemisphere);
+        outputValues.put(OUTPUT_GEOMETRY_ID, hemisphere);
+        outputValues.put(OUTPUT_AXIS_NORMALIZED_ID, axisNorm);
+        outputValues.put(OUTPUT_RADIUS_ID, radius);
+        outputValues.put(OUTPUT_VALID_ID, true);
     }
 
     private void writeEmptyOutputs() {
