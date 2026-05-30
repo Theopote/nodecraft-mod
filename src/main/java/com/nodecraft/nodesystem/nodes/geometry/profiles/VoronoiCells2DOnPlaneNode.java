@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
@@ -127,20 +128,10 @@ public class VoronoiCells2DOnPlaneNode extends BaseNode {
         double minV = uniqueUv.stream().mapToDouble(p -> p.y).min().orElse(0.0d);
         double maxV = uniqueUv.stream().mapToDouble(p -> p.y).max().orElse(0.0d);
         double m = Math.max(0.0d, clipMargin);
-        if (minU == maxU) {
-            minU -= m;
-            maxU += m;
-        } else {
-            minU -= m;
-            maxU += m;
-        }
-        if (minV == maxV) {
-            minV -= m;
-            maxV += m;
-        } else {
-            minV -= m;
-            maxV += m;
-        }
+        minU -= m;
+        maxU += m;
+        minV -= m;
+        maxV += m;
 
         List<Coordinate> coords = new ArrayList<>(uniqueUv.size());
         for (Vector2d uv : uniqueUv) {
@@ -206,8 +197,8 @@ public class VoronoiCells2DOnPlaneNode extends BaseNode {
         for (Coordinate c : coords) {
             closed.add(axes.from2d(new Vector2d(c.x, c.y)));
         }
-        Vector3d first = closed.get(0);
-        Vector3d last = closed.get(closed.size() - 1);
+        Vector3d first = closed.getFirst();
+        Vector3d last = closed.getLast();
         if (first.distanceSquared(last) > 1.0e-8d) {
             closed.add(new Vector3d(first));
         } else if (closed.size() < 4) {

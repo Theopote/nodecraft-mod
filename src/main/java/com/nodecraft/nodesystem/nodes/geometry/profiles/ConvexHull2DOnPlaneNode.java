@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
@@ -106,7 +107,7 @@ public class ConvexHull2DOnPlaneNode extends BaseNode {
 
         List<Vector3d> closed = new ArrayList<>(unique3d.size() + 1);
         closed.addAll(unique3d);
-        closed.add(new Vector3d(unique3d.get(0)));
+        closed.add(new Vector3d(unique3d.getFirst()));
 
         PolygonProfileData profile = new PolygonProfileData(closed, plane);
         outputValues.put(OUTPUT_PROFILE_ID, profile);
@@ -170,8 +171,8 @@ public class ConvexHull2DOnPlaneNode extends BaseNode {
 
         List<Vector2d> lower = new ArrayList<>();
         for (Vector2d p : points) {
-            while (lower.size() >= 2 && cross(lower.get(lower.size() - 2), lower.get(lower.size() - 1), p) <= 0.0d) {
-                lower.remove(lower.size() - 1);
+            while (lower.size() >= 2 && cross(lower.get(lower.size() - 2), lower.getLast(), p) <= 0.0d) {
+                lower.removeLast();
             }
             lower.add(p);
         }
@@ -179,14 +180,14 @@ public class ConvexHull2DOnPlaneNode extends BaseNode {
         List<Vector2d> upper = new ArrayList<>();
         for (int i = points.size() - 1; i >= 0; i--) {
             Vector2d p = points.get(i);
-            while (upper.size() >= 2 && cross(upper.get(upper.size() - 2), upper.get(upper.size() - 1), p) <= 0.0d) {
-                upper.remove(upper.size() - 1);
+            while (upper.size() >= 2 && cross(upper.get(upper.size() - 2), upper.getLast(), p) <= 0.0d) {
+                upper.removeLast();
             }
             upper.add(p);
         }
 
-        lower.remove(lower.size() - 1);
-        upper.remove(upper.size() - 1);
+        lower.removeLast();
+        upper.removeLast();
         lower.addAll(upper);
         return lower;
     }

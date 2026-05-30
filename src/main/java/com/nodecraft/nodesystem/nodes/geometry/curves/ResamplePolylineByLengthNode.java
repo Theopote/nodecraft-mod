@@ -113,7 +113,7 @@ public class ResamplePolylineByLengthNode extends AbstractCurveNode {
             for (double d = 0.0d; d <= total + EPS; d += spacing) {
                 sampleDistances.add(Math.min(d, total));
             }
-            if (sampleDistances.get(sampleDistances.size() - 1) < total - EPS) {
+            if (sampleDistances.getLast() < total - EPS) {
                 sampleDistances.add(total);
             }
         } else {
@@ -128,8 +128,8 @@ public class ResamplePolylineByLengthNode extends AbstractCurveNode {
 
         if (closed && samples.size() >= 2) {
             while (samples.size() >= 2
-                && samples.get(0).distance(samples.get(samples.size() - 1)) < 1.0e-6d) {
-                samples.remove(samples.size() - 1);
+                && samples.getFirst().distance(samples.getLast()) < 1.0e-6d) {
+                samples.removeLast();
             }
         }
 

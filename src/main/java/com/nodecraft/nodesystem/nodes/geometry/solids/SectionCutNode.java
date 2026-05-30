@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.geometry.solids;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
@@ -127,7 +128,7 @@ public class SectionCutNode extends BaseNode {
         for (Vector2d p : hull) {
             closed.add(axes.from2d(p));
         }
-        closed.add(new Vector3d(closed.get(0)));
+        closed.add(new Vector3d(closed.getFirst()));
 
         PolygonProfileData profile;
         try {
@@ -175,21 +176,21 @@ public class SectionCutNode extends BaseNode {
         }
         List<Vector2d> lower = new ArrayList<>();
         for (Vector2d p : pts) {
-            while (lower.size() >= 2 && cross(lower.get(lower.size() - 2), lower.get(lower.size() - 1), p) <= 0.0d) {
-                lower.remove(lower.size() - 1);
+            while (lower.size() >= 2 && cross(lower.get(lower.size() - 2), lower.getLast(), p) <= 0.0d) {
+                lower.removeLast();
             }
             lower.add(p);
         }
         List<Vector2d> upper = new ArrayList<>();
         for (int i = pts.size() - 1; i >= 0; i--) {
             Vector2d p = pts.get(i);
-            while (upper.size() >= 2 && cross(upper.get(upper.size() - 2), upper.get(upper.size() - 1), p) <= 0.0d) {
-                upper.remove(upper.size() - 1);
+            while (upper.size() >= 2 && cross(upper.get(upper.size() - 2), upper.getLast(), p) <= 0.0d) {
+                upper.removeLast();
             }
             upper.add(p);
         }
-        lower.remove(lower.size() - 1);
-        upper.remove(upper.size() - 1);
+        lower.removeLast();
+        upper.removeLast();
         lower.addAll(upper);
         return lower;
     }

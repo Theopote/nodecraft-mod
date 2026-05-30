@@ -144,7 +144,7 @@ public class PolylineOffsetInPlaneNode extends AbstractCurveNode {
             outPts.add(new Vec3d(w.x, w.y, w.z));
         }
         if (closed) {
-            outPts.add(outPts.get(0));
+            outPts.add(outPts.getFirst());
         }
 
         PolylineData polyline = PathUtils.createPolylineOrNull(outPts);
@@ -195,7 +195,7 @@ public class PolylineOffsetInPlaneNode extends AbstractCurveNode {
 
         List<Vector2d> out = new ArrayList<>(n);
         if (!closed) {
-            Vector2d start = new Vector2d(pts.get(0)).add(left[0]);
+            Vector2d start = new Vector2d(pts.getFirst()).add(left[0]);
             out.add(start);
             for (int i = 1; i < n - 1; i++) {
                 Vector2d corner = MiterJoinCalculator.intersectOrBevel(
@@ -226,31 +226,6 @@ public class PolylineOffsetInPlaneNode extends AbstractCurveNode {
             out.add(corner);
         }
         return out;
-    }
-
-    /**
-     * Compatibility wrapper kept for nodes that still reference PlaneProjectionUtils.PlaneAxes.
-     * New code should use PlaneProjectionUtils.PlaneAxes directly.
-     */
-    @Deprecated
-    public static final class PlaneAxes {
-        private final PlaneProjectionUtils.PlaneAxes delegate;
-
-        private PlaneAxes(PlaneProjectionUtils.PlaneAxes delegate) {
-            this.delegate = delegate;
-        }
-
-        public static PlaneAxes from(PlaneData plane) {
-            return new PlaneAxes(PlaneProjectionUtils.PlaneAxes.from(plane));
-        }
-
-        public Vector2d to2d(Vector3d p) {
-            return delegate.to2d(p);
-        }
-
-        public Vector3d from2d(Vector2d p) {
-            return delegate.from2d(p);
-        }
     }
 
 }

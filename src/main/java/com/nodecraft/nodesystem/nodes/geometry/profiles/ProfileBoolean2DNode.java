@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
@@ -90,7 +91,7 @@ public class ProfileBoolean2DNode extends BaseNode {
             return;
         }
 
-        PolygonProfileData primary = profiles.get(0);
+        PolygonProfileData primary = profiles.getFirst();
         for (PolygonProfileData p : profiles) {
             if (Math.abs(area2d(p, axes)) > Math.abs(area2d(primary, axes))) {
                 primary = p;

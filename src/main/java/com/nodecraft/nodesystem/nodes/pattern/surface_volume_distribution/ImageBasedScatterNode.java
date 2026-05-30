@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.pattern.surface_volume_distribution;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
@@ -263,8 +264,7 @@ public class ImageBasedScatterNode extends BaseNode {
 
     private double clamp01(double value) {
         if (value < 0.0d) return 0.0d;
-        if (value > 1.0d) return 1.0d;
-        return value;
+        return Math.min(value, 1.0d);
     }
 
     private record ImageData(int width, int height, List<Double> values) {}

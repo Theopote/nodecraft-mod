@@ -1,3 +1,4 @@
+package com.nodecraft.nodesystem.nodes.geometry.profiles;
 
 import com.nodecraft.nodesystem.nodes.geometry.curves.util.PlaneProjectionUtils;
 
