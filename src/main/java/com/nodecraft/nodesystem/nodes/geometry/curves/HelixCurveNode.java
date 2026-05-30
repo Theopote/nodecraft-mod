@@ -57,11 +57,11 @@ public class HelixCurveNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Vector3d center = CurvePlaneUtils.resolvePoint(inputValues.get(INPUT_CENTER_ID));
-        Object axisObj = inputValues.get(INPUT_AXIS_ID);
         Object radiusObj = inputValues.get(INPUT_RADIUS_ID);
         Object pitchObj = inputValues.get(INPUT_PITCH_ID);
         Object turnsObj = inputValues.get(INPUT_TURNS_ID);
-        if (center == null || !(axisObj instanceof Vector3d axisIn) || !(radiusObj instanceof Number radiusN)
+        Vector3d axisIn = CurvePlaneUtils.resolvePoint(inputValues.get(INPUT_AXIS_ID));
+        if (center == null || axisIn == null || !(radiusObj instanceof Number radiusN)
             || !(pitchObj instanceof Number pitchN) || !(turnsObj instanceof Number turnsN)) {
             writeInvalid();
             return;

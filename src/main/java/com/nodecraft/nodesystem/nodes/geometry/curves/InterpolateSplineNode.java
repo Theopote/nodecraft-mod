@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
-import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
@@ -76,7 +75,7 @@ public class InterpolateSplineNode extends BaseNode {
 
         List<Vec3d> points = new ArrayList<>();
         for (Object entry : collection) {
-            Vec3d point = resolvePoint(entry);
+            Vec3d point = CurvePlaneUtils.resolveVec3dPoint(entry);
             if (point != null) {
                 points.add(point);
             }
@@ -277,14 +276,6 @@ public class InterpolateSplineNode extends BaseNode {
     private int floorMod(int value, int modulus) {
         int result = value % modulus;
         return result < 0 ? result + modulus : result;
-    }
-
-    private @Nullable Vec3d resolvePoint(Object value) {
-        if (value instanceof Vec3d vec3d) {
-            return vec3d;
-        }
-        var resolved = SpatialValueResolver.resolveVector3d(value);
-        return resolved == null ? null : new Vec3d(resolved.x, resolved.y, resolved.z);
     }
 
     private int getInputInt(String portId, int fallback) {

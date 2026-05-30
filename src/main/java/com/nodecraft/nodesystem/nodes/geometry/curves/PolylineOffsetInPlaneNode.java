@@ -198,7 +198,7 @@ public class PolylineOffsetInPlaneNode extends BaseNode {
             Vector2d start = new Vector2d(pts.get(0)).add(left[0]);
             out.add(start);
             for (int i = 1; i < n - 1; i++) {
-                Vector2d corner = intersectOrBevel(
+                Vector2d corner = MiterJoinCalculator.intersectOrBevel(
                     pts.get(i - 1), pts.get(i), left[i - 1],
                     pts.get(i), pts.get(i + 1), left[i],
                     pts.get(i), miterLimit, offset);
@@ -216,7 +216,7 @@ public class PolylineOffsetInPlaneNode extends BaseNode {
             int prev = (i - 1 + n) % n;
             int self = i;
             int next = (i + 1) % n;
-            Vector2d corner = intersectOrBevel(
+            Vector2d corner = MiterJoinCalculator.intersectOrBevel(
                 pts.get(prev), pts.get(self), left[prev],
                 pts.get(self), pts.get(next), left[self],
                 pts.get(self), miterLimit, offset);
@@ -226,48 +226,6 @@ public class PolylineOffsetInPlaneNode extends BaseNode {
             out.add(corner);
         }
         return out;
-    }
-
-    private static Vector2d intersectOrBevel(Vector2d p0, Vector2d p1, Vector2d left0,
-                                             Vector2d q0, Vector2d q1, Vector2d left1,
-                                             Vector2d cornerWorld,
-                                             double miterLimit,
-                                             double offset) {
-        Vector2d l0s = new Vector2d(p0).add(left0);
-        Vector2d l0e = new Vector2d(p1).add(left0);
-        Vector2d r0 = new Vector2d(l0e).sub(l0s);
-
-        Vector2d l1s = new Vector2d(q0).add(left1);
-        Vector2d l1e = new Vector2d(q1).add(left1);
-        Vector2d r1 = new Vector2d(l1e).sub(l1s);
-
-        Vector2d hit = intersectLines(l0s, r0, l1s, r1);
-        if (hit == null) {
-            Vector2d a = new Vector2d(cornerWorld).add(left0);
-            Vector2d b = new Vector2d(cornerWorld).add(left1);
-            return new Vector2d(a).add(b).mul(0.5d);
-        }
-        double miterDist = hit.distance(cornerWorld);
-        if (miterDist > miterLimit * Math.abs(offset) + EPS) {
-            Vector2d a = new Vector2d(cornerWorld).add(left0);
-            Vector2d b = new Vector2d(cornerWorld).add(left1);
-            return new Vector2d(a).add(b).mul(0.5d);
-        }
-        return hit;
-    }
-
-    private static Vector2d intersectLines(Vector2d p, Vector2d r, Vector2d q, Vector2d s) {
-        double rxs = cross2(r, s);
-        if (Math.abs(rxs) < EPS) {
-            return null;
-        }
-        Vector2d qp = new Vector2d(q).sub(p);
-        double t = cross2(qp, s) / rxs;
-        return new Vector2d(p).add(new Vector2d(r).mul(t));
-    }
-
-    private static double cross2(Vector2d a, Vector2d b) {
-        return a.x * b.y - a.y * b.x;
     }
 
     public static final class PlaneAxes {

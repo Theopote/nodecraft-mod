@@ -61,7 +61,7 @@ public class ParabolaOnPlaneNode extends BaseNode {
         Object maxObj = inputValues.get(INPUT_X_MAX_ID);
         Object segmentsObj = inputValues.get(INPUT_SEGMENTS_ID);
         PlaneData plane = inputValues.get(INPUT_PLANE_ID) instanceof PlaneData p ? p : PlaneData.XY_PLANE;
-        Vector3d preferred = inputValues.get(INPUT_AXIS_ID) instanceof Vector3d v ? new Vector3d(v) : null;
+        Vector3d preferred = CurvePlaneUtils.resolvePoint(inputValues.get(INPUT_AXIS_ID));
 
         if (vertex == null || !(curvatureObj instanceof Number cN) || !(minObj instanceof Number minN)
             || !(maxObj instanceof Number maxN) || !(segmentsObj instanceof Number segN)) {

@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
-import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
@@ -66,7 +65,7 @@ public class BezierNode extends BaseNode {
 
         List<Vec3d> controlPoints = new ArrayList<>();
         for (Object entry : collection) {
-            Vec3d point = resolvePoint(entry);
+            Vec3d point = CurvePlaneUtils.resolveVec3dPoint(entry);
             if (point != null) {
                 controlPoints.add(point);
             }
@@ -138,14 +137,6 @@ public class BezierNode extends BaseNode {
         outputValues.put(OUTPUT_CONTROL_COUNT_ID, 0);
         outputValues.put(OUTPUT_LENGTH_ID, 0.0d);
         outputValues.put(OUTPUT_VALID_ID, false);
-    }
-
-    private @Nullable Vec3d resolvePoint(Object value) {
-        if (value instanceof Vec3d vec) {
-            return vec;
-        }
-        var resolved = SpatialValueResolver.resolveVector3d(value);
-        return resolved == null ? null : new Vec3d(resolved.x, resolved.y, resolved.z);
     }
 
     private int getInputInt(String portId, int fallback) {

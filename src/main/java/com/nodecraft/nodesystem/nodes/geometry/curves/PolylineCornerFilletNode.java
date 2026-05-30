@@ -177,16 +177,16 @@ public class PolylineCornerFilletNode extends BaseNode {
             }
             dirBc.normalize();
 
-            double cos = clamp(dirAb.dot(dirBc), -1.0d, 1.0d);
+            double cos = Polyline2DUtils.clamp(dirAb.dot(dirBc), -1.0d, 1.0d);
             double theta = Math.acos(cos);
             if (theta < 1.0e-4d || theta > Math.PI - 1.0e-3d) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
 
             double tanHalf = Math.tan(theta * 0.5d);
             if (tanHalf < EPS) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
 
@@ -196,7 +196,7 @@ public class PolylineCornerFilletNode extends BaseNode {
             double l = Math.min(lIdeal, Math.min(edgeIn, edgeOut) * 0.49d);
             double rEff = l * tanHalf;
             if (l < EPS || rEff < EPS) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
 
@@ -205,13 +205,13 @@ public class PolylineCornerFilletNode extends BaseNode {
 
             Vector2d bis = new Vector2d(dirBc).sub(dirAb);
             if (bis.lengthSquared() < EPS * EPS) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
             bis.normalize();
             double sinHalf = Math.sin(theta * 0.5d);
             if (Math.abs(sinHalf) < EPS) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
             double dCenter = rEff / sinHalf;
@@ -219,68 +219,20 @@ public class PolylineCornerFilletNode extends BaseNode {
 
             double rActual = center.distance(p1);
             if (rActual < EPS) {
-                appendIfFar(out, b);
+                Polyline2DUtils.appendIfFar(out, b);
                 continue;
             }
 
-            boolean ccw = cross2(dirAb, dirBc) > 0.0d;
+            boolean ccw = Polyline2DUtils.cross2(dirAb, dirBc) > 0.0d;
 
-            appendIfFar(out, p1);
-            List<Vector2d> arc = sampleArc(center, rActual, p1, p2, ccw, arcSegments);
+            Polyline2DUtils.appendIfFar(out, p1);
+            List<Vector2d> arc = Polyline2DUtils.sampleArc(center, rActual, p1, p2, ccw, arcSegments);
             for (int k = 1; k < arc.size(); k++) {
-                appendIfFar(out, arc.get(k));
+                Polyline2DUtils.appendIfFar(out, arc.get(k));
             }
         }
 
-        appendIfFar(out, pts.get(n - 1));
+        Polyline2DUtils.appendIfFar(out, pts.get(n - 1));
         return out;
-    }
-
-    private static void appendIfFar(List<Vector2d> out, Vector2d p) {
-        Vector2d last = out.get(out.size() - 1);
-        if (last.distanceSquared(p) > EPS * EPS) {
-            out.add(new Vector2d(p));
-        }
-    }
-
-    private static List<Vector2d> sampleArc(Vector2d center, double radius,
-                                           Vector2d p1, Vector2d p2, boolean ccw, int segments) {
-        double a1 = Math.atan2(p1.y - center.y, p1.x - center.x);
-        double a2 = Math.atan2(p2.y - center.y, p2.x - center.x);
-        double delta = normalizeAngleDelta(a1, a2, ccw);
-        List<Vector2d> arc = new ArrayList<>(segments + 1);
-        for (int i = 0; i <= segments; i++) {
-            double t = i / (double) segments;
-            double ang = a1 + delta * t;
-            double x = center.x + Math.cos(ang) * radius;
-            double y = center.y + Math.sin(ang) * radius;
-            arc.add(new Vector2d(x, y));
-        }
-        return arc;
-    }
-
-    private static double normalizeAngleDelta(double a1, double a2, boolean ccw) {
-        double d = a2 - a1;
-        while (d <= -Math.PI) {
-            d += Math.PI * 2.0d;
-        }
-        while (d > Math.PI) {
-            d -= Math.PI * 2.0d;
-        }
-        if (ccw && d < 0.0d) {
-            d += Math.PI * 2.0d;
-        }
-        if (!ccw && d > 0.0d) {
-            d -= Math.PI * 2.0d;
-        }
-        return d;
-    }
-
-    private static double cross2(Vector2d a, Vector2d b) {
-        return a.x * b.y - a.y * b.x;
-    }
-
-    private static double clamp(double v, double lo, double hi) {
-        return Math.max(lo, Math.min(hi, v));
     }
 }

@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.nodes.geometry.curves;
 
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.util.SpatialValueResolver;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -11,6 +12,14 @@ final class CurvePlaneUtils {
 
     static @Nullable Vector3d resolvePoint(@Nullable Object value) {
         return SpatialValueResolver.resolveVector3d(value);
+    }
+
+    static @Nullable Vec3d resolveVec3dPoint(@Nullable Object value) {
+        if (value instanceof Vec3d vec3d) {
+            return vec3d;
+        }
+        Vector3d resolved = resolvePoint(value);
+        return resolved == null ? null : new Vec3d(resolved.x, resolved.y, resolved.z);
     }
 
     static @Nullable Basis createBasis(PlaneData plane, @Nullable Vector3d preferredXAxis) {

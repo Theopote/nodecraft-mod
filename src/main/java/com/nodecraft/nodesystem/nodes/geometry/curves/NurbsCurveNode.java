@@ -9,7 +9,6 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
-import com.nodecraft.nodesystem.util.SpatialValueResolver;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 
@@ -80,7 +79,7 @@ public class NurbsCurveNode extends BaseNode {
 
         List<Vec3d> controlPoints = new ArrayList<>();
         for (Object entry : collection) {
-            Vec3d point = resolvePoint(entry);
+            Vec3d point = CurvePlaneUtils.resolveVec3dPoint(entry);
             if (point != null) {
                 controlPoints.add(point);
             }
@@ -100,7 +99,7 @@ public class NurbsCurveNode extends BaseNode {
         int effectiveDegree = Math.min(Math.min(5, requestedDegree), controlPoints.size() - 1);
         int n = controlPoints.size() - 1;
         int knotCount = n + effectiveDegree + 2;
-        double[] knots = buildClampedUniformKnots(knotCount, effectiveDegree, n);
+        double[] knots = NurbsMath.buildClampedUniformKnots(knotCount, effectiveDegree, n);
 
         int spanCount = Math.max(1, n - effectiveDegree + 1);
         int totalSamples = spanCount * resolutionPerSpan + 1;
@@ -111,7 +110,7 @@ public class NurbsCurveNode extends BaseNode {
         for (int i = 0; i < totalSamples; i++) {
             double t = totalSamples == 1 ? 0.0d : (double) i / (double) (totalSamples - 1);
             double u = uStart + (uEnd - uStart) * t;
-            sampled.add(evaluateNurbs(controlPoints, weights, knots, effectiveDegree, u, n));
+            sampled.add(NurbsMath.evaluateNurbs(controlPoints, weights, knots, effectiveDegree, u, n, EPSILON));
         }
 
         Curve curve = new Curve(Curve.CurveType.LINEAR, 2);
@@ -226,86 +225,6 @@ public class NurbsCurveNode extends BaseNode {
             weights.add(Math.max(EPSILON, defaultWeight));
         }
         return weights;
-    }
-
-    private double[] buildClampedUniformKnots(int knotCount, int degree, int n) {
-        double[] knots = new double[knotCount];
-        int last = knotCount - 1;
-        int domainEnd = n - degree + 1;
-
-        for (int i = 0; i < knotCount; i++) {
-            if (i <= degree) {
-                knots[i] = 0.0d;
-            } else if (i >= n + 1) {
-                knots[i] = domainEnd;
-            } else {
-                knots[i] = i - degree;
-            }
-        }
-
-        knots[last] = domainEnd;
-        return knots;
-    }
-
-    private Vec3d evaluateNurbs(List<Vec3d> cps, List<Double> weights, double[] knots, int degree, double u, int n) {
-        if (u >= knots[n + 1]) {
-            Vec3d end = cps.get(n);
-            return new Vec3d(end.x, end.y, end.z);
-        }
-
-        double numeratorX = 0.0d;
-        double numeratorY = 0.0d;
-        double numeratorZ = 0.0d;
-        double denominator = 0.0d;
-
-        for (int i = 0; i <= n; i++) {
-            double basis = basis(i, degree, u, knots);
-            if (basis == 0.0d) {
-                continue;
-            }
-            double weightedBasis = basis * weights.get(i);
-            Vec3d p = cps.get(i);
-            numeratorX += weightedBasis * p.x;
-            numeratorY += weightedBasis * p.y;
-            numeratorZ += weightedBasis * p.z;
-            denominator += weightedBasis;
-        }
-
-        if (denominator <= EPSILON) {
-            Vec3d fallback = cps.get(0);
-            return new Vec3d(fallback.x, fallback.y, fallback.z);
-        }
-
-        return new Vec3d(numeratorX / denominator, numeratorY / denominator, numeratorZ / denominator);
-    }
-
-    private double basis(int i, int degree, double u, double[] knots) {
-        if (degree == 0) {
-            return (knots[i] <= u && u < knots[i + 1]) ? 1.0d : 0.0d;
-        }
-
-        double leftDenominator = knots[i + degree] - knots[i];
-        double rightDenominator = knots[i + degree + 1] - knots[i + 1];
-
-        double left = 0.0d;
-        double right = 0.0d;
-
-        if (leftDenominator > 0.0d) {
-            left = ((u - knots[i]) / leftDenominator) * basis(i, degree - 1, u, knots);
-        }
-        if (rightDenominator > 0.0d) {
-            right = ((knots[i + degree + 1] - u) / rightDenominator) * basis(i + 1, degree - 1, u, knots);
-        }
-
-        return left + right;
-    }
-
-    private @Nullable Vec3d resolvePoint(Object value) {
-        if (value instanceof Vec3d vec3d) {
-            return vec3d;
-        }
-        var resolved = SpatialValueResolver.resolveVector3d(value);
-        return resolved == null ? null : new Vec3d(resolved.x, resolved.y, resolved.z);
     }
 
     private int getInputInt(String portId, int fallback) {

@@ -55,7 +55,7 @@ public class InfinityCurveOnPlaneNode extends BaseNode {
         Object sizeObj = inputValues.get(INPUT_SIZE_ID);
         Object segmentsObj = inputValues.get(INPUT_SEGMENTS_ID);
         PlaneData plane = inputValues.get(INPUT_PLANE_ID) instanceof PlaneData p ? p : PlaneData.XY_PLANE;
-        Vector3d preferred = inputValues.get(INPUT_AXIS_ID) instanceof Vector3d v ? new Vector3d(v) : null;
+        Vector3d preferred = CurvePlaneUtils.resolvePoint(inputValues.get(INPUT_AXIS_ID));
 
         if (center == null || !(sizeObj instanceof Number sN) || !(segmentsObj instanceof Number segN)) {
             writeInvalid();
