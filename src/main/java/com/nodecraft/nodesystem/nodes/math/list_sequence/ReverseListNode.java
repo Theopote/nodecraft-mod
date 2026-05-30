@@ -27,7 +27,6 @@ public class ReverseListNode extends BaseNode {
     // ---       ?              D ---
     private static final String INPUT_LIST_ID = "input_list";
     private static final String OUTPUT_LIST_ID = "output_list";
-    private String description; //                    ?
     
     /**
      *                                         ?
@@ -35,9 +34,6 @@ public class ReverseListNode extends BaseNode {
     public ReverseListNode() {
         //                                        UID.randomUUID()              D
         super(UUID.randomUUID(), "math.list.reverse_list");
-        
-        //                    ?
-        this.description = "Reverses the order of elements in a list";
         
         //                    ?
         IPort listInput = new BasePort(INPUT_LIST_ID, "List", 
@@ -48,15 +44,6 @@ public class ReverseListNode extends BaseNode {
         IPort listOutput = new BasePort(OUTPUT_LIST_ID, "Reversed List", 
                 "The list with elements in reverse order", NodeDataType.LIST, this);
         addOutputPort(listOutput);
-    }
-    
-    /**
-     *         ode            tDescription      ?
-     * @return              ?
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
     }
     
     /**
@@ -85,14 +72,4 @@ public class ReverseListNode extends BaseNode {
         outputValues.put(OUTPUT_LIST_ID, resultList);
     }
     
-    //                                                       ?
-    @Override
-    public Object getNodeState() {
-        return null;
-    }
-    
-    @Override
-    public void setNodeState(Object state) {
-        //                            ?
-    }
 } 

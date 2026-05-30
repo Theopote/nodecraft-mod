@@ -78,7 +78,7 @@ public class TransposeListNode extends BaseNode {
             outputValues.put(OUTPUT_TRANSPOSED_ID, List.of());
             outputValues.put(OUTPUT_ROW_COUNT_ID, 0);
             outputValues.put(OUTPUT_COLUMN_COUNT_ID, 0);
-            outputValues.put(OUTPUT_VALID_ID, false);
+            outputValues.put(OUTPUT_VALID_ID, outer.isEmpty());
             return;
         }
 

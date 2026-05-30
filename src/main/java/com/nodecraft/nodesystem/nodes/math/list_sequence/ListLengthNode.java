@@ -25,7 +25,6 @@ public class ListLengthNode extends BaseNode {
     // ---       ?              D ---
     private static final String INPUT_LIST_ID = "input_list";
     private static final String OUTPUT_LENGTH_ID = "output_length";
-    private String description; //                    ?
     
     /**
      *                                         ?
@@ -33,9 +32,6 @@ public class ListLengthNode extends BaseNode {
     public ListLengthNode() {
         //                                        UID.randomUUID()              D
         super(UUID.randomUUID(), "math.list.list_length");
-        
-        //                    ?
-        this.description = "Returns the number of items in a list";
         
         //                    ?
         IPort listInput = new BasePort(INPUT_LIST_ID, "List", 
@@ -46,15 +42,6 @@ public class ListLengthNode extends BaseNode {
         IPort lengthOutput = new BasePort(OUTPUT_LENGTH_ID, "Length", 
                 "The number of items in the list", NodeDataType.INTEGER, this);
         addOutputPort(lengthOutput);
-    }
-    
-    /**
-     *         ode            tDescription      ?
-     * @return              ?
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
     }
     
     /**
@@ -77,14 +64,4 @@ public class ListLengthNode extends BaseNode {
         outputValues.put(OUTPUT_LENGTH_ID, length);
     }
     
-    //                                                       ?
-    @Override
-    public Object getNodeState() {
-        return null;
-    }
-    
-    @Override
-    public void setNodeState(Object state) {
-        //                            ?
-    }
 } 

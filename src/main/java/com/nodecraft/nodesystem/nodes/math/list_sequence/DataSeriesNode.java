@@ -28,7 +28,6 @@ public class DataSeriesNode extends BaseNode {
     private int defaultCount = 10; //              ?
     private double defaultStart = 0; //        ?
     private double defaultStep = 1; //       
-    private String description = "Generates a series of numbers with constant increment"; //       
     
     // ---    /      ID ---
     private static final String INPUT_START_ID = "input_start";
@@ -68,15 +67,6 @@ public class DataSeriesNode extends BaseNode {
     }
     
     /**
-     *    INode     etDescription   
-     * @return       
-     */
-    @Override
-    public String getDescription() {
-        return this.description;
-    }
-    
-    /**
      *            
      * @param context        ?
      */
@@ -103,6 +93,12 @@ public class DataSeriesNode extends BaseNode {
             count = ((Number) countObj).intValue();
             //           ?
             count = Math.max(0, count);
+        }
+
+        if (!Double.isFinite(start) || !Double.isFinite(step)) {
+            outputValues.put(OUTPUT_SERIES_ID, new ArrayList<>());
+            outputValues.put(OUTPUT_SUM_ID, useIntegerType ? 0 : 0.0);
+            return;
         }
         
         //       
@@ -137,8 +133,10 @@ public class DataSeriesNode extends BaseNode {
     }
     
     public void setUseIntegerType(boolean useInt) {
-        this.useIntegerType = useInt;
-        markDirty();
+        if (this.useIntegerType != useInt) {
+            this.useIntegerType = useInt;
+            markDirty();
+        }
     }
     
     public int getDefaultCount() {
@@ -146,8 +144,11 @@ public class DataSeriesNode extends BaseNode {
     }
     
     public void setDefaultCount(int count) {
-        this.defaultCount = Math.max(0, count);
-        markDirty();
+        int resolved = Math.max(0, count);
+        if (this.defaultCount != resolved) {
+            this.defaultCount = resolved;
+            markDirty();
+        }
     }
     
     public double getDefaultStart() {
@@ -155,8 +156,10 @@ public class DataSeriesNode extends BaseNode {
     }
     
     public void setDefaultStart(double start) {
-        this.defaultStart = start;
-        markDirty();
+        if (Double.compare(this.defaultStart, start) != 0) {
+            this.defaultStart = start;
+            markDirty();
+        }
     }
     
     public double getDefaultStep() {
@@ -164,8 +167,10 @@ public class DataSeriesNode extends BaseNode {
     }
     
     public void setDefaultStep(double step) {
-        this.defaultStep = step;
-        markDirty();
+        if (Double.compare(this.defaultStep, step) != 0) {
+            this.defaultStep = step;
+            markDirty();
+        }
     }
     
     // ---             ---

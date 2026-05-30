@@ -353,7 +353,7 @@ Voxel CSG and SDF nodes are ordered in two bands (0–4 voxel, 10–23 SDF). See
 | Map List | `math.list.map_list` | Applies a scalar operation to each numeric item in a list. | `MapListNode` |
 | Reduce List | `math.list.reduce` | Reduces a list into a single value using a selected operation. | `ReduceListNode` |
 | Chunk List | `math.list.chunk` | Splits a list into fixed-size chunks. | `ChunkListNode` |
-| Transpose List of Lists | `math.list.transpose` | Transposes a list of lists by swapping rows and columns. | `TransposeListNode` |
+| Transpose List of Lists | `math.list.transpose` | Transposes a list of lists by swapping rows and columns. Empty list input is treated as a valid empty result. | `TransposeListNode` |
 | Combine Lists | `math.list.combine_lists` | Combines multiple lists into a single list by index. | `CombineListsNode` |
 | Dispatch List | `math.list.dispatch_list` | Splits a list into two based on boolean conditions | `DispatchListNode` |
 | Filter List | `math.list.filter_list` | Filters a list based on boolean conditions | `FilterListNode` |
