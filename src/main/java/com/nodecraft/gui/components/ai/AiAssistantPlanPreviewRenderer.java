@@ -7,11 +7,23 @@ import imgui.ImDrawList;
 import imgui.ImGui;
 import imgui.ImVec2;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 final class AiAssistantPlanPreviewRenderer {
+
+    private static String topologyPlanKey = "";
+    private static final Map<String, float[]> topologyManualUvByRef = new HashMap<>();
+    private static String topologyDraggingNodeRef = null;
+    private static float topologyDragOffsetX = 0.0f;
+    private static float topologyDragOffsetY = 0.0f;
 
     private AiAssistantPlanPreviewRenderer() {
     }
@@ -118,6 +130,10 @@ final class AiAssistantPlanPreviewRenderer {
         }
 
         if (ImGui.treeNode("Graph Topology Preview")) {
+            ImGui.textDisabled("Auto-layout + drag nodes to adjust manually");
+            if (ImGui.smallButton("Reset Topology Layout")) {
+                resetTopologyPreviewLayout();
+            }
             String selectedNodeRef = renderTopologyPreview(state.planNodes(), state.planConnections(), state.focusedNodeRef());
             if (selectedNodeRef != null && !selectedNodeRef.isBlank()) {
                 actions.onTopologyNodeSelected(selectedNodeRef);
@@ -220,9 +236,21 @@ final class AiAssistantPlanPreviewRenderer {
 
         float previewWidth = Math.max(240.0f, ImGui.getContentRegionAvailX());
         float previewHeight = 170.0f;
-        float nodeWidth = 90.0f;
-        float nodeHeight = 28.0f;
+        float densityScale = clamp(1.0f - Math.max(0, nodes.size() - 8) * 0.022f, 0.72f, 1.0f);
+        float nodeWidth = 90.0f * densityScale;
+        float nodeHeight = 28.0f * densityScale;
         float padding = 16.0f;
+        float contentWidth = Math.max(1.0f, previewWidth - 2.0f * padding - nodeWidth);
+        float contentHeight = Math.max(1.0f, previewHeight - 2.0f * padding - nodeHeight);
+
+        String planKey = buildTopologyPlanKey(nodes, connections);
+        if (!planKey.equals(topologyPlanKey)) {
+            topologyPlanKey = planKey;
+            topologyManualUvByRef.clear();
+            topologyDraggingNodeRef = null;
+            topologyDragOffsetX = 0.0f;
+            topologyDragOffsetY = 0.0f;
+        }
 
         ImDrawList drawList = ImGui.getWindowDrawList();
         ImVec2 cursor = ImGui.getCursorScreenPos();
@@ -239,30 +267,53 @@ final class AiAssistantPlanPreviewRenderer {
         drawList.addRectFilled(cursor.x, cursor.y, cursor.x + previewWidth, cursor.y + previewHeight, bgColor, 6.0f);
         drawList.addRect(cursor.x, cursor.y, cursor.x + previewWidth, cursor.y + previewHeight, borderColor, 6.0f, 0, 1.0f);
 
-        float minX = Float.MAX_VALUE;
-        float maxX = -Float.MAX_VALUE;
-        float minY = Float.MAX_VALUE;
-        float maxY = -Float.MAX_VALUE;
-        for (AiPlanNode node : nodes) {
-            minX = Math.min(minX, node.offsetX());
-            maxX = Math.max(maxX, node.offsetX());
-            minY = Math.min(minY, node.offsetY());
-            maxY = Math.max(maxY, node.offsetY());
-        }
-
-        float rangeX = Math.max(1.0f, maxX - minX);
-        float rangeY = Math.max(1.0f, maxY - minY);
-        float scaleX = (previewWidth - 2.0f * padding - nodeWidth) / rangeX;
-        float scaleY = (previewHeight - 2.0f * padding - nodeHeight) / rangeY;
-        float scale = Math.max(0.05f, Math.min(scaleX, scaleY));
-
+        Map<String, float[]> autoUvByRef = buildAdaptiveTopologyUv(nodes, connections, contentWidth, contentHeight, nodeWidth, nodeHeight);
         Map<String, float[]> nodeAnchors = new HashMap<>();
         for (AiPlanNode node : nodes) {
-            float nx = cursor.x + padding + (node.offsetX() - minX) * scale;
-            float ny = cursor.y + padding + (node.offsetY() - minY) * scale;
-            nx = clamp(nx, cursor.x + 2.0f, cursor.x + previewWidth - nodeWidth - 2.0f);
-            ny = clamp(ny, cursor.y + 2.0f, cursor.y + previewHeight - nodeHeight - 2.0f);
+            float[] uv = topologyManualUvByRef.get(node.ref());
+            if (uv == null) {
+                uv = autoUvByRef.get(node.ref());
+            }
+            if (uv == null) {
+                uv = new float[]{0.5f, 0.5f};
+            }
+            float nx = cursor.x + padding + clamp(uv[0], 0.0f, 1.0f) * contentWidth;
+            float ny = cursor.y + padding + clamp(uv[1], 0.0f, 1.0f) * contentHeight;
             nodeAnchors.put(node.ref(), new float[]{nx, ny});
+        }
+
+        ImVec2 mouse = ImGui.getIO().getMousePos();
+        boolean mouseInCanvas = pointInRect(mouse.x, mouse.y, cursor.x, cursor.y, previewWidth, previewHeight);
+
+        if (topologyDraggingNodeRef != null) {
+            if (ImGui.isMouseDown(0)) {
+                float nx = clamp(mouse.x - topologyDragOffsetX, cursor.x + padding, cursor.x + padding + contentWidth);
+                float ny = clamp(mouse.y - topologyDragOffsetY, cursor.y + padding, cursor.y + padding + contentHeight);
+                float u = (nx - (cursor.x + padding)) / contentWidth;
+                float v = (ny - (cursor.y + padding)) / contentHeight;
+                topologyManualUvByRef.put(topologyDraggingNodeRef, new float[]{clamp(u, 0.0f, 1.0f), clamp(v, 0.0f, 1.0f)});
+                nodeAnchors.put(topologyDraggingNodeRef, new float[]{nx, ny});
+            } else {
+                topologyDraggingNodeRef = null;
+            }
+        }
+
+        if (mouseInCanvas && ImGui.isMouseClicked(0) && topologyDraggingNodeRef == null) {
+            for (int i = nodes.size() - 1; i >= 0; i--) {
+                AiPlanNode node = nodes.get(i);
+                float[] anchor = nodeAnchors.get(node.ref());
+                if (anchor == null) {
+                    continue;
+                }
+                float nx = anchor[0];
+                float ny = anchor[1];
+                if (mouse.x >= nx && mouse.x <= nx + nodeWidth && mouse.y >= ny && mouse.y <= ny + nodeHeight) {
+                    topologyDraggingNodeRef = node.ref();
+                    topologyDragOffsetX = mouse.x - nx;
+                    topologyDragOffsetY = mouse.y - ny;
+                    break;
+                }
+            }
         }
 
         if (connections != null) {
@@ -294,8 +345,7 @@ final class AiAssistantPlanPreviewRenderer {
         }
 
         String clickedRef = null;
-        if (ImGui.isWindowHovered() && ImGui.isMouseClicked(0)) {
-            ImVec2 mouse = ImGui.getIO().getMousePos();
+        if (mouseInCanvas && ImGui.isMouseClicked(0)) {
             for (AiPlanNode node : nodes) {
                 float[] anchor = nodeAnchors.get(node.ref());
                 if (anchor == null) {
@@ -312,6 +362,163 @@ final class AiAssistantPlanPreviewRenderer {
 
         ImGui.dummy(previewWidth, previewHeight);
         return clickedRef;
+    }
+
+    private static void resetTopologyPreviewLayout() {
+        topologyManualUvByRef.clear();
+        topologyDraggingNodeRef = null;
+        topologyDragOffsetX = 0.0f;
+        topologyDragOffsetY = 0.0f;
+    }
+
+    private static String buildTopologyPlanKey(List<AiPlanNode> nodes, List<AiPlanConnection> connections) {
+        if (nodes == null || nodes.isEmpty()) {
+            return "empty";
+        }
+        StringBuilder sb = new StringBuilder(256);
+        for (AiPlanNode node : nodes) {
+            sb.append(node.ref()).append('|').append(node.typeId()).append(';');
+        }
+        sb.append('#');
+        if (connections != null) {
+            for (AiPlanConnection connection : connections) {
+                sb.append(connection.sourceRef()).append('.').append(connection.sourcePortId())
+                        .append("->")
+                        .append(connection.targetRef()).append('.').append(connection.targetPortId())
+                        .append(';');
+            }
+        }
+        return sb.toString();
+    }
+
+    private static Map<String, float[]> buildAdaptiveTopologyUv(
+            List<AiPlanNode> nodes,
+            List<AiPlanConnection> connections,
+            float contentWidth,
+            float contentHeight,
+            float nodeWidth,
+            float nodeHeight
+    ) {
+        Map<String, float[]> result = new HashMap<>();
+        if (nodes == null || nodes.isEmpty()) {
+            return result;
+        }
+
+        Map<String, Set<String>> outgoing = new LinkedHashMap<>();
+        Map<String, Integer> indegree = new LinkedHashMap<>();
+        for (AiPlanNode node : nodes) {
+            outgoing.put(node.ref(), new LinkedHashSet<>());
+            indegree.put(node.ref(), 0);
+        }
+        if (connections != null) {
+            for (AiPlanConnection connection : connections) {
+                if (!outgoing.containsKey(connection.sourceRef()) || !indegree.containsKey(connection.targetRef())) {
+                    continue;
+                }
+                if (outgoing.get(connection.sourceRef()).add(connection.targetRef())) {
+                    indegree.put(connection.targetRef(), indegree.get(connection.targetRef()) + 1);
+                }
+            }
+        }
+
+        ArrayDeque<String> queue = new ArrayDeque<>();
+        List<String> sortedRefs = nodes.stream().map(AiPlanNode::ref).sorted().toList();
+        for (String ref : sortedRefs) {
+            if (indegree.getOrDefault(ref, 0) == 0) {
+                queue.add(ref);
+            }
+        }
+
+        List<String> topoOrder = new ArrayList<>(nodes.size());
+        Map<String, Integer> layer = new HashMap<>();
+        while (!queue.isEmpty()) {
+            String ref = queue.removeFirst();
+            topoOrder.add(ref);
+            int currentLayer = layer.getOrDefault(ref, 0);
+            for (String target : outgoing.getOrDefault(ref, Set.of())) {
+                layer.put(target, Math.max(layer.getOrDefault(target, 0), currentLayer + 1));
+                int next = indegree.getOrDefault(target, 0) - 1;
+                indegree.put(target, next);
+                if (next == 0) {
+                    queue.addLast(target);
+                }
+            }
+        }
+
+        Set<String> visited = new LinkedHashSet<>(topoOrder);
+        for (String ref : sortedRefs) {
+            if (!visited.contains(ref)) {
+                topoOrder.add(ref);
+                layer.putIfAbsent(ref, 0);
+            }
+        }
+
+        Map<Integer, List<String>> byLayer = new LinkedHashMap<>();
+        int maxLayer = 0;
+        for (String ref : topoOrder) {
+            int lv = Math.max(0, layer.getOrDefault(ref, 0));
+            maxLayer = Math.max(maxLayer, lv);
+            byLayer.computeIfAbsent(lv, key -> new ArrayList<>()).add(ref);
+        }
+
+        float vGap = 8.0f;
+        float intraColumnXGap = 18.0f;
+        float interLayerGap = 44.0f;
+        int maxRowsPerColumn = Math.max(1, (int) ((contentHeight + vGap) / Math.max(1.0f, nodeHeight + vGap)));
+
+        Map<String, float[]> pre = new HashMap<>();
+        float xCursor = 0.0f;
+        for (int lv = 0; lv <= maxLayer; lv++) {
+            List<String> refs = byLayer.getOrDefault(lv, List.of());
+            if (refs.isEmpty()) {
+                xCursor += nodeWidth + interLayerGap;
+                continue;
+            }
+
+            refs.sort(Comparator.naturalOrder());
+            int cols = Math.max(1, (int) Math.ceil((double) refs.size() / (double) maxRowsPerColumn));
+            float layerWidth = nodeWidth + (cols - 1) * (nodeWidth + intraColumnXGap);
+
+            for (int i = 0; i < refs.size(); i++) {
+                int col = i / maxRowsPerColumn;
+                int row = i % maxRowsPerColumn;
+                float px = xCursor + col * (nodeWidth + intraColumnXGap);
+                float py = row * (nodeHeight + vGap);
+                pre.put(refs.get(i), new float[]{px, py});
+            }
+
+            xCursor += layerWidth + interLayerGap;
+        }
+
+        float minX = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        for (float[] point : pre.values()) {
+            minX = Math.min(minX, point[0]);
+            maxX = Math.max(maxX, point[0]);
+            minY = Math.min(minY, point[1]);
+            maxY = Math.max(maxY, point[1]);
+        }
+
+        float spanX = Math.max(1.0f, maxX - minX);
+        float spanY = Math.max(1.0f, maxY - minY);
+        for (AiPlanNode node : nodes) {
+            float[] point = pre.get(node.ref());
+            if (point == null) {
+                result.put(node.ref(), new float[]{0.5f, 0.5f});
+                continue;
+            }
+            float u = clamp((point[0] - minX) / spanX, 0.0f, 1.0f);
+            float v = clamp((point[1] - minY) / spanY, 0.0f, 1.0f);
+            result.put(node.ref(), new float[]{u, v});
+        }
+
+        return result;
+    }
+
+    private static boolean pointInRect(float x, float y, float rx, float ry, float rw, float rh) {
+        return x >= rx && x <= rx + rw && y >= ry && y <= ry + rh;
     }
 
     private static String buildPlanNodeLine(AiPlanNode node) {
