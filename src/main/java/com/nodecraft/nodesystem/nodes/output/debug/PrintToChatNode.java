@@ -1,18 +1,18 @@
 package com.nodecraft.nodesystem.nodes.output.debug;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
-import com.nodecraft.gui.editor.impl.ZoomHelper;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import imgui.ImGui;
-import imgui.ImVec2;
-import imgui.type.ImBoolean;
 import imgui.type.ImString;
-import imgui.flag.ImGuiCol;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -70,8 +70,9 @@ public class PrintToChatNode extends BaseCustomUINode {
         Object dataObj = inputValues.get(INPUT_DATA_ID);
         Object prefixObj = inputValues.get(INPUT_PREFIX_ID);
         Object colorObj = inputValues.get(INPUT_COLOR_ID);
+        Object triggerObj = inputValues.get(INPUT_TRIGGER_ID);
 
-        if (context != null && context.getPlayerAccessor() != null) {
+        if (triggerObj != null) {
             try {
                 String pfx = (prefixObj instanceof String) ? (String) prefixObj : this.prefix;
                 String color = (colorObj instanceof String) ? (String) colorObj : this.textColor;
@@ -82,7 +83,10 @@ public class PrintToChatNode extends BaseCustomUINode {
                 if (includeDataType && dataObj != null) sb.append("(").append(getDataTypeName(dataObj)).append(") ");
                 sb.append(dataStr);
                 message = sb.toString();
-                success = true;
+                if (context != null && context.getPlayer() != null) {
+                    context.getPlayer().sendMessage(toChatText(message, color), false);
+                    success = true;
+                }
             } catch (Exception e) {
                 System.err.println("Error printing to chat: " + e.getMessage());
             }
@@ -109,6 +113,23 @@ public class PrintToChatNode extends BaseCustomUINode {
     private void ensurePrefixBuffer() {
         if (prefixBuffer == null) prefixBuffer = new ImString(256);
         if (prefixNeedsSync) { prefixBuffer.set(prefix != null ? prefix : ""); prefixNeedsSync = false; }
+    }
+
+    private Text toChatText(String message, String colorName) {
+        Formatting formatting = resolveFormatting(colorName);
+        MutableText text = Text.literal(message);
+        return formatting != null ? text.formatted(formatting) : text;
+    }
+
+    private @Nullable Formatting resolveFormatting(String colorName) {
+        if (colorName == null) {
+            return null;
+        }
+        String normalized = colorName.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return Formatting.byName(normalized);
     }
 
     private String getDataTypeName(Object obj) {

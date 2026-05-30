@@ -83,15 +83,10 @@ public class PreviewBlocksNode extends BaseCustomUINode {
     }
 
     @Override
-    public String getDescription() {
-        return "Previews block coordinates or block lists as temporary ghost blocks.";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         // Throttle rapid re-execution when node is selected (prevents flickering)
         long now = System.currentTimeMillis();
-        if (now - lastExecutionTime < MIN_EXECUTION_INTERVAL_MS) {
+        if (previewEnabled && now - lastExecutionTime < MIN_EXECUTION_INTERVAL_MS) {
             // Skip execution if called too soon
             return;
         }

@@ -73,15 +73,10 @@ public class PreviewPlaneNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Previews a plane as a square grid with axes and normal direction";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         // Throttle rapid re-execution when node is selected (prevents flickering)
         long now = System.currentTimeMillis();
-        if (now - lastExecutionTime < MIN_EXECUTION_INTERVAL_MS) {
+        if (previewEnabled && now - lastExecutionTime < MIN_EXECUTION_INTERVAL_MS) {
             // Skip execution if called too soon
             return;
         }

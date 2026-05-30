@@ -120,16 +120,11 @@ public class PreviewGeometryNode extends BaseNode {
     }
 
     @Override
-    public String getDescription() {
-        return "Previews analytic geometry directly (semi-transparent fill + outline) before voxelization";
-    }
-
-    @Override
     public void processNode(@Nullable ExecutionContext context) {
         // Throttle rapid re-execution when node is selected (prevents flickering)
         long now = System.currentTimeMillis();
         long timeSinceLastExecution = now - lastExecutionTime;
-        if (timeSinceLastExecution < MIN_EXECUTION_INTERVAL_MS && hasActiveCachedPreviews(cachedPreviewIds)) {
+        if (previewEnabled && timeSinceLastExecution < MIN_EXECUTION_INTERVAL_MS && hasActiveCachedPreviews(cachedPreviewIds)) {
             // Skip execution if called too soon and previews are still active
             outputValues.put(OUTPUT_SUCCESS_ID, !cachedPreviewIds.isEmpty());
             outputValues.put(OUTPUT_PREVIEW_ID_ID, cachedPreviewIds.isEmpty() ? null : cachedPreviewIds.getFirst());

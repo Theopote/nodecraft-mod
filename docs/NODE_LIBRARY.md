@@ -447,7 +447,7 @@ Voxel CSG and SDF nodes are ordered in two bands (0–4 voxel, 10–23 SDF). See
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Value Monitor | `output.debug.value_monitor` | 将任意输出连到输入，在面板上查看该输出的数据和类型 | `ValueMonitorNode` |
-| Print To Chat | `output.debug.print_to_chat` | 将输入数据显示到游戏聊天框 | `PrintToChatNode` |
+| Print To Chat | `output.debug.print_to_chat` | Sends the formatted input message to player chat when the Trigger input fires, with optional chat color. | `PrintToChatNode` |
 | Execution Timer | `output.debug.execution_timer` | 测量连接到此节点的计算分支所花费的时间 | `ExecutionTimerNode` |
 | Panel | `output.debug.data_inspector` | 显示连接到其输入端口的原始数据（文本形式） | `PanelNode` |
 
