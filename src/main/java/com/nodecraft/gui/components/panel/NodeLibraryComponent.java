@@ -465,9 +465,11 @@ public class NodeLibraryComponent implements EditorComponent {
         String processedTerm = searchTerm.toLowerCase().trim();
         NodeCraft.LOGGER.debug("Normalized search term: '{}'", processedTerm);
 
+        Map<String, CategoryPresentation> presentationById = buildPresentationCategoryIndex();
+
         // Scan all categories and nodes directly.
         List<DisplayCategory> searchResults = new ArrayList<>();
-        Set<String> parentCategoriesToExpand = new HashSet<>();
+        Set<String> categoriesToExpand = new HashSet<>();
 
         for (CategoryPresentation category : allCategories) {
             String categoryId = category.displayCategoryId();
@@ -493,12 +495,7 @@ public class NodeLibraryComponent implements EditorComponent {
                 NodeCraft.LOGGER.debug("Category matched search term '{}': {} ({}), keeping all nodes",
                         processedTerm, category.displayName(), categoryId);
 
-                expandedCategories.put(categoryId, true);
-
-                if (category.parentDisplayId() != null) {
-                    String parentId = category.parentDisplayId();
-                    parentCategoriesToExpand.add(parentId);
-                }
+                categoriesToExpand.addAll(collectSelfAndAncestorCategoryIds(categoryId, presentationById));
 
                 continue;
             }
@@ -508,42 +505,32 @@ public class NodeLibraryComponent implements EditorComponent {
                 searchResults.add(new DisplayCategory(category, matchingNodes));
                 NodeCraft.LOGGER.debug("Category {} contains {} matching nodes", categoryId, matchingNodes.size());
 
-                expandedCategories.put(categoryId, true);
-
-                if (category.parentDisplayId() != null) {
-                    String parentId = category.parentDisplayId();
-                    parentCategoriesToExpand.add(parentId);
-                }
+                categoriesToExpand.addAll(collectSelfAndAncestorCategoryIds(categoryId, presentationById));
             }
         }
 
-        // Expand all parents of matching subcategories.
-        for (String parentId : parentCategoriesToExpand) {
-            expandedCategories.put(parentId, true);
-            NodeCraft.LOGGER.debug("Expanded parent category {}", parentId);
+        // Expand matched categories and all their ancestor chain.
+        for (String categoryId : categoriesToExpand) {
+            expandedCategories.put(categoryId, true);
+            NodeCraft.LOGGER.debug("Expanded category during search: {}", categoryId);
         }
 
         NodeCraft.LOGGER.debug("Search '{}' matched {} categories", processedTerm, searchResults.size());
 
         if (!searchResults.isEmpty()) {
-            // Ensure top-level parent categories remain visible even when only child categories matched.
+            // Ensure ancestor categories remain visible even when only deep child categories matched.
             // Build a lookup set of already-included IDs to avoid O(n²) containment checks.
             Set<String> includedIds = new HashSet<>();
             for (DisplayCategory dc : searchResults) {
                 includedIds.add(dc.getId());
             }
-            // Build a presentation-ID → CategoryPresentation index once for O(1) lookup.
-            Map<String, CategoryPresentation> presentationById = new HashMap<>();
-            for (CategoryPresentation cat : allCategories) {
-                presentationById.put(cat.displayCategoryId(), cat);
-            }
             List<DisplayCategory> completeResults = new ArrayList<>(searchResults);
-            for (String parentId : parentCategoriesToExpand) {
-                if (!parentId.contains(".") && !includedIds.contains(parentId)) {
-                    CategoryPresentation cat = presentationById.get(parentId);
+            for (String categoryId : categoriesToExpand) {
+                if (!includedIds.contains(categoryId)) {
+                    CategoryPresentation cat = presentationById.get(categoryId);
                     if (cat != null) {
                         completeResults.add(new DisplayCategory(cat, new ArrayList<>()));
-                        NodeCraft.LOGGER.debug("Added missing parent category {}", parentId);
+                        NodeCraft.LOGGER.debug("Added missing ancestor category {}", categoryId);
                     }
                 }
             }
@@ -604,15 +591,12 @@ public class NodeLibraryComponent implements EditorComponent {
 
         // In search mode, force open the categories that contain matching nodes.
         if (isSearching) {
+            Map<String, CategoryPresentation> presentationById = buildPresentationCategoryIndex();
             for (DisplayCategory category : filteredCategories) {
                 if (!category.getNodes().isEmpty()) {
-                    String categoryId = category.getId();
-                    expandedCategories.put(categoryId, true);
-
-                    if (category.getParentId() != null) {
-                        String parentId = category.getParentId();
-                        expandedCategories.put(parentId, true);
-                        NodeCraft.LOGGER.debug("Forced parent category open during search: {}", parentId);
+                    for (String categoryId : collectSelfAndAncestorCategoryIds(category.getId(), presentationById)) {
+                        expandedCategories.put(categoryId, true);
+                        NodeCraft.LOGGER.debug("Forced category open during search: {}", categoryId);
                     }
                 }
             }
@@ -697,6 +681,30 @@ public class NodeLibraryComponent implements EditorComponent {
         }
         this.cachedChildCategoriesMap = Map.copyOf(cachedChildren);
         this.categoryHierarchyCacheDirty = false;
+    }
+
+    private Map<String, CategoryPresentation> buildPresentationCategoryIndex() {
+        Map<String, CategoryPresentation> presentationById = new HashMap<>();
+        for (CategoryPresentation category : allCategories) {
+            presentationById.put(category.displayCategoryId(), category);
+        }
+        return presentationById;
+    }
+
+    private Set<String> collectSelfAndAncestorCategoryIds(String categoryId, Map<String, CategoryPresentation> presentationById) {
+        Set<String> result = new HashSet<>();
+        if (categoryId == null || categoryId.isBlank() || presentationById == null || presentationById.isEmpty()) {
+            return result;
+        }
+
+        String currentId = categoryId;
+        int guard = 0;
+        while (currentId != null && !currentId.isBlank() && guard < 64 && result.add(currentId)) {
+            CategoryPresentation current = presentationById.get(currentId);
+            currentId = current == null ? null : current.parentDisplayId();
+            guard++;
+        }
+        return result;
     }
 
     /**

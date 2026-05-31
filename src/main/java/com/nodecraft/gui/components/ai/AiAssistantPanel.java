@@ -1071,6 +1071,10 @@ public final class AiAssistantPanel {
             return false;
         }
 
+        if (AiIntentAnalysisService.classifyIntent(prompt) != UserIntent.GENERATE_NEW) {
+            return false;
+        }
+
         String nodeType = node.typeId().toLowerCase(Locale.ROOT);
         if (nodeType.startsWith("world.selection.")) {
             return true;
@@ -1079,14 +1083,35 @@ public final class AiAssistantPanel {
             return true;
         }
 
+        boolean placementLikeNodeType = nodeType.startsWith("world.")
+                || nodeType.contains("selection")
+                || nodeType.contains("selector")
+                || nodeType.contains("placement")
+                || nodeType.contains("region");
+        if (!placementLikeNodeType) {
+            return false;
+        }
+
         String normalizedPrompt = prompt == null ? "" : prompt.toLowerCase(Locale.ROOT);
-        return normalizedPrompt.contains("place")
-                || normalizedPrompt.contains("add")
-                || normalizedPrompt.contains("insert")
-                || normalizedPrompt.contains("放置")
-                || normalizedPrompt.contains("添加")
-                || normalizedPrompt.contains("插入")
-                || normalizedPrompt.contains("节点");
+        boolean hasPlacementAction = containsAny(normalizedPrompt,
+                "place", "add", "insert", "spawn", "set",
+                "放置", "添加", "插入", "生成", "摆放", "设置");
+        boolean hasPlacementTarget = containsAny(normalizedPrompt,
+                "block", "blocks", "selection", "selector", "region",
+                "方块", "选区", "选择器", "区域", "地形");
+        return hasPlacementAction && hasPlacementTarget;
+    }
+
+    private boolean containsAny(String text, String... keywords) {
+        if (text == null || text.isBlank() || keywords == null || keywords.length == 0) {
+            return false;
+        }
+        for (String keyword : keywords) {
+            if (keyword != null && !keyword.isBlank() && text.contains(keyword)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean applyPlacementPlan(AiGraphPlan pendingAiPlan) {
@@ -1323,6 +1348,8 @@ public final class AiAssistantPanel {
             return;
         }
 
+        logAiApplyHistoryContext("before-apply", editor, pendingAiPlan, aiPatchApplyMode.get());
+
         float[] anchor = resolveAiPlanAnchorPosition(editor);
         List<AiPlanNode> nodesToApply = aiAutoLayoutBeforeApply.get()
                 ? buildAutoLayoutNodes(pendingAiPlan)
@@ -1353,6 +1380,7 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = 0;
         }
         lastAiApplyWasPatch = false;
+        logAiApplyHistoryContext("after-apply-exact", editor, pendingAiPlan, false);
 
         aiPlanStatusMessage = result.statusMessage()
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled)" : "");
@@ -1368,6 +1396,7 @@ public final class AiAssistantPanel {
             aiPlanStatusMessage = "Patch apply failed: editor is unavailable.";
             return;
         }
+        logAiApplyHistoryContext("before-apply-patch", editor, pendingAiPlan, true);
         NodeGraph graph = getNodeGraph();
         if (graph == null) {
             aiPlanStatusMessage = "Patch apply failed: current graph is unavailable.";
@@ -1391,8 +1420,8 @@ public final class AiAssistantPanel {
                 payload.nodes(),
                 payload.connections(),
                 anchor,
-            aiPatchRemoveScopedConnections.get(),
-            mergeExistingNodeState
+                aiPatchRemoveScopedConnections.get(),
+                mergeExistingNodeState
         );
         if (result.success()) {
             // Patch apply records one aggregate AI_PATCH action; undo should be one step.
@@ -1402,6 +1431,7 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = 0;
             lastAiApplyWasPatch = false;
         }
+        logAiApplyHistoryContext("after-apply-patch", editor, pendingAiPlan, true);
         String patchModeDetail = mergeExistingNodeState
                 ? " (parameter merge mode)"
                 : " (state replace mode)";
@@ -1429,6 +1459,8 @@ public final class AiAssistantPanel {
             return;
         }
 
+        logAiApplyHistoryContext("before-undo-last-ai-apply", editor, getPendingAiPlan(), lastAiApplyWasPatch);
+
         int expectedUndoSteps = lastAiUndoStepCount;
         int undone = lastAiApplyWasPatch
             ? (editor.undo() ? 1 : 0)
@@ -1442,6 +1474,41 @@ public final class AiAssistantPanel {
         }
         lastAiUndoStepCount = 0;
         lastAiApplyWasPatch = false;
+        logAiApplyHistoryContext("after-undo-last-ai-apply", editor, getPendingAiPlan(), false);
+    }
+
+    private void logAiApplyHistoryContext(String phase, ImGuiNodeEditor editor, AiGraphPlan plan, boolean patchMode) {
+        if (editor == null) {
+            NodeCraft.LOGGER.info("[AI_APPLY_TRACE] phase={}, editorAvailable=false", phase);
+            return;
+        }
+
+        ImGuiNodeHistory history = editor.getHistory();
+        int undoStackSize = history == null ? -1 : history.getUndoStackSize();
+        int redoStackSize = history == null ? -1 : history.getRedoStackSize();
+        Object topActionType = history == null ? "null" : history.getUndoTopActionType();
+        boolean topIsAiPatch = history != null && history.isUndoTopActionType(ImGuiNodeHistory.ActionType.AI_PATCH);
+
+        List<AiPlanNode> nodes = safePlanNodes(plan);
+        List<AiPlanConnection> connections = safePlanConnections(plan);
+
+        NodeCraft.LOGGER.info(
+                "[AI_APPLY_TRACE] phase={}, patchMode={}, autoLayout={}, removeScoped={}, pendingNodes={}, pendingConnections={}, lastUndoSteps={}, lastWasPatch={}, canUndo={}, canRedo={}, undoStackSize={}, redoStackSize={}, topAction={}, topIsAiPatch={}",
+                phase,
+                patchMode,
+                aiAutoLayoutBeforeApply.get(),
+                aiPatchRemoveScopedConnections.get(),
+                nodes.size(),
+                connections.size(),
+                lastAiUndoStepCount,
+                lastAiApplyWasPatch,
+                history != null && history.canUndo(),
+                history != null && history.canRedo(),
+                undoStackSize,
+                redoStackSize,
+                topActionType,
+                topIsAiPatch
+        );
     }
 
     private float[] resolveAiPlanAnchorPosition(ImGuiNodeEditor editor) {

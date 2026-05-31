@@ -7,6 +7,10 @@ import java.util.concurrent.atomic.AtomicReference;
 
 final class RemotePlannerState {
 
+    private static final int STREAMING_BUFFER_MAX_CHARS = 6000;
+    private static final int STREAMING_BUFFER_HEAD_CHARS = 1200;
+    private static final String STREAMING_BUFFER_TRUNCATION_MARKER = "\n...[stream truncated]...\n";
+
     private final AtomicReference<CompletableFuture<AiRemotePlannerService.RemotePlanResult>> remotePlanFutureRef = new AtomicReference<>(null);
     private volatile String remotePendingPrompt = "";
     private volatile String lastRemoteRawResponse = "";
@@ -109,10 +113,38 @@ final class RemotePlannerState {
         }
         synchronized (remoteStreamingBuffer) {
             remoteStreamingBuffer.append(token);
-            if (remoteStreamingBuffer.length() > 6000) {
-                int excess = remoteStreamingBuffer.length() - 6000;
-                remoteStreamingBuffer.delete(0, excess);
-            }
+            applyStreamingBufferLimit();
+        }
+    }
+
+    private void applyStreamingBufferLimit() {
+        int currentLength = remoteStreamingBuffer.length();
+        if (currentLength <= STREAMING_BUFFER_MAX_CHARS) {
+            return;
+        }
+
+        int headChars = Math.min(STREAMING_BUFFER_HEAD_CHARS, STREAMING_BUFFER_MAX_CHARS / 2);
+        int tailChars = STREAMING_BUFFER_MAX_CHARS - headChars - STREAMING_BUFFER_TRUNCATION_MARKER.length();
+        if (tailChars < 0) {
+            tailChars = 0;
+        }
+        if (headChars + tailChars > currentLength) {
+            int overflow = (headChars + tailChars) - currentLength;
+            tailChars = Math.max(0, tailChars - overflow);
+        }
+
+        String head = remoteStreamingBuffer.substring(0, Math.min(headChars, currentLength));
+        String tail = tailChars <= 0
+                ? ""
+                : remoteStreamingBuffer.substring(Math.max(0, currentLength - tailChars));
+
+        remoteStreamingBuffer.setLength(0);
+        remoteStreamingBuffer.append(head)
+                .append(STREAMING_BUFFER_TRUNCATION_MARKER)
+                .append(tail);
+
+        if (remoteStreamingBuffer.length() > STREAMING_BUFFER_MAX_CHARS) {
+            remoteStreamingBuffer.setLength(STREAMING_BUFFER_MAX_CHARS);
         }
     }
 

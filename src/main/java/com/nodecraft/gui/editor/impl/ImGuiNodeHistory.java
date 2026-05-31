@@ -96,6 +96,27 @@ public class ImGuiNodeHistory {
         }
         return undoStack.peek().getType() == actionType;
     }
+
+    /**
+     * Returns current undo stack size for diagnostics.
+     */
+    public int getUndoStackSize() {
+        return undoStack.size();
+    }
+
+    /**
+     * Returns current redo stack size for diagnostics.
+     */
+    public int getRedoStackSize() {
+        return redoStack.size();
+    }
+
+    /**
+     * Returns top action type of undo stack for diagnostics, or null if empty.
+     */
+    public ActionType getUndoTopActionType() {
+        return undoStack.isEmpty() ? null : undoStack.peek().getType();
+    }
     
     /**
      * 执行撤销操作
