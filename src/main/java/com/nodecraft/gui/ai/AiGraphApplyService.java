@@ -12,6 +12,7 @@ import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -280,10 +281,43 @@ public final class AiGraphApplyService {
             return null;
         }
         try {
-            return GSON.fromJson(GSON.toJsonTree(state), Object.class);
+            return GSON.fromJson(GSON.toJsonTree(sanitizeForJson(state)), Object.class);
         } catch (Exception e) {
             return state;
         }
+    }
+
+    private static Object sanitizeForJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Double doubleValue) {
+            return Double.isFinite(doubleValue) ? doubleValue : 0.0d;
+        }
+
+        if (value instanceof Float floatValue) {
+            return Float.isFinite(floatValue) ? floatValue : 0.0f;
+        }
+
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> sanitizedMap = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                sanitizedMap.put(key, sanitizeForJson(entry.getValue()));
+            }
+            return sanitizedMap;
+        }
+
+        if (value instanceof List<?> listValue) {
+            List<Object> sanitizedList = new ArrayList<>(listValue.size());
+            for (Object item : listValue) {
+                sanitizedList.add(sanitizeForJson(item));
+            }
+            return sanitizedList;
+        }
+
+        return value;
     }
 
     private static Object mergeNodeState(Object existingState, Object plannedState, boolean mergeExistingNodeState) {

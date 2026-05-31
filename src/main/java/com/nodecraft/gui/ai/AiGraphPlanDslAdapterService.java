@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +48,7 @@ public final class AiGraphPlanDslAdapterService {
 
             JsonObject paramsObj = null;
             if (node.nodeState() instanceof Map<?, ?> stateMap) {
-                paramsObj = GSON.toJsonTree(stateMap).getAsJsonObject();
+                paramsObj = GSON.toJsonTree(sanitizeForJson(stateMap)).getAsJsonObject();
             }
             nodeObj.add("params", paramsObj == null ? new JsonObject() : paramsObj);
 
@@ -133,5 +134,40 @@ public final class AiGraphPlanDslAdapterService {
 
     private static List<PlanConnection> safeConnections(GraphPlan plan) {
         return plan.connections() == null ? List.of() : plan.connections();
+    }
+
+    private static Object sanitizeForJson(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Double doubleValue) {
+            return Double.isFinite(doubleValue) ? doubleValue : 0.0d;
+        }
+
+        if (value instanceof Float floatValue) {
+            return Float.isFinite(floatValue) ? floatValue : 0.0f;
+        }
+
+        if (value instanceof Map<?, ?> mapValue) {
+            Map<String, Object> sanitizedMap = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> entry : mapValue.entrySet()) {
+                if (!(entry.getKey() instanceof String key) || key.isBlank()) {
+                    continue;
+                }
+                sanitizedMap.put(key, sanitizeForJson(entry.getValue()));
+            }
+            return sanitizedMap;
+        }
+
+        if (value instanceof List<?> listValue) {
+            List<Object> sanitizedList = new ArrayList<>(listValue.size());
+            for (Object item : listValue) {
+                sanitizedList.add(sanitizeForJson(item));
+            }
+            return sanitizedList;
+        }
+
+        return value;
     }
 }
