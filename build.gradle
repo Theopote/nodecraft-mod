@@ -115,6 +115,7 @@ processResources {
 tasks.withType(JavaCompile).configureEach {
 	// Use the 'release' option - it sets source, target, and boot classpath consistently.
 	it.options.release = 21
+	it.options.encoding = 'UTF-8'
 	// Add compiler arguments for detailed warnings
 	it.options.compilerArgs += ["-Xlint:deprecation", "-Xlint:unchecked"]
 }

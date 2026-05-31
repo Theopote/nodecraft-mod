@@ -50,7 +50,7 @@ public class DeconstructIcosahedronNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_VOLUME_ID, "Volume", "Interior volume", NodeDataType.DOUBLE, this));
         addOutputPort(new BasePort(OUTPUT_REGION_ID, "Region", "Bounding block region", NodeDataType.REGION, this));
         addOutputPort(new BasePort(OUTPUT_BOUNDING_BOX_ID, "Bounding Box", "Axis-aligned bounds", NodeDataType.BOUNDING_BOX, this));
-        addOutputPort(new BasePort(OUTPUT_ORIENTATION_ID, "Orientation", "Rotation matrix (local vertex frame â†?world)", NodeDataType.MATRIX3, this));
+        addOutputPort(new BasePort(OUTPUT_ORIENTATION_ID, "Orientation", "Rotation matrix (local vertex frame ->?world)", NodeDataType.MATRIX3, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when input is present", NodeDataType.BOOLEAN, this));
     }
 
