@@ -47,6 +47,16 @@ public final class AiAssistantPanel {
                 Every node.type must exactly match a listed typeId.
                 Every connection.from.port and connection.to.port must exactly match declared port ids for those node types.
                 """;
+            private static final String REMOTE_DSL_TYPE_REPAIR_HINT =
+                """
+                    Additional strict requirement for this retry:
+                    - Fix data type compatibility for all connections.
+                    - Do NOT connect scalar values (float/integer/double) directly to geometry inputs.
+                    - Do NOT connect vectors to geometry inputs.
+                    - Ensure output ports and input ports exist on the corresponding node types.
+                    - If needed, replace incorrect intermediate nodes with valid ones from the provided node library.
+                    """;
+            private static final int MAX_REMOTE_DSL_REPAIR_ATTEMPTS = 2;
     private static final String[] AI_PROVIDER_STRATEGY_OPTIONS = {
             AiSettingsStore.PROVIDER_AUTO,
             AiSettingsStore.PROVIDER_OPENAI_COMPAT,
@@ -88,7 +98,7 @@ public final class AiAssistantPanel {
     private String aiPreviewFocusedNodeRef = "";
     private boolean aiPreviewFocusScrollPending = false;
     private final TopologyPreviewState aiTopologyPreviewState = new TopologyPreviewState();
-    private boolean aiRemoteDslRepairAttempted = false;
+    private int aiRemoteDslRepairAttempts = 0;
 
     public AiAssistantPanel(
             AiAssistantComponent aiAssistantComponent,
@@ -818,7 +828,7 @@ public final class AiAssistantPanel {
             return;
         }
 
-        aiRemoteDslRepairAttempted = false;
+        aiRemoteDslRepairAttempts = 0;
 
         String validation = validateAiSettings();
         if (validation.startsWith("Validation failed")) {
@@ -1046,7 +1056,7 @@ public final class AiAssistantPanel {
             aiPlanStatusMessage = errorMessage;
             NodeCraft.LOGGER.warn("[AI_SEND] DSL parse failed. source={}, errors={}", source, parsed.errors());
             if ("remote".equals(source) || "remote-tool".equals(source)) {
-                if (!aiRemoteDslRepairAttempted && tryStartRemoteDslRepair(prompt, dslOrModelResponse, parsed.errors())) {
+                if (tryStartRemoteDslRepair(prompt, dslOrModelResponse, parsed.errors())) {
                     return;
                 }
                 setPendingAiPlan(null);
@@ -1055,7 +1065,7 @@ public final class AiAssistantPanel {
             return;
         }
 
-        aiRemoteDslRepairAttempted = false;
+        aiRemoteDslRepairAttempts = 0;
 
         setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
         aiPreviewFocusedNodeRef = "";
@@ -1124,6 +1134,9 @@ public final class AiAssistantPanel {
     }
 
     private boolean tryStartRemoteDslRepair(String originalPrompt, String invalidDslOrModelResponse, List<String> parseErrors) {
+        if (aiRemoteDslRepairAttempts >= MAX_REMOTE_DSL_REPAIR_ATTEMPTS) {
+            return false;
+        }
         if (!aiEnableRemotePlanner.get()) {
             return false;
         }
@@ -1148,12 +1161,18 @@ public final class AiAssistantPanel {
         } else {
             systemPrompt = systemPrompt + "\n\n" + AiPromptBuilder.buildSystemPrompt(relevantSchemas);
         }
-        systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_REPAIR_SYSTEM_HINT;
-
         String errorsText = parseErrors == null || parseErrors.isEmpty()
-                ? "(none)"
-                : String.join("; ", parseErrors);
+            ? "(none)"
+            : String.join("; ", parseErrors);
+        boolean typeMismatchDetected = containsAny(errorsText.toLowerCase(Locale.ROOT), "type mismatch", "unsupported type relationship");
+        systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_REPAIR_SYSTEM_HINT;
+        if (typeMismatchDetected || aiRemoteDslRepairAttempts >= 1) {
+            systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_TYPE_REPAIR_HINT;
+        }
+
+        int nextAttempt = aiRemoteDslRepairAttempts + 1;
         String repairPromptPayload = "Remote planner produced invalid DSL. Repair it now.\n\n"
+            + "Repair attempt: " + nextAttempt + " / " + MAX_REMOTE_DSL_REPAIR_ATTEMPTS + "\n"
                 + "Original user prompt:\n"
                 + (originalPrompt == null ? "" : originalPrompt)
                 + "\n\n"
@@ -1184,10 +1203,14 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        aiRemoteDslRepairAttempted = true;
-        aiPlanStatusMessage = "Remote DSL validation failed. Retrying once with strict schema repair...";
+        aiRemoteDslRepairAttempts = nextAttempt;
+        aiPlanStatusMessage = "Remote DSL validation failed. Running schema/type repair retry "
+            + nextAttempt + " / " + MAX_REMOTE_DSL_REPAIR_ATTEMPTS + "...";
         addAiChatMessage("assistant", aiPlanStatusMessage);
-        NodeCraft.LOGGER.info("[AI_SEND] Started one-shot remote DSL repair retry. errors={}", errorsText);
+        NodeCraft.LOGGER.info("[AI_SEND] Started remote DSL repair retry {}/{}. errors={}",
+            nextAttempt,
+            MAX_REMOTE_DSL_REPAIR_ATTEMPTS,
+            errorsText);
         return true;
     }
 
