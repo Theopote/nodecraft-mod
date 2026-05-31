@@ -164,9 +164,17 @@ public final class AiIntentAnalysisService {
         }
 
         String lower = prompt.toLowerCase(Locale.ROOT);
+
         if (containsAnyLower(lower,
-                "修改", "改成", "改为", "换成", "调整", "增大", "减小", "参数", "半径", "直径",
-                "change", "set", "modify", "update", "adjust", "make it", "increase", "decrease", "radius", "parameter")) {
+                "新建", "生成", "创建", "做一个", "添加", "放置", "连接", "连线",
+                "帮我", "需要一个", "我想", "造一个", "建一个", "搭一个",
+                "generate", "create", "build", "make", "add", "place", "connect")) {
+            return UserIntent.GENERATE_NEW;
+        }
+
+        if (containsAnyLower(lower,
+                "修改", "改成", "改为", "换成", "调整", "增大", "减小", "参数",
+                "change", "set", "modify", "update", "adjust", "make it", "increase", "decrease", "parameter")) {
             return UserIntent.MODIFY_PARAM;
         }
 
@@ -174,13 +182,6 @@ public final class AiIntentAnalysisService {
                 "解释", "说明", "什么", "为什么", "如何", "怎么",
                 "explain", "what", "why", "how does", "how do", "how to")) {
             return UserIntent.EXPLAIN;
-        }
-
-        if (containsAnyLower(lower,
-                "新建", "生成", "创建", "做一个", "添加", "放置",
-                "帮我", "需要一个", "我想", "造一个", "建一个", "搭一个",
-                "generate", "create", "build", "make", "add", "place")) {
-            return UserIntent.GENERATE_NEW;
         }
 
         return UserIntent.UNCLEAR;
