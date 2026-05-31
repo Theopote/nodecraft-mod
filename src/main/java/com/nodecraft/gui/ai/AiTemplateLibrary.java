@@ -25,6 +25,16 @@ import java.util.Set;
 public final class AiTemplateLibrary {
 
     private static final DateTimeFormatter SAVE_TS = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
+    private static final double MIN_TEMPLATE_SCORE = 7.5d;
+    private static final double MIN_TEMPLATE_MARGIN = 2.5d;
+    private static final Set<String> GENERIC_TEMPLATE_TOKENS = Set.of(
+            "ai", "mock", "template", "generated", "locally", "local", "plan", "graph", "node", "nodes",
+            "input", "output", "reference", "geometry", "math", "world", "execute", "preview", "apply",
+            "changes", "coordinate", "coordinates", "value", "values", "vector", "point", "points",
+            "create", "build", "generate", "make", "add", "place", "insert", "using", "known", "ports",
+            "fallback", "enabled", "disabled", "current", "selected", "with", "from", "to",
+            "生成", "创建", "构建", "添加", "放置", "模板", "本地", "节点", "图", "计划", "输出", "输入", "坐标", "预览"
+    );
 
     private AiTemplateLibrary() {
     }
@@ -71,22 +81,41 @@ public final class AiTemplateLibrary {
 
         String lowerPrompt = prompt == null ? "" : prompt.toLowerCase(Locale.ROOT);
         Set<String> promptTokens = tokenize(lowerPrompt);
+        if (promptTokens.size() < 2) {
+            return Optional.empty();
+        }
         boolean generationIntent = hasAny(lowerPrompt, "generate", "create", "build", "make", "add", "place", "生成", "创建", "构建", "添加", "放置");
         boolean geometryIntent = hasAny(lowerPrompt, "geometry", "sphere", "box", "torus", "curve", "path", "几何", "球", "圆", "曲线", "路径");
         boolean spatialIntent = hasAny(lowerPrompt, "above", "position", "offset", "world", "player", "上方", "位置", "坐标", "玩家");
 
         Template best = null;
         double bestScore = Double.NEGATIVE_INFINITY;
+        double secondBestScore = Double.NEGATIVE_INFINITY;
+        int bestSharedSpecificTokens = 0;
 
         for (Template template : templates) {
             double score = scoreTemplate(template, lowerPrompt, promptTokens, generationIntent, geometryIntent, spatialIntent);
+            int sharedSpecificTokens = countSharedSpecificTokens(promptTokens, template);
             if (score > bestScore) {
+                secondBestScore = bestScore;
                 bestScore = score;
                 best = template;
+                bestSharedSpecificTokens = sharedSpecificTokens;
+            } else if (score > secondBestScore) {
+                secondBestScore = score;
             }
         }
 
-        if (best == null || bestScore <= 1.0d) {
+        int minSharedSpecificTokens = promptTokens.size() <= 4 ? 1 : 2;
+        if (best == null
+                || bestScore < MIN_TEMPLATE_SCORE
+                || bestSharedSpecificTokens < minSharedSpecificTokens) {
+            return Optional.empty();
+        }
+
+        if (secondBestScore > Double.NEGATIVE_INFINITY
+                && (bestScore - secondBestScore) < MIN_TEMPLATE_MARGIN
+                && bestSharedSpecificTokens < 3) {
             return Optional.empty();
         }
         return Optional.of(new MatchResult(best, bestScore));
@@ -234,6 +263,32 @@ public final class AiTemplateLibrary {
             }
         }
         return tokens;
+    }
+
+    private static int countSharedSpecificTokens(Set<String> promptTokens, Template template) {
+        if (promptTokens == null || promptTokens.isEmpty() || template == null) {
+            return 0;
+        }
+
+        Set<String> templateTokens = new HashSet<>();
+        templateTokens.addAll(tokenize(template.name()));
+        templateTokens.addAll(tokenize(template.description()));
+        if (template.keywords() != null) {
+            for (String keyword : template.keywords()) {
+                templateTokens.addAll(tokenize(keyword));
+            }
+        }
+
+        int count = 0;
+        for (String token : promptTokens) {
+            if (token == null || token.isBlank() || GENERIC_TEMPLATE_TOKENS.contains(token)) {
+                continue;
+            }
+            if (templateTokens.contains(token) && !GENERIC_TEMPLATE_TOKENS.contains(token)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static String stripJsonSuffix(String name) {

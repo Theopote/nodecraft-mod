@@ -27,6 +27,8 @@ final class AiAssistantMainPanelRenderer {
             String inputLanguageDetected,
             String normalizedIntentPreview,
             String streamingPreview,
+            String runtimeStage,
+            String runtimeDetail,
             String selectedNodeDisplayName,
             String selectedNodeTypeId,
             List<AiChatMessage> chatMessages,
@@ -52,6 +54,7 @@ final class AiAssistantMainPanelRenderer {
 
     static int renderMainPanel(State state, Actions actions) {
         renderHeader(state, actions);
+        renderRuntimeStatus(state);
         renderBusyStatus(state, actions);
         renderModeOptions(state);
         renderSelectionContext(state);
@@ -97,6 +100,48 @@ final class AiAssistantMainPanelRenderer {
         if (preview != null && !preview.isBlank()) {
             ImGui.textDisabled("Streaming preview:");
             ImGui.textWrapped(preview);
+        }
+    }
+
+    private static void renderRuntimeStatus(State state) {
+        String stage = state.runtimeStage();
+        if (stage == null || stage.isBlank()) {
+            return;
+        }
+
+        float r = 0.70f;
+        float g = 0.70f;
+        float b = 0.70f;
+        switch (stage) {
+            case "Streaming" -> {
+                r = 0.50f;
+                g = 0.85f;
+                b = 0.95f;
+            }
+            case "Preparing" -> {
+                r = 0.95f;
+                g = 0.78f;
+                b = 0.30f;
+            }
+            case "Parsed" -> {
+                r = 0.45f;
+                g = 0.85f;
+                b = 0.55f;
+            }
+            case "Failed" -> {
+                r = 0.95f;
+                g = 0.42f;
+                b = 0.42f;
+            }
+            default -> {
+                // Keep neutral color for Idle/unknown stages.
+            }
+        }
+
+        ImGui.textColored(r, g, b, 1.0f, "Status: " + stage);
+        String detail = state.runtimeDetail();
+        if (detail != null && !detail.isBlank()) {
+            ImGui.textDisabled(detail);
         }
     }
 

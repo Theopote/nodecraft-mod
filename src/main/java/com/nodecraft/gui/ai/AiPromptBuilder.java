@@ -49,6 +49,8 @@ public final class AiPromptBuilder {
             4. Position: Use relative 'position' offsets; (0,0) is usually fine as the engine handles auto-layout.
             5. Failure: If the request cannot be fulfilled with the library, return {"error": "brief_reason"}.
             6. Placement Requests: If the user only asks to place a node on the canvas, return the smallest valid graph for that node. Do not force an output node in placement-only tasks.
+            7. STRICT IDs: Every node.type must be an exact 'typeId' from AVAILABLE_NODE_LIBRARY; no invented aliases.
+            8. STRICT PORTS: Every connection port id must exactly match declared input/output ids for the connected node types.
 
             # WORKFLOW_BOUNDARIES
             - Minecraft block selection is a user-side interaction. Do not invent a node to perform the click unless the library explicitly provides one.

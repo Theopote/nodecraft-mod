@@ -35,6 +35,8 @@ public final class AiPlanDslWorkflowService {
                 return AiGraphPlanDslAdapterService.fromDsl(parsed.graph());
             }
             NodeCraft.LOGGER.warn("[AI_TEMPLATE] Matched template '{}' failed DSL validation, falling back to mock.", match.template().name());
+        } else {
+            NodeCraft.LOGGER.info("[AI_TEMPLATE] No confident local template match; using dynamic mock planner.");
         }
 
         AiMockPlanService.MockPlan mockPlan = AiMockPlanService.buildMockPlan(prompt);

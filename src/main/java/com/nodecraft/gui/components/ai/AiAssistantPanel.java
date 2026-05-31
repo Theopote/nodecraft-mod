@@ -38,6 +38,15 @@ public final class AiAssistantPanel {
                     If the user asks to modify a specific parameter value on an existing node,
                     return only the affected node with its updated params. Keep all other nodes and connections unchanged.
                     Use the same node ids as in the "Current plan in effect" JSON.""";
+        private static final String REMOTE_DSL_REPAIR_SYSTEM_HINT =
+            """
+                You are now in DSL repair mode.
+                You must fix ONLY invalid node type ids / invalid port ids based on the provided node library schema.
+                Do not add explanations. Return JSON object only.
+                Keep graph structure and user intent unchanged as much as possible.
+                Every node.type must exactly match a listed typeId.
+                Every connection.from.port and connection.to.port must exactly match declared port ids for those node types.
+                """;
     private static final String[] AI_PROVIDER_STRATEGY_OPTIONS = {
             AiSettingsStore.PROVIDER_AUTO,
             AiSettingsStore.PROVIDER_OPENAI_COMPAT,
@@ -79,6 +88,7 @@ public final class AiAssistantPanel {
     private String aiPreviewFocusedNodeRef = "";
     private boolean aiPreviewFocusScrollPending = false;
     private final TopologyPreviewState aiTopologyPreviewState = new TopologyPreviewState();
+    private boolean aiRemoteDslRepairAttempted = false;
 
     public AiAssistantPanel(
             AiAssistantComponent aiAssistantComponent,
@@ -126,13 +136,15 @@ public final class AiAssistantPanel {
         String selectedNodeTypeId = selectedNode == null ? "" : selectedNode.getTypeId();
         String inputLanguageDetected = AiIntentAnalysisService.detectInputLanguage(aiPromptInput.get());
         String normalizedIntentPreview = AiIntentAnalysisService.buildNormalizedIntentPreview(aiPromptInput.get());
+        boolean plannerBusy = isRemotePlannerBusy();
+        String streamingPreview = aiAssistantComponent.getRemoteStreamingBuffer();
 
         lastRenderedChatCount = AiAssistantMainPanelRenderer.renderMainPanel(
                 new AiAssistantMainPanelRenderer.State(
                         buildAiSettingsSummary(),
                         aiSettingsStatusMessage,
                         hasAiDebugData(),
-                        isRemotePlannerBusy(),
+                plannerBusy,
                         aiUseSelectionContext,
                         aiIncludeGraphContext,
                         aiPreviewOnlyMode,
@@ -141,7 +153,9 @@ public final class AiAssistantPanel {
                         aiEnterToSend,
                         inputLanguageDetected,
                         normalizedIntentPreview,
-                        aiAssistantComponent.getRemoteStreamingBuffer(),
+                streamingPreview,
+                resolveAiRuntimeStageLabel(plannerBusy, streamingPreview),
+                aiPlanStatusMessage,
                         selectedNodeDisplayName,
                         selectedNodeTypeId,
                         aiChatMessages,
@@ -563,6 +577,44 @@ public final class AiAssistantPanel {
         return "Apply mode: Patch + replace node state.";
     }
 
+    private String resolveAiRuntimeStageLabel(boolean plannerBusy, String streamingPreview) {
+        if (plannerBusy) {
+            if (streamingPreview != null && !streamingPreview.isBlank()) {
+                return "Streaming";
+            }
+            return "Preparing";
+        }
+
+        String status = aiPlanStatusMessage == null ? "" : aiPlanStatusMessage.trim();
+        if (status.isBlank()) {
+            return "Idle";
+        }
+
+        String normalized = status.toLowerCase(Locale.ROOT);
+        if (normalized.contains("failed")
+                || normalized.contains("error")
+                || normalized.contains("aborted")
+                || normalized.contains("unavailable")
+                || normalized.contains("cannot")
+                || normalized.contains("incomplete")) {
+            return "Failed";
+        }
+        if (normalized.contains("submitted")
+                || normalized.contains("processing")
+                || normalized.contains("preparing")
+                || normalized.contains("thinking")) {
+            return "Preparing";
+        }
+        if (normalized.contains("validated")
+                || normalized.contains("applied")
+                || normalized.contains("completed")
+                || normalized.contains("saved")) {
+            return "Parsed";
+        }
+
+        return getPendingAiPlan() == null ? "Idle" : "Parsed";
+    }
+
     private List<String> buildPlannedNodePreviewLines(AiGraphPlan plan) {
         if (plan == null || plan.nodes().isEmpty()) {
             return List.of();
@@ -714,6 +766,12 @@ public final class AiAssistantPanel {
             aiLastSubmittedPrompt = trimmedPrompt;
             addAiChatMessage("user", trimmedPrompt);
             aiPlanStatusMessage = "Processing prompt...";
+            addAiChatMessage(
+                "assistant",
+                aiEnableRemotePlanner.get()
+                    ? "AI is thinking... remote planner request is being prepared."
+                    : "AI is generating a local draft plan (remote planner is currently disabled)."
+            );
             NodeCraft.LOGGER.info("[AI_SEND] Processing prompt. chars={}, remoteEnabled={}",
                     trimmedPrompt.length(), aiEnableRemotePlanner.get());
 
@@ -759,6 +817,8 @@ public final class AiAssistantPanel {
             aiPlanStatusMessage = "Remote planner is already running.";
             return;
         }
+
+        aiRemoteDslRepairAttempted = false;
 
         String validation = validateAiSettings();
         if (validation.startsWith("Validation failed")) {
@@ -809,9 +869,14 @@ public final class AiAssistantPanel {
 
         String requestSnapshot = buildRemoteRequestSnapshot(config, userPrompt, userPromptPayload, relevantSchemas.size());
         boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(userPrompt, config, conversationHistory, requestSnapshot);
-        aiPlanStatusMessage = submitted
-            ? "Remote planner request submitted..."
-            : "Remote planner is already running. Please wait for completion or cancel the current request.";
+        if (submitted) {
+            aiPlanStatusMessage = "Remote planner request submitted...";
+            addAiChatMessage("assistant", "Remote planner request submitted. Streaming output will appear while generating.");
+            return;
+        }
+
+        aiPlanStatusMessage = "Remote planner is already running. Please wait for completion or cancel the current request.";
+        addAiChatMessage("assistant", aiPlanStatusMessage);
     }
 
     private void testRemoteConnection() {
@@ -974,7 +1039,6 @@ public final class AiAssistantPanel {
                 parsed.warnings() == null ? 0 : parsed.warnings().size());
 
         if (!parsed.isSuccess() || parsed.graph() == null) {
-            setPendingAiPlan(null);
             String errorMessage = (parsed.errors() != null && !parsed.errors().isEmpty())
                     ? "Plan JSON validation failed: " + String.join("; ", parsed.errors())
                     : "Plan validation failed (no error details available).";
@@ -982,10 +1046,16 @@ public final class AiAssistantPanel {
             aiPlanStatusMessage = errorMessage;
             NodeCraft.LOGGER.warn("[AI_SEND] DSL parse failed. source={}, errors={}", source, parsed.errors());
             if ("remote".equals(source) || "remote-tool".equals(source)) {
+                if (!aiRemoteDslRepairAttempted && tryStartRemoteDslRepair(prompt, dslOrModelResponse, parsed.errors())) {
+                    return;
+                }
+                setPendingAiPlan(null);
                 fallbackToLocalPlan(prompt, "remote JSON invalid");
             }
             return;
         }
+
+        aiRemoteDslRepairAttempted = false;
 
         setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
         aiPreviewFocusedNodeRef = "";
@@ -1005,23 +1075,21 @@ public final class AiAssistantPanel {
             shouldAutoApplyPlacement,
             autoAppliedPlacement);
         if (pendingAiPlan != null) {
-            if (pendingAiPlan.nodes() != null) {
-                if (pendingAiPlan.connections() != null) {
-                    addAiChatMessage(
-                            "assistant",
-                            AiPromptContextService.buildAiPlanReply(
-                                    prompt,
-                                    source,
-                                    aiUseSelectionContext.get(),
-                                getSelectedNode(),
-                                    pendingAiPlan.nodes().size(),
-                                    pendingAiPlan.connections().size(),
-                                    pendingAiPlan.isValid(),
-                                    pendingAiPlan.validationErrors()
-                            ) + warningSuffix
-                    );
-                }
-            }
+            int nodeCount = pendingAiPlan.nodes() == null ? 0 : pendingAiPlan.nodes().size();
+            int connectionCount = pendingAiPlan.connections() == null ? 0 : pendingAiPlan.connections().size();
+            addAiChatMessage(
+                    "assistant",
+                    AiPromptContextService.buildAiPlanReply(
+                            prompt,
+                            source,
+                            aiUseSelectionContext.get(),
+                            getSelectedNode(),
+                            nodeCount,
+                            connectionCount,
+                            pendingAiPlan.isValid(),
+                            pendingAiPlan.validationErrors()
+                    ) + warningSuffix
+            );
         }
         if (!shouldAutoApplyPlacement) {
             aiPlanStatusMessage = "Plan JSON validated (" + source + "). Review and click Apply Plan." + warningSuffix;
@@ -1053,6 +1121,74 @@ public final class AiAssistantPanel {
         String warningSuffix = formatValidationWarningSuffix(localParsed.warnings());
         aiPlanStatusMessage = "Remote planner fallback applied (" + reason + "). Review and click Apply Plan." + warningSuffix;
         addAiChatMessage("assistant", aiPlanStatusMessage);
+    }
+
+    private boolean tryStartRemoteDslRepair(String originalPrompt, String invalidDslOrModelResponse, List<String> parseErrors) {
+        if (!aiEnableRemotePlanner.get()) {
+            return false;
+        }
+        if (isRemotePlannerBusy()) {
+            return false;
+        }
+
+        String validation = validateAiSettings();
+        if (validation.startsWith("Validation failed")) {
+            aiPlanStatusMessage = validation;
+            addAiChatMessage("assistant", validation);
+            return false;
+        }
+
+        NodeRegistry registry = NodeRegistry.getInstance();
+        List<AiNodeSchemaCatalog.NodeSchema> allSchemas = AiNodeSchemaCatalog.collectAll(registry);
+        List<AiNodeSchemaCatalog.NodeSchema> relevantSchemas = AiNodeSchemaCatalog.selectRelevant(allSchemas, originalPrompt, 60);
+
+        String systemPrompt = aiSystemPrompt.get();
+        if (systemPrompt == null || systemPrompt.isBlank()) {
+            systemPrompt = AiPromptBuilder.buildSystemPrompt(relevantSchemas);
+        } else {
+            systemPrompt = systemPrompt + "\n\n" + AiPromptBuilder.buildSystemPrompt(relevantSchemas);
+        }
+        systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_REPAIR_SYSTEM_HINT;
+
+        String errorsText = parseErrors == null || parseErrors.isEmpty()
+                ? "(none)"
+                : String.join("; ", parseErrors);
+        String repairPromptPayload = "Remote planner produced invalid DSL. Repair it now.\n\n"
+                + "Original user prompt:\n"
+                + (originalPrompt == null ? "" : originalPrompt)
+                + "\n\n"
+                + "Validation errors:\n"
+                + errorsText
+                + "\n\n"
+                + "Invalid DSL/model payload to repair:\n"
+                + (invalidDslOrModelResponse == null ? "" : invalidDslOrModelResponse)
+                + "\n\n"
+                + "Return repaired JSON only.";
+
+        List<AiRemotePlannerService.ConversationMessage> repairConversation = List.of(
+                new AiRemotePlannerService.ConversationMessage("user", repairPromptPayload)
+        );
+        AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
+                aiApiBaseUrl.get(),
+                aiApiKey.get(),
+                aiModel.get(),
+                AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
+                systemPrompt,
+                aiMaxOutputTokens.get(),
+                aiRequestTimeoutSeconds.get()
+        );
+
+        String requestSnapshot = buildRemoteRequestSnapshot(config, originalPrompt, repairPromptPayload, relevantSchemas.size());
+        boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(originalPrompt, config, repairConversation, requestSnapshot);
+        if (!submitted) {
+            return false;
+        }
+
+        aiRemoteDslRepairAttempted = true;
+        aiPlanStatusMessage = "Remote DSL validation failed. Retrying once with strict schema repair...";
+        addAiChatMessage("assistant", aiPlanStatusMessage);
+        NodeCraft.LOGGER.info("[AI_SEND] Started one-shot remote DSL repair retry. errors={}", errorsText);
+        return true;
     }
 
     private boolean shouldAutoApplyPlacementPlan(String prompt, AiGraphPlan plan) {
