@@ -44,6 +44,7 @@ public final class AiPromptBuilder {
             
             # RULES
             1. Connection Logic: Verify that 'from' and 'to' port IDs exist in the library and have compatible 'dataType'.
+            1.1 Connectivity Guarantee: For non-placement tasks, if there are multiple nodes, they MUST be functionally connected. Avoid isolated nodes.
             2. Functional Completion: Graphs MUST eventually reach an output node (category starts with 'output.').
             3. Minimality: Prefer simple, direct graphs over complex ones.
             4. Position: Use relative 'position' offsets; (0,0) is usually fine as the engine handles auto-layout.
@@ -51,6 +52,7 @@ public final class AiPromptBuilder {
             6. Placement Requests: If the user only asks to place a node on the canvas, return the smallest valid graph for that node. Do not force an output node in placement-only tasks.
             7. STRICT IDs: Every node.type must be an exact 'typeId' from AVAILABLE_NODE_LIBRARY; no invented aliases.
             8. STRICT PORTS: Every connection port id must exactly match declared input/output ids for the connected node types.
+            9. Default Params: If user does not provide a parameter value, keep the node default parameter instead of inventing arbitrary numbers.
 
             # WORKFLOW_BOUNDARIES
             - Minecraft block selection is a user-side interaction. Do not invent a node to perform the click unless the library explicitly provides one.

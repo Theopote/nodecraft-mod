@@ -11,6 +11,7 @@ import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
 import com.nodecraft.gui.editor.impl.NodePosition;
 import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import imgui.ImGui;
@@ -20,8 +21,13 @@ import imgui.type.ImString;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -1067,7 +1073,11 @@ public final class AiAssistantPanel {
 
         aiRemoteDslRepairAttempts = 0;
 
-        setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(parsed.graph())));
+        AiGraphPlanDslAdapterService.GraphPlan enrichedPlan = enrichPlanWithIntentDefaults(
+            prompt,
+            AiPlanDslWorkflowService.fromDsl(parsed.graph())
+        );
+        setPendingAiPlan(fromServiceGraphPlan(enrichedPlan));
         aiPreviewFocusedNodeRef = "";
         aiPreviewFocusScrollPending = false;
         AiGraphPlan pendingAiPlan = getPendingAiPlan();
@@ -1328,6 +1338,313 @@ public final class AiAssistantPanel {
             return "";
         }
         return " Warning: " + String.join("; ", warnings);
+    }
+
+    private record PortMeta(String id, String dataType, boolean required) {
+    }
+
+    private record NodeMeta(
+            String ref,
+            String typeId,
+            String category,
+            float x,
+            List<PortMeta> inputs,
+            List<PortMeta> outputs
+    ) {
+    }
+
+    private AiGraphPlanDslAdapterService.GraphPlan enrichPlanWithIntentDefaults(
+            String prompt,
+            AiGraphPlanDslAdapterService.GraphPlan plan
+    ) {
+        if (plan == null || plan.nodes() == null || plan.nodes().isEmpty()) {
+            return plan;
+        }
+
+        List<AiGraphPlanDslAdapterService.PlanNode> normalizedNodes = applyDefaultNodeParams(plan.nodes());
+        List<AiGraphPlanDslAdapterService.PlanConnection> normalizedConnections =
+                plan.connections() == null ? new ArrayList<>() : new ArrayList<>(plan.connections());
+
+        int beforeConnectionCount = normalizedConnections.size();
+        UserIntent intent = AiIntentAnalysisService.classifyIntent(prompt);
+        if (intent == UserIntent.GENERATE_NEW && normalizedNodes.size() > 1 && normalizedConnections.isEmpty()) {
+            normalizedConnections.addAll(buildAutoConnections(normalizedNodes));
+        }
+
+        int addedConnections = normalizedConnections.size() - beforeConnectionCount;
+        if (addedConnections > 0) {
+            NodeCraft.LOGGER.info(
+                    "[AI_SEND] Plan enrichment added {} inferred connections for intent={}.",
+                    addedConnections,
+                    intent
+            );
+        }
+
+        return new AiGraphPlanDslAdapterService.GraphPlan(
+                plan.summary(),
+                normalizedNodes,
+                normalizedConnections,
+                plan.validationErrors() == null ? List.of() : plan.validationErrors()
+        );
+    }
+
+    private List<AiGraphPlanDslAdapterService.PlanNode> applyDefaultNodeParams(
+            List<AiGraphPlanDslAdapterService.PlanNode> nodes
+    ) {
+        NodeRegistry registry = NodeRegistry.getInstance();
+        Map<String, Map<String, Object>> defaultStateCache = new HashMap<>();
+        List<AiGraphPlanDslAdapterService.PlanNode> result = new ArrayList<>(nodes.size());
+
+        for (AiGraphPlanDslAdapterService.PlanNode node : nodes) {
+            Map<String, Object> existingState = toStateMap(node.nodeState());
+            Map<String, Object> defaultState = defaultStateCache.computeIfAbsent(
+                    node.typeId(),
+                    typeId -> resolveDefaultNodeState(registry, typeId)
+            );
+
+            if (defaultState.isEmpty()) {
+                result.add(node);
+                continue;
+            }
+
+            Map<String, Object> merged = new HashMap<>(defaultState);
+            merged.putAll(existingState);
+
+            result.add(new AiGraphPlanDslAdapterService.PlanNode(
+                    node.ref(),
+                    node.typeId(),
+                    node.offsetX(),
+                    node.offsetY(),
+                    merged
+            ));
+        }
+
+        return result;
+    }
+
+    private Map<String, Object> resolveDefaultNodeState(NodeRegistry registry, String typeId) {
+        if (registry == null || typeId == null || typeId.isBlank()) {
+            return Map.of();
+        }
+        try {
+            INode node = registry.createNodeInstance(typeId);
+            return toStateMap(node == null ? null : node.getNodeState());
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private Map<String, Object> toStateMap(Object state) {
+        if (!(state instanceof Map<?, ?> rawMap) || rawMap.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, Object> normalized = new HashMap<>();
+        for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+            if (entry.getKey() instanceof String key && !key.isBlank()) {
+                normalized.put(key, entry.getValue());
+            }
+        }
+        return normalized;
+    }
+
+    private List<AiGraphPlanDslAdapterService.PlanConnection> buildAutoConnections(
+            List<AiGraphPlanDslAdapterService.PlanNode> nodes
+    ) {
+        List<AiGraphPlanDslAdapterService.PlanConnection> generated = new ArrayList<>();
+        if (nodes == null || nodes.size() < 2) {
+            return generated;
+        }
+
+        List<NodeMeta> metas = buildNodeMetas(nodes);
+        if (metas.size() < 2) {
+            return generated;
+        }
+
+        Set<String> usedTargetPorts = new HashSet<>();
+        List<NodeMeta> targetOrder = new ArrayList<>(metas);
+        targetOrder.sort(Comparator
+                .comparing((NodeMeta meta) -> !isOutputCategory(meta.category()))
+                .thenComparing(NodeMeta::x));
+
+        for (NodeMeta target : targetOrder) {
+            if (target.inputs() == null || target.inputs().isEmpty()) {
+                continue;
+            }
+            for (PortMeta input : target.inputs()) {
+                if (!input.required()) {
+                    continue;
+                }
+                String targetKey = target.ref() + "#" + input.id();
+                if (usedTargetPorts.contains(targetKey)) {
+                    continue;
+                }
+
+                NodeMeta source = findBestSourceMeta(metas, target, input);
+                if (source == null) {
+                    continue;
+                }
+
+                PortMeta sourcePort = findBestSourcePort(source, input);
+                if (sourcePort == null) {
+                    continue;
+                }
+
+                generated.add(new AiGraphPlanDslAdapterService.PlanConnection(
+                        source.ref(),
+                        sourcePort.id(),
+                        target.ref(),
+                        input.id()
+                ));
+                usedTargetPorts.add(targetKey);
+            }
+        }
+
+        return generated;
+    }
+
+    private List<NodeMeta> buildNodeMetas(List<AiGraphPlanDslAdapterService.PlanNode> nodes) {
+        NodeRegistry registry = NodeRegistry.getInstance();
+        List<NodeMeta> metas = new ArrayList<>(nodes.size());
+        for (AiGraphPlanDslAdapterService.PlanNode node : nodes) {
+            String category = "";
+            if (registry != null && node.typeId() != null && !node.typeId().isBlank()) {
+                var info = registry.getNodeInfo(node.typeId());
+                if (info != null && info.getCategoryId() != null) {
+                    category = info.getCategoryId();
+                }
+            }
+
+            List<PortMeta> inputs = new ArrayList<>();
+            List<PortMeta> outputs = new ArrayList<>();
+            try {
+                INode instance = registry == null ? null : registry.createNodeInstance(node.typeId());
+                if (instance != null) {
+                    for (IPort input : instance.getInputPorts()) {
+                        inputs.add(new PortMeta(input.getId(), input.getDataType().getId(), input.isRequired()));
+                    }
+                    for (IPort output : instance.getOutputPorts()) {
+                        outputs.add(new PortMeta(output.getId(), output.getDataType().getId(), false));
+                    }
+                }
+            } catch (Exception ignored) {
+                // Keep partial metadata when node instantiation fails.
+            }
+
+            metas.add(new NodeMeta(
+                    node.ref(),
+                    node.typeId(),
+                    category == null ? "" : category,
+                    node.offsetX(),
+                    inputs,
+                    outputs
+            ));
+        }
+        return metas;
+    }
+
+    private NodeMeta findBestSourceMeta(List<NodeMeta> metas, NodeMeta target, PortMeta targetInput) {
+        NodeMeta best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (NodeMeta candidate : metas) {
+            if (candidate == null || candidate.ref().equals(target.ref())) {
+                continue;
+            }
+            PortMeta sourcePort = findBestSourcePort(candidate, targetInput);
+            if (sourcePort == null) {
+                continue;
+            }
+
+            int score = 0;
+            if (candidate.x() <= target.x()) {
+                score += 8;
+            }
+            if (isInputCategory(candidate.category())) {
+                score += 10;
+            }
+            if (!isOutputCategory(candidate.category()) && isOutputCategory(target.category())) {
+                score += 6;
+            }
+            if (candidate.typeId() != null && targetInput.id() != null
+                    && candidate.typeId().toLowerCase(Locale.ROOT).contains(targetInput.id().replace("input_", "").toLowerCase(Locale.ROOT))) {
+                score += 3;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private PortMeta findBestSourcePort(NodeMeta source, PortMeta targetInput) {
+        if (source == null || source.outputs() == null || source.outputs().isEmpty() || targetInput == null) {
+            return null;
+        }
+        PortMeta best = null;
+        int bestScore = Integer.MIN_VALUE;
+        for (PortMeta output : source.outputs()) {
+            if (!isTypeCompatible(output.dataType(), targetInput.dataType())) {
+                continue;
+            }
+            int score = 0;
+            if (safeLower(output.dataType()).equals(safeLower(targetInput.dataType()))) {
+                score += 20;
+            }
+            if (safeLower(output.id()).contains("output_" + safeLower(targetInput.id()).replace("input_", ""))) {
+                score += 6;
+            }
+            if (score > bestScore) {
+                bestScore = score;
+                best = output;
+            }
+        }
+        return best;
+    }
+
+    private boolean isTypeCompatible(String outputTypeRaw, String inputTypeRaw) {
+        String outputType = safeLower(outputTypeRaw);
+        String inputType = safeLower(inputTypeRaw);
+        if (inputType.isBlank() || outputType.isBlank()) {
+            return false;
+        }
+        if (outputType.equals(inputType) || "any".equals(outputType) || "any".equals(inputType)) {
+            return true;
+        }
+
+        Set<String> numericTypes = Set.of("integer", "float", "double", "number");
+        if (numericTypes.contains(outputType) && numericTypes.contains(inputType)) {
+            return true;
+        }
+
+        if (("block_pos".equals(outputType) && "coordinate".equals(inputType))
+                || ("coordinate".equals(outputType) && "block_pos".equals(inputType))) {
+            return true;
+        }
+
+        if (("vector".equals(outputType) && "position".equals(inputType))
+                || ("position".equals(outputType) && "vector".equals(inputType))) {
+            return true;
+        }
+
+        if ("geometry".equals(inputType) && (outputType.contains("geometry") || outputType.contains("sphere")
+                || outputType.contains("box") || outputType.contains("cylinder") || outputType.contains("torus"))) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private boolean isInputCategory(String category) {
+        return safeLower(category).startsWith("input.") || safeLower(category).startsWith("reference.");
+    }
+
+    private boolean isOutputCategory(String category) {
+        return safeLower(category).startsWith("output.");
+    }
+
+    private String safeLower(String text) {
+        return text == null ? "" : text.toLowerCase(Locale.ROOT);
     }
 
     private boolean isRemotePlannerBusy() {
