@@ -43,6 +43,7 @@ public final class PreviewManager {
     private static final long EMPTY_INPUT_GRACE_MS = 750L;
     private static final Map<String, Long> LAST_NON_EMPTY_BY_NODE_TYPE = new ConcurrentHashMap<>();
     private static final Map<String, PreviewBackend> LAST_BLOCKS_BACKEND_BY_NODE = new ConcurrentHashMap<>();
+    private static final Map<String, TrackedWorldRequestState> LAST_TRACKED_WORLD_REQUEST_BY_NODE = new ConcurrentHashMap<>();
 
     private PreviewManager() {
     }
@@ -63,6 +64,10 @@ public final class PreviewManager {
     private static void clearTypePreviewState(String nodeId, String previewType) {
         LAST_NON_EMPTY_BY_NODE_TYPE.remove(nodeTypeKey(nodeId, previewType));
         RENDERER.hidePreviewsByNodeAndType(nodeId, previewType);
+    }
+
+    private static void clearTrackedWorldRequestState(String nodeId) {
+        LAST_TRACKED_WORLD_REQUEST_BY_NODE.remove(nodeId);
     }
 
     public static String highlightBlock(String nodeId, Coordinate position, PreviewOptions options) {
@@ -146,6 +151,7 @@ public final class PreviewManager {
             // Force immediate backend switch visibility update even when transient empty input is present.
             RENDERER.hidePreviewsByNodeAndType(nodeId, "ghost_block");
             TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(nodeId);
+            clearTrackedWorldRequestState(nodeId);
         }
 
         if (request.backend() == PreviewBackend.GHOST) {
@@ -154,11 +160,13 @@ public final class PreviewManager {
                     return null;
                 }
                 clearTypePreviewState(nodeId, "ghost_block");
+                clearTrackedWorldRequestState(nodeId);
                 return null;
             }
             touchNonEmpty(nodeId, "ghost_block");
             // Backend switch safety: entering GHOST should always clear tracked-world remnants immediately.
             TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(nodeId);
+            clearTrackedWorldRequestState(nodeId);
             return RENDERER.upsertPreview(nodeId, "ghost_block", blocksPayload, opts);
         }
 
@@ -172,6 +180,7 @@ public final class PreviewManager {
             List<PreviewBlock> cells = blocksPayload.getBlocks();
             if (cells.isEmpty()) {
                 TrackedPreviewPlacementService.getInstance().clearTrackedPreview(ctx.getWorld(), nodeId);
+                clearTrackedWorldRequestState(nodeId);
                 return nodeId + ":tracked:cleared";
             }
             BlockState state = resolveBlockStateForPreview(cells.getFirst().blockId());
@@ -180,6 +189,13 @@ public final class PreviewManager {
                 return null;
             }
             List<BlockPos> positions = PreviewPayloadAdapters.toBlockPosList(blocksPayload);
+            String worldKey = ctx.getWorld().getRegistryKey().getValue().toString();
+            int requestSignature = computeTrackedWorldRequestSignature(worldKey, cells.getFirst().blockId(), positions);
+            TrackedWorldRequestState lastRequestState = LAST_TRACKED_WORLD_REQUEST_BY_NODE.get(nodeId);
+            if (lastRequestState != null && lastRequestState.matches(worldKey, requestSignature)) {
+                return lastRequestState.previewId();
+            }
+
             int placed = TrackedPreviewPlacementService.getInstance().updateTrackedPreview(
                 ctx.getWorld(),
                 nodeId,
@@ -187,7 +203,9 @@ public final class PreviewManager {
                 state,
                 PlacementMode.OVERWRITE
             );
-            return nodeId + ":tracked:" + placed;
+            String previewId = nodeId + ":tracked:" + placed;
+            LAST_TRACKED_WORLD_REQUEST_BY_NODE.put(nodeId, new TrackedWorldRequestState(worldKey, requestSignature, previewId));
+            return previewId;
         }
 
         NodeCraft.LOGGER.warn("PreviewManager.showPreview BLOCKS: unsupported backend {}", request.backend());
@@ -492,6 +510,7 @@ public final class PreviewManager {
         if (service.hasAnyTrackedPreviews(nodeId)) {
             service.clearTrackedPreviewAcrossWorlds(nodeId);
         }
+        clearTrackedWorldRequestState(nodeId);
     }
 
     public static void clearAllPreviews() {
@@ -520,6 +539,63 @@ public final class PreviewManager {
 
     public static PreviewRenderer.PreviewRenderSettings getSettings() {
         return RENDERER.getSettings();
+    }
+
+    private static int computeTrackedWorldRequestSignature(String worldKey, String blockId, List<BlockPos> positions) {
+        int hash = 17;
+        hash = 31 * hash + (worldKey != null ? worldKey.hashCode() : 0);
+        hash = 31 * hash + (blockId != null ? blockId.hashCode() : 0);
+
+        int size = 0;
+        long sumX = 0L;
+        long sumY = 0L;
+        long sumZ = 0L;
+        int xorHash = 0;
+        int minX = Integer.MAX_VALUE;
+        int minY = Integer.MAX_VALUE;
+        int minZ = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE;
+        int maxY = Integer.MIN_VALUE;
+        int maxZ = Integer.MIN_VALUE;
+
+        for (BlockPos pos : positions) {
+            if (pos == null) {
+                continue;
+            }
+            int x = pos.getX();
+            int y = pos.getY();
+            int z = pos.getZ();
+            size++;
+            sumX += x;
+            sumY += y;
+            sumZ += z;
+            xorHash ^= pos.hashCode();
+            minX = Math.min(minX, x);
+            minY = Math.min(minY, y);
+            minZ = Math.min(minZ, z);
+            maxX = Math.max(maxX, x);
+            maxY = Math.max(maxY, y);
+            maxZ = Math.max(maxZ, z);
+        }
+
+        hash = 31 * hash + size;
+        hash = 31 * hash + xorHash;
+        hash = 31 * hash + Long.hashCode(sumX);
+        hash = 31 * hash + Long.hashCode(sumY);
+        hash = 31 * hash + Long.hashCode(sumZ);
+        hash = 31 * hash + minX;
+        hash = 31 * hash + minY;
+        hash = 31 * hash + minZ;
+        hash = 31 * hash + maxX;
+        hash = 31 * hash + maxY;
+        hash = 31 * hash + maxZ;
+        return hash;
+    }
+
+    private record TrackedWorldRequestState(String worldKey, int signature, String previewId) {
+        private boolean matches(String currentWorldKey, int currentSignature) {
+            return signature == currentSignature && java.util.Objects.equals(worldKey, currentWorldKey);
+        }
     }
 
 }

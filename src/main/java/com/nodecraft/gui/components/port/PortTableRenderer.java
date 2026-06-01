@@ -115,9 +115,11 @@ public final class PortTableRenderer {
                 }
 
                 ImGui.tableSetColumnIndex(1);
-                Object value = graph != null
+                Object value = shouldUseCachedOutputForSelectedNode(selectedNode)
+                    ? selectedNode.getOutput(port.getId())
+                    : (graph != null
                         ? NodeOutputResolver.resolveNodeOutput(graph, selectedNode, port.getId())
-                        : selectedNode.getOutput(port.getId());
+                        : selectedNode.getOutput(port.getId()));
 
                 if (value != null) {
                     ImGui.textWrapped(PropertyValueFormatter.formatValuePreview(value));
@@ -155,6 +157,11 @@ public final class PortTableRenderer {
             }
             ImGui.endTable();
         }
+    }
+
+    private static boolean shouldUseCachedOutputForSelectedNode(INode selectedNode) {
+        return selectedNode instanceof GeometryViewerNode
+            || selectedNode instanceof PreviewGeometryNode;
     }
 
     private static java.util.List<IPort> filterViewerPorts(java.util.List<IPort> ports, INode node, NodeGraph graph) {
