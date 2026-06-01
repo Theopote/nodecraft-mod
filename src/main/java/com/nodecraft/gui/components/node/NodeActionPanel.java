@@ -3,6 +3,7 @@ package com.nodecraft.gui.components.node;
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.nodes.output.execute.ApplyChangesNode;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalMergeNode;
 import com.nodecraft.nodesystem.nodes.utilities.assist.TagRelayNode;
@@ -43,6 +44,11 @@ public final class NodeActionPanel {
     ) {
         ImGui.separator();
 
+        if (selectedNode instanceof ApplyChangesNode applyChangesNode) {
+            renderApplyChangesControls(applyChangesNode);
+            ImGui.separator();
+        }
+
         if (ImGui.button("Reset Properties")) {
             clearCurrentNodeTempValues.run();
             if (selectedNode instanceof com.nodecraft.nodesystem.core.BaseNode) {
@@ -75,6 +81,25 @@ public final class NodeActionPanel {
             }
         }
         ImGui.popStyleColor(3);
+    }
+
+    private static void renderApplyChangesControls(ApplyChangesNode applyChangesNode) {
+        ImGui.text("Apply Changes");
+        ImGui.textDisabled("Triggers the node to execute on the next auto-preview run.");
+
+        boolean canApply = !applyChangesNode.isExecuting();
+        if (!canApply) {
+            ImGui.beginDisabled();
+        }
+
+        if (ImGui.button("Apply Changes")) {
+            applyChangesNode.resetExecutionId();
+            NodeCraft.LOGGER.info("Triggered Apply Changes for {}", applyChangesNode.getDisplayName());
+        }
+
+        if (!canApply) {
+            ImGui.endDisabled();
+        }
     }
 
     private static void renderSignalForkControls(SignalForkNode forkNode, Supplier<NodeGraph> graphSupplier) {
