@@ -759,10 +759,11 @@ public class ImGuiNodeInteraction {
                         ImVec2 targetPos = getPortScreenPosition(nodeId, inputPortId, portScreenPositions);
                         ImVec2 sourcePos = getPortScreenPosition(connectedNodeId, connectedPortId, portScreenPositions);
                         if (targetPos != null && sourcePos != null) {
-                            float distance = distanceToLineSegment(
-                                    mousePos.x, mousePos.y,
-                                    sourcePos.x, sourcePos.y,
-                                    targetPos.x, targetPos.y
+                            float distance = distanceToConnectionCurve(
+                                mousePos.x, mousePos.y,
+                                sourcePos.x, sourcePos.y,
+                                targetPos.x, targetPos.y,
+                                editor.getCanvasZoom()
                             );
                             if (distance < CONNECTION_DETECTION_DISTANCE) {
                                 isHoveringConnection = true;
@@ -778,6 +779,50 @@ public class ImGuiNodeInteraction {
             }
         }
         return false;
+    }
+
+    /**
+     * 计算点到连接曲线的最短距离。
+     * 连接渲染使用的是与起终点水平延展的三次贝塞尔曲线，这里按相同控制点进行采样。
+     */
+    private float distanceToConnectionCurve(float px, float py,
+                                            float startX, float startY,
+                                            float endX, float endY,
+                                            float canvasZoom) {
+        float controlOffset = getScaledControlOffset(endX, startX, canvasZoom);
+        float ctrl1X = startX + controlOffset;
+        float ctrl1Y = startY;
+        float ctrl2X = endX - controlOffset;
+        float ctrl2Y = endY;
+
+        final int samples = 24;
+        float minDistance = Float.MAX_VALUE;
+
+        float prevX = startX;
+        float prevY = startY;
+        for (int i = 1; i <= samples; i++) {
+            float t = i / (float) samples;
+            float invT = 1.0f - t;
+
+            float x = invT * invT * invT * startX
+                    + 3.0f * invT * invT * t * ctrl1X
+                    + 3.0f * invT * t * t * ctrl2X
+                    + t * t * t * endX;
+            float y = invT * invT * invT * startY
+                    + 3.0f * invT * invT * t * ctrl1Y
+                    + 3.0f * invT * t * t * ctrl2Y
+                    + t * t * t * endY;
+
+            float distance = distanceToLineSegment(px, py, prevX, prevY, x, y);
+            if (distance < minDistance) {
+                minDistance = distance;
+            }
+
+            prevX = x;
+            prevY = y;
+        }
+
+        return minDistance;
     }
 
     /**
@@ -801,6 +846,19 @@ public class ImGuiNodeInteraction {
         float projY = y1 + t * (y2 - y1);
 
         return (float)Math.sqrt((px - projX) * (px - projX) + (py - projY) * (py - projY));
+    }
+
+    private static float getScaledControlOffset(float endX, float startX, float canvasZoom) {
+        float minControlOffsetUnscaled = 30.0f;
+        float maxControlOffsetUnscaled = 150.0f;
+
+        float distanceBetweenNodesScaled = Math.abs(endX - startX);
+        float initialControlOffsetScaled = distanceBetweenNodesScaled * 0.4f;
+
+        float finalControlOffsetScaled = Math.max(initialControlOffsetScaled, minControlOffsetUnscaled * canvasZoom);
+        finalControlOffsetScaled = Math.min(finalControlOffsetScaled, maxControlOffsetUnscaled * canvasZoom);
+
+        return finalControlOffsetScaled;
     }
 
     /**
