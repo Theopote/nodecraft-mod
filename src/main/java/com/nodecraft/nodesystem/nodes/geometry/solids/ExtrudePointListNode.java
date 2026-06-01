@@ -10,6 +10,7 @@ import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Vector3;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
@@ -69,9 +70,9 @@ public class ExtrudePointListNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object pointsObj = inputValues.get(INPUT_POINTS_ID);
-        Object directionObj = inputValues.get(INPUT_DIRECTION_ID);
+        Vector3d direction = resolveDirection(inputValues.get(INPUT_DIRECTION_ID));
 
-        if (!(pointsObj instanceof List<?> pointsInput) || !(directionObj instanceof Vector3d direction)) {
+        if (!(pointsObj instanceof List<?> pointsInput) || direction == null) {
             writeEmptyOutputs();
             return;
         }
@@ -166,6 +167,19 @@ public class ExtrudePointListNode extends BaseNode {
         }
         if (value instanceof BlockPos blockPos) {
             return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
+        }
+        return null;
+    }
+
+    private @Nullable Vector3d resolveDirection(@Nullable Object value) {
+        if (value instanceof Vector3d vector) {
+            return new Vector3d(vector);
+        }
+        if (value instanceof Vec3d vector) {
+            return new Vector3d(vector.x, vector.y, vector.z);
+        }
+        if (value instanceof Vector3 vector) {
+            return new Vector3d(vector.getX(), vector.getY(), vector.getZ());
         }
         return null;
     }

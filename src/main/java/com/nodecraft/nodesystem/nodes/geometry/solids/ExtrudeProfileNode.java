@@ -6,8 +6,11 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
 import com.nodecraft.nodesystem.datatypes.PolygonProfileData;
+import com.nodecraft.nodesystem.datatypes.PrismGeometryData;
 import com.nodecraft.nodesystem.datatypes.SurfaceStripData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.util.Vector3;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -27,6 +30,8 @@ public class ExtrudeProfileNode extends BaseNode {
     private static final String INPUT_PROFILE_ID = "input_profile";
     private static final String INPUT_DIRECTION_ID = "input_direction";
 
+    private static final String OUTPUT_PRISM_ID = "output_prism";
+    private static final String OUTPUT_GEOMETRY_ID = "output_geometry";
     private static final String OUTPUT_BASE_PROFILE_ID = "output_base_profile";
     private static final String OUTPUT_TOP_PROFILE_ID = "output_top_profile";
     private static final String OUTPUT_BASE_POINTS_ID = "output_base_points";
@@ -41,6 +46,8 @@ public class ExtrudeProfileNode extends BaseNode {
         addInputPort(new BasePort(INPUT_PROFILE_ID, "Profile", "Polygon profile to extrude", NodeDataType.POLYGON_PROFILE, this));
         addInputPort(new BasePort(INPUT_DIRECTION_ID, "Direction", "Extrusion direction vector", NodeDataType.VECTOR, this));
 
+        addOutputPort(new BasePort(OUTPUT_PRISM_ID, "Prism", "Constructed prism geometry", NodeDataType.PRISM_GEOMETRY, this));
+        addOutputPort(new BasePort(OUTPUT_GEOMETRY_ID, "Geometry", "Unified geometry output", NodeDataType.GEOMETRY, this));
         addOutputPort(new BasePort(OUTPUT_BASE_PROFILE_ID, "Base Profile", "Original polygon profile", NodeDataType.POLYGON_PROFILE, this));
         addOutputPort(new BasePort(OUTPUT_TOP_PROFILE_ID, "Top Profile", "Extruded polygon profile", NodeDataType.POLYGON_PROFILE, this));
         addOutputPort(new BasePort(OUTPUT_BASE_POINTS_ID, "Base Points", "Closed base polygon points", NodeDataType.VECTOR_LIST, this));
@@ -58,9 +65,15 @@ public class ExtrudeProfileNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object profileObj = inputValues.get(INPUT_PROFILE_ID);
-        Object directionObj = inputValues.get(INPUT_DIRECTION_ID);
+        Vector3d direction = resolveDirection(inputValues.get(INPUT_DIRECTION_ID));
 
-        if (!(profileObj instanceof PolygonProfileData baseProfile) || !(directionObj instanceof Vector3d direction)) {
+        if (!(profileObj instanceof PolygonProfileData baseProfile) || direction == null) {
+            writeEmptyOutputs();
+            return;
+        }
+
+        List<Vector3d> baseUniquePoints = baseProfile.getUniquePoints();
+        if (baseUniquePoints.size() < 3) {
             writeEmptyOutputs();
             return;
         }
@@ -83,12 +96,15 @@ public class ExtrudeProfileNode extends BaseNode {
             basePlane.getNormal()
         );
         PolygonProfileData topProfile = new PolygonProfileData(topClosedPoints, topPlane);
+        PrismGeometryData prism = new PrismGeometryData(baseUniquePoints, direction);
 
         SurfaceStripData sideSurface = new SurfaceStripData(
             List.of(baseProfile.getUniquePoints(), topProfile.getUniquePoints()),
             List.of(true, true)
         );
 
+        outputValues.put(OUTPUT_PRISM_ID, prism);
+        outputValues.put(OUTPUT_GEOMETRY_ID, prism);
         outputValues.put(OUTPUT_BASE_PROFILE_ID, baseProfile);
         outputValues.put(OUTPUT_TOP_PROFILE_ID, topProfile);
         outputValues.put(OUTPUT_BASE_POINTS_ID, List.copyOf(baseClosedPoints));
@@ -99,6 +115,8 @@ public class ExtrudeProfileNode extends BaseNode {
     }
 
     private void writeEmptyOutputs() {
+        outputValues.put(OUTPUT_PRISM_ID, null);
+        outputValues.put(OUTPUT_GEOMETRY_ID, null);
         outputValues.put(OUTPUT_BASE_PROFILE_ID, null);
         outputValues.put(OUTPUT_TOP_PROFILE_ID, null);
         outputValues.put(OUTPUT_BASE_POINTS_ID, List.of());
@@ -106,5 +124,18 @@ public class ExtrudeProfileNode extends BaseNode {
         outputValues.put(OUTPUT_SIDE_SURFACE_ID, null);
         outputValues.put(OUTPUT_HEIGHT_ID, 0.0d);
         outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    private @Nullable Vector3d resolveDirection(@Nullable Object value) {
+        if (value instanceof Vector3d vector) {
+            return new Vector3d(vector);
+        }
+        if (value instanceof Vec3d vector) {
+            return new Vector3d(vector.x, vector.y, vector.z);
+        }
+        if (value instanceof Vector3 vector) {
+            return new Vector3d(vector.getX(), vector.getY(), vector.getZ());
+        }
+        return null;
     }
 }
