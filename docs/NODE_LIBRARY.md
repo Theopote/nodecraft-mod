@@ -1,8 +1,8 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **454**
-- Total categories: **51**
+- Total nodes: **472**
+- Total categories: **52**
 
 ## Category Statistics
 
@@ -58,6 +58,7 @@
 | `world.query` | 10 |
 | `world.read` | 12 |
 | `world.selection` | 9 |
+| `world.terrain` | 18 |
 | `world.write` | 17 |
 
 ## flow.control (3)
@@ -749,6 +750,29 @@ Note: For `Deconstruct*` nodes in this category, when `Valid == false`, geometry
 | Selected Block Sequence | `world.selection.selected_block_sequence` | Collects multiple picked blocks in click order and outputs an ordered block sequence | `SelectedBlockSequenceNode` |
 | Multi-Region Selection | `world.selection.multi_region` | Aggregates multiple non-contiguous region selections into a region list. | `MultiRegionSelectionNode` |
 | Selected Entity | `world.selection.selected_entity` | Gets information about the entity selected by the player. | `SelectedEntityNode` |
+
+## world.terrain (18)
+
+| Node Name | Node ID | Description | Class |
+|---|---|---|---|
+| Height Seed Field | `world.terrain.height_seed_field` | Builds a deterministic continental-scale seed height field over X/Z. | `HeightSeedFieldNode` |
+| Sample Field On Region | `world.terrain.sample_field_on_region` | Samples a scalar field on a regular X/Z lattice inside a region. | `SampleFieldOnRegionNode` |
+| Combine Height Fields | `world.terrain.combine_height_fields` | Combines base, additive, and subtractive height fields into one output field. | `CombineHeightFieldsNode` |
+| Flow Direction Field | `world.terrain.flow_direction_field` | Computes downslope flow direction and slope magnitude from a height field. | `FlowDirectionFieldNode` |
+| Flow Accumulation Field | `world.terrain.flow_accumulation_field` | Approximates drainage accumulation from a flow field and optional precipitation field. | `FlowAccumulationFieldNode` |
+| River Mask Field | `world.terrain.river_mask_field` | Creates a river-channel mask field from flow accumulation. | `RiverMaskFieldNode` |
+| Precipitation Field | `world.terrain.precipitation_field` | Builds precipitation from latitude bands and terrain rain-shadow response. | `PrecipitationFieldNode` |
+| Orogenic Uplift Field | `world.terrain.orogenic_uplift_field` | Converts boundary intensity into mountain uplift potential. | `OrogenicUpliftFieldNode` |
+| Thermal Erosion Step | `world.terrain.thermal_erosion_step` | Applies one thermal weathering step based on local slope exceeding talus angle. | `ThermalErosionStepNode` |
+| Hydraulic Erosion Step | `world.terrain.hydraulic_erosion_step` | Applies one hydraulic erosion step using flow accumulation as transport energy. | `HydraulicErosionStepNode` |
+| Deposition Step | `world.terrain.deposition_step` | Deposits sediment in low-slope and low-energy zones. | `DepositionStepNode` |
+| Plate Partition Field | `world.terrain.plate_partition_field` | Generates pseudo tectonic plate ids and boundary intensity via Voronoi-style partitioning. | `PlatePartitionFieldNode` |
+| Rift Subsidence Field | `world.terrain.rift_subsidence_field` | Builds rift/trench subsidence strength from boundary intensity. | `RiftSubsidenceFieldNode` |
+| Temperature Field | `world.terrain.temperature_field` | Builds temperature from latitude bands and elevation lapse-rate cooling. | `TemperatureFieldNode` |
+| Biome Classify | `world.terrain.biome_classify` | Classifies a biome index using temperature, precipitation, and elevation. | `BiomeClassifyNode` |
+| Heightfield To Blocks | `world.terrain.heightfield_to_blocks` | Converts a height field inside a region to terrain block placements. | `HeightfieldToBlocksNode` |
+| Biome Field To Blocks | `world.terrain.biome_field_to_blocks` | Maps biome id field to surface block placements using a configurable palette. | `BiomeFieldToBlocksNode` |
+| Scalar Field Slice To Blocks | `world.terrain.scalar_field_slice_to_blocks` | Visualizes scalar field values on a horizontal slice using low/high block thresholds. | `ScalarFieldSliceToBlocksNode` |
 
 ## world.write (17)
 
