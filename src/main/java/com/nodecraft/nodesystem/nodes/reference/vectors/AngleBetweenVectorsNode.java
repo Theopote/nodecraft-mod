@@ -107,8 +107,8 @@ public class AngleBetweenVectorsNode extends BaseNode {
     }
 
     private void writeInvalid() {
-        outputValues.put(OUTPUT_RADIANS_ID, 0.0d);
-        outputValues.put(OUTPUT_DEGREES_ID, 0.0d);
+        outputValues.put(OUTPUT_RADIANS_ID, Double.NaN);
+        outputValues.put(OUTPUT_DEGREES_ID, Double.NaN);
         outputValues.put(OUTPUT_SIGNED_RADIANS_ID, Double.NaN);
         outputValues.put(OUTPUT_SIGNED_DEGREES_ID, Double.NaN);
         outputValues.put(OUTPUT_VALID_ID, false);

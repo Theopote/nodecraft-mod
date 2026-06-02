@@ -12,8 +12,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "reference.vectors.construct_vector",
-    displayName = "构建向量",
-    description = "通过 X / Y / Z 数值输入构建向量，并输出 Vector / X / Y / Z",
+    displayName = "Construct Vector",
+    description = "Constructs a Vector3d from X, Y, and Z components.",
     category = "reference.vectors",
     order = 1
 )
@@ -27,23 +27,31 @@ public class ConstructVectorNode extends BaseNode {
     private static final String OUTPUT_X_ID = "output_x";
     private static final String OUTPUT_Y_ID = "output_y";
     private static final String OUTPUT_Z_ID = "output_z";
+    private static final String OUTPUT_VALID_ID = "output_valid";
 
     public ConstructVectorNode() {
         super(UUID.randomUUID(), "reference.vectors.construct_vector");
 
-        addInputPort(new BasePort(INPUT_X_ID, "X", "X 分量输入", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_Y_ID, "Y", "Y 分量输入", NodeDataType.DOUBLE, this));
-        addInputPort(new BasePort(INPUT_Z_ID, "Z", "Z 分量输入", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_X_ID, "X", "X component input", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_Y_ID, "Y", "Y component input", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_Z_ID, "Z", "Z component input", NodeDataType.DOUBLE, this));
 
-        addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Vector", "构建后的向量", NodeDataType.VECTOR, this));
-        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X 分量输出", NodeDataType.DOUBLE, this));
-        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y 分量输出", NodeDataType.DOUBLE, this));
-        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Z 分量输出", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Vector", "Constructed vector", NodeDataType.VECTOR, this));
+        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "Resolved X component", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Resolved Y component", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Resolved Z component", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether all resolved components are finite numbers",
+            NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Construct Vector";
     }
 
     @Override
     public String getDescription() {
-        return "通过 X / Y / Z 输入构建向量，并输出 Vector / X / Y / Z。";
+        return "Constructs a Vector3d from X, Y, and Z components.";
     }
 
     @Override
@@ -51,11 +59,13 @@ public class ConstructVectorNode extends BaseNode {
         double x = toDouble(inputValues.get(INPUT_X_ID));
         double y = toDouble(inputValues.get(INPUT_Y_ID));
         double z = toDouble(inputValues.get(INPUT_Z_ID));
+        boolean valid = Double.isFinite(x) && Double.isFinite(y) && Double.isFinite(z);
 
-        outputValues.put(OUTPUT_VECTOR_ID, new Vector3d(x, y, z));
-        outputValues.put(OUTPUT_X_ID, x);
-        outputValues.put(OUTPUT_Y_ID, y);
-        outputValues.put(OUTPUT_Z_ID, z);
+        outputValues.put(OUTPUT_VECTOR_ID, valid ? new Vector3d(x, y, z) : new Vector3d());
+        outputValues.put(OUTPUT_X_ID, valid ? x : Double.NaN);
+        outputValues.put(OUTPUT_Y_ID, valid ? y : Double.NaN);
+        outputValues.put(OUTPUT_Z_ID, valid ? z : Double.NaN);
+        outputValues.put(OUTPUT_VALID_ID, valid);
     }
 
     private double toDouble(Object value) {
