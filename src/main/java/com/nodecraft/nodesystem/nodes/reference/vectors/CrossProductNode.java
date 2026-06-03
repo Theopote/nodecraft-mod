@@ -72,7 +72,7 @@ public class CrossProductNode extends BaseNode {
 
     private void writeInvalid() {
         outputValues.put(OUTPUT_CROSS_PRODUCT_ID, new Vector3d());
-        outputValues.put(OUTPUT_MAGNITUDE_ID, 0.0d);
+        outputValues.put(OUTPUT_MAGNITUDE_ID, Double.NaN);
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 

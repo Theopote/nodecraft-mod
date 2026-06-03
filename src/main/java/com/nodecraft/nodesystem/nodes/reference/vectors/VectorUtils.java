@@ -38,8 +38,12 @@ final class VectorUtils {
         return v != null && v.lengthSquared() > EPS;
     }
 
-    static boolean isValidInput(Vector3d v) {
+    static boolean isValidForMath(Vector3d v) {
         return isFinite(v) && isNonZero(v);
+    }
+
+    static boolean isValidInput(Vector3d v) {
+        return isValidForMath(v);
     }
 
     // ==================== 安全数学操作 ====================

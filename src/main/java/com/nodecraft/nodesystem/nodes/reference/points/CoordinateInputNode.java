@@ -7,7 +7,6 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import imgui.ImGui;
-import imgui.flag.ImGuiCol;
 import imgui.type.ImInt;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
@@ -19,7 +18,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "reference.points.point_from_coordinates",
     displayName = "Coordinate Input",
-    description = "输入一个整数坐标，并同时输出 Coordinate / Block Pos / X / Y / Z",
+    description = "Inputs an integer coordinate and outputs Coordinate, Block Pos, X, Y, and Z.",
     category = "reference.points",
     order = 0
 )
@@ -31,31 +30,32 @@ public class CoordinateInputNode extends BaseCustomUINode {
     private static final String OUTPUT_Y_ID = "output_y";
     private static final String OUTPUT_Z_ID = "output_z";
 
-    @NodeProperty(displayName = "X", category = "分量", order = 1, description = "坐标的 X 分量")
+    @NodeProperty(displayName = "X", category = "Components", order = 1, description = "X coordinate")
     private int x = 0;
 
-    @NodeProperty(displayName = "Y", category = "分量", order = 2, description = "坐标的 Y 分量")
+    @NodeProperty(displayName = "Y", category = "Components", order = 2, description = "Y coordinate")
     private int y = 0;
 
-    @NodeProperty(displayName = "Z", category = "分量", order = 3, description = "坐标的 Z 分量")
+    @NodeProperty(displayName = "Z", category = "Components", order = 3, description = "Z coordinate")
     private int z = 0;
 
-    @NodeProperty(displayName = "显示标签", category = "UI设置", order = 10, description = "是否显示当前坐标摘要")
+    @NodeProperty(displayName = "Show Label", category = "UI Settings", order = 10,
+        description = "Whether to show the current coordinate summary")
     private boolean showLabel = true;
 
     public CoordinateInputNode() {
         super(UUID.randomUUID(), "reference.points.point_from_coordinates");
-        addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate", "整数坐标", NodeDataType.COORDINATE, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCK_POS_ID, "Block Pos", "方块坐标", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X 分量", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y 分量", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Z 分量", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate", "Integer coordinate", NodeDataType.COORDINATE, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCK_POS_ID, "Block Pos", "Block position", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X coordinate", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y coordinate", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Z coordinate", NodeDataType.INTEGER, this));
         updateOutput();
     }
 
     @Override
     public String getDescription() {
-        return "输入一个整数坐标，并同时输出 Coordinate / Block Pos / X / Y / Z。";
+        return "Inputs an integer coordinate and outputs Coordinate, Block Pos, X, Y, and Z.";
     }
 
     @Override

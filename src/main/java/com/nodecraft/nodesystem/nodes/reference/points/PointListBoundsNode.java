@@ -80,9 +80,7 @@ public class PointListBoundsNode extends BaseNode {
     public void processNode(@Nullable ExecutionContext context) {
         Object value = inputValues.get(INPUT_POINTS_ID);
         if (!(value instanceof Collection<?> collection) || collection.isEmpty()) {
-            outputValues.clear();
-            outputValues.put(OUTPUT_VALID_ID, false);
-            outputValues.put(OUTPUT_COUNT_ID, 0);
+            writeInvalid();
             return;
         }
 
@@ -91,8 +89,8 @@ public class PointListBoundsNode extends BaseNode {
         int count = 0;
 
         for (Object entry : collection) {
-            Vector3d point = resolvePoint(entry);
-            if (point == null) {
+            Vector3d point = PointUtils.resolvePoint(entry);
+            if (!PointUtils.isFinite(point)) {
                 continue;
             }
 
@@ -107,9 +105,7 @@ public class PointListBoundsNode extends BaseNode {
         }
 
         if (min == null || max == null || count == 0) {
-            outputValues.clear();
-            outputValues.put(OUTPUT_VALID_ID, false);
-            outputValues.put(OUTPUT_COUNT_ID, 0);
+            writeInvalid();
             return;
         }
 
@@ -136,16 +132,16 @@ public class PointListBoundsNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, true);
     }
 
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_BOUNDING_BOX_ID, null);
+        outputValues.put(OUTPUT_REGION_ID, null);
+        outputValues.put(OUTPUT_MIN_POINT_ID, null);
+        outputValues.put(OUTPUT_MAX_POINT_ID, null);
+        outputValues.put(OUTPUT_CENTER_POINT_ID, null);
+        outputValues.put(OUTPUT_SIZE_X_ID, Double.NaN);
+        outputValues.put(OUTPUT_SIZE_Y_ID, Double.NaN);
+        outputValues.put(OUTPUT_SIZE_Z_ID, Double.NaN);
+        outputValues.put(OUTPUT_COUNT_ID, 0);
+        outputValues.put(OUTPUT_VALID_ID, false);
     }
 }

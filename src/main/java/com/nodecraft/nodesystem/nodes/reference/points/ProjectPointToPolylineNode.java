@@ -8,7 +8,6 @@ import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.PolylineData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -91,9 +90,9 @@ public class ProjectPointToPolylineNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d query = resolvePoint(inputValues.get(INPUT_POINT_ID));
+        Vector3d query = PointUtils.resolvePoint(inputValues.get(INPUT_POINT_ID));
         List<Vector3d> verts = resolveVertices();
-        if (query == null || verts == null || verts.size() < 2) {
+        if (!PointUtils.isFinite(query) || verts == null || verts.size() < 2) {
             writeInvalid();
             return;
         }
@@ -150,10 +149,10 @@ public class ProjectPointToPolylineNode extends BaseNode {
     private void writeInvalid() {
         outputValues.put(OUTPUT_POINT_ID, null);
         outputValues.put(OUTPUT_VECTOR_ID, null);
-        outputValues.put(OUTPUT_DISTANCE_ID, 0.0d);
+        outputValues.put(OUTPUT_DISTANCE_ID, Double.NaN);
         outputValues.put(OUTPUT_SEGMENT_INDEX_ID, -1);
-        outputValues.put(OUTPUT_SEGMENT_T_ID, 0.0d);
-        outputValues.put(OUTPUT_ARC_LENGTH_ID, 0.0d);
+        outputValues.put(OUTPUT_SEGMENT_T_ID, Double.NaN);
+        outputValues.put(OUTPUT_ARC_LENGTH_ID, Double.NaN);
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
@@ -164,14 +163,19 @@ public class ProjectPointToPolylineNode extends BaseNode {
             List<Vec3d> pts = poly.getPoints();
             List<Vector3d> out = new ArrayList<>(pts.size());
             for (Vec3d v : pts) {
-                out.add(new Vector3d(v.x, v.y, v.z));
+                Vector3d point = PointUtils.resolvePoint(v);
+                if (PointUtils.isFinite(point)) {
+                    out.add(point);
+                }
             }
             return out;
         }
         if (lineObj instanceof LineData line) {
-            Vec3d a = line.getStart();
-            Vec3d b = line.getEnd();
-            return List.of(new Vector3d(a.x, a.y, a.z), new Vector3d(b.x, b.y, b.z));
+            Vector3d a = PointUtils.resolvePoint(line.getStart());
+            Vector3d b = PointUtils.resolvePoint(line.getEnd());
+            if (PointUtils.isFinite(a) && PointUtils.isFinite(b)) {
+                return List.of(a, b);
+            }
         }
         return null;
     }
@@ -181,19 +185,6 @@ public class ProjectPointToPolylineNode extends BaseNode {
             return false;
         }
         return verts.get(0).distance(verts.get(verts.size() - 1)) < 1.0e-6d;
-    }
-
-    private static Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return new Vector3d(pointData.getPosition());
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
     }
 
     private static SegmentClosest closestOnSegment(Vector3d p, Vector3d a, Vector3d b) {

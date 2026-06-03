@@ -6,7 +6,6 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -60,9 +59,7 @@ public class PointListCenterNode extends BaseNode {
     public void processNode(@Nullable ExecutionContext context) {
         Object value = inputValues.get(INPUT_POINTS_ID);
         if (!(value instanceof Collection<?> collection) || collection.isEmpty()) {
-            outputValues.clear();
-            outputValues.put(OUTPUT_VALID_ID, false);
-            outputValues.put(OUTPUT_COUNT_ID, 0);
+            writeInvalid();
             return;
         }
 
@@ -70,8 +67,8 @@ public class PointListCenterNode extends BaseNode {
         int count = 0;
 
         for (Object entry : collection) {
-            Vector3d point = resolvePoint(entry);
-            if (point == null) {
+            Vector3d point = PointUtils.resolvePoint(entry);
+            if (!PointUtils.isFinite(point)) {
                 continue;
             }
             sum.add(point);
@@ -79,9 +76,7 @@ public class PointListCenterNode extends BaseNode {
         }
 
         if (count == 0) {
-            outputValues.clear();
-            outputValues.put(OUTPUT_VALID_ID, false);
-            outputValues.put(OUTPUT_COUNT_ID, 0);
+            writeInvalid();
             return;
         }
 
@@ -93,16 +88,10 @@ public class PointListCenterNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, true);
     }
 
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_CENTER_POINT_ID, null);
+        outputValues.put(OUTPUT_CENTER_VECTOR_ID, null);
+        outputValues.put(OUTPUT_COUNT_ID, 0);
+        outputValues.put(OUTPUT_VALID_ID, false);
     }
 }

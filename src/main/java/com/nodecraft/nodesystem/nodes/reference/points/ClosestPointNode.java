@@ -4,116 +4,134 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
-
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
+
+import java.util.Collection;
 import java.util.UUID;
 
 /**
- * Closest Point 节点: 在一个 Coordinate 列表中找到距离另一个点最近的点
+ * Finds the closest point in a point collection to a reference point.
  */
 @NodeInfo(
     id = "reference.points.closest_point",
     displayName = "Closest Point",
-    description = "在坐标列表中找到距离指定点最近的点",
+    description = "Finds the closest point in a point collection to a reference point.",
     category = "reference.points",
     order = 7
 )
 public class ClosestPointNode extends BaseNode {
 
-    // --- 节点属性 ---
-    private String description = "在坐标列表中找到距离指定点最近的点";
-
-    // --- 输入端口 IDs ---
     private static final String INPUT_POINT_ID = "input_point";
     private static final String INPUT_COORDINATES_ID = "input_coordinates";
 
-    // --- 输出端口 IDs ---
     private static final String OUTPUT_CLOSEST_POINT_ID = "output_closest_point";
     private static final String OUTPUT_DISTANCE_ID = "output_distance";
     private static final String OUTPUT_INDEX_ID = "output_index";
+    private static final String OUTPUT_POINT_DATA_ID = "output_point_data";
+    private static final String OUTPUT_VECTOR_ID = "output_vector";
+    private static final String OUTPUT_VALID_ID = "output_valid";
 
-    // --- 构造函数 ---
     public ClosestPointNode() {
         super(UUID.randomUUID(), "reference.points.closest_point");
-        
-        // 创建并添加输入端口
-        addInputPort(new BasePort(INPUT_POINT_ID, "Point", 
-                "参考点", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", 
-                "坐标列表", NodeDataType.BLOCK_LIST, this));
 
-        // 创建并添加输出端口
-        addOutputPort(new BasePort(OUTPUT_CLOSEST_POINT_ID, "Closest Point", 
-                "最近的点", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_DISTANCE_ID, "Distance", 
-                "最近点到参考点的距离", NodeDataType.DOUBLE, this));
-        addOutputPort(new BasePort(OUTPUT_INDEX_ID, "Index", 
-                "最近点在坐标列表中的索引", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_POINT_ID, "Point",
+            "Reference point. Supports Point, Vector, Position, or Block Coordinate.",
+            NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_COORDINATES_ID, "Points",
+            "Collection of candidate points or block coordinates.",
+            NodeDataType.ANY, this));
+
+        addOutputPort(new BasePort(OUTPUT_CLOSEST_POINT_ID, "Closest Block",
+            "Closest point snapped to a block coordinate", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_DISTANCE_ID, "Distance",
+            "Distance from the reference point to the closest point", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_INDEX_ID, "Index",
+            "Index of the closest valid point in the input collection", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_POINT_DATA_ID, "Closest Point",
+            "Closest point as PointData", NodeDataType.POINT, this));
+        addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Closest Vector",
+            "Closest point as a Vector3d position", NodeDataType.VECTOR, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid",
+            "True when a closest point was found", NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Closest Point";
     }
 
     @Override
     public String getDescription() {
-        return this.description;
+        return "Finds the closest point in a point collection to a reference point.";
     }
 
-    // --- 核心逻辑 ---
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 获取输入值
-        Object pointObj = inputValues.get(INPUT_POINT_ID);
-        Object coordinatesObj = inputValues.get(INPUT_COORDINATES_ID);
-        
-        // 检查输入是否合法
-        if (pointObj instanceof BlockPos && coordinatesObj instanceof BlockPosList) {
-            BlockPos referencePoint = (BlockPos) pointObj;
-            BlockPosList coordinates = (BlockPosList) coordinatesObj;
-            
-            // 如果坐标列表不为空，查找最近点
-            if (!coordinates.isEmpty()) {
-                // 初始化最小距离为最大值
-                double minDistanceSquared = Double.MAX_VALUE;
-                BlockPos closestPoint = null;
-                int closestIndex = -1;
-                
-                // 遍历所有坐标，寻找距离最小的点
-                int index = 0;
-                for (BlockPos pos : coordinates) {
-                    double distanceSquared = calculateDistanceSquared(referencePoint, pos);
-                    if (distanceSquared < minDistanceSquared) {
-                        minDistanceSquared = distanceSquared;
-                        closestPoint = pos;
-                        closestIndex = index;
-                    }
-                    index++;
-                }
-                
-                // 设置输出值
-                if (closestPoint != null) {
-                    outputValues.put(OUTPUT_CLOSEST_POINT_ID, closestPoint);
-                    outputValues.put(OUTPUT_DISTANCE_ID, Math.sqrt(minDistanceSquared));
-                    outputValues.put(OUTPUT_INDEX_ID, closestIndex);
-                    return;
+        Vector3d reference = PointUtils.resolvePoint(inputValues.get(INPUT_POINT_ID));
+        if (!PointUtils.isFinite(reference)) {
+            writeInvalid();
+            return;
+        }
+
+        Object candidatesObj = inputValues.get(INPUT_COORDINATES_ID);
+        Iterable<?> candidates = toIterable(candidatesObj);
+        if (candidates == null) {
+            writeInvalid();
+            return;
+        }
+
+        double minDistanceSquared = Double.MAX_VALUE;
+        Vector3d closest = null;
+        int closestIndex = -1;
+        int index = 0;
+
+        for (Object candidateObj : candidates) {
+            Vector3d candidate = PointUtils.resolvePoint(candidateObj);
+            if (PointUtils.isFinite(candidate)) {
+                double distanceSquared = PointUtils.distanceSquared(reference, candidate);
+                if (distanceSquared < minDistanceSquared) {
+                    minDistanceSquared = distanceSquared;
+                    closest = candidate;
+                    closestIndex = index;
                 }
             }
+            index++;
         }
-        
-        // 如果没有有效输入或找不到最近点，清除所有输出
-        outputValues.clear();
+
+        if (closest == null) {
+            writeInvalid();
+            return;
+        }
+
+        outputValues.put(OUTPUT_CLOSEST_POINT_ID, BlockPos.ofFloored(closest.x, closest.y, closest.z));
+        outputValues.put(OUTPUT_DISTANCE_ID, Math.sqrt(minDistanceSquared));
+        outputValues.put(OUTPUT_INDEX_ID, closestIndex);
+        outputValues.put(OUTPUT_POINT_DATA_ID, new PointData(closest));
+        outputValues.put(OUTPUT_VECTOR_ID, new Vector3d(closest));
+        outputValues.put(OUTPUT_VALID_ID, true);
     }
-    
-    /**
-     * 计算两点之间的距离平方
-     * @param p1 第一个点
-     * @param p2 第二个点
-     * @return 距离平方
-     */
-    private double calculateDistanceSquared(BlockPos p1, BlockPos p2) {
-        double dx = p1.getX() - p2.getX();
-        double dy = p1.getY() - p2.getY();
-        double dz = p1.getZ() - p2.getZ();
-        return dx * dx + dy * dy + dz * dz;
+
+    private Iterable<?> toIterable(Object value) {
+        if (value instanceof BlockPosList blockPosList) {
+            return blockPosList;
+        }
+        if (value instanceof Collection<?> collection) {
+            return collection;
+        }
+        return null;
     }
-} 
+
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_CLOSEST_POINT_ID, null);
+        outputValues.put(OUTPUT_DISTANCE_ID, Double.NaN);
+        outputValues.put(OUTPUT_INDEX_ID, -1);
+        outputValues.put(OUTPUT_POINT_DATA_ID, null);
+        outputValues.put(OUTPUT_VECTOR_ID, null);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+}

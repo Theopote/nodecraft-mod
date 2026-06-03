@@ -6,7 +6,6 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -69,11 +68,12 @@ public class PointAlongVectorNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d point = resolvePoint(inputValues.get(INPUT_POINT_ID));
+        Vector3d point = PointUtils.resolvePoint(inputValues.get(INPUT_POINT_ID));
         Object vectorObj = inputValues.get(INPUT_VECTOR_ID);
         Object distanceObj = inputValues.get(INPUT_DISTANCE_ID);
 
-        if (point == null || !(vectorObj instanceof Vector3d inputVector) || !(distanceObj instanceof Number number)) {
+        if (!PointUtils.isFinite(point) || !(vectorObj instanceof Vector3d inputVector)
+            || !PointUtils.isFinite(inputVector) || !(distanceObj instanceof Number number)) {
             outputValues.put(OUTPUT_POINT_ID, null);
             outputValues.put(OUTPUT_VECTOR_ID, null);
             outputValues.put(OUTPUT_DIRECTION_ID, null);
@@ -82,7 +82,7 @@ public class PointAlongVectorNode extends BaseNode {
         }
 
         Vector3d direction = new Vector3d(inputVector);
-        if (direction.lengthSquared() <= 1.0E-12D) {
+        if (direction.lengthSquared() <= PointUtils.EPS) {
             outputValues.put(OUTPUT_POINT_ID, null);
             outputValues.put(OUTPUT_VECTOR_ID, null);
             outputValues.put(OUTPUT_DIRECTION_ID, null);
@@ -95,6 +95,14 @@ public class PointAlongVectorNode extends BaseNode {
         }
 
         double distance = number.doubleValue();
+        if (!PointUtils.isFinite(distance)) {
+            outputValues.put(OUTPUT_POINT_ID, null);
+            outputValues.put(OUTPUT_VECTOR_ID, null);
+            outputValues.put(OUTPUT_DIRECTION_ID, null);
+            outputValues.put(OUTPUT_VALID_ID, false);
+            return;
+        }
+
         Vector3d result = new Vector3d(point).fma(distance, direction);
 
         outputValues.put(OUTPUT_POINT_ID, new PointData(result));
@@ -127,18 +135,5 @@ public class PointAlongVectorNode extends BaseNode {
                 setNormalizeDirection(enabled);
             }
         }
-    }
-
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
     }
 }

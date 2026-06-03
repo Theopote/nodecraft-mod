@@ -12,8 +12,8 @@ import java.util.UUID;
 
 @NodeInfo(
     id = "reference.points.construct_coordinate",
-    displayName = "构建坐标",
-    description = "通过 X / Y / Z 数值输入构建坐标，并输出 Coordinate / Block Pos / X / Y / Z",
+    displayName = "Construct Coordinate",
+    description = "Constructs a block coordinate from X, Y, and Z integer components.",
     category = "reference.points",
     order = 1
 )
@@ -28,31 +28,44 @@ public class ConstructCoordinateNode extends BaseNode {
     private static final String OUTPUT_X_ID = "output_x";
     private static final String OUTPUT_Y_ID = "output_y";
     private static final String OUTPUT_Z_ID = "output_z";
+    private static final String OUTPUT_VALID_ID = "output_valid";
 
     public ConstructCoordinateNode() {
         super(UUID.randomUUID(), "reference.points.construct_coordinate");
 
-        addInputPort(new BasePort(INPUT_X_ID, "X", "X 分量输入", NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_Y_ID, "Y", "Y 分量输入", NodeDataType.INTEGER, this));
-        addInputPort(new BasePort(INPUT_Z_ID, "Z", "Z 分量输入", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_X_ID, "X", "X integer coordinate", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_Y_ID, "Y", "Y integer coordinate", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_Z_ID, "Z", "Z integer coordinate", NodeDataType.INTEGER, this));
 
-        addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate", "构建后的坐标", NodeDataType.COORDINATE, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCK_POS_ID, "Block Pos", "构建后的方块坐标", NodeDataType.BLOCK_POS, this));
-        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X 分量输出", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y 分量输出", NodeDataType.INTEGER, this));
-        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Z 分量输出", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_COORDINATE_ID, "Coordinate", "Constructed coordinate", NodeDataType.COORDINATE, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCK_POS_ID, "Block Pos", "Constructed block position", NodeDataType.BLOCK_POS, this));
+        addOutputPort(new BasePort(OUTPUT_X_ID, "X", "Resolved X coordinate", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Resolved Y coordinate", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_Z_ID, "Z", "Resolved Z coordinate", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether all inputs are valid finite numbers",
+            NodeDataType.BOOLEAN, this));
+    }
+
+    @Override
+    public String getDisplayName() {
+        return "Construct Coordinate";
     }
 
     @Override
     public String getDescription() {
-        return "通过 X / Y / Z 输入构建坐标，并输出 Coordinate / Block Pos / X / Y / Z。";
+        return "Constructs a block coordinate from X, Y, and Z integer components.";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        int x = toInt(inputValues.get(INPUT_X_ID));
-        int y = toInt(inputValues.get(INPUT_Y_ID));
-        int z = toInt(inputValues.get(INPUT_Z_ID));
+        Integer x = toInt(inputValues.get(INPUT_X_ID));
+        Integer y = toInt(inputValues.get(INPUT_Y_ID));
+        Integer z = toInt(inputValues.get(INPUT_Z_ID));
+
+        if (x == null || y == null || z == null) {
+            writeInvalid();
+            return;
+        }
 
         BlockPos blockPos = new BlockPos(x, y, z);
         outputValues.put(OUTPUT_COORDINATE_ID, blockPos);
@@ -60,12 +73,25 @@ public class ConstructCoordinateNode extends BaseNode {
         outputValues.put(OUTPUT_X_ID, x);
         outputValues.put(OUTPUT_Y_ID, y);
         outputValues.put(OUTPUT_Z_ID, z);
+        outputValues.put(OUTPUT_VALID_ID, true);
     }
 
-    private int toInt(Object value) {
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_COORDINATE_ID, null);
+        outputValues.put(OUTPUT_BLOCK_POS_ID, null);
+        outputValues.put(OUTPUT_X_ID, 0);
+        outputValues.put(OUTPUT_Y_ID, 0);
+        outputValues.put(OUTPUT_Z_ID, 0);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    private Integer toInt(Object value) {
         if (value instanceof Number number) {
-            return number.intValue();
+            double raw = number.doubleValue();
+            if (Double.isFinite(raw)) {
+                return number.intValue();
+            }
         }
-        return 0;
+        return null;
     }
 }
