@@ -24,6 +24,7 @@ public class BlockToVectorNode extends BaseNode {
 
     private static final String INPUT_COORDINATE_ID = "input_coordinate";
     private static final String OUTPUT_VECTOR_ID = "output_vector";
+    private static final String OUTPUT_VALID_ID = "output_valid";
 
     private boolean useBlockCenter = false;
 
@@ -31,9 +32,12 @@ public class BlockToVectorNode extends BaseNode {
         super(UUID.randomUUID(), "reference.points.block_to_vector");
 
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate",
-            "Block coordinate to convert", NodeDataType.BLOCK_POS, this));
+            "Coordinate to convert. Supports BlockPos, PointData, Vector3d, or Vec3d.",
+            NodeDataType.ANY, this));
         addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Vector",
             "Converted Vector3d position", NodeDataType.VECTOR, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid",
+            "Whether the input coordinate was valid", NodeDataType.BOOLEAN, this));
     }
 
     @Override
@@ -43,19 +47,22 @@ public class BlockToVectorNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Object coordinateObj = inputValues.get(INPUT_COORDINATE_ID);
-        Vector3d vector = new Vector3d(0.0, 0.0, 0.0);
-
-        if (coordinateObj instanceof BlockPos pos) {
-            double offset = useBlockCenter ? 0.5D : 0.0D;
-            vector = new Vector3d(
-                pos.getX() + offset,
-                pos.getY() + offset,
-                pos.getZ() + offset
-            );
+        BlockPos pos = PointUtils.toBlockPos(inputValues.get(INPUT_COORDINATE_ID));
+        if (pos == null) {
+            outputValues.put(OUTPUT_VECTOR_ID, new Vector3d());
+            outputValues.put(OUTPUT_VALID_ID, false);
+            return;
         }
 
+        double offset = useBlockCenter ? 0.5D : 0.0D;
+        Vector3d vector = new Vector3d(
+            pos.getX() + offset,
+            pos.getY() + offset,
+            pos.getZ() + offset
+        );
+
         outputValues.put(OUTPUT_VECTOR_ID, vector);
+        outputValues.put(OUTPUT_VALID_ID, true);
     }
 
     public boolean isUseBlockCenter() {
