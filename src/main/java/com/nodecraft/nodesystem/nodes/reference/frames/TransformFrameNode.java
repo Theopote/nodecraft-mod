@@ -11,6 +11,8 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
@@ -162,5 +164,45 @@ public class TransformFrameNode extends BaseNode {
         outputValues.put(OUTPUT_Z_AXIS_ID, null);
         outputValues.put(OUTPUT_PLANE_ID, null);
         outputValues.put(OUTPUT_VALID_ID, false);
+    }
+
+    @Override
+    public Object getNodeState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("translationX", translationX);
+        state.put("translationY", translationY);
+        state.put("translationZ", translationZ);
+        state.put("rotationX", rotationX);
+        state.put("rotationY", rotationY);
+        state.put("rotationZ", rotationZ);
+        state.put("scale", scale);
+        return state;
+    }
+
+    @Override
+    public void setNodeState(Object state) {
+        if (!(state instanceof Map<?, ?> map)) {
+            return;
+        }
+        translationX = finiteOrCurrent(map.get("translationX"), translationX);
+        translationY = finiteOrCurrent(map.get("translationY"), translationY);
+        translationZ = finiteOrCurrent(map.get("translationZ"), translationZ);
+        rotationX = finiteOrCurrent(map.get("rotationX"), rotationX);
+        rotationY = finiteOrCurrent(map.get("rotationY"), rotationY);
+        rotationZ = finiteOrCurrent(map.get("rotationZ"), rotationZ);
+        double loadedScale = finiteOrCurrent(map.get("scale"), scale);
+        if (Math.abs(loadedScale) > FrameUtils.EPS) {
+            scale = loadedScale;
+        }
+    }
+
+    private double finiteOrCurrent(Object value, double current) {
+        if (value instanceof Number number) {
+            double candidate = number.doubleValue();
+            if (Double.isFinite(candidate)) {
+                return candidate;
+            }
+        }
+        return current;
     }
 }

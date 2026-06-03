@@ -68,21 +68,22 @@ public class FaceCenterFrameNode extends BaseNode {
 
         Vector3d xAxis = FrameUtils.normalizedDirection(corners.get(0), corners.get(1));
         Vector3d yAxis = FrameUtils.normalizedDirection(corners.get(0), corners.get(3));
+        Vector3d center = face.getCenter();
         Vector3d zAxis = new Vector3d(face.getNormal());
 
-        if (xAxis == null || yAxis == null || !FrameUtils.isUsableAxis(zAxis)) {
+        if (xAxis == null || yAxis == null || !FrameUtils.isFinite(center) || !FrameUtils.isUsableAxis(zAxis)) {
             writeEmptyOutputs();
             return;
         }
 
         zAxis.normalize();
 
-        outputValues.put(OUTPUT_CENTER_ID, face.getCenter());
+        outputValues.put(OUTPUT_CENTER_ID, center);
         outputValues.put(OUTPUT_PLANE_ID, face.getPlane());
         outputValues.put(OUTPUT_X_AXIS_ID, xAxis);
         outputValues.put(OUTPUT_Y_AXIS_ID, yAxis);
         outputValues.put(OUTPUT_Z_AXIS_ID, zAxis);
-        outputValues.put(OUTPUT_NORMAL_ID, face.getNormal());
+        outputValues.put(OUTPUT_NORMAL_ID, new Vector3d(zAxis));
         outputValues.put(OUTPUT_CORNER_INDICES_ID, face.getCornerIndices());
         outputValues.put(OUTPUT_VALID_ID, true);
     }
