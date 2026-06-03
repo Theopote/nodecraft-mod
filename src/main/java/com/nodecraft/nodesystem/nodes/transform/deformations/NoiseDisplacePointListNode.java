@@ -5,9 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -51,6 +49,7 @@ public class NoiseDisplacePointListNode extends BaseNode {
     private static final String INPUT_AMPLITUDE_ID = "input_amplitude";
     private static final String INPUT_FREQUENCY_ID = "input_frequency";
     private static final String INPUT_SEED_ID = "input_seed";
+    private static final String INPUT_OFFSET_ID = "input_offset";
 
     private static final String OUTPUT_POINTS_ID = "output_points";
     private static final String OUTPUT_COUNT_ID = "output_count";
@@ -58,10 +57,11 @@ public class NoiseDisplacePointListNode extends BaseNode {
 
     public NoiseDisplacePointListNode() {
         super(UUID.randomUUID(), "transform.deformations.noise_displace");
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to displace", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to displace", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_AMPLITUDE_ID, "Amplitude", "Optional displacement amplitude override", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_FREQUENCY_ID, "Frequency", "Optional noise frequency override", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_SEED_ID, "Seed", "Optional noise seed override", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_OFFSET_ID, "Offset", "Optional noise-space offset override", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_POINTS_ID, "Points", "Displaced point list", NodeDataType.VECTOR_LIST, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of points in the displaced output", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "True when displacement was applied", NodeDataType.BOOLEAN, this));
@@ -83,6 +83,17 @@ public class NoiseDisplacePointListNode extends BaseNode {
         double resolvedAmplitude = resolveDouble(inputValues.get(INPUT_AMPLITUDE_ID), amplitude);
         double resolvedFrequency = resolveDouble(inputValues.get(INPUT_FREQUENCY_ID), frequency);
         int resolvedSeed = resolveInt(inputValues.get(INPUT_SEED_ID), seed);
+        Vector3d resolvedOffset = inputValues.get(INPUT_OFFSET_ID) instanceof Vector3d offsetInput
+            ? new Vector3d(offsetInput)
+            : new Vector3d(offset);
+        Vector3d axisWeight = new Vector3d(axisWeightX, axisWeightY, axisWeightZ);
+        if (!Double.isFinite(resolvedAmplitude)
+            || !Double.isFinite(resolvedFrequency)
+            || !DeformationUtils.isFinite(resolvedOffset)
+            || !DeformationUtils.isFinite(axisWeight)) {
+            writeEmptyOutputs();
+            return;
+        }
 
         List<Vector3d> displaced = new ArrayList<>(pointsInput.size());
         for (Object entry : pointsInput) {
@@ -90,9 +101,9 @@ public class NoiseDisplacePointListNode extends BaseNode {
             if (point == null) {
                 continue;
             }
-            double px = point.x + offset.x;
-            double py = point.y + offset.y;
-            double pz = point.z + offset.z;
+            double px = point.x + resolvedOffset.x;
+            double py = point.y + resolvedOffset.y;
+            double pz = point.z + resolvedOffset.z;
             double nx = noise(px, py, pz, resolvedFrequency, resolvedSeed ^ 0x45d9f3b);
             double ny = noise(px, py, pz, resolvedFrequency, resolvedSeed ^ 0x9e3779b9);
             double nz = noise(px, py, pz, resolvedFrequency, resolvedSeed ^ 0x7f4a7c15);
@@ -128,15 +139,15 @@ public class NoiseDisplacePointListNode extends BaseNode {
         if (!(state instanceof Map<?, ?> map)) {
             return;
         }
-        if (map.get("amplitude") instanceof Number value) amplitude = value.doubleValue();
-        if (map.get("frequency") instanceof Number value) frequency = value.doubleValue();
+        amplitude = DeformationUtils.finiteOrCurrent(map.get("amplitude"), amplitude);
+        frequency = DeformationUtils.finiteOrCurrent(map.get("frequency"), frequency);
         if (map.get("seed") instanceof Number value) seed = value.intValue();
-        if (map.get("offsetX") instanceof Number value) offset.x = value.doubleValue();
-        if (map.get("offsetY") instanceof Number value) offset.y = value.doubleValue();
-        if (map.get("offsetZ") instanceof Number value) offset.z = value.doubleValue();
-        if (map.get("axisWeightX") instanceof Number value) axisWeightX = value.doubleValue();
-        if (map.get("axisWeightY") instanceof Number value) axisWeightY = value.doubleValue();
-        if (map.get("axisWeightZ") instanceof Number value) axisWeightZ = value.doubleValue();
+        offset.x = DeformationUtils.finiteOrCurrent(map.get("offsetX"), offset.x);
+        offset.y = DeformationUtils.finiteOrCurrent(map.get("offsetY"), offset.y);
+        offset.z = DeformationUtils.finiteOrCurrent(map.get("offsetZ"), offset.z);
+        axisWeightX = DeformationUtils.finiteOrCurrent(map.get("axisWeightX"), axisWeightX);
+        axisWeightY = DeformationUtils.finiteOrCurrent(map.get("axisWeightY"), axisWeightY);
+        axisWeightZ = DeformationUtils.finiteOrCurrent(map.get("axisWeightZ"), axisWeightZ);
     }
 
     private void writeEmptyOutputs() {
@@ -146,14 +157,12 @@ public class NoiseDisplacePointListNode extends BaseNode {
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) return pointData.getPosition();
-        if (value instanceof Vector3d vector) return new Vector3d(vector);
-        if (value instanceof BlockPos blockPos) return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 
     private double resolveDouble(Object value, double fallback) {
-        return value instanceof Number number ? number.doubleValue() : fallback;
+        return DeformationUtils.resolveFiniteDouble(value, fallback);
     }
 
     private int resolveInt(Object value, int fallback) {
@@ -168,4 +177,3 @@ public class NoiseDisplacePointListNode extends BaseNode {
         return (s - Math.floor(s)) * 2.0d - 1.0d;
     }
 }
-

@@ -5,9 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -56,7 +54,7 @@ public class BendPointListNode extends BaseNode {
 
     public BendPointListNode() {
         super(UUID.randomUUID(), "transform.deformations.bend");
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to bend", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to bend", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_AXIS_ORIGIN_ID, "Axis Origin", "Origin point of the bend axis", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_AXIS_DIRECTION_ID, "Axis Direction", "Direction vector of the bend axis", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_BEND_NORMAL_ID, "Bend Normal", "Direction the bend curves toward", NodeDataType.VECTOR, this));
@@ -76,13 +74,13 @@ public class BendPointListNode extends BaseNode {
     public void processNode(@Nullable ExecutionContext context) {
         Object pointsObj = inputValues.get(INPUT_POINTS_ID);
         Vector3d axisOrigin = resolvePoint(inputValues.get(INPUT_AXIS_ORIGIN_ID));
-        if (!(pointsObj instanceof List<?> pointsInput) || axisOrigin == null || !(inputValues.get(INPUT_AXIS_DIRECTION_ID) instanceof Vector3d axisDirection)) {
+        if (!(pointsObj instanceof List<?> pointsInput) || !DeformationUtils.isFinite(axisOrigin) || !(inputValues.get(INPUT_AXIS_DIRECTION_ID) instanceof Vector3d axisDirection)) {
             writeEmptyOutputs();
             return;
         }
 
         Vector3d axis = new Vector3d(axisDirection);
-        if (axis.lengthSquared() <= EPSILON) {
+        if (!DeformationUtils.isUsableDirection(axis)) {
             writeEmptyOutputs();
             return;
         }
@@ -93,11 +91,24 @@ public class BendPointListNode extends BaseNode {
         if (normal.lengthSquared() <= EPSILON) {
             normal = defaultNormal(axis);
         }
+        if (!DeformationUtils.isUsableDirection(normal)) {
+            writeEmptyOutputs();
+            return;
+        }
         normal.normalize();
-        Vector3d binormal = new Vector3d(axis).cross(normal).normalize();
+        Vector3d binormal = new Vector3d(axis).cross(normal);
+        if (!DeformationUtils.isUsableDirection(binormal)) {
+            writeEmptyOutputs();
+            return;
+        }
+        binormal.normalize();
 
         double resolvedBendDegrees = resolveDouble(inputValues.get(INPUT_BEND_DEGREES_ID), bendDegrees);
         double resolvedBendLength = Math.max(EPSILON, resolveDouble(inputValues.get(INPUT_BEND_LENGTH_ID), bendLength));
+        if (!Double.isFinite(resolvedBendDegrees) || !Double.isFinite(resolvedBendLength)) {
+            writeEmptyOutputs();
+            return;
+        }
         double totalAngleRadians = Math.toRadians(resolvedBendDegrees);
         double curvature = Math.abs(totalAngleRadians) <= EPSILON ? 0.0d : totalAngleRadians / resolvedBendLength;
         double radius = Math.abs(curvature) <= EPSILON ? 0.0d : 1.0d / curvature;
@@ -126,7 +137,7 @@ public class BendPointListNode extends BaseNode {
                     .add(new Vector3d(axis).mul(radius * Math.sin(theta)));
             }
 
-            Vector3d rotatedRadial = rotateAroundAxis(radialComponent, binormal, theta);
+            Vector3d rotatedRadial = DeformationUtils.rotateAroundAxis(radialComponent, binormal, theta);
             bentPoints.add(centerline.add(rotatedRadial));
         }
 
@@ -151,10 +162,10 @@ public class BendPointListNode extends BaseNode {
             return;
         }
         if (map.get("bendDegrees") instanceof Number value) {
-            bendDegrees = value.doubleValue();
+            bendDegrees = DeformationUtils.finiteOrCurrent(value, bendDegrees);
         }
         if (map.get("bendLength") instanceof Number value) {
-            bendLength = Math.max(EPSILON, value.doubleValue());
+            bendLength = Math.max(EPSILON, DeformationUtils.finiteOrCurrent(value, bendLength));
         }
         if (map.get("clampMode") instanceof String value) {
             try {
@@ -179,14 +190,12 @@ public class BendPointListNode extends BaseNode {
     }
 
     private double resolveDouble(Object value, double fallback) {
-        return value instanceof Number number ? number.doubleValue() : fallback;
+        return DeformationUtils.resolveFiniteDouble(value, fallback);
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) return pointData.getPosition();
-        if (value instanceof Vector3d vector) return new Vector3d(vector);
-        if (value instanceof BlockPos blockPos) return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 
     private double applyClampMode(double normalizedDistance) {
@@ -217,13 +226,4 @@ public class BendPointListNode extends BaseNode {
         };
     }
 
-    private Vector3d rotateAroundAxis(Vector3d vector, Vector3d axis, double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-        Vector3d term1 = new Vector3d(vector).mul(cos);
-        Vector3d term2 = new Vector3d(axis).cross(vector, new Vector3d()).mul(sin);
-        Vector3d term3 = new Vector3d(axis).mul(axis.dot(vector) * (1.0d - cos));
-        return term1.add(term2).add(term3);
-    }
 }
-

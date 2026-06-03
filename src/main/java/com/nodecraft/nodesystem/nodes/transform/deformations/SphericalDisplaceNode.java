@@ -5,10 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -52,7 +49,7 @@ public class SphericalDisplaceNode extends BaseNode {
     public SphericalDisplaceNode() {
         super(UUID.randomUUID(), "transform.deformations.spherical_displace");
 
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Input point list", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Input point list", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center of spherical displacement", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_STRENGTH_ID, "Strength", "Optional displacement strength override", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Optional influence radius override", NodeDataType.DOUBLE, this));
@@ -85,9 +82,17 @@ public class SphericalDisplaceNode extends BaseNode {
         if (center == null) {
             center = new Vector3d(0.0d, 0.0d, 0.0d);
         }
+        if (!DeformationUtils.isFinite(center)) {
+            writeInvalid();
+            return;
+        }
         double resolvedStrength = resolveDouble(inputValues.get(INPUT_STRENGTH_ID), strength);
         double resolvedRadius = Math.max(1.0e-9d, Math.abs(resolveDouble(inputValues.get(INPUT_RADIUS_ID), radius)));
         double resolvedPower = Math.max(1.0e-6d, resolveDouble(inputValues.get(INPUT_POWER_ID), falloffPower));
+        if (!Double.isFinite(resolvedStrength) || !Double.isFinite(resolvedRadius) || !Double.isFinite(resolvedPower)) {
+            writeInvalid();
+            return;
+        }
 
         List<Vector3d> out = new ArrayList<>(inputPoints.size());
         for (Object entry : inputPoints) {
@@ -135,15 +140,12 @@ public class SphericalDisplaceNode extends BaseNode {
     }
 
     private double resolveDouble(Object value, double fallback) {
-        return value instanceof Number number ? number.doubleValue() : fallback;
+        return DeformationUtils.resolveFiniteDouble(value, fallback);
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof Vector3d v) return new Vector3d(v);
-        if (value instanceof Vec3d v) return new Vector3d(v.x, v.y, v.z);
-        if (value instanceof PointData p) return new Vector3d(p.getPosition());
-        if (value instanceof BlockPos b) return new Vector3d(b.getX(), b.getY(), b.getZ());
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 
     @Override
@@ -161,9 +163,9 @@ public class SphericalDisplaceNode extends BaseNode {
         if (!(state instanceof Map<?, ?> map)) {
             return;
         }
-        if (map.get("strength") instanceof Number n) strength = n.doubleValue();
-        if (map.get("radius") instanceof Number n) radius = n.doubleValue();
-        if (map.get("falloffPower") instanceof Number n) falloffPower = n.doubleValue();
+        strength = DeformationUtils.finiteOrCurrent(map.get("strength"), strength);
+        radius = Math.max(1.0e-9d, Math.abs(DeformationUtils.finiteOrCurrent(map.get("radius"), radius)));
+        falloffPower = Math.max(1.0e-6d, DeformationUtils.finiteOrCurrent(map.get("falloffPower"), falloffPower));
         if (map.get("affectOutsideRadius") instanceof Boolean b) affectOutsideRadius = b;
     }
 }

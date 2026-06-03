@@ -5,15 +5,15 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.PointListKnn3d;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
@@ -52,7 +52,7 @@ public class RelaxPointListNode extends BaseNode {
     public RelaxPointListNode() {
         super(UUID.randomUUID(), "transform.deformations.relax_points");
 
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to smooth", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to smooth", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_K_ID, "K", "Neighbor count override", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_ITERATIONS_ID, "Iterations", "Smoothing iterations override", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_BLEND_ID, "Blend", "Blend factor override", NodeDataType.DOUBLE, this));
@@ -150,19 +150,32 @@ public class RelaxPointListNode extends BaseNode {
     }
 
     private static double resolveDouble(Object value, double fallback) {
-        return value instanceof Number n ? n.doubleValue() : fallback;
+        return DeformationUtils.resolveFiniteDouble(value, fallback);
     }
 
     private static Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
+    }
+
+    @Override
+    public Object getNodeState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("neighborsK", neighborsK);
+        state.put("iterations", iterations);
+        state.put("blend", blend);
+        state.put("maxPoints", maxPoints);
+        return state;
+    }
+
+    @Override
+    public void setNodeState(Object state) {
+        if (!(state instanceof Map<?, ?> map)) {
+            return;
         }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        neighborsK = Math.max(1, DeformationUtils.intOrCurrent(map.get("neighborsK"), neighborsK));
+        iterations = Math.max(1, DeformationUtils.intOrCurrent(map.get("iterations"), iterations));
+        blend = Math.max(0.0d, Math.min(1.0d, DeformationUtils.finiteOrCurrent(map.get("blend"), blend)));
+        maxPoints = Math.max(8, Math.min(8192, DeformationUtils.intOrCurrent(map.get("maxPoints"), maxPoints)));
     }
 }

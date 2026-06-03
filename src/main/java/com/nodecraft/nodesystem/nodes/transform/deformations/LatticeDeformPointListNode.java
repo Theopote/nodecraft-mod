@@ -5,14 +5,14 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
@@ -48,7 +48,7 @@ public class LatticeDeformPointListNode extends BaseNode {
     public LatticeDeformPointListNode() {
         super(UUID.randomUUID(), "transform.deformations.lattice_deform");
 
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to deform", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to deform", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_MIN_ID, "Min", "Lattice box minimum corner", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_MAX_ID, "Max", "Lattice box maximum corner", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_OFFSETS_ID, "Offsets",
@@ -81,6 +81,10 @@ public class LatticeDeformPointListNode extends BaseNode {
             writeEmpty();
             return;
         }
+        if (!DeformationUtils.isFinite(min) || !DeformationUtils.isFinite(max)) {
+            writeEmpty();
+            return;
+        }
 
         int nx = clampGrid(gridX);
         int ny = clampGrid(gridY);
@@ -92,7 +96,7 @@ public class LatticeDeformPointListNode extends BaseNode {
 
         List<Vector3d> controls = new ArrayList<>(expected);
         for (Object o : offsetList) {
-            if (o instanceof Vector3d v) {
+            if (o instanceof Vector3d v && DeformationUtils.isFinite(v)) {
                 controls.add(new Vector3d(v));
             }
         }
@@ -105,7 +109,7 @@ public class LatticeDeformPointListNode extends BaseNode {
         Vector3d mx = new Vector3d(max);
         swapIfNeeded(mn, mx);
         Vector3d span = new Vector3d(mx).sub(mn);
-        if (span.lengthSquared() < EPS) {
+        if (span.x <= EPS || span.y <= EPS || span.z <= EPS) {
             writeEmpty();
             return;
         }
@@ -209,16 +213,27 @@ public class LatticeDeformPointListNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
+    @Override
+    public Object getNodeState() {
+        Map<String, Object> state = new HashMap<>();
+        state.put("gridX", gridX);
+        state.put("gridY", gridY);
+        state.put("gridZ", gridZ);
+        return state;
+    }
+
+    @Override
+    public void setNodeState(Object state) {
+        if (!(state instanceof Map<?, ?> map)) {
+            return;
+        }
+        gridX = clampGrid(DeformationUtils.intOrCurrent(map.get("gridX"), gridX));
+        gridY = clampGrid(DeformationUtils.intOrCurrent(map.get("gridY"), gridY));
+        gridZ = clampGrid(DeformationUtils.intOrCurrent(map.get("gridZ"), gridZ));
+    }
+
     private static Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 }

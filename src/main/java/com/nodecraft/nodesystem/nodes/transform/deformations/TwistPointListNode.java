@@ -5,9 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -56,7 +54,7 @@ public class TwistPointListNode extends BaseNode {
     public TwistPointListNode() {
         super(UUID.randomUUID(), "transform.deformations.twist");
 
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to twist", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to twist", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_AXIS_ORIGIN_ID, "Axis Origin", "Origin point of the twist axis", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_AXIS_DIRECTION_ID, "Axis Direction", "Direction vector of the twist axis", NodeDataType.VECTOR, this));
         addInputPort(new BasePort(INPUT_ANGLE_DEGREES_ID, "Angle Degrees", "Optional total twist angle override in degrees", NodeDataType.DOUBLE, this));
@@ -78,13 +76,13 @@ public class TwistPointListNode extends BaseNode {
         Vector3d axisOrigin = resolvePoint(inputValues.get(INPUT_AXIS_ORIGIN_ID));
         Object axisDirectionObj = inputValues.get(INPUT_AXIS_DIRECTION_ID);
 
-        if (!(pointsObj instanceof List<?> pointsInput) || axisOrigin == null || !(axisDirectionObj instanceof Vector3d axisDirection)) {
+        if (!(pointsObj instanceof List<?> pointsInput) || !DeformationUtils.isFinite(axisOrigin) || !(axisDirectionObj instanceof Vector3d axisDirection)) {
             writeEmptyOutputs();
             return;
         }
 
         Vector3d axis = new Vector3d(axisDirection);
-        if (axis.lengthSquared() <= EPSILON) {
+        if (!DeformationUtils.isUsableDirection(axis)) {
             writeEmptyOutputs();
             return;
         }
@@ -92,6 +90,10 @@ public class TwistPointListNode extends BaseNode {
 
         double resolvedAngleDegrees = resolveDouble(inputValues.get(INPUT_ANGLE_DEGREES_ID), angleDegrees);
         double resolvedTwistLength = Math.max(EPSILON, resolveDouble(inputValues.get(INPUT_TWIST_LENGTH_ID), twistLength));
+        if (!Double.isFinite(resolvedAngleDegrees) || !Double.isFinite(resolvedTwistLength)) {
+            writeEmptyOutputs();
+            return;
+        }
         double totalAngleRadians = Math.toRadians(resolvedAngleDegrees);
 
         List<Vector3d> twistedPoints = new ArrayList<>(pointsInput.size());
@@ -109,7 +111,7 @@ public class TwistPointListNode extends BaseNode {
 
             Vector3d axialComponent = new Vector3d(axis).mul(axialDistance);
             Vector3d radialComponent = new Vector3d(offset).sub(axialComponent);
-            Vector3d rotatedRadial = rotateAroundAxis(radialComponent, axis, angle);
+            Vector3d rotatedRadial = DeformationUtils.rotateAroundAxis(radialComponent, axis, angle);
             twistedPoints.add(new Vector3d(axisOrigin).add(axialComponent).add(rotatedRadial));
         }
 
@@ -148,7 +150,7 @@ public class TwistPointListNode extends BaseNode {
     }
 
     public void setAngleDegrees(double angleDegrees) {
-        this.angleDegrees = angleDegrees;
+        this.angleDegrees = DeformationUtils.resolveFiniteDouble(angleDegrees, this.angleDegrees);
         markDirty();
     }
 
@@ -157,7 +159,7 @@ public class TwistPointListNode extends BaseNode {
     }
 
     public void setTwistLength(double twistLength) {
-        this.twistLength = Math.max(EPSILON, twistLength);
+        this.twistLength = Math.max(EPSILON, DeformationUtils.resolveFiniteDouble(twistLength, this.twistLength));
         markDirty();
     }
 
@@ -190,22 +192,14 @@ public class TwistPointListNode extends BaseNode {
 
     private double resolveDouble(Object value, double fallback) {
         if (value instanceof Number number) {
-            return number.doubleValue();
+            return DeformationUtils.resolveFiniteDouble(number, fallback);
         }
         return fallback;
     }
 
     private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 
     private double applyClampMode(double normalizedDistance) {
@@ -216,13 +210,4 @@ public class TwistPointListNode extends BaseNode {
         };
     }
 
-    private Vector3d rotateAroundAxis(Vector3d vector, Vector3d axis, double angle) {
-        double cos = Math.cos(angle);
-        double sin = Math.sin(angle);
-
-        Vector3d term1 = new Vector3d(vector).mul(cos);
-        Vector3d term2 = new Vector3d(axis).cross(vector, new Vector3d()).mul(sin);
-        Vector3d term3 = new Vector3d(axis).mul(axis.dot(vector) * (1.0d - cos));
-        return term1.add(term2).add(term3);
-    }
 }

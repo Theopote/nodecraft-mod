@@ -5,11 +5,9 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.Curve;
 import com.nodecraft.nodesystem.util.PolylineClosestPoint3d;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
@@ -63,7 +61,7 @@ public class CurveAttractPointListNode extends BaseNode {
     public CurveAttractPointListNode() {
         super(UUID.randomUUID(), "transform.deformations.curve_attract");
 
-        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to deform", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_POINTS_ID, "Points", "Point list to deform", NodeDataType.ANY, this));
         addInputPort(new BasePort(INPUT_CURVE_ID, "Curve", "Target curve (sampled internally)", NodeDataType.CURVE, this));
         addInputPort(new BasePort(INPUT_STRENGTH_ID, "Strength", "Attraction strength override", NodeDataType.DOUBLE, this));
         addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Falloff radius override", NodeDataType.DOUBLE, this));
@@ -100,6 +98,10 @@ public class CurveAttractPointListNode extends BaseNode {
 
         double str = resolveDouble(inputValues.get(INPUT_STRENGTH_ID), strength);
         double rad = Math.max(EPS, resolveDouble(inputValues.get(INPUT_RADIUS_ID), radius));
+        if (!Double.isFinite(str) || !Double.isFinite(rad)) {
+            writeEmpty();
+            return;
+        }
         str = Math.max(0.0d, Math.min(1.0d, str));
         DisplacementMode mode = displacementMode == null ? DisplacementMode.TOWARD_POINT : displacementMode;
 
@@ -163,8 +165,8 @@ public class CurveAttractPointListNode extends BaseNode {
         if (!(state instanceof Map<?, ?> map)) {
             return;
         }
-        if (map.get("strength") instanceof Number value) strength = value.doubleValue();
-        if (map.get("radius") instanceof Number value) radius = value.doubleValue();
+        strength = DeformationUtils.finiteOrCurrent(map.get("strength"), strength);
+        radius = Math.max(EPS, DeformationUtils.finiteOrCurrent(map.get("radius"), radius));
         if (map.get("displacementMode") instanceof String value) {
             try {
                 displacementMode = DisplacementMode.valueOf(value.trim().toUpperCase());
@@ -189,19 +191,11 @@ public class CurveAttractPointListNode extends BaseNode {
     }
 
     private static double resolveDouble(Object value, double fallback) {
-        return value instanceof Number n ? n.doubleValue() : fallback;
+        return DeformationUtils.resolveFiniteDouble(value, fallback);
     }
 
     private static Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
+        Vector3d point = DeformationUtils.resolvePoint(value);
+        return DeformationUtils.isFinite(point) ? point : null;
     }
 }
