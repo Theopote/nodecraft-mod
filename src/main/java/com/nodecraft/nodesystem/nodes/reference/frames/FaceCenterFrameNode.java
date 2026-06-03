@@ -66,11 +66,11 @@ public class FaceCenterFrameNode extends BaseNode {
             return;
         }
 
-        Vector3d xAxis = direction(corners.get(0), corners.get(1));
-        Vector3d yAxis = direction(corners.get(0), corners.get(3));
+        Vector3d xAxis = FrameUtils.normalizedDirection(corners.get(0), corners.get(1));
+        Vector3d yAxis = FrameUtils.normalizedDirection(corners.get(0), corners.get(3));
         Vector3d zAxis = new Vector3d(face.getNormal());
 
-        if (xAxis == null || yAxis == null || zAxis.lengthSquared() < 1.0e-12) {
+        if (xAxis == null || yAxis == null || !FrameUtils.isUsableAxis(zAxis)) {
             writeEmptyOutputs();
             return;
         }
@@ -98,11 +98,4 @@ public class FaceCenterFrameNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
-    private Vector3d direction(Vector3d from, Vector3d to) {
-        Vector3d axis = new Vector3d(to).sub(from);
-        if (axis.lengthSquared() < 1.0e-12) {
-            return null;
-        }
-        return axis.normalize();
-    }
 }

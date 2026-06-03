@@ -6,9 +6,7 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix3d;
 import org.joml.Vector3d;
@@ -83,13 +81,26 @@ public class TransformFrameNode extends BaseNode {
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        Vector3d origin = resolvePoint(inputValues.get(INPUT_ORIGIN_ID));
+        Object originObj = inputValues.get(INPUT_ORIGIN_ID);
+        Vector3d origin = FrameUtils.resolvePoint(originObj);
         if (origin == null) {
+            if (originObj != null) {
+                writeInvalid();
+                return;
+            }
             origin = new Vector3d(0.0d, 0.0d, 0.0d);
+        }
+        if (!FrameUtils.isFinite(origin)) {
+            writeInvalid();
+            return;
         }
         Vector3d xAxis = axisOrDefault(inputValues.get(INPUT_X_AXIS_ID), 1.0d, 0.0d, 0.0d);
         Vector3d yAxis = axisOrDefault(inputValues.get(INPUT_Y_AXIS_ID), 0.0d, 1.0d, 0.0d);
         Vector3d zAxis = axisOrDefault(inputValues.get(INPUT_Z_AXIS_ID), 0.0d, 0.0d, 1.0d);
+        if (xAxis == null || yAxis == null || zAxis == null) {
+            writeInvalid();
+            return;
+        }
 
         Vector3d translation = inputValues.get(INPUT_TRANSLATION_ID) instanceof Vector3d t
             ? new Vector3d(t)
@@ -98,8 +109,14 @@ public class TransformFrameNode extends BaseNode {
         double ry = inputValues.get(INPUT_ROT_Y_ID) instanceof Number n ? n.doubleValue() : rotationY;
         double rz = inputValues.get(INPUT_ROT_Z_ID) instanceof Number n ? n.doubleValue() : rotationZ;
         double s = inputValues.get(INPUT_SCALE_ID) instanceof Number n ? n.doubleValue() : scale;
-        if (!Double.isFinite(s) || Math.abs(s) < 1.0e-9d) {
-            s = 1.0d;
+        if (!FrameUtils.isFinite(translation)
+            || !Double.isFinite(rx)
+            || !Double.isFinite(ry)
+            || !Double.isFinite(rz)
+            || !Double.isFinite(s)
+            || Math.abs(s) <= FrameUtils.EPS) {
+            writeInvalid();
+            return;
         }
 
         Matrix3d rotation = new Matrix3d().rotateXYZ(
@@ -113,9 +130,12 @@ public class TransformFrameNode extends BaseNode {
         Vector3d outZ = rotation.transform(new Vector3d(zAxis)).mul(s);
         Vector3d outOrigin = origin.add(translation, new Vector3d());
 
-        Vector3d planeNormal = outZ.lengthSquared() < 1.0e-12d
-            ? new Vector3d(0.0d, 0.0d, 1.0d)
-            : new Vector3d(outZ).normalize();
+        if (!FrameUtils.isUsableAxis(outX) || !FrameUtils.isUsableAxis(outY) || !FrameUtils.isUsableAxis(outZ)) {
+            writeInvalid();
+            return;
+        }
+
+        Vector3d planeNormal = new Vector3d(outZ).normalize();
 
         outputValues.put(OUTPUT_ORIGIN_ID, outOrigin);
         outputValues.put(OUTPUT_X_AXIS_ID, outX);
@@ -126,23 +146,21 @@ public class TransformFrameNode extends BaseNode {
     }
 
     private Vector3d axisOrDefault(Object axisObj, double x, double y, double z) {
-        if (axisObj instanceof Vector3d v && v.lengthSquared() > 1.0e-12d) {
+        if (axisObj == null) {
+            return new Vector3d(x, y, z);
+        }
+        if (axisObj instanceof Vector3d v && FrameUtils.isUsableAxis(v)) {
             return new Vector3d(v);
-        }
-        return new Vector3d(x, y, z);
-    }
-
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
         }
         return null;
     }
-}
 
+    private void writeInvalid() {
+        outputValues.put(OUTPUT_ORIGIN_ID, null);
+        outputValues.put(OUTPUT_X_AXIS_ID, null);
+        outputValues.put(OUTPUT_Y_AXIS_ID, null);
+        outputValues.put(OUTPUT_Z_AXIS_ID, null);
+        outputValues.put(OUTPUT_PLANE_ID, null);
+        outputValues.put(OUTPUT_VALID_ID, false);
+    }
+}

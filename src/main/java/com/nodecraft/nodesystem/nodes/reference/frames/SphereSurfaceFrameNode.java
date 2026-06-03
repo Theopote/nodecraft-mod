@@ -5,10 +5,8 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.datatypes.PlaneData;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.datatypes.SphereData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -22,8 +20,6 @@ import java.util.UUID;
     order = 1
 )
 public class SphereSurfaceFrameNode extends BaseNode {
-
-    private static final double EPSILON = 1.0e-9d;
 
     private static final String INPUT_SPHERE_ID = "input_sphere";
     private static final String INPUT_POINT_ID = "input_point";
@@ -61,37 +57,44 @@ public class SphereSurfaceFrameNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object sphereObj = inputValues.get(INPUT_SPHERE_ID);
-        Vector3d point = resolvePoint(inputValues.get(INPUT_POINT_ID));
+        Vector3d point = FrameUtils.resolvePoint(inputValues.get(INPUT_POINT_ID));
 
-        if (!(sphereObj instanceof SphereData sphere) || point == null) {
+        if (!(sphereObj instanceof SphereData sphere) || !FrameUtils.isFinite(point)) {
             writeEmptyOutputs();
             return;
         }
 
         Vector3d center = sphere.getCenter();
         double radius = sphere.getRadius();
+        if (!FrameUtils.isFinite(center) || !Double.isFinite(radius) || radius <= FrameUtils.EPS) {
+            writeEmptyOutputs();
+            return;
+        }
+
         Vector3d radial = new Vector3d(point).sub(center);
-        Vector3d normal = radial.lengthSquared() > EPSILON
-            ? radial.normalize()
-            : new Vector3d(0.0d, 1.0d, 0.0d);
+        if (!FrameUtils.isUsableAxis(radial)) {
+            writeEmptyOutputs();
+            return;
+        }
+        Vector3d normal = radial.normalize();
         Vector3d origin = new Vector3d(normal).mul(radius).add(center);
 
         Vector3d referenceUp = Math.abs(normal.y) < 0.99d
             ? new Vector3d(0.0d, 1.0d, 0.0d)
             : new Vector3d(1.0d, 0.0d, 0.0d);
         Vector3d xAxis = referenceUp.cross(normal, new Vector3d());
-        if (xAxis.lengthSquared() <= EPSILON) {
+        if (!FrameUtils.isUsableAxis(xAxis)) {
             referenceUp.set(0.0d, 0.0d, 1.0d);
             xAxis = referenceUp.cross(normal, new Vector3d());
         }
-        if (xAxis.lengthSquared() <= EPSILON) {
+        if (!FrameUtils.isUsableAxis(xAxis)) {
             writeEmptyOutputs();
             return;
         }
         xAxis.normalize();
 
         Vector3d yAxis = new Vector3d(normal).cross(xAxis);
-        if (yAxis.lengthSquared() <= EPSILON) {
+        if (!FrameUtils.isUsableAxis(yAxis)) {
             writeEmptyOutputs();
             return;
         }
@@ -120,16 +123,4 @@ public class SphereSurfaceFrameNode extends BaseNode {
         outputValues.put(OUTPUT_VALID_ID, false);
     }
 
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
-    }
 }
