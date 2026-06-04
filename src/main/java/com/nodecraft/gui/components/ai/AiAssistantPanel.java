@@ -792,12 +792,6 @@ public final class AiAssistantPanel {
             aiLastSubmittedPrompt = trimmedPrompt;
             addAiChatMessage("user", trimmedPrompt);
             aiPlanStatusMessage = "Processing prompt...";
-            addAiChatMessage(
-                "assistant",
-                aiEnableRemotePlanner.get()
-                    ? "AI is thinking... remote planner request is being prepared."
-                    : "AI is generating a local draft plan (remote planner is currently disabled)."
-            );
             NodeCraft.LOGGER.info("[AI_SEND] Processing prompt. chars={}, remoteEnabled={}",
                     trimmedPrompt.length(), aiEnableRemotePlanner.get());
 
@@ -887,7 +881,7 @@ public final class AiAssistantPanel {
                 buildConversationHistory(userPrompt, userPromptPayload);
         AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
                 aiApiBaseUrl.get(),
-                aiApiKey.get(),
+                resolveEffectiveApiKey(),
                 aiModel.get(),
                 AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
                 systemPrompt,
@@ -921,7 +915,7 @@ public final class AiAssistantPanel {
 
         AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
                 aiApiBaseUrl.get(),
-                aiApiKey.get(),
+                resolveEffectiveApiKey(),
                 aiModel.get(),
                 AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
                 aiSystemPrompt.get(),
@@ -1048,7 +1042,7 @@ public final class AiAssistantPanel {
             String error = formatRemoteErrorMessage(result);
             aiPlanStatusMessage = error;
             addAiChatMessage("assistant", error);
-            fallbackToLocalPlan(prompt, "remote request failed");
+            setPendingAiPlan(null);
             return;
         }
 
@@ -1078,7 +1072,8 @@ public final class AiAssistantPanel {
                     return;
                 }
                 setPendingAiPlan(null);
-                fallbackToLocalPlan(prompt, "remote JSON invalid");
+                aiPlanStatusMessage = errorMessage + " No fallback plan was generated; fix the remote output or switch to local mode explicitly.";
+                addAiChatMessage("assistant", aiPlanStatusMessage);
             }
             return;
         }
@@ -1132,27 +1127,6 @@ public final class AiAssistantPanel {
         } else if (!warningSuffix.isBlank()) {
             aiPlanStatusMessage = aiPlanStatusMessage + warningSuffix;
         }
-    }
-
-    private void fallbackToLocalPlan(String prompt, String reason) {
-        String localDslJson = AiPlanDslWorkflowService.toDslJson(
-                AiPlanDslWorkflowService.buildMockGraphPlan(prompt)
-        );
-        AiGraphDslSupport.ParseValidationResult localParsed =
-                AiGraphDslSupport.parseAndValidate(localDslJson, NodeRegistry.getInstance());
-
-        if (!localParsed.isSuccess() || localParsed.graph() == null) {
-            aiPlanStatusMessage = "Local fallback also failed: " + String.join("; ", localParsed.errors());
-            addAiChatMessage("assistant", aiPlanStatusMessage);
-            return;
-        }
-
-        setPendingAiPlan(fromServiceGraphPlan(AiPlanDslWorkflowService.fromDsl(localParsed.graph())));
-        aiPreviewFocusedNodeRef = "";
-        aiPreviewFocusScrollPending = false;
-        String warningSuffix = formatValidationWarningSuffix(localParsed.warnings());
-        aiPlanStatusMessage = "Remote planner fallback applied (" + reason + "). Review and click Apply Plan." + warningSuffix;
-        addAiChatMessage("assistant", aiPlanStatusMessage);
     }
 
     private boolean tryStartRemoteDslRepair(String originalPrompt, String invalidDslOrModelResponse, List<String> parseErrors) {
@@ -1211,7 +1185,7 @@ public final class AiAssistantPanel {
         );
         AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
                 aiApiBaseUrl.get(),
-                aiApiKey.get(),
+                resolveEffectiveApiKey(),
                 aiModel.get(),
                 AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
                 systemPrompt,
@@ -1796,6 +1770,10 @@ public final class AiAssistantPanel {
         String prefix = secret.substring(0, 4);
         String suffix = secret.substring(Math.max(0, len - 2));
         return prefix + "***" + suffix;
+    }
+
+    private String resolveEffectiveApiKey() {
+        return AiSettingsStore.resolveApiKey(collectAiSettingsData());
     }
 
     private void maybeAutofillModelByProviderChange(String detectedProviderLabel, String[] suggestedModels) {

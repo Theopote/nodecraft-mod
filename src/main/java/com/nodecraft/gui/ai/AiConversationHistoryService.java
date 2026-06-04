@@ -9,8 +9,11 @@ public final class AiConversationHistoryService {
             "Remote planner request submitted",
             "Retrying last request",
             "Remote planner request canceled",
+            "Remote planner failed",
             "Plan JSON validated",
             "Remote planner fallback applied",
+            "AI is thinking",
+            "AI is generating a local draft plan",
             "Undo completed",
             "Applied AI plan",
             "Patch apply completed"

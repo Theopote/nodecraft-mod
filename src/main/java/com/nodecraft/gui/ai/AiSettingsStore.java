@@ -14,6 +14,9 @@ import java.nio.file.Paths;
 public final class AiSettingsStore {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    public static final String API_KEY_ENV = "NODECRAFT_AI_API_KEY";
+    public static final String OPENAI_API_KEY_ENV = "OPENAI_API_KEY";
+    public static final String ANTHROPIC_API_KEY_ENV = "ANTHROPIC_API_KEY";
 
     public static final String PROVIDER_AUTO = "AUTO";
     public static final String PROVIDER_OPENAI_COMPAT = "OPENAI_COMPAT";
@@ -60,7 +63,7 @@ public final class AiSettingsStore {
                 true,
                 true,
                 false,
-                true,
+                false,
                 false,
                 true
         );
@@ -109,7 +112,7 @@ public final class AiSettingsStore {
                     !root.has("autoLayoutBeforeApply") || root.get("autoLayoutBeforeApply").getAsBoolean(),
                     !root.has("includeGraphContext") || root.get("includeGraphContext").getAsBoolean(),
                     root.has("previewOnlyMode") && root.get("previewOnlyMode").getAsBoolean(),
-                    !root.has("patchApplyMode") || root.get("patchApplyMode").getAsBoolean(),
+                    root.has("patchApplyMode") && root.get("patchApplyMode").getAsBoolean(),
                         root.has("patchRemoveScopedConnections") && root.get("patchRemoveScopedConnections").getAsBoolean(),
                         !root.has("enterToSend") || root.get("enterToSend").getAsBoolean()
             );
@@ -168,8 +171,9 @@ public final class AiSettingsStore {
         if (isBlank(data.apiBaseUrl())) {
             return "Validation failed: API Base URL is required when remote planner is enabled.";
         }
-        if (isBlank(data.apiKey())) {
-            return "Validation failed: API Key is required when remote planner is enabled.";
+        if (isBlank(resolveApiKey(data))) {
+            return "Validation failed: API Key is required when remote planner is enabled. Set it in settings or via "
+                    + API_KEY_ENV + ", " + OPENAI_API_KEY_ENV + ", or " + ANTHROPIC_API_KEY_ENV + ".";
         }
         if (isBlank(data.model())) {
             return "Validation failed: Model is required when remote planner is enabled.";
@@ -196,10 +200,35 @@ public final class AiSettingsStore {
         String plannerMode = data.enableRemotePlanner() ? "Planner: Remote" : "Planner: Local";
         String modelName = isBlank(data.model()) ? "(no model)" : data.model();
         String provider = sanitizeProviderStrategy(data.providerStrategy());
-        String keyStatus = isBlank(data.apiKey()) ? "API Key: missing" : "API Key: set";
+        String keyStatus = isBlank(data.apiKey())
+                ? (isBlank(resolveApiKey(data)) ? "API Key: missing" : "API Key: env")
+                : "API Key: saved";
         String layoutMode = data.autoLayoutBeforeApply() ? "Layout: Auto" : "Layout: Plan";
         return plannerMode + " | Provider: " + provider + " | Model: " + modelName + " | MaxTokens: "
             + clampMaxOutputTokens(data.maxOutputTokens()) + " | " + keyStatus + " | " + layoutMode;
+    }
+
+    public static String resolveApiKey(AiSettingsData data) {
+        if (data != null && !isBlank(data.apiKey())) {
+            return data.apiKey();
+        }
+        String key = System.getenv(API_KEY_ENV);
+        if (!isBlank(key)) {
+            return key;
+        }
+        String provider = data == null ? PROVIDER_AUTO : sanitizeProviderStrategy(data.providerStrategy());
+        if (PROVIDER_ANTHROPIC.equals(provider)) {
+            key = System.getenv(ANTHROPIC_API_KEY_ENV);
+            if (!isBlank(key)) {
+                return key;
+            }
+        }
+        key = System.getenv(OPENAI_API_KEY_ENV);
+        if (!isBlank(key)) {
+            return key;
+        }
+        key = System.getenv(ANTHROPIC_API_KEY_ENV);
+        return isBlank(key) ? "" : key;
     }
 
     private static String safe(String text) {
