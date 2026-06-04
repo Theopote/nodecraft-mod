@@ -149,7 +149,7 @@ final class AiAssistantMainPanelRenderer {
         ImGui.checkbox("Use current selection as context", state.useSelectionContext());
         ImGui.checkbox("Include current canvas graph summary", state.includeGraphContext());
         ImGui.checkbox("Preview-only mode (do not mutate graph)", state.previewOnlyMode());
-        ImGui.checkbox("Patch apply mode (reuse matching nodes)", state.patchApplyMode());
+        ImGui.checkbox("Patch apply mode (reuse matching nodes, advanced)", state.patchApplyMode());
         ImGui.checkbox("Press Enter to send", state.enterToSend());
         if (!state.patchApplyMode().get()) {
             return;
@@ -256,14 +256,15 @@ final class AiAssistantMainPanelRenderer {
         float lineH = ImGui.getFrameHeight();
         float dynamicHeight = activeLineCount * lineH;
 
-        ImGui.pushItemWidth(ImGui.getContentRegionAvailX() - 85.0f);
+        float inputWidth = Math.max(120.0f, ImGui.getContentRegionAvailX() - 85.0f);
+        ImGui.pushItemWidth(inputWidth);
         int inputFlags = ImGuiInputTextFlags.CtrlEnterForNewLine;
         if (state.enterToSend().get()) {
             inputFlags |= ImGuiInputTextFlags.EnterReturnsTrue;
         }
 
         boolean submitted = ImGui.inputTextMultiline("##ai_input_multiline", state.promptInput(),
-                ImGui.getContentRegionAvailX() - 85.0f,
+                inputWidth,
                 dynamicHeight,
             inputFlags);
         ImGui.popItemWidth();

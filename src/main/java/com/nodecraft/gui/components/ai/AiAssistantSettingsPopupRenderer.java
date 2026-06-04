@@ -7,6 +7,8 @@ import imgui.type.ImBoolean;
 import imgui.type.ImInt;
 import imgui.type.ImString;
 
+import com.nodecraft.gui.ai.AiSettingsStore;
+
 import java.nio.file.Path;
 
 final class AiAssistantSettingsPopupRenderer {
@@ -69,6 +71,13 @@ final class AiAssistantSettingsPopupRenderer {
         ImGui.inputText("##ai_api_key", state.apiKey(), keyFlags);
         ImGui.popItemWidth();
         ImGui.checkbox("Show API key", state.showApiKey());
+        ImGui.textDisabled("Leave empty to use env: " + AiSettingsStore.API_KEY_ENV
+                + ", " + AiSettingsStore.OPENAI_API_KEY_ENV
+                + ", or " + AiSettingsStore.ANTHROPIC_API_KEY_ENV + ".");
+        if (state.apiKey().get() != null && !state.apiKey().get().isBlank()) {
+            ImGui.textColored(0.95f, 0.72f, 0.22f, 1.0f,
+                    "Saved API keys are stored as plain text in this config file.");
+        }
 
         ImGui.text("Model");
         ImGui.pushItemWidth(mediumFieldWidth);
