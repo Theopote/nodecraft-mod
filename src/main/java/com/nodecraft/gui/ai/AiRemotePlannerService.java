@@ -383,6 +383,7 @@ public class AiRemotePlannerService {
 
         body.add("messages", messages);
         body.addProperty("stream", true);
+        addOpenAIToolSchema(body);
 
         HttpResponse<java.util.stream.Stream<String>> response = sendOpenAIStreamingRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
         StringBuilder rawResponse = new StringBuilder();
@@ -394,6 +395,7 @@ public class AiRemotePlannerService {
                 if (line == null || line.isBlank()) {
                     return;
                 }
+                rawResponse.append(line).append('\n');
                 if (!line.startsWith("data:")) {
                     return;
                 }
@@ -401,7 +403,6 @@ public class AiRemotePlannerService {
                 if (payload.isBlank()) {
                     return;
                 }
-                rawResponse.append(payload).append('\n');
                 if ("[DONE]".equals(payload)) {
                     return;
                 }
@@ -422,12 +423,40 @@ public class AiRemotePlannerService {
 
         String raw = rawResponse.toString();
         if (response.statusCode() >= 300) {
+            if (response.statusCode() == 400 && isOpenAIToolCompatibilityError(raw)) {
+                body.remove("tools");
+                body.remove("tool_choice");
+                body.addProperty("stream", false);
+                HttpResponse<String> fallbackResponse = sendOpenAIRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
+                if (fallbackResponse.statusCode() < 300) {
+                    String fallbackContent = extractOpenAINonStreamingContentOrToolArguments(fallbackResponse.body());
+                    if (!isBlank(fallbackContent)) {
+                        return RemotePlanResult.ok(fallbackContent, fallbackResponse.statusCode(), fallbackResponse.body(), attempt);
+                    }
+                    return RemotePlanResult.fail(
+                            "OpenAI-compatible fallback response did not include message content.",
+                            fallbackResponse.statusCode(),
+                            fallbackResponse.body(),
+                            "response-format",
+                            attempt
+                    );
+                }
+
+                return RemotePlanResult.fail(
+                        "HTTP " + fallbackResponse.statusCode() + ": " + truncate(fallbackResponse.body()),
+                        fallbackResponse.statusCode(),
+                        fallbackResponse.body(),
+                        classifyErrorCategory(fallbackResponse.statusCode()),
+                        attempt
+                );
+            }
             if (response.statusCode() == 400 && isOpenAITokenFieldCompatibilityError(raw)) {
             body.remove(OPENAI_MAX_TOKENS_FIELD);
             body.addProperty(OPENAI_MAX_COMPLETION_TOKENS_FIELD, maxTokens);
+            body.addProperty("stream", false);
             HttpResponse<String> fallbackResponse = sendOpenAIRequest(client, endpoint, config.apiKey(), body, timeoutSeconds);
             if (fallbackResponse.statusCode() < 300) {
-                String fallbackContent = extractOpenAIContent(fallbackResponse.body());
+                String fallbackContent = extractOpenAINonStreamingContentOrToolArguments(fallbackResponse.body());
                 if (!isBlank(fallbackContent)) {
                 return RemotePlanResult.ok(fallbackContent, fallbackResponse.statusCode(), fallbackResponse.body(), attempt);
                 }
@@ -521,6 +550,23 @@ public class AiRemotePlannerService {
                 || body.contains("not allowed")
                 || body.contains("unrecognized");
         return mentionsTokenField && indicatesInvalidField;
+    }
+
+    private boolean isOpenAIToolCompatibilityError(String responseBody) {
+        if (responseBody == null || responseBody.isBlank()) {
+            return false;
+        }
+        String body = responseBody.toLowerCase(Locale.ROOT);
+        boolean mentionsToolField = body.contains("tools")
+                || body.contains("tool_choice")
+                || body.contains("function")
+                || body.contains("tool_calls");
+        boolean indicatesInvalidField = body.contains("unknown")
+                || body.contains("unsupported")
+                || body.contains("invalid")
+                || body.contains("not allowed")
+                || body.contains("unrecognized");
+        return mentionsToolField && indicatesInvalidField;
     }
 
         private RemotePlanResult requestAnthropicStreaming(
@@ -743,6 +789,47 @@ public class AiRemotePlannerService {
         }
     }
 
+    private String extractOpenAINonStreamingContentOrToolArguments(String body) {
+        String toolArguments = extractOpenAINonStreamingToolArguments(body);
+        if (!isBlank(toolArguments)) {
+            return toolArguments;
+        }
+        return extractOpenAIContent(body);
+    }
+
+    private String extractOpenAINonStreamingToolArguments(String body) {
+        try {
+            JsonObject root = JsonParser.parseString(body).getAsJsonObject();
+            JsonArray choices = root.getAsJsonArray("choices");
+            if (choices == null || choices.isEmpty()) {
+                return "";
+            }
+            JsonObject message = choices.get(0).getAsJsonObject().getAsJsonObject("message");
+            if (message == null || !message.has("tool_calls")) {
+                return "";
+            }
+            JsonArray toolCalls = message.getAsJsonArray("tool_calls");
+            StringBuilder args = new StringBuilder();
+            for (int i = 0; i < toolCalls.size(); i++) {
+                JsonObject call = toolCalls.get(i).getAsJsonObject();
+                if (!call.has("function")) {
+                    continue;
+                }
+                JsonObject function = call.getAsJsonObject("function");
+                if (function.has("name")
+                        && !"create_node_graph".equals(function.get("name").getAsString())) {
+                    continue;
+                }
+                if (function.has("arguments")) {
+                    args.append(function.get("arguments").getAsString());
+                }
+            }
+            return args.toString();
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
     private String extractAnthropicContent(String body) {
         try {
             JsonObject root = JsonParser.parseString(body).getAsJsonObject();
@@ -895,7 +982,33 @@ public class AiRemotePlannerService {
         JsonObject tool = new JsonObject();
         tool.addProperty("name", "create_node_graph");
         tool.addProperty("description", "Create a node graph from user's description");
+        tool.add("input_schema", buildNodeGraphParametersSchema());
+        return tool;
+    }
 
+    private void addOpenAIToolSchema(JsonObject body) {
+        JsonArray tools = new JsonArray();
+        JsonObject tool = new JsonObject();
+        tool.addProperty("type", "function");
+
+        JsonObject function = new JsonObject();
+        function.addProperty("name", "create_node_graph");
+        function.addProperty("description", "Create a NodeCraft DSL node graph from the user's request.");
+        function.add("parameters", buildNodeGraphParametersSchema());
+        tool.add("function", function);
+        tools.add(tool);
+
+        JsonObject toolChoice = new JsonObject();
+        toolChoice.addProperty("type", "function");
+        JsonObject chosenFunction = new JsonObject();
+        chosenFunction.addProperty("name", "create_node_graph");
+        toolChoice.add("function", chosenFunction);
+
+        body.add("tools", tools);
+        body.add("tool_choice", toolChoice);
+    }
+
+    private JsonObject buildNodeGraphParametersSchema() {
         JsonObject schema = new JsonObject();
         schema.addProperty("type", "object");
 
@@ -918,9 +1031,7 @@ public class AiRemotePlannerService {
         required.add("connections");
         schema.add("required", required);
         schema.addProperty("additionalProperties", false);
-
-        tool.add("input_schema", schema);
-        return tool;
+        return schema;
     }
 
     private static @NonNull JsonObject getConnections() {

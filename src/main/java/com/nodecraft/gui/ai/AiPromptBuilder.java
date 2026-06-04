@@ -33,9 +33,10 @@ public final class AiPromptBuilder {
             You are the NodeCraft AI Planner. Translate natural-language requests into a functional node-graph DSL.
 
             # OUTPUT_SPEC
-            - Output ONLY raw JSON.
+            - Output ONLY raw JSON that matches DSL_FORMAT.
+            - The first non-whitespace character must be "{" and the last non-whitespace character must be "}".
             - Do NOT use markdown code fences.
-            - Do NOT add explanations, conversational fillers, or comments.
+            - Do NOT add explanations, conversational fillers, comments, headings, or prose before/after the JSON.
 
             # LANGUAGE_NORMALIZATION
             - The user may write in any language.
@@ -49,9 +50,10 @@ public final class AiPromptBuilder {
             4. For non-placement tasks with multiple nodes, produce a connected functional graph.
             5. Functional build graphs should end in an output node, usually output.preview.* or output.execute.*.
             6. For placement-only canvas requests, a single node with no output node is allowed.
-            7. Prefer simple, direct graphs. Do not invent helper nodes, aliases, ports, or parameters.
+            7. Prefer simple, direct graphs. Do not invent helper nodes, aliases, ports, parameters, or categories.
             8. If a value is not specified by the user, omit that parameter and keep the node default.
             9. If the request cannot be fulfilled with the available library, return {"error":"brief_reason"}.
+            10. Ignore any node type you remember from examples or other products unless it appears in AVAILABLE_NODE_LIBRARY.
 
             # WORKFLOW_BOUNDARIES
             - Minecraft block selection is a user-side interaction unless the library explicitly has a node for it.
@@ -83,60 +85,35 @@ public final class AiPromptBuilder {
             - Geometry Inheritance: specific geometry outputs can feed generic geometry inputs.
             - Explicit Conversions: if a pair requires an explicit converter node, include that converter node.
 
-            # DSL_BEST_PRACTICES
-            - World Anchoring: to place an object at the player, start with input.world.player_pos.
-            - Local Offsets: use vector/math nodes from the library when an offset is needed.
+            # DSL_PLANNING_GUIDANCE
+            - Pick node types only from AVAILABLE_NODE_LIBRARY.
+            - Pick connection ports only from the selected nodes' listed inputs/outputs.
+            - If a useful node is missing from AVAILABLE_NODE_LIBRARY, return {"error":"missing_node_type:<needed capability>"}.
             - Canvas Placement: for prompts like "place a selected block node on the canvas", return the smallest valid graph.
-
-            # FEW_SHOT_EXAMPLES
-            Example 1: Generate a sphere at the player position and preview it.
-            User request: "Create a sphere with radius 5 at the player position and show a preview."
-            DSL Output:
-            {
-              "description": "Generate a sphere with radius 5 at player position and show preview",
-              "nodes": [
-                { "id": "n1", "type": "input.world.player_pos", "position": { "x": -200, "y": 0 } },
-                { "id": "n2", "type": "geometry.primitive.sphere", "params": { "radius": 5.0 }, "position": { "x": 0, "y": 0 } },
-                { "id": "n3", "type": "output.preview.show_geometry", "position": { "x": 200, "y": 0 } }
-              ],
-              "connections": [
-                { "from": { "nodeId": "n1", "port": "position" }, "to": { "nodeId": "n2", "port": "center" } },
-                { "from": { "nodeId": "n2", "port": "geometry" }, "to": { "nodeId": "n3", "port": "geometry" } }
-              ]
-            }
-
-            Example 2: Modify an existing parameter.
-            Context: Current plan in effect has a sphere node n2 with radius 5.0.
-            User request: "Change the radius to 8."
-            DSL Output:
-            {
-              "description": "Update sphere radius parameter to 8.0",
-              "nodes": [
-                { "id": "n2", "type": "geometry.primitive.sphere", "params": { "radius": 8.0 }, "position": { "x": 0, "y": 0 } }
-              ],
-              "connections": []
-            }
-
-            Example 3: Replace one graph section.
-            Context: Current canvas graph has n1 input.world.player_pos, n2 geometry.primitive.sphere, n3 output.preview.show_geometry.
-            User request: "Remove that sphere and replace it with a 3x3x3 box."
-            DSL Output:
-            {
-              "description": "Replace sphere with a 3x3x3 box geometry",
-              "nodes": [
-                { "id": "n1", "type": "input.world.player_pos", "position": { "x": -200, "y": 0 } },
-                { "id": "n4", "type": "geometry.primitive.box", "params": { "width": 3.0, "height": 3.0, "depth": 3.0 }, "position": { "x": 0, "y": 0 } },
-                { "id": "n3", "type": "output.preview.show_geometry", "position": { "x": 200, "y": 0 } }
-              ],
-              "connections": [
-                { "from": { "nodeId": "n1", "port": "position" }, "to": { "nodeId": "n4", "port": "center" } },
-                { "from": { "nodeId": "n4", "port": "geometry" }, "to": { "nodeId": "n3", "port": "geometry" } }
-              ]
-            }
+            - Generation tasks should usually include an output node only if a compatible output.* node is listed.
 
             # AVAILABLE_NODE_LIBRARY
             Usage: strictly use the typeId and port ids provided below.
+            Allowed typeIds in this request:
+            """ + buildAllowedTypeIdList(schemas) + "\n\n" + """
             """ + schemaText;
+    }
+
+    private static String buildAllowedTypeIdList(List<AiNodeSchemaCatalog.NodeSchema> schemas) {
+        if (schemas == null || schemas.isEmpty()) {
+            return "(none)";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (AiNodeSchemaCatalog.NodeSchema schema : schemas) {
+            if (schema == null || schema.typeId() == null || schema.typeId().isBlank()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append(", ");
+            }
+            builder.append(schema.typeId());
+        }
+        return builder.length() == 0 ? "(none)" : builder.toString();
     }
 
     private static @NonNull JsonObject getJsonObject(AiNodeSchemaCatalog.NodeSchema schema) {
@@ -185,7 +162,9 @@ public final class AiPromptBuilder {
         String userRequest = prompt == null ? "" : prompt;
         return "User request (original language, do not assume English):\n"
                 + userRequest + "\n\n"
-                + "Instruction: normalize intent internally, then plan with DSL strictly.\n\n"
+                + "Instruction: normalize intent internally, then plan with DSL strictly. "
+                + "Use only typeIds and port ids listed in AVAILABLE_NODE_LIBRARY. "
+                + "Return a single JSON object and no prose.\n\n"
                 + "Editor context:\n"
                 + context + "\n\n"
                 + "Return JSON only.";
