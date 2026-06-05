@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **472**
+- Total nodes: **473**
 - Total categories: **52**
 
 ## Category Statistics
@@ -19,7 +19,7 @@
 | `input.context` | 4 |
 | `input.numeric` | 7 |
 | `input.type_selectors` | 5 |
-| `input.values` | 4 |
+| `input.values` | 5 |
 | `material.basic_assignment` | 3 |
 | `material.block_state` | 6 |
 | `material.directional_mapping` | 2 |
@@ -263,7 +263,7 @@
 | Biome Selector | `input.type_selectors.biome_selector` | Selects a biome id for biome-aware generation workflows. | `BiomeSelectorNode` |
 | Block State Selector | `input.type_selectors.block_state_selector` | Builds block-state key/value data from a compact properties string. | `BlockStateSelectorNode` |
 
-## input.values (4)
+## input.values (5)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -271,6 +271,7 @@
 | Color Picker | `input.basic.color_picker` | Allows selecting a color value with RGB and alpha support. | `ColorPickerNode` |
 | Boolean Toggle | `input.basic.boolean_toggle` | 提供一个可以切换的布尔值开关控制 | `BooleanToggleNode` |
 | Dropdown Selector | `input.values.dropdown` | Selects one value from user-defined option list and outputs index + text value. | `DropdownSelectorNode` |
+| File Path Input | `input.values.file_path` | Selects or types a local file path and outputs it for file read/write nodes. | `FilePathInputNode` |
 
 ## material.basic_assignment (3)
 
