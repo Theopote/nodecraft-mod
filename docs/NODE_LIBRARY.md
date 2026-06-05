@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **475**
+- Total nodes: **477**
 - Total categories: **52**
 
 ## Category Statistics
@@ -15,7 +15,7 @@
 | `geometry.curves` | 21 |
 | `geometry.primitives` | 29 |
 | `geometry.profiles` | 24 |
-| `geometry.solids` | 20 |
+| `geometry.solids` | 22 |
 | `input.context` | 4 |
 | `input.numeric` | 7 |
 | `input.type_selectors` | 5 |
@@ -209,7 +209,7 @@
 | Profile Boolean 2D | `geometry.profiles.boolean_2d` | Performs 2D boolean operations (union/intersection/difference) on two polygon profiles in a shared plane | `ProfileBoolean2DNode` |
 | Profile Triangulate 2D | `geometry.profiles.triangulate_2d` | Triangulates a planar polygon profile into triangle profiles using ear clipping | `ProfileTriangulate2DNode` |
 
-## geometry.solids (20)
+## geometry.solids (22)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -230,7 +230,9 @@
 | Section Cut | `geometry.solids.section_cut` | Cuts geometry by a plane and outputs a section profile extracted from voxelized intersection points. | `SectionCutNode` |
 | Deconstruct Surface Strip | `geometry.solids.deconstruct_surface_strip` | Breaks a surface strip into section paths, flattened points, and rail segments | `DeconstructSurfaceStripNode` |
 | Multi-Section Loft | `geometry.solids.loft_multi_section` | Lofts multiple polygon sections with matching vertex counts into one surface strip. | `MultiSectionLoftNode` |
+| Extract Surface Strip Range | `geometry.solids.extract_surface_strip_range` | Extracts a contiguous section range from a surface strip as a smaller surface strip | `ExtractSurfaceStripRangeNode` |
 | Morph Between Profiles | `geometry.solids.morph_profiles` | Interpolates between two compatible polygon profiles using parameter t in [0,1]. | `MorphBetweenProfilesNode` |
+| Offset Surface Strip | `geometry.solids.offset_surface_strip` | Offsets a surface strip by a signed distance and outputs a single offset surface | `OffsetSurfaceStripNode` |
 | Shrinkwrap Points On Surface Strip | `geometry.solids.shrinkwrap_points_surface_strip` | Projects each query point to the closest location on the surface strip triangle mesh | `ShrinkwrapPointsOnSurfaceStripNode` |
 | Shrinkwrap Points To Voxel Geometry | `geometry.solids.shrinkwrap_points_voxel_geometry` | Voxelizes geometry to blocks, then snaps each query point to the nearest voxel block center (shell when fill is off); distinct from triangle strip shrinkwrap | `ShrinkwrapPointsToVoxelGeometryNode` |
 
