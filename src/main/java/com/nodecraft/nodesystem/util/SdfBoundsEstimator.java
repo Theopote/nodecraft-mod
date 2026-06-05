@@ -9,6 +9,7 @@ import com.nodecraft.nodesystem.datatypes.SignedDistanceFieldData;
 import com.nodecraft.nodesystem.datatypes.SphereSdfData;
 import com.nodecraft.nodesystem.datatypes.TorusSdfData;
 import com.nodecraft.nodesystem.datatypes.TransformedSdfData;
+import com.nodecraft.nodesystem.datatypes.TwistedSdfData;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
@@ -116,6 +117,9 @@ public final class SdfBoundsEstimator {
             }
             return inner.expanded(warp.getWarpAmplitude());
         }
+        if (sdf instanceof TwistedSdfData twisted) {
+            return boundsForTwist(twisted);
+        }
         return null;
     }
 
@@ -165,6 +169,33 @@ public final class SdfBoundsEstimator {
             new Vector3d(center.x - half.x, center.y - half.y, center.z - half.z),
             new Vector3d(center.x + half.x, center.y + half.y, center.z + half.z)
         );
+    }
+
+    private static @Nullable AxisAlignedBounds boundsForTwist(TwistedSdfData twisted) {
+        AxisAlignedBounds inner = estimate(twisted.getSource());
+        if (inner == null || !inner.isValid()) {
+            return null;
+        }
+
+        int samples = 5;
+        AxisAlignedBounds bounds = null;
+        for (int ix = 0; ix < samples; ix++) {
+            double x = lerp(inner.min.x, inner.max.x, ix / (double) (samples - 1));
+            for (int iy = 0; iy < samples; iy++) {
+                double y = lerp(inner.min.y, inner.max.y, iy / (double) (samples - 1));
+                for (int iz = 0; iz < samples; iz++) {
+                    double z = lerp(inner.min.z, inner.max.z, iz / (double) (samples - 1));
+                    Vector3d point = twisted.twistPoint(new Vector3d(x, y, z));
+                    AxisAlignedBounds pointBounds = new AxisAlignedBounds(new Vector3d(point), new Vector3d(point));
+                    bounds = bounds == null ? pointBounds : bounds.union(pointBounds);
+                }
+            }
+        }
+        return bounds == null ? null : bounds.expanded(2.0d);
+    }
+
+    private static double lerp(double a, double b, double t) {
+        return a + (b - a) * t;
     }
 
     private static AxisAlignedBounds boundsForCapsule(CapsuleSdfData capsule) {
