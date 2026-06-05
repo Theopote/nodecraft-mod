@@ -17,7 +17,7 @@
 | `geometry.profiles` | 24 |
 | `geometry.solids` | 20 |
 | `input.context` | 4 |
-| `input.numeric` | 8 |
+| `input.numeric` | 7 |
 | `input.type_selectors` | 5 |
 | `input.values` | 4 |
 | `material.basic_assignment` | 3 |
@@ -47,7 +47,7 @@
 | `reference.frames` | 4 |
 | `reference.planes` | 6 |
 | `reference.points` | 17 |
-| `reference.vectors` | 17 |
+| `reference.vectors` | 18 |
 | `transform.basic_transforms` | 12 |
 | `transform.deformations` | 8 |
 | `transform.orientation` | 3 |
@@ -241,7 +241,7 @@
 | Dimension Info | `input.context.dimension_info` | Gets the current dimension and basic dimension traits from the active Minecraft world. | `DimensionInfoNode` |
 | Current Time | `input.context.current_time` | Gets the current time and weather state from the active Minecraft world. | `CurrentTimeNode` |
 
-## input.numeric (8)
+## input.numeric (7)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -251,7 +251,6 @@
 | Float Slider | `input.numeric.float_slider` | 输出一个可通过滑动条调节的浮点数。 | `FloatSliderNode` |
 | Angle Slider | `input.numeric.angle` | 输出一个可通过滑动条调节的角度值，支持度和弧度输出。 | `AngleSliderNode` |
 | Circular Angle Picker | `input.numeric.angle_picker` | 通过圆形表盘选择角度，同时输出度和弧度。 | `CircularAngleNode` |
-| 2D Vector Input | `input.numeric.vector2_input` | Inputs a 2D vector (X/Y or U/V) and outputs vector + components. | `Vector2InputNode` |
 | Range Input | `input.numeric.range` | Defines a numeric interval and outputs min/max/span plus a range object. | `RangeInputNode` |
 
 ## input.type_selectors (5)
@@ -601,11 +600,12 @@
 | Deconstruct Face Edge | `reference.points.deconstruct_edge` | Extracts endpoints, midpoint, direction, vector, and length from a face edge | `DeconstructFaceEdgeNode` |
 | Project Point To Polyline | `reference.points.project_to_polyline` | Projects a point onto the closest location on a polyline or line segment | `ProjectPointToPolylineNode` |
 
-## reference.vectors (17)
+## reference.vectors (18)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Vector Input | `reference.vectors.vector` | Inputs a 3D vector from panel values or optional X/Y/Z input ports, then outputs the vector and components. | `VectorInputNode` |
+| 2D Vector Input | `reference.vectors.vector2_input` | Inputs a 2D vector (X/Y or U/V) and outputs vector + components. | `Vector2InputNode` |
 | Construct Vector | `reference.vectors.construct_vector` | Constructs a Vector3d from X, Y, and Z components. | `ConstructVectorNode` |
 | Deconstruct Vector | `reference.vectors.deconstruct_vector` | Outputs the X, Y, and Z components of a vector. | `DeconstructVectorNode` |
 | Normalize Vector | `reference.vectors.normalize_vector` | Normalizes a vector to unit length. | `NormalizeVectorNode` |

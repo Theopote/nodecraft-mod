@@ -1,4 +1,4 @@
-package com.nodecraft.nodesystem.nodes.input.numeric;
+package com.nodecraft.nodesystem.nodes.reference.vectors;
 
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -18,11 +18,11 @@ import java.util.UUID;
 import java.util.function.DoubleConsumer;
 
 @NodeInfo(
-    id = "input.numeric.vector2_input",
+    id = "reference.vectors.vector2_input",
     displayName = "2D Vector Input",
     description = "Inputs a 2D vector (X/Y or U/V) and outputs vector + components.",
-    category = "input.numeric",
-    order = 8
+    category = "reference.vectors",
+    order = 1
 )
 public class Vector2InputNode extends BaseCustomUINode {
 
@@ -42,7 +42,7 @@ public class Vector2InputNode extends BaseCustomUINode {
     private int precision = 2;
 
     public Vector2InputNode() {
-        super(UUID.randomUUID(), "input.numeric.vector2_input");
+        super(UUID.randomUUID(), "reference.vectors.vector2_input");
         addOutputPort(new BasePort(OUTPUT_VECTOR_ID, "Vector", "2D vector as Vector3d(x,y,0)", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_X_ID, "X", "X / U component", NodeDataType.DOUBLE, this));
         addOutputPort(new BasePort(OUTPUT_Y_ID, "Y", "Y / V component", NodeDataType.DOUBLE, this));
