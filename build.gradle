@@ -91,6 +91,10 @@ dependencies {
 	// Using modImplementation as Cloth Config is a mod dependency.
 	modImplementation "me.shedaniel.cloth:cloth-config-fabric:${project.cloth_config_version}"
 
+	// JSVG - lightweight SVG rendering library for node icons
+	implementation 'com.github.weisj:jsvg:1.4.0'
+	include 'com.github.weisj:jsvg:1.4.0'
+
 	// Gson for JSON serialization
 	implementation 'com.google.code.gson:gson:2.10.1'
 
