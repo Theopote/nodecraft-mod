@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="100%" stop-color="#1D4ED8"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <rect x="1" y="1" width="30" height="30" rx="6.5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <!-- Left circle -->
+  <circle cx="13" cy="16" r="6" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="1.5"/>
+  <!-- Right circle -->
+  <circle cx="19" cy="16" r="6" fill="rgba(255,255,255,0.25)" stroke="white" stroke-width="1.5"/>
+  <!-- Union fill overlay in the center overlap -->
+  <clipPath id="leftCircle">
+    <circle cx="13" cy="16" r="6"/>
+  </clipPath>
+  <!-- Highlight dot at union center -->
+  <circle cx="16" cy="16" r="1.2" fill="white" opacity="0.9"/>
+  <!-- Union symbol label -->
+  <text x="16" y="28" text-anchor="middle" font-size="5" fill="rgba(255,255,255,0.7)" font-family="serif">∪</text>
+</svg>

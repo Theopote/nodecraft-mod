@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#B91C1C"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <rect x="1" y="1" width="30" height="30" rx="6.5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <!-- Field lines pointing inward toward center -->
+  <!-- Top -->
+  <line x1="16" y1="7" x2="16" y2="13" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="16,13 14.5,10.5 17.5,10.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Bottom -->
+  <line x1="16" y1="25" x2="16" y2="19" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="16,19 14.5,21.5 17.5,21.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Left -->
+  <line x1="7" y1="16" x2="13" y2="16" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="13,16 10.5,14.5 10.5,17.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Right -->
+  <line x1="25" y1="16" x2="19" y2="16" stroke="rgba(255,255,255,0.7)" stroke-width="1.2" stroke-linecap="round"/>
+  <polygon points="19,16 21.5,14.5 21.5,17.5" fill="rgba(255,255,255,0.7)"/>
+  <!-- Diagonal TL -->
+  <line x1="9" y1="9" x2="13.5" y2="13.5" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-linecap="round"/>
+  <polygon points="13.5,13.5 11,12 12,11" fill="rgba(255,255,255,0.5)"/>
+  <!-- Diagonal TR -->
+  <line x1="23" y1="9" x2="18.5" y2="13.5" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-linecap="round"/>
+  <polygon points="18.5,13.5 21,12 20,11" fill="rgba(255,255,255,0.5)"/>
+  <!-- Diagonal BL -->
+  <line x1="9" y1="23" x2="13.5" y2="18.5" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-linecap="round"/>
+  <polygon points="13.5,18.5 11,20 12,21" fill="rgba(255,255,255,0.5)"/>
+  <!-- Diagonal BR -->
+  <line x1="23" y1="23" x2="18.5" y2="18.5" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-linecap="round"/>
+  <polygon points="18.5,18.5 21,20 20,21" fill="rgba(255,255,255,0.5)"/>
+  <!-- Center attractor point -->
+  <circle cx="16" cy="16" r="2.5" fill="white"/>
+  <circle cx="16" cy="16" r="1.2" fill="#EF4444"/>
+</svg>

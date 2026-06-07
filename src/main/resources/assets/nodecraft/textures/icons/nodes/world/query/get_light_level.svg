@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#14B8A6"/>
+      <stop offset="100%" stop-color="#0F766E"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#bg)"/>
+  <rect x="1" y="1" width="30" height="30" rx="6.5" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+  <!-- Sun circle -->
+  <circle cx="16" cy="14" r="4.5" fill="white"/>
+  <!-- Rays -->
+  <line x1="16" y1="6" x2="16" y2="4" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="16" y1="22" x2="16" y2="24" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="8" y1="14" x2="6" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="24" y1="14" x2="26" y2="14" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="10.3" y1="8.3" x2="9" y2="7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="21.7" y1="19.7" x2="23" y2="21" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="21.7" y1="8.3" x2="23" y2="7" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="10.3" y1="19.7" x2="9" y2="21" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Brightness number indicator -->
+  <rect x="10" y="24" width="12" height="5" rx="2" fill="rgba(255,255,255,0.2)"/>
+  <text x="16" y="28.2" text-anchor="middle" font-size="4" fill="white" font-family="monospace">15</text>
+</svg>
