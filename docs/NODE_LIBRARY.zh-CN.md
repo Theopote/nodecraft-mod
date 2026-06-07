@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**493**
+- **节点总数**：**494**
 - **分类总数**：**52**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -53,7 +53,7 @@
 | `transform.deformations` | 9 |
 | `transform.orientation` | 6 |
 | `utilities.assist` | 7 |
-| `utilities.fileio` | 1 |
+| `utilities.fileio` | 2 |
 | `utilities.organization` | 8 |
 | `variable` | 4 |
 | `world.query` | 10 |
@@ -695,11 +695,12 @@
 | Signal Merge | `utilities.assist.signal_merge` | 将两路输入按优先级汇聚为一路输出 | `SignalMergeNode` |
 | Tag Relay | `utilities.assist.tag_relay` | 用于标注语义的中继节点，输入输出保持透传 | `TagRelayNode` |
 
-## utilities.fileio（1）
+## utilities.fileio（2）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
 | Read Image | `utilities.fileio.read_image` | Reads a local image file and outputs dimensions, colors, and grayscale samples | `ReadImageNode` |
+| Image Sampler | `utilities.fileio.image_sampler` | Samples color, channels, and grayscale values from image pixels using UV or pixel coordinates | `ImageSamplerNode` |
 
 ## utilities.organization（8）
 
