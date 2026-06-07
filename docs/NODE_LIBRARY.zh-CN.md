@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**492**
+- **节点总数**：**493**
 - **分类总数**：**52**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -32,7 +32,7 @@
 | `math.list` | 22 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
-| `math.scalar_math` | 21 |
+| `math.scalar_math` | 22 |
 | `math.sequence` | 3 |
 | `math.trigonometry` | 14 |
 | `output.debug` | 4 |
@@ -415,7 +415,7 @@
 | Random List Item | `math.random.random_list_item` | Randomly selects one or more items from a list. | `RandomListItemNode` |
 | Random Vector | `math.random.random_vector` | Generates random vectors within a specified bounding box. | `RandomVectorNode` |
 
-## math.scalar_math（21）
+## math.scalar_math（22）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -440,6 +440,7 @@
 | Smoothstep | `math.scalar_math.smoothstep` | Computes smooth Hermite interpolation 3t^2 - 2t^3 between edge0 and edge1. | `SmoothstepNode` |
 | Sign | `math.scalar_math.sign` | Returns -1, 0, or +1 based on the sign of the input value. | `SignNode` |
 | Fraction (Frac) | `math.scalar_math.frac` | Returns the fractional part of x as x - floor(x). | `FracNode` |
+| Graph Mapper | `math.scalar_math.graph_mapper` | Maps a value through a selectable normalized graph function, similar to Grasshopper's Graph Mapper | `GraphMapperNode` |
 
 ## math.sequence（3）
 

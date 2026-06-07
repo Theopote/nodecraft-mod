@@ -1,7 +1,7 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **492**
+- Total nodes: **493**
 - Total categories: **52**
 
 ## Category Statistics
@@ -31,7 +31,7 @@
 | `math.list` | 22 |
 | `math.logic` | 6 |
 | `math.random` | 4 |
-| `math.scalar_math` | 21 |
+| `math.scalar_math` | 22 |
 | `math.sequence` | 3 |
 | `math.trigonometry` | 14 |
 | `output.debug` | 4 |
@@ -414,7 +414,7 @@
 | Random List Item | `math.random.random_list_item` | Randomly selects one or more items from a list. | `RandomListItemNode` |
 | Random Vector | `math.random.random_vector` | Generates random vectors within a specified bounding box. | `RandomVectorNode` |
 
-## math.scalar_math (21)
+## math.scalar_math (22)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -439,6 +439,7 @@
 | Smoothstep | `math.scalar_math.smoothstep` | Computes smooth Hermite interpolation 3t^2 - 2t^3 between edge0 and edge1. | `SmoothstepNode` |
 | Sign | `math.scalar_math.sign` | Returns -1, 0, or +1 based on the sign of the input value. | `SignNode` |
 | Fraction (Frac) | `math.scalar_math.frac` | Returns the fractional part of x as x - floor(x). | `FracNode` |
+| Graph Mapper | `math.scalar_math.graph_mapper` | Maps a value through a selectable normalized graph function, similar to Grasshopper's Graph Mapper | `GraphMapperNode` |
 
 ## math.sequence (3)
 
