@@ -1,13 +1,16 @@
 package com.nodecraft.gui.utils;
 
+import com.github.weisj.jsvg.SVGDocument;
+import com.github.weisj.jsvg.parser.SVGLoader;
 import com.nodecraft.core.NodeCraft;
-import org.lwjgl.BufferUtils;
-import org.lwjgl.opengl.GL11;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
 import net.minecraft.resource.Resource;
 import net.minecraft.util.Identifier;
+import org.lwjgl.BufferUtils;
+import org.lwjgl.opengl.GL11;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -16,350 +19,308 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * 管理节点图标的加载和渲染
+ * 管理节点图标的加载和渲染。
+ * 支持 SVG 格式，运行时通过 JSVG 光栅化为 OpenGL 纹理。
+ * <p>
+ * 图标查找顺序（以 flow.control.branch 为例）：
+ * 1. textures/icons/nodes/flow/control/branch.svg  （节点专属图标）
+ * 2. textures/icons/nodes/flow/control.svg          （子分类图标）
+ * 3. textures/icons/nodes/flow/flow.svg             （主分类图标）
+ * 4. 彩色占位纹理
  */
 public class NodeIconManager {
+
     private static NodeIconManager instance;
-    
-    // 图标命名空间和路径
+
     private static final String ICON_NAMESPACE = "nodecraft";
-    private static final String ICON_BASE_PATH = "textures/icons/nodes/";
-    private static final String CATEGORY_PREFIX = "category_";
-    
-    // 存储已加载图标的映射
-    private final Map<String, Integer> iconTextureMap = new HashMap<>();
-    private final Map<String, Integer> categoryColorMap = new HashMap<>();
-    
-    // 默认图标ID
-    private static final String DEFAULT_ICON = "default";
-    
+    private static final String ICON_BASE_PATH  = "textures/icons/nodes/";
+    /** 图标渲染分辨率（SVG 光栅化目标尺寸，px） */
+    private static final int ICON_RENDER_SIZE = 64;
+
+    /** 已加载图标缓存 <iconCacheKey → glTextureId> */
+    private final Map<String, Integer> textureCache = new HashMap<>();
+    /** 分类默认颜色（作为最终 fallback） */
+    private final Map<String, Integer> categoryColors = new HashMap<>();
+
+    private static final SVGLoader SVG_LOADER = new SVGLoader();
+
+    // -----------------------------------------------------------------------
+    //  Singleton
+    // -----------------------------------------------------------------------
+
     private NodeIconManager() {
-        // 私有构造函数确保单例
-        initializeCategoryColors();
+        initCategoryColors();
     }
-    
-    /**
-     * 初始化分类颜色
-     */
-    private void initializeCategoryColors() {
-        // 主分类颜色 - 作为备选方案，当图标文件不存在时使用
-        categoryColorMap.put("inputs", 0xFF3498DB);     // 蓝色
-        categoryColorMap.put("data", 0xFF9B59B6);       // 紫色
-        categoryColorMap.put("math", 0xFFE74C3C);       // 红色
-        categoryColorMap.put("spatial", 0xFF2ECC71);    // 绿色
-        categoryColorMap.put("world", 0xFFF39C12);      // 橙色
-        categoryColorMap.put("visualization", 0xFF1ABC9C); // 青色
-        categoryColorMap.put("utilities", 0xFF7F8C8D);  // 灰色
-    }
-    
-    /**
-     * 获取单例实例
-     */
+
     public static NodeIconManager getInstance() {
         if (instance == null) {
             instance = new NodeIconManager();
         }
         return instance;
     }
-    
-    /**
-     * 初始化图标管理器
-     */
+
+    // -----------------------------------------------------------------------
+    //  Lifecycle
+    // -----------------------------------------------------------------------
+
     public void initialize() {
-        NodeCraft.LOGGER.info("正在初始化节点图标管理器...");
-        
-        // 加载默认图标
-        loadIcon(DEFAULT_ICON);
-        
-        // 预加载常用分类图标
-        loadCategoryIcons();
-        
-        NodeCraft.LOGGER.info("节点图标管理器初始化完成，加载了 {} 个图标", iconTextureMap.size());
+        NodeCraft.LOGGER.info("正在初始化节点图标管理器…");
+        NodeCraft.LOGGER.info("节点图标管理器就绪，已缓存 {} 个纹理", textureCache.size());
     }
-    
-    /**
-     * 预加载分类图标
-     */
-    private void loadCategoryIcons() {
-        // 主分类图标
-        String[] mainCategories = {
-            "inputs", "data", "math", "spatial", "world", "visualization", "utilities"
-        };
-        
-        // 加载主分类图标
-        for (String category : mainCategories) {
-            // 尝试从对应分类文件夹加载图标
-            loadCategoryIcon(category);
+
+    public void cleanup() {
+        for (int id : textureCache.values()) {
+            GL11.glDeleteTextures(id);
         }
+        textureCache.clear();
+        NodeCraft.LOGGER.info("节点图标管理器已清理");
     }
-    
+
+    // -----------------------------------------------------------------------
+    //  Public API
+    // -----------------------------------------------------------------------
+
     /**
-     * 加载分类图标
-     * @param category 分类名称
-     * @return 纹理ID
-     */
-    private int loadCategoryIcon(String category) {
-        // 构造图标路径：分类文件夹 + category.png
-        String iconPath = ICON_BASE_PATH + category + "/" + category + ".png";
-        String iconId = CATEGORY_PREFIX + category;
-        
-        // 如果已加载，直接返回
-        if (iconTextureMap.containsKey(iconId)) {
-            return iconTextureMap.get(iconId);
-        }
-        
-        // 尝试从资源加载
-        int textureId = loadTextureFromResource(iconPath);
-        
-        // 如果加载失败，创建彩色纹理作为替代
-        if (textureId == 0 && categoryColorMap.containsKey(category)) {
-            textureId = createColorTexture(category, categoryColorMap.get(category));
-        }
-        
-        // 存储并返回
-        if (textureId != 0) {
-            iconTextureMap.put(iconId, textureId);
-        }
-        
-        return textureId;
-    }
-    
-    /**
-     * 加载节点图标
-     * @param nodeId 节点ID
-     * @param category 节点分类
-     * @return 纹理ID
+     * 获取节点图标纹理 ID。
+     *
+     * @param nodeId   节点全局 ID，如 "flow.control.branch"
+     * @param category 节点分类，如 "flow.control"
+     * @return OpenGL 纹理 ID；不存在时返回分类颜色占位纹理
      */
     public int loadNodeIcon(String nodeId, String category) {
-        // 提取主分类
-        String mainCategory = category;
-        if (category.contains(".")) {
-            mainCategory = category.substring(0, category.indexOf("."));
-        }
-        
-        // 构造图标路径：分类文件夹 + 节点ID + .png
-        String iconPath = ICON_BASE_PATH + mainCategory + "/" + nodeId + ".png";
-        
-        // 如果已加载，直接返回
-        if (iconTextureMap.containsKey(nodeId)) {
-            return iconTextureMap.get(nodeId);
-        }
-        
-        // 尝试从资源加载
-        int textureId = loadTextureFromResource(iconPath);
-        
-        // 如果加载失败，返回分类图标
-        if (textureId == 0) {
-            return getTextureId(CATEGORY_PREFIX + mainCategory);
-        }
-        
-        // 存储并返回
-        iconTextureMap.put(nodeId, textureId);
-        return textureId;
+        // 1. 精确匹配：节点专属 SVG
+        String nodePath = buildNodePath(nodeId);
+        int texId = loadOrGet(nodeId, nodePath);
+        if (texId != 0) return texId;
+
+        // 2. 子分类图标
+        String subCatPath = buildSubCategoryPath(category);
+        String subCatKey  = "subcat:" + category;
+        texId = loadOrGet(subCatKey, subCatPath);
+        if (texId != 0) return texId;
+
+        // 3. 主分类图标
+        String mainCat     = extractMainCategory(category);
+        String mainCatPath = ICON_BASE_PATH + mainCat + "/" + mainCat + ".svg";
+        String mainCatKey  = "cat:" + mainCat;
+        texId = loadOrGet(mainCatKey, mainCatPath);
+        if (texId != 0) return texId;
+
+        // 4. 彩色占位
+        return getFallbackTexture(mainCat);
     }
-    
+
     /**
-     * 从资源加载纹理
-     * @param resourcePath 资源路径
-     * @return 纹理ID，加载失败返回0
+     * 通用图标加载（用于分类列表等非节点场景）。
+     *
+     * @param iconId  任意 key，同时用作缓存键
+     * @return OpenGL 纹理 ID
      */
-    private int loadTextureFromResource(String resourcePath) {
+    public int loadIcon(String iconId) {
+        if (textureCache.containsKey(iconId)) {
+            return textureCache.get(iconId);
+        }
+        String path = ICON_BASE_PATH + iconId + ".svg";
+        int texId = loadSvgFromResource(path);
+        if (texId != 0) {
+            textureCache.put(iconId, texId);
+        }
+        return texId;
+    }
+
+    /**
+     * 获取分类图标 ID（供 UI 调用）。
+     */
+    public String getCategoryIconId(String categoryId) {
+        if (categoryId.contains(".")) {
+            categoryId = categoryId.substring(0, categoryId.indexOf("."));
+        }
+        return "cat:" + categoryId;
+    }
+
+    // -----------------------------------------------------------------------
+    //  Path helpers
+    // -----------------------------------------------------------------------
+
+    /**
+     * 将节点 ID 转换为 SVG 文件路径。
+     * 例：flow.control.branch → textures/icons/nodes/flow/control/branch.svg
+     *     variable.get         → textures/icons/nodes/variable/get.svg
+     */
+    private String buildNodePath(String nodeId) {
+        String[] parts = nodeId.split("\\.");
+        if (parts.length == 1) {
+            return ICON_BASE_PATH + parts[0] + "/" + parts[0] + ".svg";
+        } else if (parts.length == 2) {
+            return ICON_BASE_PATH + parts[0] + "/" + parts[1] + ".svg";
+        } else {
+            // 3 parts: main.sub.leaf
+            return ICON_BASE_PATH + parts[0] + "/" + parts[1] + "/" + parts[2] + ".svg";
+        }
+    }
+
+    /**
+     * 子分类图标路径。
+     * 例：flow.control → textures/icons/nodes/flow/control.svg
+     *     variable     → textures/icons/nodes/variable/variable.svg
+     */
+    private String buildSubCategoryPath(String category) {
+        if (category.contains(".")) {
+            String[] parts = category.split("\\.", 2);
+            return ICON_BASE_PATH + parts[0] + "/" + parts[1] + ".svg";
+        }
+        return ICON_BASE_PATH + category + "/" + category + ".svg";
+    }
+
+    private String extractMainCategory(String category) {
+        if (category.contains(".")) {
+            return category.substring(0, category.indexOf("."));
+        }
+        return category;
+    }
+
+    // -----------------------------------------------------------------------
+    //  Texture loading
+    // -----------------------------------------------------------------------
+
+    /** 从缓存或资源加载纹理，0 表示不存在。 */
+    private int loadOrGet(String cacheKey, String resourcePath) {
+        if (textureCache.containsKey(cacheKey)) {
+            return textureCache.get(cacheKey);
+        }
+        int texId = loadSvgFromResource(resourcePath);
+        if (texId != 0) {
+            textureCache.put(cacheKey, texId);
+        }
+        return texId;
+    }
+
+    /**
+     * 从 Minecraft 资源系统加载 SVG 并光栅化为 OpenGL 纹理。
+     *
+     * @return 纹理 ID，失败返回 0
+     */
+    private int loadSvgFromResource(String resourcePath) {
         try {
-            // 构建资源标识符，使用Minecraft命名空间格式
-            String fullPath = ICON_NAMESPACE + ":" + resourcePath;
-            Identifier resourceId;
-            
-            try {
-                // 尝试通过解析字符串创建，格式为"namespace:path"
-                resourceId = Identifier.tryParse(fullPath);
-                if (resourceId == null) {
-                    NodeCraft.LOGGER.warn("无法解析资源标识符: {}", fullPath);
-                    return 0;
-                }
-            } catch (Exception e) {
-                NodeCraft.LOGGER.warn("创建资源标识符时出错: {}", e.getMessage());
-                return 0;
+            String full = ICON_NAMESPACE + ":" + resourcePath;
+            Identifier id = Identifier.tryParse(full);
+            if (id == null) return 0;
+
+            Optional<Resource> res = MinecraftClient.getInstance()
+                    .getResourceManager().getResource(id);
+            if (res.isEmpty()) return 0;
+
+            try (InputStream stream = res.get().getInputStream()) {
+                SVGDocument doc = SVG_LOADER.load(stream, null, null, null);
+                if (doc == null) return 0;
+
+                BufferedImage img = rasterizeSvg(doc, ICON_RENDER_SIZE, ICON_RENDER_SIZE);
+                int texId = uploadBufferedImage(img);
+                NodeCraft.LOGGER.debug("已加载SVG图标: {} (texId={})", resourcePath, texId);
+                return texId;
             }
-            
-            // 尝试加载资源
-            Optional<Resource> resourceOptional = MinecraftClient.getInstance().getResourceManager().getResource(resourceId);
-            
-            if (resourceOptional.isPresent()) {
-                try (InputStream stream = resourceOptional.get().getInputStream()) {
-                    // 加载图像
-                    NativeImage image = NativeImage.read(stream);
-                    int textureId;
-                    try {
-                        textureId = createTextureFromNativeImage(image);
-                    } finally {
-                        image.close();
-                    }
-                    
-                    NodeCraft.LOGGER.debug("加载图标纹理: {} (纹理ID: {})", resourcePath, textureId);
-                    return textureId;
-                }
-            } else {
-                NodeCraft.LOGGER.debug("找不到图标资源: {}", resourceId);
-                return 0;
-            }
-        } catch (IOException e) {
-            NodeCraft.LOGGER.debug("加载图标时出错: {} - {}", resourcePath, e.getMessage());
+        } catch (Exception e) {
+            NodeCraft.LOGGER.debug("SVG图标加载失败: {} — {}", resourcePath, e.getMessage());
             return 0;
         }
     }
 
     /**
-     * 从 NativeImage 创建 OpenGL 纹理
+     * 将 SVGDocument 光栅化为 BufferedImage。
      */
-    private int createTextureFromNativeImage(NativeImage image) {
-        int textureId = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+    private BufferedImage rasterizeSvg(SVGDocument doc, int width, int height) {
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2d = img.createGraphics();
+        try {
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING,  RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.setRenderingHint(RenderingHints.KEY_RENDERING,     RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            g2d.setComposite(AlphaComposite.Clear);
+            g2d.fillRect(0, 0, width, height);
+            g2d.setComposite(AlphaComposite.SrcOver);
+
+            doc.render(null, g2d, new java.awt.geom.Rectangle2D.Float(0, 0, width, height));
+        } finally {
+            g2d.dispose();
+        }
+        return img;
+    }
+
+    /**
+     * 将 BufferedImage 上传至 OpenGL，返回纹理 ID。
+     */
+    private int uploadBufferedImage(BufferedImage img) {
+        int width  = img.getWidth();
+        int height = img.getHeight();
+
+        int[] pixels = img.getRGB(0, 0, width, height, null, 0, width);
+        ByteBuffer buf = BufferUtils.createByteBuffer(width * height * 4);
+
+        for (int argb : pixels) {
+            buf.put((byte) ((argb >> 16) & 0xFF)); // R
+            buf.put((byte) ((argb >>  8) & 0xFF)); // G
+            buf.put((byte) (argb         & 0xFF)); // B
+            buf.put((byte) ((argb >> 24) & 0xFF)); // A
+        }
+        buf.flip();
+
+        int texId = GL11.glGenTextures();
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-
-        int width = image.getWidth();
-        int height = image.getHeight();
-        ByteBuffer pixels = BufferUtils.createByteBuffer(width * height * 4);
-
-        for (int y = 0; y < height; y++) {
-            for (int x = 0; x < width; x++) {
-                int argb = image.getColorArgb(x, y);
-                pixels.put((byte) ((argb >> 16) & 0xFF));
-                pixels.put((byte) ((argb >> 8) & 0xFF));
-                pixels.put((byte) (argb & 0xFF));
-                pixels.put((byte) ((argb >> 24) & 0xFF));
-            }
-        }
-        pixels.flip();
-
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-        return textureId;
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA,
+                width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf);
+        return texId;
     }
-    
-    /**
-     * 创建彩色纹理
-     * @param id 纹理ID
-     * @param color ARGB颜色
-     * @return 纹理ID
-     */
-    private int createColorTexture(String id, int color) {
-        // 创建彩色纹理
-        int textureId = GL11.glGenTextures();
-        GL11.glBindTexture(GL11.GL_TEXTURE_2D, textureId);
+
+    // -----------------------------------------------------------------------
+    //  Fallback
+    // -----------------------------------------------------------------------
+
+    private int getFallbackTexture(String mainCategory) {
+        String key = "fallback:" + mainCategory;
+        if (textureCache.containsKey(key)) {
+            return textureCache.get(key);
+        }
+        int color = categoryColors.getOrDefault(mainCategory, 0xFF607D8B);
+        int texId = createColorTexture(color);
+        textureCache.put(key, texId);
+        return texId;
+    }
+
+    private int createColorTexture(int argb) {
+        int r = (argb >> 16) & 0xFF;
+        int g = (argb >>  8) & 0xFF;
+        int b =  argb        & 0xFF;
+        int a = (argb >> 24) & 0xFF;
+
+        ByteBuffer buf = BufferUtils.createByteBuffer(16 * 16 * 4);
+        for (int i = 0; i < 16 * 16; i++) {
+            buf.put((byte) r).put((byte) g).put((byte) b).put((byte) a);
+        }
+        buf.flip();
+
+        int texId = GL11.glGenTextures();
+        GL11.glBindTexture(GL11.GL_TEXTURE_2D, texId);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_LINEAR);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_LINEAR);
-        
-        // 提取颜色分量
-        int r = (color >> 16) & 0xFF;
-        int g = (color >> 8) & 0xFF;
-        int b = color & 0xFF;
-        int a = (color >> 24) & 0xFF;
-        
-        // 创建纹理
-        int width = 16;
-        int height = 16;
-        ByteBuffer pixels = BufferUtils.createByteBuffer(width * height * 4);
-        
-        for (int i = 0; i < width * height; i++) {
-            pixels.put((byte)r);
-            pixels.put((byte)g);
-            pixels.put((byte)b);
-            pixels.put((byte)a);
-        }
-        pixels.flip();
-        
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, width, height, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
-        
-        NodeCraft.LOGGER.debug("创建颜色纹理: {} (纹理ID: {})", id, textureId);
-        return textureId;
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA,
+                16, 16, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buf);
+        return texId;
     }
-    
-    /**
-     * 加载指定ID的图标
-     * @param iconId 图标ID
-     * @return 纹理ID
-     */
-    public int loadIcon(String iconId) {
-        // 如果已加载，直接返回
-        if (iconTextureMap.containsKey(iconId)) {
-            return iconTextureMap.get(iconId);
-        }
-        
-        // 构造图标路径
-        String iconPath = ICON_BASE_PATH + iconId + ".png";
-        
-        // 尝试从资源加载
-        int textureId = loadTextureFromResource(iconPath);
-        
-        // 如果加载失败，创建默认纹理
-        if (textureId == 0) {
-            if (DEFAULT_ICON.equals(iconId)) {
-                // 默认图标使用灰色
-                textureId = createColorTexture(iconId, 0xFF808080);
-            } else {
-                // 其他图标使用默认图标
-                return getDefaultTextureId();
-            }
-        }
-        
-        // 存储并返回
-        iconTextureMap.put(iconId, textureId);
-        return textureId;
+
+    private void initCategoryColors() {
+        categoryColors.put("flow",       0xFFF59E0B);
+        categoryColors.put("geometry",   0xFF3B82F6);
+        categoryColors.put("input",      0xFF10B981);
+        categoryColors.put("material",   0xFF8B5CF6);
+        categoryColors.put("math",       0xFFEF4444);
+        categoryColors.put("output",     0xFF06B6D4);
+        categoryColors.put("pattern",    0xFFEAB308);
+        categoryColors.put("reference",  0xFF6366F1);
+        categoryColors.put("transform",  0xFFEC4899);
+        categoryColors.put("utilities",  0xFF64748B);
+        categoryColors.put("variable",   0xFFF97316);
+        categoryColors.put("world",      0xFF14B8A6);
     }
-    
-    /**
-     * 获取图标的GL纹理ID
-     * @param iconId 图标ID
-     * @return GL纹理ID，如果不存在则返回默认图标
-     */
-    public int getTextureId(String iconId) {
-        // 如果是分类前缀，尝试加载分类图标
-        if (iconId.startsWith(CATEGORY_PREFIX)) {
-            String category = iconId.substring(CATEGORY_PREFIX.length());
-            return loadCategoryIcon(category);
-        }
-        
-        // 如果图标已存在，直接返回
-        if (iconTextureMap.containsKey(iconId)) {
-            return iconTextureMap.get(iconId);
-        }
-        
-        // 尝试加载图标
-        return loadIcon(iconId);
-    }
-    
-    /**
-     * 获取默认纹理ID
-     */
-    private int getDefaultTextureId() {
-        if (!iconTextureMap.containsKey(DEFAULT_ICON)) {
-            loadIcon(DEFAULT_ICON);
-        }
-        return iconTextureMap.getOrDefault(DEFAULT_ICON, 0);
-    }
-    
-    /**
-     * 根据分类ID获取合适的图标ID
-     * @param categoryId 分类ID
-     * @return 图标ID
-     */
-    public String getCategoryIconId(String categoryId) {
-        // 如果有点号，取主分类部分
-        if (categoryId.contains(".")) {
-            categoryId = categoryId.substring(0, categoryId.indexOf("."));
-        }
-        return CATEGORY_PREFIX + categoryId;
-    }
-    
-    /**
-     * 清理资源
-     */
-    public void cleanup() {
-        for (int textureId : iconTextureMap.values()) {
-            // 删除纹理
-            GL11.glDeleteTextures(textureId);
-        }
-        
-        iconTextureMap.clear();
-    }
-} 
+}
