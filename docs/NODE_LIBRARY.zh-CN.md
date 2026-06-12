@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**496**
+- **节点总数**：**497**
 - **分类总数**：**52**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -20,7 +20,7 @@
 | `input.context` | 4 |
 | `input.numeric` | 8 |
 | `input.type_selectors` | 5 |
-| `input.values` | 5 |
+| `input.values` | 6 |
 | `material.basic_assignment` | 3 |
 | `material.block_state` | 6 |
 | `material.directional_mapping` | 2 |
@@ -233,7 +233,7 @@
 | Prism By Base Points Vector | `geometry.solids.extrude_profile_from_points` | Constructs prism geometry from an ordered base polygon and an extrusion vector | `PrismByBasePointsVectorNode` |
 | Section Cut | `geometry.solids.section_cut` | Cuts geometry by a plane and outputs a section profile extracted from voxelized intersection points. | `SectionCutNode` |
 | Deconstruct Surface Strip | `geometry.solids.deconstruct_surface_strip` | Breaks a surface strip into section paths, flattened points, and rail segments | `DeconstructSurfaceStripNode` |
-| Multi-Section Loft | `geometry.solids.loft_multi_section` | Lofts multiple polygon sections with matching vertex counts into one surface strip. | `MultiSectionLoftNode` |
+| Multi-Section Loft | `geometry.solids.loft_multi_section` | Lofts multiple polygon sections into one surface strip with close, flip, seam, and resample options. | `MultiSectionLoftNode` |
 | Extract Surface Strip Range | `geometry.solids.extract_surface_strip_range` | Extracts a contiguous section range from a surface strip as a smaller surface strip | `ExtractSurfaceStripRangeNode` |
 | Morph Between Profiles | `geometry.solids.morph_profiles` | Interpolates between two compatible polygon profiles using parameter t in [0,1]. | `MorphBetweenProfilesNode` |
 | Offset Surface Strip | `geometry.solids.offset_surface_strip` | Offsets a surface strip by a signed distance and outputs a single offset surface | `OffsetSurfaceStripNode` |
@@ -272,13 +272,14 @@
 | Biome Selector | `input.type_selectors.biome_selector` | Selects a biome id for biome-aware generation workflows. | `BiomeSelectorNode` |
 | Block State Selector | `input.type_selectors.block_state_selector` | Builds block-state key/value data from a compact properties string. | `BlockStateSelectorNode` |
 
-## input.values（5）
+## input.values（6）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
 | Text Input | `input.basic.text_input` | Allows entering single-line or multi-line text. | `TextInputNode` |
 | Color Picker | `input.basic.color_picker` | Allows selecting a color value with RGB and alpha support. | `ColorPickerNode` |
 | Boolean Toggle | `input.basic.boolean_toggle` | 提供一个可以切换的布尔值开关控制 | `BooleanToggleNode` |
+| Gradient Ramp | `input.values.gradient_ramp` | Creates and samples a customizable multi-stop gradient ramp with a visual editor | `GradientRampNode` |
 | Dropdown Selector | `input.values.dropdown` | Selects one value from user-defined option list and outputs index + text value. | `DropdownSelectorNode` |
 | File Path Input | `input.values.file_path` | Selects or types a local file path and outputs it for file read/write nodes. | `FilePathInputNode` |
 
