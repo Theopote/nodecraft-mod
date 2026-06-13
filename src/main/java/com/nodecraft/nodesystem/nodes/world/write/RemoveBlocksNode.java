@@ -21,7 +21,7 @@ import java.util.UUID;
  * Low-level world edit node that clears blocks at explicit coordinates.
  */
 @NodeInfo(
-    id = "world.write.clear_region",
+    id = "world.write.remove_blocks",
     displayName = "Clear Blocks",
     description = "Clears blocks at explicit coordinates by replacing them with air",
     category = "world.write",
@@ -30,6 +30,7 @@ import java.util.UUID;
 public class RemoveBlocksNode extends BaseNode {
 
     private static final String INPUT_COORDINATES_ID = "input_coordinates";
+    private static final String INPUT_TRIGGER_ID = WorldWriteUtils.INPUT_TRIGGER_ID;
     private static final String INPUT_NOTIFY_ID = "input_notify";
     private static final String INPUT_SPAWN_DROPS_ID = "input_spawn_drops";
     private static final String INPUT_MAX_BLOCKS_ID = "input_max_blocks";
@@ -38,6 +39,7 @@ public class RemoveBlocksNode extends BaseNode {
     private static final String OUTPUT_SUCCESS_COUNT_ID = "output_success_count";
     private static final String OUTPUT_TOTAL_COUNT_ID = "output_total_count";
     private static final String OUTPUT_PREVIOUS_BLOCKS_ID = "output_previous_blocks";
+    private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
 
     private boolean notifyUpdate = true;
     private boolean spawnDrops = true;
@@ -46,9 +48,10 @@ public class RemoveBlocksNode extends BaseNode {
     private boolean recordUndo = true;
 
     public RemoveBlocksNode() {
-        super(UUID.randomUUID(), "world.write.clear_region");
+        super(UUID.randomUUID(), "world.write.remove_blocks");
 
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", "Block coordinates to clear", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "When connected, false prevents this write from running", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify Update", "Whether neighbor and listener updates should fire", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_SPAWN_DROPS_ID, "Spawn Drops", "Whether removed blocks should drop items", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_MAX_BLOCKS_ID, "Max Blocks", "Safety limit for the number of blocks to clear", NodeDataType.INTEGER, this));
@@ -57,6 +60,7 @@ public class RemoveBlocksNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SUCCESS_COUNT_ID, "Success Count", "Number of successful operations", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_TOTAL_COUNT_ID, "Total Count", "Number of attempted operations", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_PREVIOUS_BLOCKS_ID, "Previous Blocks", "Block states that existed before clearing", NodeDataType.BLOCK_INFO_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why clearing did not run or the first write error", NodeDataType.STRING, this));
     }
 
     @Override
@@ -69,6 +73,7 @@ public class RemoveBlocksNode extends BaseNode {
         int removedBlocks = 0;
         int successCount = 0;
         int totalCount = 0;
+        String error = "";
         List<Object> previousBlocks = new ArrayList<>();
 
         Object coordinatesObj = inputValues.get(INPUT_COORDINATES_ID);
@@ -78,17 +83,18 @@ public class RemoveBlocksNode extends BaseNode {
             ? Math.max(1, value.intValue())
             : maxBlocks;
 
-        if (context != null && context.getWorld() != null && coordinatesObj instanceof BlockPosList coordinates) {
-            if (coordinates.size() > blockLimit) {
-                outputValues.put(OUTPUT_REMOVED_BLOCKS_ID, removedBlocks);
-                outputValues.put(OUTPUT_SUCCESS_COUNT_ID, successCount);
-                outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
-                outputValues.put(OUTPUT_PREVIOUS_BLOCKS_ID, previousBlocks);
-                return;
-            }
+        if (!WorldWriteUtils.shouldRun(inputValues)) {
+            error = "Not triggered";
+        } else if (context == null || context.getWorld() == null) {
+            error = "Missing execution world";
+        } else if (!(coordinatesObj instanceof BlockPosList coordinates)) {
+            error = "Invalid coordinates";
+        } else if (coordinates.size() > blockLimit) {
+            error = "Coordinate count " + coordinates.size() + " exceeds max blocks " + blockLimit;
+        } else {
 
             BlockState airState = Blocks.AIR.getDefaultState();
-            int flags = notify ? Block.NOTIFY_ALL : Block.FORCE_STATE;
+            int flags = WorldWriteUtils.flags(notify);
             WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
 
             for (BlockPos pos : coordinates) {
@@ -116,8 +122,10 @@ public class RemoveBlocksNode extends BaseNode {
                             undoRecord.add(pos, currentState);
                         }
                     }
-                } catch (Exception ignored) {
-                    // Keep processing the remaining coordinates.
+                } catch (Exception e) {
+                    if (error.isEmpty()) {
+                        error = "Error clearing block at " + pos + ": " + e.getMessage();
+                    }
                 }
             }
             if (undoRecord != null) {
@@ -129,6 +137,7 @@ public class RemoveBlocksNode extends BaseNode {
         outputValues.put(OUTPUT_SUCCESS_COUNT_ID, successCount);
         outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
         outputValues.put(OUTPUT_PREVIOUS_BLOCKS_ID, previousBlocks);
+        outputValues.put(OUTPUT_ERROR_ID, error);
     }
 
     public boolean isNotifyUpdate() {

@@ -24,26 +24,33 @@ import java.util.UUID;
 public class ApplyRedstonePowerNode extends BaseNode {
 
     private static final String INPUT_COORDINATE_ID = "input_coordinate";
+    private static final String INPUT_TRIGGER_ID = WorldWriteUtils.INPUT_TRIGGER_ID;
     private static final String INPUT_POWER_LEVEL_ID = "input_power_level";
     private static final String INPUT_DURATION_ID = "input_duration";
     private static final String INPUT_PLAY_SOUND_ID = "input_play_sound";
+    private static final String INPUT_ONLY_IF_AIR_ID = "input_only_if_air";
 
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_BLOCK_TYPE_ID = "output_block_type";
+    private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
 
     private int powerLevel = 15;
     private int duration = 1;
+    private boolean onlyIfAir = true;
 
     public ApplyRedstonePowerNode() {
         super(UUID.randomUUID(), "world.write.apply_redstone_power");
 
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", "Target block position", NodeDataType.COORDINATE, this));
+        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "When connected, false prevents this write from running", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_POWER_LEVEL_ID, "Power Level", "Requested redstone power level", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_DURATION_ID, "Duration", "Duration in ticks", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_PLAY_SOUND_ID, "Play Sound", "Reserved for future sound toggling", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_ONLY_IF_AIR_ID, "Only If Air", "Only place temporary support/source blocks into air", NodeDataType.BOOLEAN, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether a pulse source was placed", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_TYPE_ID, "Block Type", "Registry id of the target block", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why the pulse was not placed", NodeDataType.STRING, this));
     }
 
     @Override
@@ -55,12 +62,21 @@ public class ApplyRedstonePowerNode extends BaseNode {
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
         String blockType = "";
+        String error = "";
 
         Object coordinateObj = inputValues.get(INPUT_COORDINATE_ID);
         int resolvedPower = inputValues.get(INPUT_POWER_LEVEL_ID) instanceof Number value ? Math.max(0, Math.min(15, value.intValue())) : powerLevel;
         int resolvedDuration = inputValues.get(INPUT_DURATION_ID) instanceof Number value ? Math.max(1, value.intValue()) : duration;
+        boolean onlyIfAirValue = inputValues.get(INPUT_ONLY_IF_AIR_ID) instanceof Boolean value ? value : onlyIfAir;
 
-        if (context != null && context.getWorld() != null && coordinateObj instanceof BlockPos targetPos) {
+        BlockPos targetPos = WorldWriteUtils.resolveBlockPos(coordinateObj);
+        if (!WorldWriteUtils.shouldRun(inputValues)) {
+            error = "Not triggered";
+        } else if (context == null || context.getWorld() == null) {
+            error = "Missing execution world";
+        } else if (targetPos == null) {
+            error = "Invalid coordinate";
+        } else {
             try {
                 blockType = Registries.BLOCK.getId(context.getWorld().getBlockState(targetPos).getBlock()).toString();
                 BlockPos supportPos = targetPos.up();
@@ -68,6 +84,14 @@ public class ApplyRedstonePowerNode extends BaseNode {
 
                 BlockState previousSupportState = context.getWorld().getBlockState(supportPos);
                 BlockState previousSourceState = context.getWorld().getBlockState(sourcePos);
+
+                if (onlyIfAirValue && (!previousSupportState.isAir() || !previousSourceState.isAir())) {
+                    error = "Temporary redstone positions are not air";
+                    outputValues.put(OUTPUT_SUCCESS_ID, false);
+                    outputValues.put(OUTPUT_BLOCK_TYPE_ID, blockType);
+                    outputValues.put(OUTPUT_ERROR_ID, error);
+                    return;
+                }
 
                 BlockState supportState = previousSupportState.isAir() ? Blocks.STONE.getDefaultState() : previousSupportState;
                 BlockState sourceState = resolvedPower >= 15
@@ -84,12 +108,13 @@ public class ApplyRedstonePowerNode extends BaseNode {
                 pulseService.enqueue(context.getWorld(), supportPos, previousSupportState, sourcePos, previousSourceState, resolvedDuration);
                 success = true;
             } catch (Exception e) {
-                System.err.println("Error applying redstone power: " + e.getMessage());
+                error = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             }
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_BLOCK_TYPE_ID, blockType);
+        outputValues.put(OUTPUT_ERROR_ID, error);
     }
 
     public int getPowerLevel() {
@@ -110,9 +135,18 @@ public class ApplyRedstonePowerNode extends BaseNode {
         markDirty();
     }
 
+    public boolean isOnlyIfAir() {
+        return onlyIfAir;
+    }
+
+    public void setOnlyIfAir(boolean onlyIfAir) {
+        this.onlyIfAir = onlyIfAir;
+        markDirty();
+    }
+
     @Override
     public @Nullable Object getNodeState() {
-        return new int[]{powerLevel, duration};
+        return new Object[]{powerLevel, duration, onlyIfAir};
     }
 
     @Override
@@ -120,6 +154,18 @@ public class ApplyRedstonePowerNode extends BaseNode {
         if (state instanceof int[] values && values.length >= 2) {
             powerLevel = values[0];
             duration = values[1];
+            return;
+        }
+        if (state instanceof Object[] values && values.length >= 2) {
+            if (values[0] instanceof Number power) {
+                powerLevel = Math.max(0, Math.min(15, power.intValue()));
+            }
+            if (values[1] instanceof Number ticks) {
+                duration = Math.max(1, ticks.intValue());
+            }
+            if (values.length >= 3 && values[2] instanceof Boolean value) {
+                onlyIfAir = value;
+            }
         }
     }
 }

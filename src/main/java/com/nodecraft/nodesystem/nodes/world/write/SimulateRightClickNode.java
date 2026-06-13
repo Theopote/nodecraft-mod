@@ -27,6 +27,7 @@ import java.util.UUID;
 public class SimulateRightClickNode extends BaseNode {
 
     private static final String INPUT_COORDINATE_ID = "input_coordinate";
+    private static final String INPUT_TRIGGER_ID = WorldWriteUtils.INPUT_TRIGGER_ID;
     private static final String INPUT_PLAYER_ID = "input_player";
     private static final String INPUT_ITEM_IN_HAND_ID = "input_item_in_hand";
     private static final String INPUT_PLAY_SOUND_ID = "input_play_sound";
@@ -34,6 +35,7 @@ public class SimulateRightClickNode extends BaseNode {
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_BLOCK_TYPE_ID = "output_block_type";
     private static final String OUTPUT_INTERACTION_RESULT_ID = "output_interaction_result";
+    private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
 
     private boolean playSound = true;
 
@@ -41,6 +43,7 @@ public class SimulateRightClickNode extends BaseNode {
         super(UUID.randomUUID(), "world.write.simulate_right_click");
 
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", "Target block position", NodeDataType.COORDINATE, this));
+        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "When connected, false prevents this interaction from running", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_PLAYER_ID, "Player", "Optional server player executor", NodeDataType.PLAYER, this));
         addInputPort(new BasePort(INPUT_ITEM_IN_HAND_ID, "Item in Hand", "Optional item stack to use", NodeDataType.ITEM_STACK, this));
         addInputPort(new BasePort(INPUT_PLAY_SOUND_ID, "Play Sound", "Whether to sync interaction listeners", NodeDataType.BOOLEAN, this));
@@ -48,6 +51,7 @@ public class SimulateRightClickNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether the interaction was accepted", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_TYPE_ID, "Block Type", "Registry id of the target block", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_INTERACTION_RESULT_ID, "Interaction Result", "Action result name", NodeDataType.ANY, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why the interaction did not run", NodeDataType.STRING, this));
     }
 
     @Override
@@ -60,13 +64,21 @@ public class SimulateRightClickNode extends BaseNode {
         boolean success = false;
         String blockType = "";
         String interactionResult = "PASS";
+        String error = "";
 
         Object coordinateObj = inputValues.get(INPUT_COORDINATE_ID);
         Object playerObj = inputValues.get(INPUT_PLAYER_ID);
         Object itemInHandObj = inputValues.get(INPUT_ITEM_IN_HAND_ID);
         boolean syncListeners = inputValues.get(INPUT_PLAY_SOUND_ID) instanceof Boolean value ? value : playSound;
 
-        if (context != null && context.getWorld() != null && coordinateObj instanceof BlockPos pos) {
+        BlockPos pos = WorldWriteUtils.resolveBlockPos(coordinateObj);
+        if (!WorldWriteUtils.shouldRun(inputValues)) {
+            error = "Not triggered";
+        } else if (context == null || context.getWorld() == null) {
+            error = "Missing execution world";
+        } else if (pos == null) {
+            error = "Invalid coordinate";
+        } else {
             ServerPlayerEntity player = playerObj instanceof ServerPlayerEntity provided ? provided : context.getPlayer();
             if (player != null) {
                 try {
@@ -82,13 +94,17 @@ public class SimulateRightClickNode extends BaseNode {
                     }
                 } catch (Exception e) {
                     interactionResult = "ERROR: " + e.getMessage();
+                    error = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
                 }
+            } else {
+                error = "Missing server player";
             }
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_BLOCK_TYPE_ID, blockType);
         outputValues.put(OUTPUT_INTERACTION_RESULT_ID, interactionResult);
+        outputValues.put(OUTPUT_ERROR_ID, error);
     }
 
     public boolean isPlaySound() {

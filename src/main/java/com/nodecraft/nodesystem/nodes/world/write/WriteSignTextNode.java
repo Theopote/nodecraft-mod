@@ -24,6 +24,7 @@ import java.util.UUID;
 public class WriteSignTextNode extends BaseNode {
 
     private static final String INPUT_COORDINATE_ID = "input_coordinate";
+    private static final String INPUT_TRIGGER_ID = WorldWriteUtils.INPUT_TRIGGER_ID;
     private static final String INPUT_LINE_1_ID = "input_line_1";
     private static final String INPUT_LINE_2_ID = "input_line_2";
     private static final String INPUT_LINE_3_ID = "input_line_3";
@@ -35,6 +36,7 @@ public class WriteSignTextNode extends BaseNode {
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_IS_SIGN_ID = "output_is_sign";
     private static final String OUTPUT_SIGN_TYPE_ID = "output_sign_type";
+    private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
 
     private String[] defaultLines = new String[]{"", "", "", ""};
     private boolean allowFormatting = true;
@@ -44,6 +46,7 @@ public class WriteSignTextNode extends BaseNode {
         super(UUID.randomUUID(), "world.write.write_sign_text");
 
         addInputPort(new BasePort(INPUT_COORDINATE_ID, "Coordinate", "Sign position", NodeDataType.COORDINATE, this));
+        addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "When connected, false prevents this write from running", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_LINE_1_ID, "Line 1", "First line", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_LINE_2_ID, "Line 2", "Second line", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_LINE_3_ID, "Line 3", "Third line", NodeDataType.STRING, this));
@@ -55,6 +58,7 @@ public class WriteSignTextNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether sign text was updated", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_IS_SIGN_ID, "Is Sign", "Whether the target block entity is a sign", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_SIGN_TYPE_ID, "Sign Type", "Registry id of the sign block", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why sign text was not updated", NodeDataType.STRING, this));
     }
 
     @Override
@@ -67,9 +71,17 @@ public class WriteSignTextNode extends BaseNode {
         boolean success = false;
         boolean isSign = false;
         String signType = "";
+        String error = "";
 
         Object coordinateObj = inputValues.get(INPUT_COORDINATE_ID);
-        if (context != null && context.getWorld() != null && coordinateObj instanceof BlockPos pos) {
+        BlockPos pos = WorldWriteUtils.resolveBlockPos(coordinateObj);
+        if (!WorldWriteUtils.shouldRun(inputValues)) {
+            error = "Not triggered";
+        } else if (context == null || context.getWorld() == null) {
+            error = "Missing execution world";
+        } else if (pos == null) {
+            error = "Invalid coordinate";
+        } else {
             String[] lines = resolveLines();
             String colorId = inputValues.get(INPUT_TEXT_COLOR_ID) instanceof String value ? value : textColor;
             boolean glowing = inputValues.get(INPUT_GLOWING_ID) instanceof Boolean value ? value : false;
@@ -93,16 +105,21 @@ public class WriteSignTextNode extends BaseNode {
                     if (success) {
                         sign.markDirty();
                         context.getWorld().updateListeners(pos, context.getWorld().getBlockState(pos), context.getWorld().getBlockState(pos), 3);
+                    } else {
+                        error = "World rejected sign text update";
                     }
+                } else {
+                    error = "Target block entity is not a sign";
                 }
             } catch (Exception e) {
-                System.err.println("Error writing sign text: " + e.getMessage());
+                error = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             }
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, success);
         outputValues.put(OUTPUT_IS_SIGN_ID, isSign);
         outputValues.put(OUTPUT_SIGN_TYPE_ID, signType);
+        outputValues.put(OUTPUT_ERROR_ID, error);
     }
 
     private String[] resolveLines() {
