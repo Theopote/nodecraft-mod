@@ -12,6 +12,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.registry.Registries;
 import net.minecraft.util.math.Box;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +35,11 @@ public class GetEntitiesInRegionNode extends BaseNode {
     private static final String OUTPUT_COUNT_ID = "output_count";
     private static final String OUTPUT_PLAYER_COUNT_ID = "output_player_count";
     private static final String OUTPUT_NEAREST_ENTITY_ID = "output_nearest_entity";
+    private static final String OUTPUT_ENTITY_UUIDS_ID = "output_entity_uuids";
+    private static final String OUTPUT_ENTITY_TYPE_IDS_ID = "output_entity_type_ids";
+    private static final String OUTPUT_ENTITY_POSITIONS_ID = "output_entity_positions";
+    private static final String OUTPUT_ITEM_COUNT_ID = "output_item_count";
+    private static final String OUTPUT_VALID_ID = "output_valid";
 
     private boolean excludePlayers = false;
     private boolean includeItems = true;
@@ -50,6 +56,11 @@ public class GetEntitiesInRegionNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Total number of included entities", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_PLAYER_COUNT_ID, "Player Count", "Number of player entities in the result", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_NEAREST_ENTITY_ID, "Nearest Entity", "Nearest included entity to the current player", NodeDataType.MINECRAFT_ENTITY, this));
+        addOutputPort(new BasePort(OUTPUT_ENTITY_UUIDS_ID, "Entity UUIDs", "UUID strings for included entities", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_ENTITY_TYPE_IDS_ID, "Entity Type IDs", "Registry ids for included entity types", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_ENTITY_POSITIONS_ID, "Entity Positions", "World positions for included entities", NodeDataType.LIST, this));
+        addOutputPort(new BasePort(OUTPUT_ITEM_COUNT_ID, "Item Count", "Number of item entities in the result", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether the region query was executed", NodeDataType.BOOLEAN, this));
     }
 
     @Override
@@ -62,8 +73,13 @@ public class GetEntitiesInRegionNode extends BaseNode {
         List<Object> entitiesList = new ArrayList<>();
         int count = 0;
         int playerCount = 0;
+        int itemCount = 0;
         Entity nearestEntity = null;
         double nearestDistance = Double.MAX_VALUE;
+        boolean valid = false;
+        List<String> uuids = new ArrayList<>();
+        List<String> typeIds = new ArrayList<>();
+        List<Vector3d> positions = new ArrayList<>();
 
         Object regionObj = inputValues.get(INPUT_REGION_ID);
         Object entityTypeObj = inputValues.get(INPUT_ENTITY_TYPE_ID);
@@ -75,6 +91,7 @@ public class GetEntitiesInRegionNode extends BaseNode {
         if (context != null && context.getWorld() != null && regionObj instanceof RegionData region && region.isComplete()) {
             Box box = region.toBox();
             if (box != null) {
+                valid = true;
                 List<Entity> entities = new ArrayList<>(context.getWorld().getOtherEntities(null, box));
                 if (context.getPlayer() != null
                     && box.contains(context.getPlayer().getX(), context.getPlayer().getY(), context.getPlayer().getZ())) {
@@ -104,6 +121,13 @@ public class GetEntitiesInRegionNode extends BaseNode {
                     if (isPlayer) {
                         playerCount++;
                     }
+                    if (isItem) {
+                        itemCount++;
+                    }
+
+                    uuids.add(entity.getUuidAsString());
+                    typeIds.add(Registries.ENTITY_TYPE.getId(entity.getType()).toString());
+                    positions.add(new Vector3d(entity.getX(), entity.getY(), entity.getZ()));
 
                     if (context.getPlayer() != null) {
                         double distance = context.getPlayer().squaredDistanceTo(entity);
@@ -122,6 +146,11 @@ public class GetEntitiesInRegionNode extends BaseNode {
         outputValues.put(OUTPUT_COUNT_ID, count);
         outputValues.put(OUTPUT_PLAYER_COUNT_ID, playerCount);
         outputValues.put(OUTPUT_NEAREST_ENTITY_ID, nearestEntity);
+        outputValues.put(OUTPUT_ENTITY_UUIDS_ID, uuids);
+        outputValues.put(OUTPUT_ENTITY_TYPE_IDS_ID, typeIds);
+        outputValues.put(OUTPUT_ENTITY_POSITIONS_ID, positions);
+        outputValues.put(OUTPUT_ITEM_COUNT_ID, itemCount);
+        outputValues.put(OUTPUT_VALID_ID, valid);
     }
 
     public boolean isExcludePlayers() {

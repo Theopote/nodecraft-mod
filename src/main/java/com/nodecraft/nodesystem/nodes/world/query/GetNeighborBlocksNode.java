@@ -20,7 +20,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "world.query.get_neighbors",
     displayName = "Get Neighbor Blocks",
-    description = "Returns 6 or 26 neighboring blocks around a center position.",
+    description = "Returns axis-ray neighbors or cube-volume neighbors around a center position.",
     category = "world.query",
     order = 10
 )
@@ -44,11 +44,11 @@ public class GetNeighborBlocksNode extends BaseNode {
         super(UUID.randomUUID(), "world.query.get_neighbors");
 
         addInputPort(new BasePort(INPUT_CENTER_ID, "Center", "Center block position", NodeDataType.BLOCK_POS, this));
-        addInputPort(new BasePort(INPUT_INCLUDE_DIAGONALS_ID, "Include Diagonals", "Use 26-neighbor mode", NodeDataType.BOOLEAN, this));
-        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Neighbor radius in blocks", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_INCLUDE_DIAGONALS_ID, "Include Diagonals", "Use cube-volume 26-neighbor mode instead of six axis rays", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_RADIUS_ID, "Radius", "Neighbor radius in blocks; six-neighbor mode returns axis rays, diagonal mode returns the surrounding cube volume", NodeDataType.INTEGER, this));
 
         addOutputPort(new BasePort(OUTPUT_COORDINATES_ID, "Coordinates", "Neighbor block positions", NodeDataType.BLOCK_LIST, this));
-        addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Neighbor block ids", NodeDataType.BLOCK_INFO_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Neighbor block ids", NodeDataType.LIST, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_INFOS_ID, "Block Infos", "Neighbor info map list", NodeDataType.LIST, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Neighbor count", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether neighbor query was executed", NodeDataType.BOOLEAN, this));
@@ -56,7 +56,7 @@ public class GetNeighborBlocksNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Returns 6 or 26 neighboring blocks around a center position.";
+        return "Returns axis-ray neighbors or cube-volume neighbors around a center position.";
     }
 
     @Override

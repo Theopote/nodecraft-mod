@@ -1,183 +1,170 @@
 package com.nodecraft.nodesystem.nodes.world.query;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import net.minecraft.entity.Entity;
+import net.minecraft.registry.Registries;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.Box;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3d;
 
+import java.util.List;
 import java.util.UUID;
 
-/**
- * Get Entity 节点: 根据实体ID或选择器获取实体信息。
- */
 @NodeInfo(
     id = "world.query.get_entity",
     displayName = "Get Entity",
-    description = "根据实体ID或选择器获取实体信息",
+    description = "Finds an entity by UUID or by type near the current player.",
     category = "world.query"
 )
 public class GetEntityNode extends BaseNode {
 
-    // --- 输入端口 IDs ---
     private static final String INPUT_UUID_ID = "input_uuid";
     private static final String INPUT_ENTITY_TYPE_ID = "input_entity_type";
     private static final String INPUT_FIND_NEAREST_ID = "input_find_nearest";
     private static final String INPUT_MAX_DISTANCE_ID = "input_max_distance";
 
-    // --- 输出端口 IDs ---
     private static final String OUTPUT_ENTITY_ID = "output_entity";
     private static final String OUTPUT_ENTITY_TYPE_ID = "output_entity_type";
     private static final String OUTPUT_ENTITY_POS_ID = "output_entity_pos";
     private static final String OUTPUT_FOUND_ID = "output_found";
     private static final String OUTPUT_DISTANCE_ID = "output_distance";
-    
-    // 节点描述
-    private final String description = "通过UUID或类型获取实体信息";
+    private static final String OUTPUT_UUID_ID = "output_uuid";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
-    // --- 构造函数 ---
     public GetEntityNode() {
         super(UUID.randomUUID(), "world.query.get_entity");
-        
-        // 创建并添加输入端口
-        addInputPort(new BasePort(INPUT_UUID_ID, "UUID", 
-                "实体的UUID", NodeDataType.STRING, this));
-        addInputPort(new BasePort(INPUT_ENTITY_TYPE_ID, "Entity Type", 
-                "实体类型（如果没有指定UUID）", NodeDataType.ENTITY_TYPE, this));
-        addInputPort(new BasePort(INPUT_FIND_NEAREST_ID, "Find Nearest", 
-                "查找最近的实体（按类型时）", NodeDataType.BOOLEAN, this));
-        addInputPort(new BasePort(INPUT_MAX_DISTANCE_ID, "Max Distance", 
-                "查找的最大距离", NodeDataType.DOUBLE, this));
 
-        // 创建并添加输出端口
-        addOutputPort(new BasePort(OUTPUT_ENTITY_ID, "Entity", 
-                "实体对象", NodeDataType.MINECRAFT_ENTITY, this));
-        addOutputPort(new BasePort(OUTPUT_ENTITY_TYPE_ID, "Entity Type", 
-                "实体类型", NodeDataType.ENTITY_TYPE, this));
-        addOutputPort(new BasePort(OUTPUT_ENTITY_POS_ID, "Entity Position", 
-                "实体位置", NodeDataType.POSITION, this));
-        addOutputPort(new BasePort(OUTPUT_FOUND_ID, "Found", 
-                "是否找到实体", NodeDataType.BOOLEAN, this));
-        addOutputPort(new BasePort(OUTPUT_DISTANCE_ID, "Distance", 
-                "到实体的距离", NodeDataType.DOUBLE, this));
+        addInputPort(new BasePort(INPUT_UUID_ID, "UUID", "Entity UUID string", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_ENTITY_TYPE_ID, "Entity Type", "Entity type id used when UUID is empty", NodeDataType.ENTITY_TYPE, this));
+        addInputPort(new BasePort(INPUT_FIND_NEAREST_ID, "Find Nearest", "Choose nearest matching entity to the current player", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_MAX_DISTANCE_ID, "Max Distance", "Search radius for type lookup around the current player", NodeDataType.DOUBLE, this));
+
+        addOutputPort(new BasePort(OUTPUT_ENTITY_ID, "Entity", "Resolved entity object", NodeDataType.MINECRAFT_ENTITY, this));
+        addOutputPort(new BasePort(OUTPUT_ENTITY_TYPE_ID, "Entity Type", "Entity registry id", NodeDataType.ENTITY_TYPE, this));
+        addOutputPort(new BasePort(OUTPUT_ENTITY_POS_ID, "Entity Position", "Entity world position", NodeDataType.POSITION, this));
+        addOutputPort(new BasePort(OUTPUT_FOUND_ID, "Found", "Whether an entity was found", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_DISTANCE_ID, "Distance", "Distance from the current player to the entity", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_UUID_ID, "UUID", "Resolved entity UUID", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether the query inputs and execution context were usable", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when the query is invalid", NodeDataType.STRING, this));
     }
-    
-    /**
-     * 实现INode接口的getDescription方法
-     * @return 节点描述
-     */
+
     @Override
     public String getDescription() {
-        return this.description;
+        return "Finds an entity by UUID or by type near the current player.";
     }
-    
-    /**
-     * 实现INode接口的getDisplayName方法
-     * @return 节点显示名称
-     */
+
     @Override
     public String getDisplayName() {
         return "Get Entity";
     }
 
-    // --- 核心逻辑 ---
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        // 默认输出值
-        Object entityObj = null;
-        String entityType = "";
-        Object entityPos = null;
-        boolean found = false;
-        double distance = Double.MAX_VALUE;
-        
-        // 获取输入值
+        if (context == null || context.getWorld() == null) {
+            publish(null, false, false, "Execution context or world is missing.", context);
+            return;
+        }
+
+        boolean findNearest = !(inputValues.get(INPUT_FIND_NEAREST_ID) instanceof Boolean b) || b;
+        double maxDistance = inputValues.get(INPUT_MAX_DISTANCE_ID) instanceof Number n ? Math.max(1.0d, n.doubleValue()) : 64.0d;
+
+        Entity entity = null;
         Object uuidObj = inputValues.get(INPUT_UUID_ID);
         Object entityTypeObj = inputValues.get(INPUT_ENTITY_TYPE_ID);
-        
-        // 获取额外输入参数
-        boolean findNearest = false;
-        Object findNearestObj = inputValues.get(INPUT_FIND_NEAREST_ID);
-        if (findNearestObj instanceof Boolean) {
-            findNearest = (Boolean) findNearestObj;
-        }
-        
-        // 设置默认最大距离为100个方块
-        double maxDistance = 100.0;
-        Object maxDistanceObj = inputValues.get(INPUT_MAX_DISTANCE_ID);
-        if (maxDistanceObj instanceof Number) {
-            maxDistance = ((Number) maxDistanceObj).doubleValue();
-            if (maxDistance <= 0) {
-                maxDistance = Double.MAX_VALUE; // 无限制
-            }
-        }
-        
-        // 检查执行上下文是否有效
-        if (context != null && context.getWorld() != null) {
+
+        if (uuidObj instanceof String uuidText && !uuidText.isBlank()) {
             try {
-                if (uuidObj instanceof String) {
-                    // 尝试解析UUID
-                    try {
-                        UUID uuid = UUID.fromString((String) uuidObj);
-                        
-                        // 通过UUID查找实体（在实际实现中使用Minecraft API）
-                        // entityObj = context.getWorld().getEntity(uuid);
-                        
-                        // 模拟实现
-                        if (entityObj != null) {
-                            found = true;
-                            // 获取实体类型
-                            entityType = entityObj.getClass().getSimpleName();
-                            
-                            // 获取实体位置（实际实现中使用entity.getPos()或类似方法）
-                            // entityPos = new Vector3d(entity.getX(), entity.getY(), entity.getZ());
-                            
-                            // 计算距离（如果有玩家位置）
-                            if (context.getPlayer() != null) {
-                                // 在实际实现中计算玩家到实体的距离
-                                // distance = context.getPlayer().getPos().distanceTo(entity.getPos());
-                            }
-                        }
-                    } catch (IllegalArgumentException e) {
-                        // UUID格式无效，记录错误
-                        System.err.println("Invalid UUID format: " + uuidObj);
-                    }
-                } 
-                // 如果没有找到实体通过UUID或没有提供UUID，尝试按类型查找
-                else if (!found && entityTypeObj instanceof String) {
-                    String type = (String) entityTypeObj;
-                    
-                    // 在实际实现中通过类型查找实体（可能找到多个）
-                    // List<Entity> entities = context.getWorld().getEntitiesByType(...);
-                    
-                    // 如果找到多个实体
-                    if (findNearest && context.getPlayer() != null) {
-                        // 查找最近的实体
-                        // 代码应根据实际Minecraft API实现
-                    } else {
-                        // 返回第一个找到的实体
-                        // 代码应根据实际Minecraft API实现
-                    }
-                    
-                    // 如果找到实体，设置输出值
-                    if (entityObj != null) {
-                        found = true;
-                        entityType = type;
-                        // 获取实体位置和计算距离
-                        // 代码应根据实际Minecraft API实现
-                    }
-                }
+                entity = findByUuid(context, uuidText.trim());
+            } catch (IllegalArgumentException e) {
+                publish(null, false, false, "Invalid UUID: " + uuidText, context);
+                return;
             } catch (Exception e) {
-                // 记录错误
-                System.err.println("Error finding entity: " + e.getMessage());
+                NodeCraft.LOGGER.warn("GetEntityNode UUID query failed: {}", e.getMessage());
+                publish(null, false, false, "Entity UUID query failed: " + e.getMessage(), context);
+                return;
+            }
+        } else if (entityTypeObj instanceof String typeId && !typeId.isBlank()) {
+            if (context.getPlayer() == null) {
+                publish(null, false, false, "Current player is required for entity type lookup.", context);
+                return;
+            }
+            entity = findByType(context, typeId.trim(), findNearest, maxDistance);
+        } else {
+            publish(null, false, false, "UUID or Entity Type is required.", context);
+            return;
+        }
+
+        publish(entity, true, entity != null, "", context);
+    }
+
+    private @Nullable Entity findByUuid(ExecutionContext context, String uuidText) {
+        UUID uuid = UUID.fromString(uuidText);
+        if (context.getWorld() instanceof ServerWorld serverWorld) {
+            return serverWorld.getEntity(uuid);
+        }
+        return null;
+    }
+
+    private @Nullable Entity findByType(ExecutionContext context, String typeId, boolean findNearest, double maxDistance) {
+        Box box = context.getPlayer().getBoundingBox().expand(maxDistance);
+        List<Entity> nearby = context.getWorld().getOtherEntities(context.getPlayer(), box);
+        Entity best = null;
+        double bestDistance = Double.MAX_VALUE;
+
+        for (Entity entity : nearby) {
+            if (!isQueryable(entity)) {
+                continue;
+            }
+            String entityTypeId = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
+            if (!typeId.equals(entityTypeId)) {
+                continue;
+            }
+            if (!findNearest) {
+                return entity;
+            }
+            double distance = context.getPlayer().squaredDistanceTo(entity);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = entity;
             }
         }
-        
-        // 设置输出值
-        outputValues.put(OUTPUT_ENTITY_ID, entityObj);
+        return best;
+    }
+
+    private boolean isQueryable(Entity entity) {
+        return entity != null && entity.isAlive() && !entity.isRemoved();
+    }
+
+    private void publish(@Nullable Entity entity, boolean valid, boolean found, String error, @Nullable ExecutionContext context) {
+        String entityType = "";
+        Vector3d entityPos = new Vector3d();
+        String uuid = "";
+        double distance = -1.0d;
+
+        if (entity != null) {
+            entityType = Registries.ENTITY_TYPE.getId(entity.getType()).toString();
+            entityPos = new Vector3d(entity.getX(), entity.getY(), entity.getZ());
+            uuid = entity.getUuidAsString();
+            if (context != null && context.getPlayer() != null) {
+                distance = Math.sqrt(context.getPlayer().squaredDistanceTo(entity));
+            }
+        }
+
+        outputValues.put(OUTPUT_ENTITY_ID, entity);
         outputValues.put(OUTPUT_ENTITY_TYPE_ID, entityType);
         outputValues.put(OUTPUT_ENTITY_POS_ID, entityPos);
         outputValues.put(OUTPUT_FOUND_ID, found);
-        outputValues.put(OUTPUT_DISTANCE_ID, found ? distance : -1.0);
+        outputValues.put(OUTPUT_DISTANCE_ID, distance);
+        outputValues.put(OUTPUT_UUID_ID, uuid);
+        outputValues.put(OUTPUT_VALID_ID, valid);
+        outputValues.put(OUTPUT_ERROR_ID, error == null ? "" : error);
     }
-} 
+}

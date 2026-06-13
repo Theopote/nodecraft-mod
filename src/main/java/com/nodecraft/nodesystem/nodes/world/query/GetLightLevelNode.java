@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.world.query;
 
+import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
@@ -27,6 +28,8 @@ public class GetLightLevelNode extends BaseNode {
     private static final String OUTPUT_BLOCK_LIGHT_ID = "output_block_light";
     private static final String OUTPUT_IS_DAY_ID = "output_is_day";
     private static final String OUTPUT_CAN_SEE_SKY_ID = "output_can_see_sky";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
     public GetLightLevelNode() {
         super(UUID.randomUUID(), "world.query.get_light_level");
@@ -38,6 +41,8 @@ public class GetLightLevelNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_BLOCK_LIGHT_ID, "Block Light", "Block light level", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_IS_DAY_ID, "Is Day", "Whether the world currently counts as daytime", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_CAN_SEE_SKY_ID, "Can See Sky", "Whether the queried block can see the sky", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether the light query succeeded", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when the light query fails", NodeDataType.STRING, this));
     }
 
     @Override
@@ -52,17 +57,25 @@ public class GetLightLevelNode extends BaseNode {
         int blockLight = 0;
         boolean isDay = false;
         boolean canSeeSky = false;
+        boolean valid = false;
+        String error = "";
 
         Object coordinateObj = inputValues.get(INPUT_COORDINATE_ID);
-        if (context != null && context.getWorld() != null && coordinateObj instanceof BlockPos pos) {
+        if (context == null || context.getWorld() == null) {
+            error = "Execution context or world is missing.";
+        } else if (!(coordinateObj instanceof BlockPos pos)) {
+            error = "Coordinate input must be a block position.";
+        } else {
             try {
                 lightLevel = context.getWorld().getLightLevel(pos);
                 skyLight = context.getWorld().getLightLevel(LightType.SKY, pos);
                 blockLight = context.getWorld().getLightLevel(LightType.BLOCK, pos);
                 isDay = context.getWorld().isDay();
                 canSeeSky = context.getWorld().isSkyVisible(pos);
+                valid = true;
             } catch (Exception e) {
-                System.err.println("Error getting light level at " + pos + ": " + e.getMessage());
+                error = "Error getting light level at " + pos + ": " + e.getMessage();
+                NodeCraft.LOGGER.warn(error);
             }
         }
 
@@ -71,5 +84,7 @@ public class GetLightLevelNode extends BaseNode {
         outputValues.put(OUTPUT_BLOCK_LIGHT_ID, blockLight);
         outputValues.put(OUTPUT_IS_DAY_ID, isDay);
         outputValues.put(OUTPUT_CAN_SEE_SKY_ID, canSeeSky);
+        outputValues.put(OUTPUT_VALID_ID, valid);
+        outputValues.put(OUTPUT_ERROR_ID, error);
     }
 }

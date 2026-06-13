@@ -4,7 +4,6 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
-import com.nodecraft.nodesystem.datatypes.PointData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.util.math.BlockPos;
@@ -86,14 +85,14 @@ public class FilterGridPointsNode extends BaseNode {
             return;
         }
 
-        List<PointData> gridPoints = new ArrayList<>();
+        List<Vector3d> gridPoints = new ArrayList<>();
         BlockPosList gridBlocks = new BlockPosList();
-        List<PointData> offGridPoints = new ArrayList<>();
+        List<Vector3d> offGridPoints = new ArrayList<>();
         int validCount = 0;
         int skippedCount = 0;
 
         for (Object entry : values) {
-            Vector3d point = resolvePoint(entry);
+            Vector3d point = WorldQueryPointResolver.resolveVector(entry);
             if (point == null) {
                 skippedCount++;
                 continue;
@@ -109,12 +108,11 @@ public class FilterGridPointsNode extends BaseNode {
             double dz = point.z - nearestZ;
             double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
 
-            PointData pointData = new PointData(point);
             if (distance <= Math.max(0.0D, tolerance)) {
-                gridPoints.add(pointData);
+                gridPoints.add(new Vector3d(point));
                 gridBlocks.add(new BlockPos(nearestX, nearestY, nearestZ));
             } else {
-                offGridPoints.add(pointData);
+                offGridPoints.add(new Vector3d(point));
             }
         }
 
@@ -151,18 +149,5 @@ public class FilterGridPointsNode extends BaseNode {
                 setTolerance(number.doubleValue());
             }
         }
-    }
-
-    private Vector3d resolvePoint(Object value) {
-        if (value instanceof PointData pointData) {
-            return pointData.getPosition();
-        }
-        if (value instanceof Vector3d vector) {
-            return new Vector3d(vector);
-        }
-        if (value instanceof BlockPos blockPos) {
-            return new Vector3d(blockPos.getX(), blockPos.getY(), blockPos.getZ());
-        }
-        return null;
     }
 }

@@ -44,6 +44,8 @@ public class RaycastNode extends BaseNode {
     private static final String OUTPUT_HIT_NORMAL_ID = "output_hit_normal";
     private static final String OUTPUT_HIT_ENTITY_ID = "output_hit_entity";
     private static final String OUTPUT_DISTANCE_ID = "output_distance";
+    private static final String OUTPUT_VALID_ID = "output_valid";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
     public RaycastNode() {
         super(UUID.randomUUID(), "world.query.raycast");
@@ -62,6 +64,8 @@ public class RaycastNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_HIT_NORMAL_ID, "Hit Normal", "Hit surface normal vector", NodeDataType.VECTOR, this));
         addOutputPort(new BasePort(OUTPUT_HIT_ENTITY_ID, "Hit Entity", "Entity object when entity hit", NodeDataType.MINECRAFT_ENTITY, this));
         addOutputPort(new BasePort(OUTPUT_DISTANCE_ID, "Distance", "Distance from origin to hit", NodeDataType.DOUBLE, this));
+        addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether ray inputs and execution context were valid", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when the raycast is invalid", NodeDataType.STRING, this));
     }
 
     @Override
@@ -72,18 +76,18 @@ public class RaycastNode extends BaseNode {
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         if (context == null || context.getWorld() == null) {
-            writeNoHit();
+            writeNoHit(false, "Execution context or world is missing.");
             return;
         }
 
-        Vector3d origin = resolveVector(inputValues.get(INPUT_ORIGIN_ID));
-        Vector3d direction = resolveVector(inputValues.get(INPUT_DIRECTION_ID));
+        Vector3d origin = WorldQueryPointResolver.resolveVector(inputValues.get(INPUT_ORIGIN_ID));
+        Vector3d direction = WorldQueryPointResolver.resolveVector(inputValues.get(INPUT_DIRECTION_ID));
         if (origin == null || direction == null || direction.lengthSquared() <= 1.0e-12d) {
-            writeNoHit();
+            writeNoHit(false, "Origin and non-zero Direction inputs are required.");
             return;
         }
 
-        double maxDistance = inputValues.get(INPUT_MAX_DISTANCE_ID) instanceof Number n ? Math.max(0.0d, n.doubleValue()) : 16.0d;
+        double maxDistance = inputValues.get(INPUT_MAX_DISTANCE_ID) instanceof Number n ? Math.max(1.0e-3d, n.doubleValue()) : 16.0d;
         boolean includeFluids = inputValues.get(INPUT_INCLUDE_FLUIDS_ID) instanceof Boolean b && b;
         boolean checkEntities = inputValues.get(INPUT_CHECK_ENTITIES_ID) instanceof Boolean b && b;
         double entityRadius = inputValues.get(INPUT_ENTITY_RADIUS_ID) instanceof Number n ? Math.max(0.0d, n.doubleValue()) : 0.15d;
@@ -126,7 +130,7 @@ public class RaycastNode extends BaseNode {
 
         HitCandidate best = chooseBest(blockCandidate, entityCandidate);
         if (best == null) {
-            writeNoHit();
+            writeNoHit(true, "");
             return;
         }
 
@@ -137,6 +141,8 @@ public class RaycastNode extends BaseNode {
         outputValues.put(OUTPUT_HIT_NORMAL_ID, best.normal != null ? new Vector3d(best.normal) : new Vector3d());
         outputValues.put(OUTPUT_HIT_ENTITY_ID, best.entity);
         outputValues.put(OUTPUT_DISTANCE_ID, best.distance);
+        outputValues.put(OUTPUT_VALID_ID, true);
+        outputValues.put(OUTPUT_ERROR_ID, "");
     }
 
     private HitCandidate raycastEntities(ExecutionContext context,
@@ -153,6 +159,9 @@ public class RaycastNode extends BaseNode {
 
         HitCandidate best = null;
         for (Entity entity : entities) {
+            if (!isRaycastableEntity(entity)) {
+                continue;
+            }
             Box box = entity.getBoundingBox().expand(extraRadius);
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             Vec3d hitPos = box.raycast(start, end).orElse(null);
@@ -169,6 +178,13 @@ public class RaycastNode extends BaseNode {
             }
         }
         return best;
+    }
+
+    private boolean isRaycastableEntity(Entity entity) {
+        if (entity == null || !entity.isAlive() || entity.isRemoved()) {
+            return false;
+        }
+        return !(entity instanceof PlayerEntity player && player.isSpectator());
     }
 
     private Vector3d estimateNormal(Box box, Vec3d hitPos) {
@@ -188,21 +204,16 @@ public class RaycastNode extends BaseNode {
         return a.distance <= b.distance ? a : b;
     }
 
-    private void writeNoHit() {
+    private void writeNoHit(boolean valid, String error) {
         outputValues.put(OUTPUT_HIT_ID, false);
         outputValues.put(OUTPUT_HIT_TYPE_ID, "none");
         outputValues.put(OUTPUT_HIT_POS_ID, new Vector3d());
-        outputValues.put(OUTPUT_HIT_BLOCK_POS_ID, null);
+        outputValues.put(OUTPUT_HIT_BLOCK_POS_ID, BlockPos.ORIGIN);
         outputValues.put(OUTPUT_HIT_NORMAL_ID, new Vector3d());
         outputValues.put(OUTPUT_HIT_ENTITY_ID, null);
         outputValues.put(OUTPUT_DISTANCE_ID, -1.0d);
-    }
-
-    private @Nullable Vector3d resolveVector(Object value) {
-        if (value instanceof Vector3d vector) return new Vector3d(vector);
-        if (value instanceof Vec3d vector) return new Vector3d(vector.x, vector.y, vector.z);
-        if (value instanceof BlockPos pos) return new Vector3d(pos.getX(), pos.getY(), pos.getZ());
-        return null;
+        outputValues.put(OUTPUT_VALID_ID, valid);
+        outputValues.put(OUTPUT_ERROR_ID, error == null ? "" : error);
     }
 
     private static final class HitCandidate {

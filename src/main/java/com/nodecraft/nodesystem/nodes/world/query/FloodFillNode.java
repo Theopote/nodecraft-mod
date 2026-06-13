@@ -38,6 +38,10 @@ public class FloodFillNode extends BaseNode {
     private static final String OUTPUT_TARGET_BLOCK_ID = "output_target_block";
     private static final String OUTPUT_BOUNDARY_BLOCKS_ID = "output_boundary_blocks";
     private static final String OUTPUT_VALID_ID = "output_valid";
+    private static final String OUTPUT_STOPPED_REASON_ID = "output_stopped_reason";
+    private static final String OUTPUT_VISITED_COUNT_ID = "output_visited_count";
+    private static final String OUTPUT_SKIPPED_COUNT_ID = "output_skipped_count";
+    private static final String OUTPUT_HIT_LIMIT_ID = "output_hit_limit";
 
     private static final int[][] OFFSETS_6 = new int[][] {
         {1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}
@@ -50,7 +54,7 @@ public class FloodFillNode extends BaseNode {
 
         addInputPort(new BasePort(INPUT_SEED_ID, "Seed", "Start block position", NodeDataType.BLOCK_POS, this));
         addInputPort(new BasePort(INPUT_TARGET_BLOCK_ID, "Target Block", "Optional target block id; defaults to seed block id", NodeDataType.BLOCK_TYPE, this));
-        addInputPort(new BasePort(INPUT_MAX_DISTANCE_ID, "Max Distance", "Maximum Manhattan search radius from seed", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_MAX_DISTANCE_ID, "Max Distance", "Maximum Chebyshev search radius from seed", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_MAX_BLOCKS_ID, "Max Blocks", "Maximum number of connected blocks to return", NodeDataType.INTEGER, this));
         addInputPort(new BasePort(INPUT_INCLUDE_DIAGONALS_ID, "Include Diagonals", "Use 26-neighbor connectivity instead of 6-neighbor", NodeDataType.BOOLEAN, this));
 
@@ -59,6 +63,10 @@ public class FloodFillNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_TARGET_BLOCK_ID, "Target Block", "Resolved target block id", NodeDataType.BLOCK_TYPE, this));
         addOutputPort(new BasePort(OUTPUT_BOUNDARY_BLOCKS_ID, "Boundary Blocks", "Subset of filled blocks touching non-target neighbors", NodeDataType.BLOCK_LIST, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether flood fill was executed", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_STOPPED_REASON_ID, "Stopped Reason", "completed, max_blocks, or invalid", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_VISITED_COUNT_ID, "Visited Count", "Number of positions visited by the search", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_SKIPPED_COUNT_ID, "Skipped Count", "Number of candidate neighbors skipped before enqueue", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_HIT_LIMIT_ID, "Hit Limit", "Whether Max Blocks stopped the search", NodeDataType.BOOLEAN, this));
     }
 
     @Override
@@ -89,16 +97,19 @@ public class FloodFillNode extends BaseNode {
         ArrayDeque<BlockPos> queue = new ArrayDeque<>();
         Set<BlockPos> visited = new HashSet<>();
         List<BlockPos> filled = new ArrayList<>();
+        int skippedCount = 0;
 
         BlockPos start = seed.toImmutable();
+        if (!matchesTarget(context, start, targetBlockId)) {
+            publish(new BlockPosList(), new BlockPosList(), targetBlockId, visited.size(), 1, false, "completed");
+            return;
+        }
+
         queue.add(start);
         visited.add(start);
 
         while (!queue.isEmpty() && filled.size() < maxBlocks) {
             BlockPos pos = queue.pollFirst();
-            if (!matchesTarget(context, pos, targetBlockId)) {
-                continue;
-            }
             filled.add(pos);
 
             for (int[] d : offsets) {
@@ -109,18 +120,38 @@ public class FloodFillNode extends BaseNode {
                 if (distanceChebyshev(seed, next) > maxDistance) {
                     continue;
                 }
+                if (!matchesTarget(context, next, targetBlockId)) {
+                    skippedCount++;
+                    continue;
+                }
                 visited.add(next);
                 queue.addLast(next);
             }
         }
 
+        boolean hitLimit = filled.size() >= maxBlocks && !queue.isEmpty();
+        String stoppedReason = hitLimit ? "max_blocks" : "completed";
         BlockPosList blocks = new BlockPosList(filled);
         BlockPosList boundary = new BlockPosList(resolveBoundary(context, filled, targetBlockId, offsets));
+        publish(blocks, boundary, targetBlockId, visited.size(), skippedCount, hitLimit, stoppedReason);
+    }
+
+    private void publish(BlockPosList blocks,
+                         BlockPosList boundary,
+                         String targetBlockId,
+                         int visitedCount,
+                         int skippedCount,
+                         boolean hitLimit,
+                         String stoppedReason) {
         outputValues.put(OUTPUT_BLOCKS_ID, blocks);
-        outputValues.put(OUTPUT_COUNT_ID, filled.size());
+        outputValues.put(OUTPUT_COUNT_ID, blocks.size());
         outputValues.put(OUTPUT_TARGET_BLOCK_ID, targetBlockId);
         outputValues.put(OUTPUT_BOUNDARY_BLOCKS_ID, boundary);
         outputValues.put(OUTPUT_VALID_ID, true);
+        outputValues.put(OUTPUT_STOPPED_REASON_ID, stoppedReason);
+        outputValues.put(OUTPUT_VISITED_COUNT_ID, visitedCount);
+        outputValues.put(OUTPUT_SKIPPED_COUNT_ID, skippedCount);
+        outputValues.put(OUTPUT_HIT_LIMIT_ID, hitLimit);
     }
 
     private boolean matchesTarget(ExecutionContext context, BlockPos pos, String targetBlockId) {
@@ -163,6 +194,10 @@ public class FloodFillNode extends BaseNode {
         outputValues.put(OUTPUT_TARGET_BLOCK_ID, "");
         outputValues.put(OUTPUT_BOUNDARY_BLOCKS_ID, new BlockPosList());
         outputValues.put(OUTPUT_VALID_ID, false);
+        outputValues.put(OUTPUT_STOPPED_REASON_ID, "invalid");
+        outputValues.put(OUTPUT_VISITED_COUNT_ID, 0);
+        outputValues.put(OUTPUT_SKIPPED_COUNT_ID, 0);
+        outputValues.put(OUTPUT_HIT_LIMIT_ID, false);
     }
 
     private static int[][] buildOffsets26() {
