@@ -12,6 +12,7 @@ import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
 import com.nodecraft.gui.editor.impl.NodePosition;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import imgui.ImGui;
@@ -1571,7 +1572,7 @@ public final class AiAssistantPanel {
         return types.toString();
     }
 
-    private record PortMeta(String id, String dataType, boolean required) {
+    private record PortMeta(String id, NodeDataType dataType, boolean required) {
     }
 
     private record NodeMeta(
@@ -1599,7 +1600,13 @@ public final class AiAssistantPanel {
         int beforeConnectionCount = normalizedConnections.size();
         UserIntent intent = AiIntentAnalysisService.classifyIntent(prompt);
         if (intent == UserIntent.GENERATE_NEW && normalizedNodes.size() > 1 && normalizedConnections.isEmpty()) {
-            normalizedConnections.addAll(buildAutoConnections(normalizedNodes));
+            List<AiGraphPlanDslAdapterService.PlanConnection> inferredConnections = buildAutoConnections(normalizedNodes);
+            normalizedConnections.addAll(filterValidInferredConnections(
+                    plan.summary(),
+                    normalizedNodes,
+                    normalizedConnections,
+                    inferredConnections
+            ));
         }
 
         int addedConnections = normalizedConnections.size() - beforeConnectionCount;
@@ -1617,6 +1624,49 @@ public final class AiAssistantPanel {
                 normalizedConnections,
                 plan.validationErrors() == null ? List.of() : plan.validationErrors()
         );
+    }
+
+    private List<AiGraphPlanDslAdapterService.PlanConnection> filterValidInferredConnections(
+            String summary,
+            List<AiGraphPlanDslAdapterService.PlanNode> nodes,
+            List<AiGraphPlanDslAdapterService.PlanConnection> existingConnections,
+            List<AiGraphPlanDslAdapterService.PlanConnection> inferredConnections
+    ) {
+        if (inferredConnections == null || inferredConnections.isEmpty()) {
+            return List.of();
+        }
+
+        List<AiGraphPlanDslAdapterService.PlanConnection> accepted = new ArrayList<>();
+        List<AiGraphPlanDslAdapterService.PlanConnection> working = new ArrayList<>(
+                existingConnections == null ? List.of() : existingConnections
+        );
+
+        for (AiGraphPlanDslAdapterService.PlanConnection candidate : inferredConnections) {
+            working.add(candidate);
+            AiGraphPlanDslAdapterService.GraphPlan trial = new AiGraphPlanDslAdapterService.GraphPlan(
+                    summary,
+                    nodes,
+                    working,
+                    List.of()
+            );
+            AiGraphDslSupport.ParseValidationResult parsed =
+                    AiGraphDslSupport.parseAndValidate(AiPlanDslWorkflowService.toDslJsonCompact(trial), NodeRegistry.getInstance());
+            if (parsed.isSuccess()) {
+                accepted.add(candidate);
+            } else {
+                working.remove(working.size() - 1);
+                NodeCraft.LOGGER.warn(
+                        "[AI_SEND] Rejected inferred connection {}.{} -> {}.{} because validation failed: {}",
+                        candidate.sourceRef(),
+                        candidate.sourcePortId(),
+                        candidate.targetRef(),
+                        candidate.targetPortId(),
+                        parsed.errors()
+                );
+            }
+        }
+
+        return accepted;
     }
 
     private List<AiGraphPlanDslAdapterService.PlanNode> applyDefaultNodeParams(
@@ -1754,10 +1804,10 @@ public final class AiAssistantPanel {
                 INode instance = registry == null ? null : registry.createNodeInstance(node.typeId());
                 if (instance != null) {
                     for (IPort input : instance.getInputPorts()) {
-                        inputs.add(new PortMeta(input.getId(), input.getDataType().getId(), input.isRequired()));
+                        inputs.add(new PortMeta(input.getId(), input.getDataType(), input.isRequired()));
                     }
                     for (IPort output : instance.getOutputPorts()) {
-                        outputs.add(new PortMeta(output.getId(), output.getDataType().getId(), false));
+                        outputs.add(new PortMeta(output.getId(), output.getDataType(), false));
                     }
                 }
             } catch (Exception ignored) {
@@ -1828,7 +1878,7 @@ public final class AiAssistantPanel {
                 continue;
             }
             int score = 0;
-            if (safeLower(output.dataType()).equals(safeLower(targetInput.dataType()))) {
+            if (output.dataType() == targetInput.dataType()) {
                 score += 20;
             }
             if (safeLower(output.id()).contains("output_" + safeLower(targetInput.id()).replace("input_", ""))) {
@@ -1842,33 +1892,11 @@ public final class AiAssistantPanel {
         return best;
     }
 
-    private boolean isTypeCompatible(String outputTypeRaw, String inputTypeRaw) {
-        String outputType = safeLower(outputTypeRaw);
-        String inputType = safeLower(inputTypeRaw);
-        if (inputType.isBlank() || outputType.isBlank()) {
+    private boolean isTypeCompatible(NodeDataType outputType, NodeDataType inputType) {
+        if (outputType == null || inputType == null) {
             return false;
         }
-        if (outputType.equals(inputType) || "any".equals(outputType) || "any".equals(inputType)) {
-            return true;
-        }
-
-        Set<String> numericTypes = Set.of("integer", "float", "double", "number");
-        if (numericTypes.contains(outputType) && numericTypes.contains(inputType)) {
-            return true;
-        }
-
-        if (("block_pos".equals(outputType) && "coordinate".equals(inputType))
-                || ("coordinate".equals(outputType) && "block_pos".equals(inputType))) {
-            return true;
-        }
-
-        if (("vector".equals(outputType) && "position".equals(inputType))
-                || ("position".equals(outputType) && "vector".equals(inputType))) {
-            return true;
-        }
-
-        return "geometry".equals(inputType) && (outputType.contains("geometry") || outputType.contains("sphere")
-                || outputType.contains("box") || outputType.contains("cylinder") || outputType.contains("torus"));
+        return NodeDataType.isConnectableTo(outputType, inputType);
     }
 
     private boolean shouldAutoWireInputPort(PortMeta input) {
@@ -1876,7 +1904,7 @@ public final class AiAssistantPanel {
             return false;
         }
         String inputId = safeLower(input.id());
-        String inputType = safeLower(input.dataType());
+        String inputType = input.dataType() == null ? "" : safeLower(input.dataType().getId());
 
         if (containsAny(inputId,
                 "color", "block_type", "transparency", "trigger", "notify", "status", "message", "progress")) {
