@@ -28,6 +28,9 @@ public class VariableListNode extends BaseNode {
     @NodeProperty(displayName = "Sort Names", category = "Variable", order = 1)
     private boolean sortNames = true;
 
+    @NodeProperty(displayName = "Show Internal Variables", category = "Variable", order = 2)
+    private boolean showInternalVariables = false;
+
     private static final String INPUT_PREFIX_ID = "input_prefix";
 
     private static final String OUTPUT_NAMES_ID = "output_names";
@@ -53,7 +56,7 @@ public class VariableListNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Lists variables currently available in the execution scope.";
+        return "Lists user variables currently available in the execution scope.";
     }
 
     @Override
@@ -72,6 +75,9 @@ public class VariableListNode extends BaseNode {
 
         for (Map.Entry<String, Object> entry : entries) {
             String name = entry.getKey();
+            if (!showInternalVariables && VariableScopeBridge.isInternalVariableName(name)) {
+                continue;
+            }
             if (prefix != null && !prefix.isEmpty() && (name == null || !name.startsWith(prefix))) {
                 continue;
             }
@@ -92,7 +98,7 @@ public class VariableListNode extends BaseNode {
 
     private String resolvePrefix(Object prefixObj) {
         if (prefixObj instanceof String prefix) {
-            return prefix;
+            return prefix.trim();
         }
         return "";
     }
@@ -101,6 +107,7 @@ public class VariableListNode extends BaseNode {
     public Object getNodeState() {
         Map<String, Object> state = new HashMap<>();
         state.put("sortNames", sortNames);
+        state.put("showInternalVariables", showInternalVariables);
         return state;
     }
 
@@ -112,6 +119,10 @@ public class VariableListNode extends BaseNode {
         Object sortNamesValue = map.get("sortNames");
         if (sortNamesValue instanceof Boolean value) {
             sortNames = value;
+        }
+        Object showInternalVariablesValue = map.get("showInternalVariables");
+        if (showInternalVariablesValue instanceof Boolean value) {
+            showInternalVariables = value;
         }
     }
 }

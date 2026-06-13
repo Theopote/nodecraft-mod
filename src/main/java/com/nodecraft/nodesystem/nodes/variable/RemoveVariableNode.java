@@ -13,74 +13,67 @@ import java.util.Map;
 import java.util.UUID;
 
 @NodeInfo(
-    id = "variable.get",
-    displayName = "Get Variable",
-    description = "Reads a value by variable name from the execution scope.",
+    id = "variable.remove",
+    displayName = "Remove Variable",
+    description = "Removes a user variable from the execution scope.",
     category = "variable",
-    order = 1
+    order = 4
 )
-public class GetVariableNode extends BaseNode {
+public class RemoveVariableNode extends BaseNode {
 
     @NodeProperty(displayName = "Default Name", category = "Variable", order = 1)
     private String defaultName = "";
 
     private static final String INPUT_NAME_ID = "input_name";
-    private static final String INPUT_DEFAULT_VALUE_ID = "input_default_value";
 
-    private static final String OUTPUT_VALUE_ID = "output_value";
-    private static final String OUTPUT_EXISTS_ID = "output_exists";
+    private static final String OUTPUT_PREVIOUS_ID = "output_previous";
     private static final String OUTPUT_NAME_ID = "output_name";
-    private static final String OUTPUT_IS_NULL_ID = "output_is_null";
+    private static final String OUTPUT_REMOVED_ID = "output_removed";
     private static final String OUTPUT_VALID_ID = "output_valid";
     private static final String OUTPUT_ERROR_ID = "output_error";
 
-    public GetVariableNode() {
-        super(UUID.randomUUID(), "variable.get");
+    public RemoveVariableNode() {
+        super(UUID.randomUUID(), "variable.remove");
 
-        addInputPort(new BasePort(INPUT_NAME_ID, "Name", "Variable name", NodeDataType.STRING, this));
-        addInputPort(new BasePort(INPUT_DEFAULT_VALUE_ID, "Default", "Fallback value when variable is missing", NodeDataType.ANY, this));
+        addInputPort(new BasePort(INPUT_NAME_ID, "Name", "Variable name to remove", NodeDataType.STRING, this));
 
-        addOutputPort(new BasePort(OUTPUT_VALUE_ID, "Value", "Resolved variable value", NodeDataType.ANY, this));
-        addOutputPort(new BasePort(OUTPUT_EXISTS_ID, "Exists", "Whether the variable exists", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_PREVIOUS_ID, "Previous", "Removed value", NodeDataType.ANY, this));
         addOutputPort(new BasePort(OUTPUT_NAME_ID, "Name", "Resolved variable name", NodeDataType.STRING, this));
-        addOutputPort(new BasePort(OUTPUT_IS_NULL_ID, "Is Null", "Whether the stored variable value is null", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_REMOVED_ID, "Removed", "Whether the variable existed and was removed", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether the requested variable name is usable", NodeDataType.BOOLEAN, this));
-        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when read is invalid", NodeDataType.STRING, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when remove is invalid", NodeDataType.STRING, this));
     }
 
     @Override
     public String getDisplayName() {
-        return "Get Variable";
+        return "Remove Variable";
     }
 
     @Override
     public String getDescription() {
-        return "Reads a value by user variable name from the execution scope. Exists means the name exists, even when its stored value is null.";
+        return "Removes a user variable from the execution scope.";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         String name = VariableScopeBridge.resolveName(inputValues.get(INPUT_NAME_ID), defaultName);
-        Object fallback = inputValues.get(INPUT_DEFAULT_VALUE_ID);
         String error = VariableScopeBridge.validationError(name);
 
         if (error != null) {
-            outputValues.put(OUTPUT_VALUE_ID, fallback);
-            outputValues.put(OUTPUT_EXISTS_ID, false);
+            outputValues.put(OUTPUT_PREVIOUS_ID, null);
             outputValues.put(OUTPUT_NAME_ID, name == null ? "" : name);
-            outputValues.put(OUTPUT_IS_NULL_ID, false);
+            outputValues.put(OUTPUT_REMOVED_ID, false);
             outputValues.put(OUTPUT_VALID_ID, false);
             outputValues.put(OUTPUT_ERROR_ID, error);
             return;
         }
 
-        boolean exists = VariableScopeBridge.containsKey(context, name);
-        Object value = exists ? VariableScopeBridge.get(context, name) : fallback;
+        boolean existed = VariableScopeBridge.containsKey(context, name);
+        Object previous = existed ? VariableScopeBridge.remove(context, name) : null;
 
-        outputValues.put(OUTPUT_VALUE_ID, value);
-        outputValues.put(OUTPUT_EXISTS_ID, exists);
+        outputValues.put(OUTPUT_PREVIOUS_ID, previous);
         outputValues.put(OUTPUT_NAME_ID, name);
-        outputValues.put(OUTPUT_IS_NULL_ID, exists && value == null);
+        outputValues.put(OUTPUT_REMOVED_ID, existed);
         outputValues.put(OUTPUT_VALID_ID, true);
         outputValues.put(OUTPUT_ERROR_ID, "");
     }

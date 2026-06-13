@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -46,6 +47,8 @@ public class FrameLocalVariableNode extends BaseNode {
     private static final String OUTPUT_NAME_ID = "output_name";
     private static final String OUTPUT_SIZE_ID = "output_size";
     private static final String OUTPUT_VALID_ID = "output_valid";
+    private static final String OUTPUT_CLEARED_ID = "output_cleared";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
     public FrameLocalVariableNode() {
         super(UUID.randomUUID(), "variable.frame_local");
@@ -64,6 +67,8 @@ public class FrameLocalVariableNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_NAME_ID, "Name", "Resolved variable name", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_SIZE_ID, "Frame Size", "Number of entries in current frame", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_VALID_ID, "Valid", "Whether frame/name resolved correctly", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_CLEARED_ID, "Cleared", "Whether the frame was cleared during this execution", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when frame local access is invalid", NodeDataType.STRING, this));
     }
 
     @Override
@@ -73,7 +78,7 @@ public class FrameLocalVariableNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Reads or writes variables in an isolated frame-local namespace.";
+        return "Reads or writes variables in an isolated frame-local namespace. When Clear Frame and Write are both true, the frame is cleared first, then Value is written to Name.";
     }
 
     @Override
@@ -82,8 +87,9 @@ public class FrameLocalVariableNode extends BaseNode {
         String name = resolveName(inputValues.get(INPUT_NAME_ID));
         boolean write = Boolean.TRUE.equals(inputValues.get(INPUT_WRITE_ID));
         boolean clearFrame = Boolean.TRUE.equals(inputValues.get(INPUT_CLEAR_FRAME_ID));
+        String error = validateFrameLocalAccess(frame, name);
 
-        if (frame == null || frame.isBlank() || name == null || name.isBlank()) {
+        if (error != null) {
             outputValues.put(OUTPUT_VALUE_ID, inputValues.get(INPUT_DEFAULT_ID));
             outputValues.put(OUTPUT_PREVIOUS_ID, null);
             outputValues.put(OUTPUT_EXISTS_ID, false);
@@ -91,12 +97,16 @@ public class FrameLocalVariableNode extends BaseNode {
             outputValues.put(OUTPUT_NAME_ID, name == null ? "" : name);
             outputValues.put(OUTPUT_SIZE_ID, 0);
             outputValues.put(OUTPUT_VALID_ID, false);
+            outputValues.put(OUTPUT_CLEARED_ID, false);
+            outputValues.put(OUTPUT_ERROR_ID, error);
             return;
         }
 
         Map<String, Object> frameScope = getOrCreateFrameScope(context, frame);
+        boolean cleared = false;
         if (clearFrame) {
             frameScope.clear();
+            cleared = true;
         }
 
         boolean exists = frameScope.containsKey(name);
@@ -120,6 +130,8 @@ public class FrameLocalVariableNode extends BaseNode {
         outputValues.put(OUTPUT_NAME_ID, name);
         outputValues.put(OUTPUT_SIZE_ID, frameScope.size());
         outputValues.put(OUTPUT_VALID_ID, true);
+        outputValues.put(OUTPUT_CLEARED_ID, cleared);
+        outputValues.put(OUTPUT_ERROR_ID, "");
     }
 
     private String resolveFrame(Object inputFrame) {
@@ -136,6 +148,13 @@ public class FrameLocalVariableNode extends BaseNode {
         return defaultName == null ? null : defaultName.trim();
     }
 
+    private String validateFrameLocalAccess(String frame, String name) {
+        if (frame == null || frame.isBlank()) {
+            return "Frame name is required.";
+        }
+        return VariableScopeBridge.validationError(name);
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> getOrCreateFrameScope(@Nullable ExecutionContext context, String frame) {
         if (context != null) {
@@ -147,9 +166,29 @@ public class FrameLocalVariableNode extends BaseNode {
                 root = new ConcurrentHashMap<>();
                 context.setVariable(LOCAL_SCOPE_ROOT_KEY, root);
             }
-            return root.computeIfAbsent(frame, ignored -> new ConcurrentHashMap<>());
+            return getOrCreateNullFriendlyFrameMap(root, frame);
         }
-        return FALLBACK_SCOPE.computeIfAbsent(frame, ignored -> new ConcurrentHashMap<>());
+        return getOrCreateNullFriendlyFrameMap(FALLBACK_SCOPE, frame);
+    }
+
+    private Map<String, Object> getOrCreateNullFriendlyFrameMap(Map<String, Map<String, Object>> root, String frame) {
+        Map<String, Object> frameScope = root.get(frame);
+        if (frameScope == null) {
+            frameScope = newFrameMap();
+            root.put(frame, frameScope);
+            return frameScope;
+        }
+        if (frameScope instanceof ConcurrentHashMap<?, ?>) {
+            Map<String, Object> migrated = newFrameMap();
+            migrated.putAll(frameScope);
+            root.put(frame, migrated);
+            return migrated;
+        }
+        return frameScope;
+    }
+
+    private Map<String, Object> newFrameMap() {
+        return Collections.synchronizedMap(new LinkedHashMap<>());
     }
 
     @Override
@@ -175,4 +214,3 @@ public class FrameLocalVariableNode extends BaseNode {
         }
     }
 }
-

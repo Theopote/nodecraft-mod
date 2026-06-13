@@ -32,6 +32,7 @@ public class SetVariableNode extends BaseNode {
     private static final String OUTPUT_NAME_ID = "output_name";
     private static final String OUTPUT_SUCCESS_ID = "output_success";
     private static final String OUTPUT_EXISTS_BEFORE_ID = "output_exists_before";
+    private static final String OUTPUT_ERROR_ID = "output_error";
 
     public SetVariableNode() {
         super(UUID.randomUUID(), "variable.set");
@@ -44,6 +45,7 @@ public class SetVariableNode extends BaseNode {
         addOutputPort(new BasePort(OUTPUT_NAME_ID, "Name", "Resolved variable name", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether write succeeded", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_EXISTS_BEFORE_ID, "Exists Before", "Whether variable existed before write", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Error message when write fails", NodeDataType.STRING, this));
     }
 
     @Override
@@ -53,20 +55,22 @@ public class SetVariableNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Stores a value under a variable name in the execution scope.";
+        return "Stores a value under a user variable name in the execution scope. Connect an output to downstream nodes when write order matters.";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
-        String name = resolveName(inputValues.get(INPUT_NAME_ID));
+        String name = VariableScopeBridge.resolveName(inputValues.get(INPUT_NAME_ID), defaultName);
         Object value = inputValues.get(INPUT_VALUE_ID);
+        String error = VariableScopeBridge.validationError(name);
 
-        if (name == null || name.isBlank()) {
+        if (error != null) {
             outputValues.put(OUTPUT_VALUE_ID, value);
             outputValues.put(OUTPUT_PREVIOUS_ID, null);
-            outputValues.put(OUTPUT_NAME_ID, "");
+            outputValues.put(OUTPUT_NAME_ID, name == null ? "" : name);
             outputValues.put(OUTPUT_SUCCESS_ID, false);
             outputValues.put(OUTPUT_EXISTS_BEFORE_ID, false);
+            outputValues.put(OUTPUT_ERROR_ID, error);
             return;
         }
 
@@ -78,16 +82,7 @@ public class SetVariableNode extends BaseNode {
         outputValues.put(OUTPUT_NAME_ID, name);
         outputValues.put(OUTPUT_SUCCESS_ID, true);
         outputValues.put(OUTPUT_EXISTS_BEFORE_ID, existsBefore);
-    }
-
-    private String resolveName(Object inputName) {
-        if (inputName instanceof String name && !name.isBlank()) {
-            return name.trim();
-        }
-        if (defaultName == null || defaultName.isBlank()) {
-            return null;
-        }
-        return defaultName.trim();
+        outputValues.put(OUTPUT_ERROR_ID, "");
     }
 
     @Override
@@ -108,4 +103,3 @@ public class SetVariableNode extends BaseNode {
         }
     }
 }
-
