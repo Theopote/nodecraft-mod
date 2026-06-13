@@ -146,15 +146,17 @@ Required additions after the current node set:
 
 ### Phase 2: Array Nodes
 
+Status: started.
+
 Array nodes should support tree output first because array workflows naturally create groups.
 
 Targets:
 
-- Linear Array
-- Polar Array
-- Rectangle Array
-- Box Array
-- Curve Array
+- Linear Array: started, coordinate and geometry variants expose one branch per emitted copy.
+- Polar Array: started, coordinate and geometry variants expose one branch per emitted copy.
+- Rectangle Array: started through Grid Array; 2D outputs use `{x;y}` paths.
+- Box Array: started through Grid Array; 3D outputs use `{x;y;z}` paths.
+- Curve Array: started for geometry arrays; output paths use copy order `{i}`.
 
 Recommended output rule:
 
@@ -170,6 +172,14 @@ Linear Array: {0}, {1}, {2}
 Rectangle Array: {row;column}
 Box Array: {x;y;z}
 ```
+
+Current implementation notes:
+
+- Existing flat outputs are preserved.
+- New tree outputs are parallel outputs, not replacements.
+- Coordinate array branches contain the coordinates generated for that copy.
+- Geometry array branches contain one geometry copy per branch.
+- Grid-style arrays use coordinate-like path order `{x;y}` or `{x;y;z}`.
 
 ### Phase 3: Curve and Surface Nodes
 
