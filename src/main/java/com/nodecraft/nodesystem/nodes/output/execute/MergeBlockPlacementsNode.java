@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.DataTreeData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -21,12 +22,12 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Concatenates multiple block placement lists into one execution-ready list.
+ * Merges block placement lists and placement trees into execution-ready outputs.
  */
 @NodeInfo(
     id = "output.execute.merge_block_placements",
     displayName = "Merge Block Placements",
-    description = "Concatenates multiple block placement lists into one execution-ready placement list",
+    description = "Merges block placement lists and placement trees into execution-ready placements",
     category = "output.execute",
     order = 13
 )
@@ -36,6 +37,7 @@ public class MergeBlockPlacementsNode extends BaseNode {
     private static final int MAX_INPUT_COUNT = 16;
 
     private static final String OUTPUT_PLACEMENTS_ID = "output_placements";
+    private static final String OUTPUT_PLACEMENTS_TREE_ID = "output_placements_tree";
     private static final String OUTPUT_POSITIONS_ID = "output_positions";
     private static final String OUTPUT_BLOCK_IDS_ID = "output_block_ids";
     private static final String OUTPUT_COUNT_ID = "output_count";
@@ -68,6 +70,7 @@ public class MergeBlockPlacementsNode extends BaseNode {
         super(UUID.randomUUID(), "output.execute.merge_block_placements");
         rebuildInputPorts();
         addOutputPort(new BasePort(OUTPUT_PLACEMENTS_ID, "Block Placements", "Merged placement list", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_PLACEMENTS_TREE_ID, "Block Placements Tree", "Merged placements grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_POSITIONS_ID, "Positions", "Merged placement positions", NodeDataType.BLOCK_LIST, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Block ids aligned with the merged placement list", NodeDataType.BLOCK_INFO_LIST, this));
         addOutputPort(new BasePort(OUTPUT_COUNT_ID, "Count", "Number of merged placements", NodeDataType.INTEGER, this));
@@ -90,6 +93,7 @@ public class MergeBlockPlacementsNode extends BaseNode {
         }
 
         outputValues.put(OUTPUT_PLACEMENTS_ID, merged);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, mergeResult.placementsTree());
         outputValues.put(OUTPUT_POSITIONS_ID, positions);
         outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
         outputValues.put(OUTPUT_COUNT_ID, merged.size());
@@ -98,58 +102,101 @@ public class MergeBlockPlacementsNode extends BaseNode {
     }
 
     private MergeResult mergeByConcatenation() {
-        List<BlockPlacementData> merged = new ArrayList<>();
+        List<PlacementEntry> merged = new ArrayList<>();
         int duplicateCount = 0;
         int conflictCount = 0;
         Map<BlockPos, BlockPlacementData> seen = new HashMap<>();
-        for (int i = 0; i < inputCount; i++) {
-            Object value = inputValues.get(inputPortId(i));
-            if (!(value instanceof List<?> list)) {
-                continue;
-            }
-            for (Object entry : list) {
-                if (entry instanceof BlockPlacementData placement && isValidPlacement(placement)) {
-                    BlockPlacementData existing = seen.get(placement.pos());
-                    if (existing != null) {
-                        duplicateCount++;
-                        if (isConflict(existing, placement)) {
-                            conflictCount++;
-                        }
-                    } else {
-                        seen.put(placement.pos(), placement);
-                    }
-                    merged.add(placement);
+
+        for (PlacementEntry entry : collectPlacementEntries()) {
+            BlockPlacementData placement = entry.placement();
+            BlockPlacementData existing = seen.get(placement.pos());
+            if (existing != null) {
+                duplicateCount++;
+                if (isConflict(existing, placement)) {
+                    conflictCount++;
                 }
+            } else {
+                seen.put(placement.pos(), placement);
             }
+            merged.add(entry);
         }
-        return new MergeResult(List.copyOf(merged), duplicateCount, conflictCount);
+        return new MergeResult(toPlacements(merged), buildPlacementTree(merged), duplicateCount, conflictCount);
     }
 
     private MergeResult mergeWithOverwrite() {
-        Map<BlockPos, BlockPlacementData> merged = new LinkedHashMap<>();
+        Map<BlockPos, PlacementEntry> merged = new LinkedHashMap<>();
         int duplicateCount = 0;
         int conflictCount = 0;
-        for (int i = 0; i < inputCount; i++) {
-            Object value = inputValues.get(inputPortId(i));
-            if (!(value instanceof List<?> list)) {
-                continue;
+
+        for (PlacementEntry entry : collectPlacementEntries()) {
+            BlockPlacementData placement = entry.placement();
+            PlacementEntry existingEntry = merged.get(placement.pos());
+            if (existingEntry != null) {
+                duplicateCount++;
+                if (isConflict(existingEntry.placement(), placement)) {
+                    conflictCount++;
+                }
+                BlockPlacementData resolved = mergeStateData ? mergePlacements(existingEntry.placement(), placement) : placement;
+                merged.put(placement.pos(), new PlacementEntry(resolved, entry.path()));
+            } else {
+                merged.put(placement.pos(), entry);
             }
-            for (Object entry : list) {
-                if (entry instanceof BlockPlacementData placement && isValidPlacement(placement)) {
-                    BlockPlacementData existing = merged.get(placement.pos());
-                    if (existing != null) {
-                        duplicateCount++;
-                        if (isConflict(existing, placement)) {
-                            conflictCount++;
-                        }
-                        merged.put(placement.pos(), mergeStateData ? mergePlacements(existing, placement) : placement);
-                    } else {
-                        merged.put(placement.pos(), placement);
-                    }
+        }
+        List<PlacementEntry> entries = new ArrayList<>(merged.values());
+        return new MergeResult(toPlacements(entries), buildPlacementTree(entries), duplicateCount, conflictCount);
+    }
+
+    private List<PlacementEntry> collectPlacementEntries() {
+        List<PlacementEntry> entries = new ArrayList<>();
+        for (int i = 0; i < inputCount; i++) {
+            collectListPlacements(inputValues.get(inputPortId(i)), List.of(i), entries);
+            collectTreePlacements(inputValues.get(treeInputPortId(i)), entries);
+        }
+        return entries;
+    }
+
+    private void collectListPlacements(Object value, List<Integer> path, List<PlacementEntry> entries) {
+        if (!(value instanceof List<?> list)) {
+            return;
+        }
+        for (Object item : list) {
+            if (item instanceof BlockPlacementData placement && isValidPlacement(placement)) {
+                entries.add(new PlacementEntry(placement, path));
+            }
+        }
+    }
+
+    private void collectTreePlacements(Object value, List<PlacementEntry> entries) {
+        if (!(value instanceof DataTreeData tree) || tree.getBranchCount() == 0) {
+            return;
+        }
+        for (DataTreeData.Branch branch : tree.getBranches()) {
+            for (Object item : branch.items()) {
+                if (item instanceof BlockPlacementData placement && isValidPlacement(placement)) {
+                    entries.add(new PlacementEntry(placement, branch.path()));
                 }
             }
         }
-        return new MergeResult(new ArrayList<>(merged.values()), duplicateCount, conflictCount);
+    }
+
+    private List<BlockPlacementData> toPlacements(List<PlacementEntry> entries) {
+        List<BlockPlacementData> placements = new ArrayList<>(entries.size());
+        for (PlacementEntry entry : entries) {
+            placements.add(entry.placement());
+        }
+        return placements;
+    }
+
+    private DataTreeData buildPlacementTree(List<PlacementEntry> entries) {
+        Map<List<Integer>, List<Object>> byPath = new LinkedHashMap<>();
+        for (PlacementEntry entry : entries) {
+            byPath.computeIfAbsent(entry.path(), ignored -> new ArrayList<>()).add(entry.placement());
+        }
+        List<DataTreeData.Branch> branches = new ArrayList<>(byPath.size());
+        for (Map.Entry<List<Integer>, List<Object>> entry : byPath.entrySet()) {
+            branches.add(new DataTreeData.Branch(entry.getKey(), entry.getValue()));
+        }
+        return new DataTreeData(branches);
     }
 
     private void rebuildInputPorts() {
@@ -162,11 +209,22 @@ public class MergeBlockPlacementsNode extends BaseNode {
                 NodeDataType.BLOCK_PLACEMENT_LIST,
                 this
             ));
+            addInputPort(new BasePort(
+                treeInputPortId(i),
+                "Placements Tree " + (i + 1),
+                "Block placement tree " + (i + 1),
+                NodeDataType.DATA_TREE,
+                this
+            ));
         }
     }
 
     private String inputPortId(int index) {
         return "input_placements_" + index;
+    }
+
+    private String treeInputPortId(int index) {
+        return "input_placements_tree_" + index;
     }
 
     public int getInputCount() {
@@ -258,6 +316,12 @@ public class MergeBlockPlacementsNode extends BaseNode {
         return new BlockPlacementData(incoming.pos(), blockId, mergedState);
     }
 
-    private record MergeResult(List<BlockPlacementData> placements, int duplicateCount, int conflictCount) {
+    private record PlacementEntry(BlockPlacementData placement, List<Integer> path) {
+        private PlacementEntry {
+            path = List.copyOf(path);
+        }
+    }
+
+private record MergeResult(List<BlockPlacementData> placements, DataTreeData placementsTree, int duplicateCount, int conflictCount) {
     }
 }
