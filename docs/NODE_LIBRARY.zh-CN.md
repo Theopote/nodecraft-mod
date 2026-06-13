@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**511**
+- **节点总数**：**512**
 - **分类总数**：**53**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -16,7 +16,7 @@
 | `geometry.curves` | 24 |
 | `geometry.primitives` | 29 |
 | `geometry.profiles` | 24 |
-| `geometry.solids` | 23 |
+| `geometry.solids` | 24 |
 | `input.context` | 4 |
 | `input.numeric` | 8 |
 | `input.type_selectors` | 5 |
@@ -214,7 +214,7 @@
 | Profile Boolean 2D | `geometry.profiles.boolean_2d` | Performs 2D boolean operations (union/intersection/difference) on two polygon profiles in a shared plane | `ProfileBoolean2DNode` |
 | Profile Triangulate 2D | `geometry.profiles.triangulate_2d` | Triangulates a planar polygon profile into triangle profiles using ear clipping | `ProfileTriangulate2DNode` |
 
-## geometry.solids（23）
+## geometry.solids（24）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -232,6 +232,7 @@
 | Shell Surface Strip | `geometry.solids.shell` | Builds inner and outer offset shell layers from a surface strip and emits cap strips plus an optional geometry approximation | `ShellNode` |
 | Prism By Profile Vector | `geometry.solids.extrude_profile` | Constructs prism geometry from a polygon profile and an extrusion vector | `PrismByProfileVectorNode` |
 | Thicken Surface | `geometry.solids.thicken_surface` | Thickens a surface strip into two offset layers with optional cap strips and a reusable geometry approximation | `ThickenSurfaceNode` |
+| Contour | `geometry.solids.contour` | Generates parallel section planes and traces voxel contour profiles from geometry at regular spacing. | `ContourNode` |
 | Prism By Base Points Vector | `geometry.solids.extrude_profile_from_points` | Constructs prism geometry from an ordered base polygon and an extrusion vector | `PrismByBasePointsVectorNode` |
 | Section Cut | `geometry.solids.section_cut` | Cuts geometry by one or more planes and traces voxel slice contours as section profiles, boundaries, blocks, and tree-grouped data. | `SectionCutNode` |
 | Deconstruct Surface Strip | `geometry.solids.deconstruct_surface_strip` | Breaks a surface strip into section paths, flattened points, and rail segments | `DeconstructSurfaceStripNode` |
