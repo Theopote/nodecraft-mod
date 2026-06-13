@@ -55,6 +55,8 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities", "Utilities"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities.assist", "Assist"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities.fileio", "File I/O"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.organization", "Organization"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.morphology", "Morphology"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world", "World"));
 
         NodeCraft.LOGGER.debug("Registered top-level categories for the built-in provider.");
@@ -95,6 +97,8 @@ public class DefaultNodeProvider implements INodeProvider {
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.deformations", "Deformations"));
         registry.registerCategory(new NodeRegistry.NodeCategory("transform.orientation", "Orientation"));
         registry.registerCategory(new NodeRegistry.NodeCategory("utilities.fileio", "File I/O"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.organization", "Organization"));
+        registry.registerCategory(new NodeRegistry.NodeCategory("utilities.morphology", "Morphology"));
         registry.registerCategory(new NodeRegistry.NodeCategory("world.selection", "Selection"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math.list", "List"));
         registry.registerCategory(new NodeRegistry.NodeCategory("math.sequence", "Sequence"));

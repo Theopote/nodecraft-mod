@@ -99,6 +99,29 @@ public class ImGuiNodeMenus {
                         if (ImGui.menuItem(isBatchOperation ? "Disconnect Selected" : "Disconnect All")) {
                             disconnectAllPorts(contextTargets);
                         }
+
+                        if (contextTargets.size() > 1 && ImGui.beginMenu("Align Selected")) {
+                            try {
+                                if (ImGui.menuItem("Align Left")) {
+                                    editor.alignNodes(contextTargets, ICanvasEditor.NodeAlignmentAction.ALIGN_LEFT);
+                                }
+                                if (ImGui.menuItem("Align Center")) {
+                                    editor.alignNodes(contextTargets, ICanvasEditor.NodeAlignmentAction.ALIGN_CENTER);
+                                }
+                                boolean canDistribute = contextTargets.size() >= 3;
+                                if (!canDistribute) {
+                                    ImGui.beginDisabled();
+                                }
+                                if (ImGui.menuItem("Distribute") && canDistribute) {
+                                    editor.alignNodes(contextTargets, ICanvasEditor.NodeAlignmentAction.DISTRIBUTE_HORIZONTAL);
+                                }
+                                if (!canDistribute) {
+                                    ImGui.endDisabled();
+                                }
+                            } finally {
+                                ImGui.endMenu();
+                            }
+                        }
                         
                         // 设置节点颜色
                         if (ImGui.beginMenu("Set Color")) {

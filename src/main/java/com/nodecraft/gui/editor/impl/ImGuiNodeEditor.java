@@ -1188,6 +1188,102 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         return !currentGraph.getNodes().isEmpty();
     }
 
+    @Override
+    public boolean alignNodes(java.util.Set<UUID> nodeIds, NodeAlignmentAction action) {
+        if (nodeIds == null || nodeIds.size() < 2 || action == null) {
+            return false;
+        }
+
+        List<NodePosition> positions = new java.util.ArrayList<>();
+        for (UUID nodeId : nodeIds) {
+            NodePosition position = nodePositions.get(nodeId);
+            if (position != null) {
+                positions.add(position);
+            }
+        }
+        if (positions.size() < 2) {
+            return false;
+        }
+
+        boolean changed = switch (action) {
+            case ALIGN_LEFT -> alignLeft(positions);
+            case ALIGN_CENTER -> alignCenter(positions);
+            case DISTRIBUTE_HORIZONTAL -> distributeHorizontal(positions);
+        };
+
+        if (changed) {
+            markGraphStructureDirty();
+            NodeCraft.LOGGER.info("Applied node alignment {} to {} nodes", action, positions.size());
+        }
+        return changed;
+    }
+
+    private static boolean alignLeft(List<NodePosition> positions) {
+        float left = Float.MAX_VALUE;
+        for (NodePosition position : positions) {
+            left = Math.min(left, position.x);
+        }
+
+        boolean changed = false;
+        for (NodePosition position : positions) {
+            if (Float.compare(position.x, left) != 0) {
+                position.x = left;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static boolean alignCenter(List<NodePosition> positions) {
+        float minCenter = Float.MAX_VALUE;
+        float maxCenter = -Float.MAX_VALUE;
+        for (NodePosition position : positions) {
+            float center = position.x + getSafeWidth(position) / 2.0f;
+            minCenter = Math.min(minCenter, center);
+            maxCenter = Math.max(maxCenter, center);
+        }
+        float targetCenter = (minCenter + maxCenter) / 2.0f;
+
+        boolean changed = false;
+        for (NodePosition position : positions) {
+            float nextX = targetCenter - getSafeWidth(position) / 2.0f;
+            if (Float.compare(position.x, nextX) != 0) {
+                position.x = nextX;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static boolean distributeHorizontal(List<NodePosition> positions) {
+        if (positions.size() < 3) {
+            return false;
+        }
+        positions.sort(java.util.Comparator.comparingDouble(position -> position.x + getSafeWidth(position) / 2.0f));
+
+        NodePosition first = positions.get(0);
+        NodePosition last = positions.get(positions.size() - 1);
+        float firstCenter = first.x + getSafeWidth(first) / 2.0f;
+        float lastCenter = last.x + getSafeWidth(last) / 2.0f;
+        float step = (lastCenter - firstCenter) / (positions.size() - 1);
+
+        boolean changed = false;
+        for (int i = 1; i < positions.size() - 1; i++) {
+            NodePosition position = positions.get(i);
+            float targetCenter = firstCenter + step * i;
+            float nextX = targetCenter - getSafeWidth(position) / 2.0f;
+            if (Float.compare(position.x, nextX) != 0) {
+                position.x = nextX;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static float getSafeWidth(NodePosition position) {
+        return position.width > 0.0f ? position.width : 150.0f;
+    }
+
     private void maybeAutoExecutePreviewGraph() {
         if (currentGraph == null || io == null) {
             return;
