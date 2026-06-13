@@ -125,6 +125,7 @@ Only these editor-side utility areas should remain:
 
 - `utilities.assist`
 - `utilities.organization`
+- `utilities.morphology`
 
 They are not part of the modeling taxonomy.
 

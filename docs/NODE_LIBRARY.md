@@ -1,8 +1,8 @@
 # NodeCraft Node Library
 
 - Scope: `src/main/java/com/nodecraft/nodesystem/nodes`
-- Total nodes: **514**
-- Total categories: **53**
+- Total nodes: **513**
+- Total categories: **54**
 
 ## Category Statistics
 
@@ -52,9 +52,10 @@
 | `transform.basic_transforms` | 15 |
 | `transform.deformations` | 9 |
 | `transform.orientation` | 6 |
-| `utilities.assist` | 7 |
+| `utilities.assist` | 6 |
 | `utilities.fileio` | 2 |
-| `utilities.organization` | 8 |
+| `utilities.morphology` | 1 |
+| `utilities.organization` | 7 |
 | `variable` | 6 |
 | `world.query` | 10 |
 | `world.read` | 12 |
@@ -706,17 +707,16 @@
 | Project Curve To Plane | `transform.orientation.project_curve_to_plane` | Projects a curve, polyline, or line onto a target plane | `ProjectCurveToPlaneNode` |
 | Project Profile To Plane | `transform.orientation.project_profile_to_plane` | Projects a polygon profile boundary onto a target plane | `ProjectProfileToPlaneNode` |
 
-## utilities.assist (7)
+## utilities.assist (6)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
-| Block List Morphology | `utilities.morphology.block_list_morphology` | Dilates or erodes a block list using 6- or 26-neighbor morphology iterations (Connectivity property) | `BlockListMorphologyNode` |
 | String Format | `utilities.assist.string_format` | Formats strings with placeholders like {0}, {1} from dynamic values. | `StringFormatNode` |
 | Assert / Validate | `utilities.assist.assert` | Validates a boolean condition and optionally throws to stop execution when it fails. | `AssertNode` |
 | Reroute | `utilities.assist.reroute` | 用于整理连线的中继节点，仅透传输入到输出 | `RerouteNode` |
 | Signal Fork | `utilities.assist.signal_fork` | 将一路输入透传到两路输出，便于连线分流 | `SignalForkNode` |
 | Signal Merge | `utilities.assist.signal_merge` | 将两路输入按优先级汇聚为一路输出 | `SignalMergeNode` |
-| Tag Relay | `utilities.assist.tag_relay` | 用于标注语义的中继节点，输入输出保持透传 | `TagRelayNode` |
+| Tag Relay | `utilities.assist.tag_relay` | Passes a signal through while adding a visual semantic tag. | `TagRelayNode` |
 
 ## utilities.fileio (2)
 
@@ -725,7 +725,13 @@
 | Read Image | `utilities.fileio.read_image` | Reads a local image file and outputs dimensions, colors, and grayscale samples | `ReadImageNode` |
 | Image Sampler | `utilities.fileio.image_sampler` | Samples color, channels, and grayscale values from image pixels using UV or pixel coordinates | `ImageSamplerNode` |
 
-## utilities.organization (8)
+## utilities.morphology (1)
+
+| Node Name | Node ID | Description | Class |
+|---|---|---|---|
+| Block List Morphology | `utilities.morphology.block_list_morphology` | Dilates or erodes a block list using 6- or 26-neighbor morphology iterations (Connectivity property) | `BlockListMorphologyNode` |
+
+## utilities.organization (7)
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
@@ -733,8 +739,7 @@
 | Graph Output | `utilities.organization.graph_output` | Defines a named graph-level output and publishes it into execution context. | `GraphOutputNode` |
 | Subgraph | `utilities.organization.subgraph` | Executes a referenced subgraph with named input/output mapping. | `SubgraphNode` |
 | Subgraph Register | `utilities.organization.subgraph_register` | Registers a subgraph reference into execution context for Subgraph calls. | `SubgraphRegisterNode` |
-| Node Preset | `utilities.organization.preset` | Saves, loads, and deletes named node presets in execution context. | `NodePresetNode` |
-| Align Nodes | `utilities.organization.align_nodes` | 对齐选中的节点 | `AlignNodesNode` |
+| Runtime Preset | `utilities.organization.preset` | Saves, loads, and deletes named runtime presets in execution context. | `NodePresetNode` |
 | Comment | `utilities.organization.comment` | 在画布上添加文本注释 | `CommentNode` |
 | Group | `utilities.organization.group` | 将选中的节点打包成一个可视化组 | `GroupNode` |
 
@@ -829,11 +834,11 @@
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Set Block | `world.write.set_block` | Places one block at one block position | `SetBlockNode` |
-| Set Blocks | `world.write.set_blocks` | 在坐标列表上批量放置方块 | `SetBlocksNode` |
-| Fill Region | `world.write.fill_region` | 用指定方块填充区域 | `FillRegionNode` |
-| Replace Blocks | `world.write.replace_blocks` | 在区域或坐标列表中替换指定方块 | `ReplaceBlocksNode` |
+| Set Blocks | `world.write.set_blocks` | Sets blocks at explicit coordinates | `SetBlocksNode` |
+| Fill Region | `world.write.fill_region` | Fills a region with a block | `FillRegionNode` |
+| Replace Blocks | `world.write.replace_blocks` | Replaces matching blocks in a region or coordinate list | `ReplaceBlocksNode` |
 | Clone Region | `world.write.clone_region` | 复制区域到另一个位置 | `CloneRegionNode` |
-| Clear Blocks | `world.write.clear_region` | Clears blocks at explicit coordinates by replacing them with air | `RemoveBlocksNode` |
+| Clear Blocks | `world.write.remove_blocks` | Clears blocks at explicit coordinates by replacing them with air | `RemoveBlocksNode` |
 | Set Block NBT | `world.write.set_block_nbt` | Writes NBT data to a block entity at a target position. | `SetBlockNbtNode` |
 | Undo Last World Write | `world.write.undo_last_write` | Reverts the most recent recorded world.write block placement operation | `UndoLastWorldWriteNode` |
 | Peek Last World Write Undo | `world.write.peek_last_undo` | Inspects the latest world.write undo record and outputs affected count and region bounds | `PeekLastWorldWriteUndoNode` |

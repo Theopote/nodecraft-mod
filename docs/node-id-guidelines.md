@@ -46,7 +46,7 @@ These are the only top-level domains that should be used for new node work.
   - `data.*`
   - `control.*`
   - `utilities.*`
-- `utilities.assist` and `utilities.organization` are editor-side helpers, not modeling taxonomy extensions.
+- `utilities.assist`, `utilities.organization`, and `utilities.morphology` are utility/tooling areas, not broad modeling taxonomy extensions.
 
 ## Canonical-Only Rule
 
