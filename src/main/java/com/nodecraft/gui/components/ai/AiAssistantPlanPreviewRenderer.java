@@ -84,6 +84,68 @@ final class AiAssistantPlanPreviewRenderer {
             }
         }
 
+        if (ImGui.treeNode("Graph Topology Preview")) {
+            ImGui.textDisabled("Auto-layout + drag nodes to adjust manually");
+            if (ImGui.smallButton("Reset Topology Layout")) {
+                state.topologyPreviewState().reset();
+            }
+            String selectedNodeRef = renderTopologyPreview(
+                    state.planNodes(),
+                    state.planConnections(),
+                    state.focusedNodeRef(),
+                    state.topologyPreviewState()
+            );
+            if (selectedNodeRef != null && !selectedNodeRef.isBlank()) {
+                actions.onTopologyNodeSelected(selectedNodeRef);
+            }
+            ImGui.treePop();
+        }
+
+        renderTechnicalPlanDetails(state, actions);
+        renderDebugDiffDetails(state);
+
+        if (!state.canApply()) ImGui.beginDisabled();
+        if (ImGui.button("Apply Plan")) {
+            actions.applyPlan();
+        }
+        if (!state.canApply()) ImGui.endDisabled();
+
+        boolean compactActions = ImGui.getContentRegionAvailX() < 430.0f;
+        if (!compactActions) ImGui.sameLine();
+        if (!state.canApply()) ImGui.beginDisabled();
+        if (ImGui.button("Dry Run Report")) {
+            actions.dryRunReport();
+        }
+        if (!state.canApply()) ImGui.endDisabled();
+
+        if (!compactActions) ImGui.sameLine();
+        if (!state.hasPlan()) ImGui.beginDisabled();
+        if (ImGui.button("Save as Template")) {
+            actions.saveAsTemplate();
+        }
+        if (!state.hasPlan()) ImGui.endDisabled();
+
+        if (!compactActions) ImGui.sameLine();
+        if (!state.canUndo()) ImGui.beginDisabled();
+        if (ImGui.button("Undo Last AI Apply")) {
+            actions.undoLastApply();
+        }
+        if (!state.canUndo()) ImGui.endDisabled();
+
+        if (!state.canUndo() && state.undoDisabledReason() != null && !state.undoDisabledReason().isBlank()) {
+            ImGui.textDisabled(state.undoDisabledReason());
+        }
+
+        if (state.statusMessage() != null && !state.statusMessage().isBlank()) {
+            AiUiHelper.renderStatusMessage(state.statusMessage());
+        }
+    }
+
+    private static void renderTechnicalPlanDetails(State state, Actions actions) {
+        if (!ImGui.treeNode("Technical plan details")) {
+            return;
+        }
+
         if (ImGui.treeNode("Planned Nodes")) {
             if (state.planNodes() != null && !state.planNodes().isEmpty()) {
                 boolean consumedScroll = false;
@@ -124,25 +186,20 @@ final class AiAssistantPlanPreviewRenderer {
             ImGui.treePop();
         }
 
-        if (ImGui.treeNode("Graph Topology Preview")) {
-            ImGui.textDisabled("Auto-layout + drag nodes to adjust manually");
-            if (ImGui.smallButton("Reset Topology Layout")) {
-                state.topologyPreviewState().reset();
-            }
-            String selectedNodeRef = renderTopologyPreview(
-                    state.planNodes(),
-                    state.planConnections(),
-                    state.focusedNodeRef(),
-                    state.topologyPreviewState()
-            );
-            if (selectedNodeRef != null && !selectedNodeRef.isBlank()) {
-                actions.onTopologyNodeSelected(selectedNodeRef);
-            }
-            ImGui.treePop();
+        ImGui.treePop();
+    }
+
+    private static void renderDebugDiffDetails(State state) {
+        AiGraphDiffService.GraphDiffSummary diff = state.heuristicDiff();
+        AiGraphDiffService.MappedDiffSummary mapped = state.mappedDiff();
+        if (diff == null && mapped == null) {
+            return;
+        }
+        if (!ImGui.treeNode("Debug diff details")) {
+            return;
         }
 
-        AiGraphDiffService.GraphDiffSummary diff = state.heuristicDiff();
-        if (diff != null && ImGui.treeNode("Graph Diff (Heuristic)")) {
+        if (diff != null && ImGui.treeNode("Heuristic diff")) {
             ImGui.textDisabled("Compared by node type+params signature and typed connection signature.");
             ImGui.text("Potential additions: nodes=" + diff.nodeAdditions() + ", connections=" + diff.connectionAdditions());
             ImGui.text("Potential missing from plan: nodes=" + diff.nodeMissingFromPlan() + ", connections=" + diff.connectionMissingFromPlan());
@@ -154,8 +211,7 @@ final class AiAssistantPlanPreviewRenderer {
             ImGui.treePop();
         }
 
-        AiGraphDiffService.MappedDiffSummary mapped = state.mappedDiff();
-        if (mapped != null && ImGui.treeNode("Mapped Diff (Preview)")) {
+        if (mapped != null && ImGui.treeNode("Mapped diff")) {
             ImGui.textDisabled("Greedy matching by type+params, then type fallback. Estimates reusable vs new nodes.");
             ImGui.text("Reusable matches=" + mapped.reusableNodeMatches()
                     + ", new nodes=" + mapped.newNodesToCreate());
@@ -174,40 +230,7 @@ final class AiAssistantPlanPreviewRenderer {
             ImGui.treePop();
         }
 
-        if (!state.canApply()) ImGui.beginDisabled();
-        if (ImGui.button("Apply Plan")) {
-            actions.applyPlan();
-        }
-        if (!state.canApply()) ImGui.endDisabled();
-
-        ImGui.sameLine();
-        if (!state.canApply()) ImGui.beginDisabled();
-        if (ImGui.button("Dry Run Report")) {
-            actions.dryRunReport();
-        }
-        if (!state.canApply()) ImGui.endDisabled();
-
-        ImGui.sameLine();
-        if (!state.hasPlan()) ImGui.beginDisabled();
-        if (ImGui.button("Save as Template")) {
-            actions.saveAsTemplate();
-        }
-        if (!state.hasPlan()) ImGui.endDisabled();
-
-        ImGui.sameLine();
-        if (!state.canUndo()) ImGui.beginDisabled();
-        if (ImGui.button("Undo Last AI Apply")) {
-            actions.undoLastApply();
-        }
-        if (!state.canUndo()) ImGui.endDisabled();
-
-        if (!state.canUndo() && state.undoDisabledReason() != null && !state.undoDisabledReason().isBlank()) {
-            ImGui.textDisabled(state.undoDisabledReason());
-        }
-
-        if (state.statusMessage() != null && !state.statusMessage().isBlank()) {
-            AiUiHelper.renderStatusMessage(state.statusMessage());
-        }
+        ImGui.treePop();
     }
 
     private static void renderDiffSamples(String title, List<String> samples) {

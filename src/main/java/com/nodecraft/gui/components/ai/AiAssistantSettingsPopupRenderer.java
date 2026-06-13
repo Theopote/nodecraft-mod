@@ -115,11 +115,6 @@ final class AiAssistantSettingsPopupRenderer {
             ImGui.popItemWidth();
         }
 
-        ImGui.text("Provider Strategy");
-        ImGui.pushItemWidth(mediumFieldWidth);
-        ImGui.combo("##ai_provider_strategy", state.providerStrategyIndex(), new String[]{"AUTO", "OPENAI_COMPAT", "ANTHROPIC"});
-        ImGui.popItemWidth();
-
         ImGui.text("Request Timeout (seconds)");
         ImGui.pushItemWidth(120.0f);
         if (ImGui.inputInt("##ai_timeout_seconds", state.requestTimeoutSeconds())) {
@@ -127,26 +122,34 @@ final class AiAssistantSettingsPopupRenderer {
         }
         ImGui.popItemWidth();
 
-        ImGui.text("Max Output Tokens");
-        ImGui.pushItemWidth(120.0f);
-        if (ImGui.inputInt("##ai_max_output_tokens", state.maxOutputTokens())) {
-            state.maxOutputTokens().set(Math.max(512, Math.min(4096, state.maxOutputTokens().get())));
-        }
-        ImGui.popItemWidth();
-
-        ImGui.text("Conversation History Turns");
-        ImGui.pushItemWidth(120.0f);
-        if (ImGui.inputInt("##ai_conversation_history_turns", state.conversationHistoryTurns())) {
-            state.conversationHistoryTurns().set(Math.max(1, Math.min(20, state.conversationHistoryTurns().get())));
-        }
-        ImGui.popItemWidth();
-
         ImGui.checkbox("Auto layout before apply", state.autoLayoutBeforeApply());
 
-        ImGui.text("System Prompt");
-        ImGui.pushItemWidth(wideFieldWidth);
-        ImGui.inputTextMultiline("##ai_system_prompt", state.systemPrompt(), wideFieldWidth, 100.0f);
-        ImGui.popItemWidth();
+        if (ImGui.treeNode("Advanced request options")) {
+            ImGui.text("Provider Strategy");
+            ImGui.pushItemWidth(mediumFieldWidth);
+            ImGui.combo("##ai_provider_strategy", state.providerStrategyIndex(), new String[]{"AUTO", "OPENAI_COMPAT", "ANTHROPIC"});
+            ImGui.popItemWidth();
+
+            ImGui.text("Max Output Tokens");
+            ImGui.pushItemWidth(120.0f);
+            if (ImGui.inputInt("##ai_max_output_tokens", state.maxOutputTokens())) {
+                state.maxOutputTokens().set(Math.max(512, Math.min(4096, state.maxOutputTokens().get())));
+            }
+            ImGui.popItemWidth();
+
+            ImGui.text("Conversation History Turns");
+            ImGui.pushItemWidth(120.0f);
+            if (ImGui.inputInt("##ai_conversation_history_turns", state.conversationHistoryTurns())) {
+                state.conversationHistoryTurns().set(Math.max(1, Math.min(20, state.conversationHistoryTurns().get())));
+            }
+            ImGui.popItemWidth();
+
+            ImGui.text("System Prompt");
+            ImGui.pushItemWidth(wideFieldWidth);
+            ImGui.inputTextMultiline("##ai_system_prompt", state.systemPrompt(), wideFieldWidth, 100.0f);
+            ImGui.popItemWidth();
+            ImGui.treePop();
+        }
 
         ImGui.separator();
         if (ImGui.button("Validate (Local)")) {
@@ -169,8 +172,11 @@ final class AiAssistantSettingsPopupRenderer {
             ImGui.closeCurrentPopup();
         }
 
-        ImGui.textDisabled("Config file: " + state.settingsPath().toAbsolutePath());
-        ImGui.textDisabled("Settings are persisted to disk and loaded on startup.");
+        if (ImGui.treeNode("Storage")) {
+            ImGui.textDisabled("Config file: " + state.settingsPath().toAbsolutePath());
+            ImGui.textDisabled("Settings are persisted to disk and loaded on startup.");
+            ImGui.treePop();
+        }
 
         ImGui.endPopup();
     }

@@ -70,8 +70,8 @@ final class AiAssistantMainPanelRenderer {
     }
 
     private static void renderHeader(State state, Actions actions) {
-        ImGui.textWrapped("Describe what you want to build (any language), and AI will generate a node graph plan.");
-        if (ImGui.smallButton("AI Settings")) {
+        ImGui.textWrapped("Describe the graph you want to create or change.");
+        if (ImGui.smallButton("Settings")) {
             actions.openSettingsPopup();
         }
         ImGui.sameLine();
@@ -81,7 +81,7 @@ final class AiAssistantMainPanelRenderer {
             AiUiHelper.renderStatusMessage(state.settingsStatusMessage());
         }
 
-        if (state.hasDebugData() && ImGui.smallButton("Open Debug Console")) {
+        if (state.hasDebugData() && ImGui.smallButton("Debug")) {
             actions.openDebugConsolePopup();
         }
     }
@@ -146,24 +146,25 @@ final class AiAssistantMainPanelRenderer {
     }
 
     private static void renderModeOptions(State state) {
-        ImGui.checkbox("Use current selection as context", state.useSelectionContext());
-        ImGui.checkbox("Include current canvas graph summary", state.includeGraphContext());
-        ImGui.checkbox("Preview-only mode (do not mutate graph)", state.previewOnlyMode());
-        ImGui.checkbox("Patch apply mode (reuse matching nodes, advanced)", state.patchApplyMode());
+        ImGui.checkbox("Use selected node as context", state.useSelectionContext());
+        ImGui.checkbox("Include current graph", state.includeGraphContext());
         ImGui.checkbox("Press Enter to send", state.enterToSend());
-        if (!state.patchApplyMode().get()) {
+
+        if (!ImGui.treeNode("Advanced apply options")) {
             return;
         }
 
-        ImGui.checkbox("Patch remove scoped stale connections", state.patchRemoveScopedConnections());
-        ImGui.textColored(0.95f, 0.72f, 0.22f, 1.0f,
-                "Warning: reused-node parameter updates may not be undoable.");
-        ImGui.sameLine();
-        ImGui.textDisabled("(?)");
-        if (ImGui.isItemHovered()) {
-            ImGui.setTooltip("Patch mode can update state on matched existing nodes directly.\n"
-                    + "Graph edits are undoable, but some parameter/state updates may require manual revert.");
+        ImGui.checkbox("Preview only", state.previewOnlyMode());
+        ImGui.checkbox("Reuse matching nodes", state.patchApplyMode());
+        if (state.patchApplyMode().get()) {
+            ImGui.checkbox("Remove stale scoped connections", state.patchRemoveScopedConnections());
+            ImGui.textColored(0.95f, 0.72f, 0.22f, 1.0f,
+                    "Some reused-node parameter updates may require manual revert.");
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip("Graph edits are undoable, but direct state updates on reused nodes may not be fully reversible.");
+            }
         }
+        ImGui.treePop();
     }
 
     private static void renderSelectionContext(State state) {
@@ -183,23 +184,24 @@ final class AiAssistantMainPanelRenderer {
 
     private static void renderQuickPrompts(State state, Actions actions) {
         ImGui.separator();
-        ImGui.text("Quick prompts:");
+        ImGui.text("Quick prompts");
 
         if (state.busy()) {
             ImGui.beginDisabled();
         }
 
+        boolean compact = ImGui.getContentRegionAvailX() < 330.0f;
         if (ImGui.smallButton("Generate from selection")) {
             actions.onQuickPrompt("Generate a node graph based on current selection and keep existing style.");
         }
-        ImGui.sameLine();
+        if (!compact) ImGui.sameLine();
         if (ImGui.smallButton("Optimize selected graph")) {
             actions.onQuickPrompt("Optimize selected node graph for readability and performance.");
         }
         if (ImGui.smallButton("Explain current node")) {
             actions.onQuickPrompt("Explain what the selected node does and how to connect it.");
         }
-        ImGui.sameLine();
+        if (!compact) ImGui.sameLine();
         if (ImGui.smallButton("Mobius ring example")) {
             actions.onQuickPrompt("Build a parametrized Mobius ring above selected position with radius/width/thickness controls.");
         }
@@ -283,8 +285,8 @@ final class AiAssistantMainPanelRenderer {
 
     private static void renderModeHint(State state) {
         ImGui.textDisabled(state.remotePlannerEnabled()
-                ? "Current mode: remote planner + DSL validation + apply/undo"
-                : "Current mode: local mock planner + DSL validation + apply/undo");
+                ? "Planner: remote"
+                : "Planner: local draft");
     }
 
     private static void renderLanguageDiagnostics(State state) {
@@ -294,7 +296,11 @@ final class AiAssistantMainPanelRenderer {
             return;
         }
 
+        if (!ImGui.treeNode("Request diagnostics")) {
+            return;
+        }
         ImGui.textDisabled("Input language: " + (language == null || language.isBlank() ? "unknown" : language));
         ImGui.textDisabled("Normalized intent: " + (intent == null || intent.isBlank() ? "general-request" : intent));
+        ImGui.treePop();
     }
 }
