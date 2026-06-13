@@ -13,6 +13,7 @@ import org.jetbrains.annotations.Nullable;
 import org.joml.Vector3d;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,7 +22,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "geometry.solids.sweep_from_points",
     displayName = "Sweep Point List Along Path",
-    description = "Sweeps an ordered point profile along a path and emits section paths plus connecting rail segments",
+    description = "Sweeps an ordered point profile along a path with optional scale, rotation, close, and flip controls",
     category = "geometry.solids",
     order = 6
 )
@@ -33,11 +34,28 @@ public class SweepPointListAlongPathNode extends BaseNode {
     @NodeProperty(displayName = "Close Profile", category = "Sweep", order = 2)
     private boolean closeProfile = true;
 
+    @NodeProperty(displayName = "Flip Profile", category = "Sweep", order = 3)
+    private boolean flipProfile = false;
+
+    @NodeProperty(displayName = "Start Scale", category = "Scale", order = 10)
+    private double startScale = 1.0d;
+
+    @NodeProperty(displayName = "End Scale", category = "Scale", order = 11)
+    private double endScale = 1.0d;
+
+    @NodeProperty(displayName = "Start Rotation Degrees", category = "Rotation", order = 20)
+    private double startRotationDegrees = 0.0d;
+
+    @NodeProperty(displayName = "End Rotation Degrees", category = "Rotation", order = 21)
+    private double endRotationDegrees = 0.0d;
+
     private static final String INPUT_PROFILE_POINTS_ID = "input_profile_points";
     private static final String INPUT_LINE_ID = "input_line";
     private static final String INPUT_POLYLINE_ID = "input_polyline";
     private static final String INPUT_CURVE_ID = "input_curve";
     private static final String INPUT_PATH_POINTS_ID = "input_path_points";
+    private static final String INPUT_SCALE_VALUES_ID = "input_scale_values";
+    private static final String INPUT_ROTATION_VALUES_ID = "input_rotation_values";
 
     private static final String OUTPUT_SPINE_POINTS_ID = "output_spine_points";
     private static final String OUTPUT_SECTION_PATHS_ID = "output_section_paths";
@@ -55,6 +73,8 @@ public class SweepPointListAlongPathNode extends BaseNode {
         addInputPort(new BasePort(INPUT_POLYLINE_ID, "Polyline", "Optional polyline spine", NodeDataType.POLYLINE, this));
         addInputPort(new BasePort(INPUT_CURVE_ID, "Curve", "Optional curve spine", NodeDataType.CURVE, this));
         addInputPort(new BasePort(INPUT_PATH_POINTS_ID, "Path Points", "Optional ordered path point list fallback", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_SCALE_VALUES_ID, "Scale Values", "Optional scale list sampled along the path", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_ROTATION_VALUES_ID, "Rotation Values", "Optional rotation degrees list sampled along the path", NodeDataType.LIST, this));
 
         addOutputPort(new BasePort(OUTPUT_SPINE_POINTS_ID, "Spine Points", "Resolved spine point list", NodeDataType.VECTOR_LIST, this));
         addOutputPort(new BasePort(OUTPUT_SECTION_PATHS_ID, "Section Paths", "List of swept section polylines", NodeDataType.LIST, this));
@@ -67,7 +87,7 @@ public class SweepPointListAlongPathNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Sweeps an ordered point profile along a path and emits section paths plus connecting rail segments";
+        return "Sweeps an ordered point profile along a path with optional scale, rotation, close, and flip controls";
     }
 
     @Override
@@ -81,7 +101,14 @@ public class SweepPointListAlongPathNode extends BaseNode {
             return;
         }
 
-        Vector3d profileOrigin = new Vector3d(profilePoints.get(0));
+        if (flipProfile) {
+            profilePoints = new ArrayList<>(profilePoints);
+            Collections.reverse(profilePoints);
+        }
+
+        Vector3d profileOrigin = SolidNodeUtils.computeCenter(profilePoints);
+        List<Double> scaleValues = resolveNumberList(inputValues.get(INPUT_SCALE_VALUES_ID));
+        List<Double> rotationValues = resolveNumberList(inputValues.get(INPUT_ROTATION_VALUES_ID));
         List<List<Vector3d>> sections = new ArrayList<>(spinePoints.size());
         List<Object> sectionPaths = new ArrayList<>(spinePoints.size());
         List<Vector3d> allPoints = new ArrayList<>(profilePoints.size() * spinePoints.size());
@@ -92,10 +119,14 @@ public class SweepPointListAlongPathNode extends BaseNode {
             SolidNodeUtils.Frame frame = orientToPath
                 ? SolidNodeUtils.buildFrame(spinePoint, tangent)
                 : SolidNodeUtils.Frame.identity(spinePoint);
+            double t = spinePoints.size() <= 1 ? 0.0d : (double) i / (double) (spinePoints.size() - 1);
+            double scale = resolveScalarAt(scaleValues, t, startScale, endScale);
+            double rotationRadians = Math.toRadians(resolveScalarAt(rotationValues, t, startRotationDegrees, endRotationDegrees));
 
             List<Vector3d> section = new ArrayList<>(profilePoints.size());
             for (Vector3d profilePoint : profilePoints) {
                 Vector3d local = new Vector3d(profilePoint).sub(profileOrigin);
+                local = transformLocalProfilePoint(local, scale, rotationRadians);
                 Vector3d worldPoint = frame.transform(local);
                 section.add(worldPoint);
                 allPoints.add(worldPoint);
@@ -139,6 +170,11 @@ public class SweepPointListAlongPathNode extends BaseNode {
         Map<String, Object> state = new HashMap<>();
         state.put("orientToPath", orientToPath);
         state.put("closeProfile", closeProfile);
+        state.put("flipProfile", flipProfile);
+        state.put("startScale", startScale);
+        state.put("endScale", endScale);
+        state.put("startRotationDegrees", startRotationDegrees);
+        state.put("endRotationDegrees", endRotationDegrees);
         return state;
     }
 
@@ -152,6 +188,21 @@ public class SweepPointListAlongPathNode extends BaseNode {
         }
         if (map.get("closeProfile") instanceof Boolean value) {
             setCloseProfile(value);
+        }
+        if (map.get("flipProfile") instanceof Boolean value) {
+            setFlipProfile(value);
+        }
+        if (map.get("startScale") instanceof Number value) {
+            setStartScale(value.doubleValue());
+        }
+        if (map.get("endScale") instanceof Number value) {
+            setEndScale(value.doubleValue());
+        }
+        if (map.get("startRotationDegrees") instanceof Number value) {
+            setStartRotationDegrees(value.doubleValue());
+        }
+        if (map.get("endRotationDegrees") instanceof Number value) {
+            setEndRotationDegrees(value.doubleValue());
         }
     }
 
@@ -173,6 +224,51 @@ public class SweepPointListAlongPathNode extends BaseNode {
         markDirty();
     }
 
+    public boolean isFlipProfile() {
+        return flipProfile;
+    }
+
+    public void setFlipProfile(boolean flipProfile) {
+        this.flipProfile = flipProfile;
+        markDirty();
+    }
+
+    public double getStartScale() {
+        return startScale;
+    }
+
+    public void setStartScale(double startScale) {
+        this.startScale = startScale;
+        markDirty();
+    }
+
+    public double getEndScale() {
+        return endScale;
+    }
+
+    public void setEndScale(double endScale) {
+        this.endScale = endScale;
+        markDirty();
+    }
+
+    public double getStartRotationDegrees() {
+        return startRotationDegrees;
+    }
+
+    public void setStartRotationDegrees(double startRotationDegrees) {
+        this.startRotationDegrees = startRotationDegrees;
+        markDirty();
+    }
+
+    public double getEndRotationDegrees() {
+        return endRotationDegrees;
+    }
+
+    public void setEndRotationDegrees(double endRotationDegrees) {
+        this.endRotationDegrees = endRotationDegrees;
+        markDirty();
+    }
+
     private void writeEmptyOutputs() {
         outputValues.put(OUTPUT_SPINE_POINTS_ID, List.of());
         outputValues.put(OUTPUT_SECTION_PATHS_ID, List.of());
@@ -190,5 +286,44 @@ public class SweepPointListAlongPathNode extends BaseNode {
         Object pathPointsObj = inputValues.get(INPUT_PATH_POINTS_ID);
 
         return SolidNodeUtils.resolveSpinePoints(lineObj, polylineObj, curveObj, pathPointsObj);
+    }
+
+    private List<Double> resolveNumberList(Object value) {
+        if (!(value instanceof List<?> list)) {
+            return List.of();
+        }
+        List<Double> numbers = new ArrayList<>();
+        for (Object item : list) {
+            if (item instanceof Number number) {
+                numbers.add(number.doubleValue());
+            }
+        }
+        return List.copyOf(numbers);
+    }
+
+    private double resolveScalarAt(List<Double> values, double t, double start, double end) {
+        if (values.isEmpty()) {
+            return start + (end - start) * t;
+        }
+        if (values.size() == 1) {
+            return values.getFirst();
+        }
+        double scaled = Math.max(0.0d, Math.min(1.0d, t)) * (values.size() - 1);
+        int i = (int) Math.floor(scaled);
+        int next = Math.min(values.size() - 1, i + 1);
+        double localT = scaled - i;
+        return values.get(i) + (values.get(next) - values.get(i)) * localT;
+    }
+
+    private Vector3d transformLocalProfilePoint(Vector3d local, double scale, double rotationRadians) {
+        double scaledX = local.x * scale;
+        double scaledY = local.y * scale;
+        double cos = Math.cos(rotationRadians);
+        double sin = Math.sin(rotationRadians);
+        return new Vector3d(
+            scaledX * cos - scaledY * sin,
+            scaledX * sin + scaledY * cos,
+            local.z * scale
+        );
     }
 }

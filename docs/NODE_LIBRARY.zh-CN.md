@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**497**
+- **节点总数**：**498**
 - **分类总数**：**52**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -16,7 +16,7 @@
 | `geometry.curves` | 24 |
 | `geometry.primitives` | 29 |
 | `geometry.profiles` | 24 |
-| `geometry.solids` | 22 |
+| `geometry.solids` | 23 |
 | `input.context` | 4 |
 | `input.numeric` | 8 |
 | `input.type_selectors` | 5 |
@@ -213,7 +213,7 @@
 | Profile Boolean 2D | `geometry.profiles.boolean_2d` | Performs 2D boolean operations (union/intersection/difference) on two polygon profiles in a shared plane | `ProfileBoolean2DNode` |
 | Profile Triangulate 2D | `geometry.profiles.triangulate_2d` | Triangulates a planar polygon profile into triangle profiles using ear clipping | `ProfileTriangulate2DNode` |
 
-## geometry.solids（22）
+## geometry.solids（23）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -222,10 +222,11 @@
 | Extrude Box Face | `geometry.solids.extrude_box_face` | Extrudes a box face into a new box segment and returns a composite geometry | `ExtrudeBoxFaceNode` |
 | Loft Profiles | `geometry.solids.loft` | Lofts two polygon profiles with matching edge counts into a side surface strip | `LoftProfilesNode` |
 | Loft Point Lists | `geometry.solids.loft_from_points` | Connects two ordered point lists and emits source paths, target paths, and loft rail segments | `LoftPointListsNode` |
-| Sweep Profile Along Path | `geometry.solids.sweep` | Sweeps a polygon profile along a path and emits section profiles plus a side surface strip | `SweepProfileAlongPathNode` |
-| Sweep Point List Along Path | `geometry.solids.sweep_from_points` | Sweeps an ordered point profile along a path and emits section paths plus connecting rail segments | `SweepPointListAlongPathNode` |
+| Sweep Profile Along Path | `geometry.solids.sweep` | Sweeps a polygon profile along a path with optional scale, rotation, close, and flip controls | `SweepProfileAlongPathNode` |
+| Sweep Point List Along Path | `geometry.solids.sweep_from_points` | Sweeps an ordered point profile along a path with optional scale, rotation, close, and flip controls | `SweepPointListAlongPathNode` |
 | Revolve Profile | `geometry.solids.revolve` | Revolves a polygon profile around an axis and emits section profiles plus a side surface strip | `RevolveProfileNode` |
 | Surface Strip To Geometry | `geometry.solids.surface_strip_to_geometry` | Explicitly converts a surface strip into reusable geometry by sampling section edges and rails as cylinders | `SurfaceStripToGeometryNode` |
+| Sweep 2 Rails | `geometry.solids.sweep_two_rails` | Sweeps a profile between two guide rails with optional scale and rotation controls | `SweepTwoRailsNode` |
 | Push/Pull Box Face | `geometry.solids.push_pull_face` | Moves one box face along its normal and outputs a new box geometry | `PushPullBoxFaceNode` |
 | Shell Surface Strip | `geometry.solids.shell` | Builds inner and outer offset shell layers from a surface strip and emits cap strips plus an optional geometry approximation | `ShellNode` |
 | Prism By Profile Vector | `geometry.solids.extrude_profile` | Constructs prism geometry from a polygon profile and an extrusion vector | `PrismByProfileVectorNode` |
