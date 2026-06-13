@@ -7,6 +7,7 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.bake.BakePlacementService;
 import com.nodecraft.nodesystem.bake.PlacementMode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.DataTreeData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -34,12 +35,12 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Applies explicit placements or voxelized geometry to the world.
+ * Applies explicit placements, placement trees, or voxelized geometry to the world.
  */
 @NodeInfo(
     id = "output.execute.apply_changes",
     displayName = "Apply Changes",
-    description = "Applies explicit placements or voxelized geometry to the world.",
+    description = "Applies explicit placements, placement trees, or voxelized geometry to the world.",
     category = "output.execute",
     order = 0
 )
@@ -83,6 +84,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
     private static final String INPUT_TORUS_GEOMETRY_ID = "input_torus_geometry";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
     private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
+    private static final String INPUT_BLOCK_PLACEMENTS_TREE_ID = "input_block_placements_tree";
     private static final String INPUT_NOTIFY_ID = "input_notify";
 
     private static final String OUTPUT_SUCCESS_ID = "output_success";
@@ -101,6 +103,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
         addInputPort(new BasePort(INPUT_TORUS_GEOMETRY_ID, "Torus Geometry", "Torus geometry to voxelize and place", NodeDataType.TORUS_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Fallback block type for uniform placement", NodeDataType.STRING, this));
         addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "Per-position block assignments", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_TREE_ID, "Block Placements Tree", "Tree-grouped per-position block assignments", NodeDataType.DATA_TREE, this));
         addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify On Complete", "Overrides node notification behavior", NodeDataType.BOOLEAN, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether placement succeeded", NodeDataType.BOOLEAN, this));
@@ -118,6 +121,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
 
         Object triggerObj = inputValues.get(INPUT_TRIGGER_ID);
         Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
+        Object placementsTreeObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_TREE_ID);
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
         Object geometryObj = inputValues.get(INPUT_GEOMETRY_ID);
         Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
@@ -147,6 +151,7 @@ public class ApplyChangesNode extends BaseCustomUINode {
             }
 
             List<BlockPlacementData> placements = resolvePlacements(placementsObj);
+            placements.addAll(resolvePlacementTree(placementsTreeObj));
             if (!placements.isEmpty()) {
                 long startTime = System.currentTimeMillis();
                 progressPercentage = 0.2f;
@@ -257,6 +262,25 @@ public class ApplyChangesNode extends BaseCustomUINode {
                 && placement.blockId() != null
                 && !placement.blockId().isEmpty()) {
                 placements.add(placement);
+            }
+        }
+        return placements;
+    }
+
+    private List<BlockPlacementData> resolvePlacementTree(Object placementsTreeObj) {
+        List<BlockPlacementData> placements = new ArrayList<>();
+        if (!(placementsTreeObj instanceof DataTreeData tree) || tree.getBranchCount() == 0) {
+            return placements;
+        }
+
+        for (DataTreeData.Branch branch : tree.getBranches()) {
+            for (Object entry : branch.items()) {
+                if (entry instanceof BlockPlacementData placement
+                    && placement.pos() != null
+                    && placement.blockId() != null
+                    && !placement.blockId().isEmpty()) {
+                    placements.add(placement);
+                }
             }
         }
         return placements;

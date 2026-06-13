@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.DataTreeData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewBackend;
 import com.nodecraft.nodesystem.preview.PreviewManager;
@@ -12,6 +13,7 @@ import com.nodecraft.nodesystem.preview.protocol.PreviewBlock;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewRequest;
 import com.nodecraft.nodesystem.preview.protocol.PreviewStyle;
+import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import com.nodecraft.nodesystem.util.Coordinate;
 import net.minecraft.util.math.BlockPos;
@@ -30,13 +32,15 @@ import java.util.UUID;
 @NodeInfo(
     id = "output.preview.preview_blocks",
     displayName = "Preview Blocks",
-    description = "Previews block coordinates or block lists as temporary ghost blocks.",
+    description = "Previews block coordinates, placements, or placement trees as temporary ghost blocks.",
     category = "output.preview",
     order = 1
 )
 public class PreviewBlocksNode extends BaseCustomUINode {
 
     private static final String INPUT_BLOCKS_ID = "input_blocks";
+    private static final String INPUT_BLOCK_PLACEMENTS_ID = "input_block_placements";
+    private static final String INPUT_BLOCK_PLACEMENTS_TREE_ID = "input_block_placements_tree";
     private static final String INPUT_COORDS_ID = "input_coords";
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
 
@@ -74,6 +78,8 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         super(UUID.randomUUID(), "output.preview.preview_blocks");
 
         addInputPort(new BasePort(INPUT_BLOCKS_ID, "Blocks", "Block list or block position list", NodeDataType.LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_ID, "Block Placements", "Position and block assignments to preview", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCK_PLACEMENTS_TREE_ID, "Block Placements Tree", "Tree-grouped position and block assignments to preview", NodeDataType.DATA_TREE, this));
         addInputPort(new BasePort(INPUT_COORDS_ID, "Coordinates", "Fallback coordinate list", NodeDataType.LIST, this));
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Ghost block type", NodeDataType.STRING, this));
 
@@ -95,6 +101,8 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         int blockCount = 0;
 
         Object blocksObj = inputValues.get(INPUT_BLOCKS_ID);
+        Object placementsObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_ID);
+        Object placementsTreeObj = inputValues.get(INPUT_BLOCK_PLACEMENTS_TREE_ID);
         Object coordsObj = inputValues.get(INPUT_COORDS_ID);
         Object blockTypeObj = inputValues.get(INPUT_BLOCK_TYPE_ID);
 
@@ -108,6 +116,8 @@ public class PreviewBlocksNode extends BaseCustomUINode {
         } else {
             List<PreviewBlock> previewBlocks = new ArrayList<>();
             collectPreviewBlocks(blocksObj, effectiveBlockType, previewBlocks);
+            collectPreviewBlocks(placementsObj, effectiveBlockType, previewBlocks);
+            collectPreviewBlocks(placementsTreeObj, effectiveBlockType, previewBlocks);
             collectPreviewBlocks(coordsObj, effectiveBlockType, previewBlocks);
 
             blockCount = previewBlocks.size();
@@ -190,6 +200,18 @@ public class PreviewBlocksNode extends BaseCustomUINode {
     }
 
     private void collectPreviewBlocks(Object source, String effectiveBlockType, List<PreviewBlock> out) {
+        if (source instanceof DataTreeData tree) {
+            for (DataTreeData.Branch branch : tree.getBranches()) {
+                for (Object item : branch.items()) {
+                    PreviewBlock block = toPreviewBlock(item, effectiveBlockType);
+                    if (block != null) {
+                        out.add(block);
+                    }
+                }
+            }
+            return;
+        }
+
         if (source instanceof BlockPosList blockPosList) {
             for (BlockPos pos : blockPosList.getPositions()) {
                 if (pos != null) {
@@ -216,6 +238,13 @@ public class PreviewBlocksNode extends BaseCustomUINode {
     }
 
     private @Nullable PreviewBlock toPreviewBlock(Object value, String effectiveBlockType) {
+        if (value instanceof BlockPlacementData placement
+            && placement.pos() != null
+            && placement.blockId() != null
+            && !placement.blockId().isBlank()) {
+            BlockPos pos = placement.pos();
+            return new PreviewBlock(pos.getX(), pos.getY(), pos.getZ(), placement.blockId());
+        }
         if (value instanceof Coordinate coordinate) {
             return new PreviewBlock(coordinate.getX(), coordinate.getY(), coordinate.getZ(), effectiveBlockType);
         }

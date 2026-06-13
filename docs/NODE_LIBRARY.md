@@ -289,8 +289,8 @@
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
-| Assign Block Type | `material.basic_assignment.assign_block_type` | Assigns a single block type to every resolved block position | `AssignBlockTypeNode` |
-| Block Palette | `material.basic_assignment.block_palette` | Assigns a repeating palette of block types to resolved positions | `BlockPaletteNode` |
+| Assign Block Type | `material.basic_assignment.assign_block_type` | Assigns a single block type to flat or tree-grouped block positions | `AssignBlockTypeNode` |
+| Block Palette | `material.basic_assignment.block_palette` | Assigns palette block types to flat positions or tree branches | `BlockPaletteNode` |
 | Weighted Block Palette | `material.basic_assignment.weighted_palette` | Assigns block types using weighted random palette probabilities. | `WeightedBlockPaletteNode` |
 
 ## material.block_state (6)
@@ -505,7 +505,7 @@
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
-| Apply Changes | `output.execute.apply_changes` | Applies explicit placements or voxelized geometry to the world. | `ApplyChangesNode` |
+| Apply Changes | `output.execute.apply_changes` | Applies explicit placements, placement trees, or voxelized geometry to the world. | `ApplyChangesNode` |
 | Clear Preview | `output.execute.clear_preview` | Clears all active previews | `ClearAllPreviewsNode` |
 | Bake Geometry To Blocks | `output.execute.bake_geometry_to_blocks` | Bakes any supported geometry into Minecraft block coordinates for final execution | `GeometryToBlocksNode` |
 | Undo Last Bake | `output.execute.undo_last_bake` | Reverts the most recent recorded bake or apply-changes operation | `UndoLastBakeNode` |
@@ -526,7 +526,7 @@
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
 | Geometry Viewer | `output.preview.geometry_viewer` | Previews geometry visually without committing changes to the world. | `GeometryViewerNode` |
-| Preview Blocks | `output.preview.preview_blocks` | Previews block coordinates or block lists as temporary ghost blocks. | `PreviewBlocksNode` |
+| Preview Blocks | `output.preview.preview_blocks` | Previews block coordinates, placements, or placement trees as temporary ghost blocks. | `PreviewBlocksNode` |
 | Preview Points | `output.preview.preview_points` | Previews one or more reference points before voxelization | `PreviewPointsNode` |
 | Preview Vectors | `output.preview.preview_vectors` | Previews vectors and directions before voxelization | `PreviewVectorsNode` |
 | Preview Plane | `output.preview.preview_plane` | Previews a plane as a square grid with axes and normal direction | `PreviewPlaneNode` |

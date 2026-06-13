@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.DataTreeData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -21,13 +22,14 @@ import java.util.UUID;
 @NodeInfo(
     id = "material.basic_assignment.assign_block_type",
     displayName = "Assign Block Type",
-    description = "Assigns a single block type to every resolved block position",
+    description = "Assigns a single block type to flat or tree-grouped block positions",
     category = "material.basic_assignment",
     order = 0
 )
 public class AssignBlockTypeNode extends BaseNode {
 
     private static final String INPUT_COORDINATES_ID = "input_coordinates";
+    private static final String INPUT_BLOCKS_TREE_ID = "input_blocks_tree";
     private static final String INPUT_GEOMETRY_ID = "input_geometry";
     private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
     private static final String INPUT_CYLINDER_GEOMETRY_ID = "input_cylinder_geometry";
@@ -36,13 +38,17 @@ public class AssignBlockTypeNode extends BaseNode {
     private static final String INPUT_BLOCK_TYPE_ID = "input_block_type";
 
     private static final String OUTPUT_POSITIONS_ID = "output_positions";
+    private static final String OUTPUT_POSITIONS_TREE_ID = "output_positions_tree";
     private static final String OUTPUT_BLOCK_IDS_ID = "output_block_ids";
+    private static final String OUTPUT_BLOCK_IDS_TREE_ID = "output_block_ids_tree";
     private static final String OUTPUT_PLACEMENTS_ID = "output_placements";
+    private static final String OUTPUT_PLACEMENTS_TREE_ID = "output_placements_tree";
 
     public AssignBlockTypeNode() {
         super(UUID.randomUUID(), "material.basic_assignment.assign_block_type");
 
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", "Block coordinate list", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCKS_TREE_ID, "Blocks Tree", "Optional block positions grouped by branch", NodeDataType.DATA_TREE, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified abstract geometry input", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data to materialize", NodeDataType.BOX_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_CYLINDER_GEOMETRY_ID, "Cylinder Geometry", "Cylinder geometry data to materialize", NodeDataType.CYLINDER_GEOMETRY, this));
@@ -51,18 +57,22 @@ public class AssignBlockTypeNode extends BaseNode {
         addInputPort(new BasePort(INPUT_BLOCK_TYPE_ID, "Block Type", "Block type applied to every resolved position", NodeDataType.BLOCK_TYPE, this));
 
         addOutputPort(new BasePort(OUTPUT_POSITIONS_ID, "Positions", "Resolved block positions", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_POSITIONS_TREE_ID, "Positions Tree", "Resolved block positions grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Block IDs aligned with the positions list", NodeDataType.BLOCK_INFO_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_TREE_ID, "Block IDs Tree", "Block IDs grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_PLACEMENTS_ID, "Block Placements", "Position and block pairs for baking", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_PLACEMENTS_TREE_ID, "Block Placements Tree", "Position and block pairs grouped by source branch", NodeDataType.DATA_TREE, this));
     }
 
     @Override
     public String getDescription() {
-        return "Assigns a single block type to every resolved block position";
+        return "Assigns a single block type to flat or tree-grouped block positions";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         Object coordsObj = inputValues.get(INPUT_COORDINATES_ID);
+        Object blocksTreeObj = inputValues.get(INPUT_BLOCKS_TREE_ID);
         Object geometryObj = inputValues.get(INPUT_GEOMETRY_ID);
         Object boxGeometryObj = inputValues.get(INPUT_BOX_GEOMETRY_ID);
         Object cylinderGeometryObj = inputValues.get(INPUT_CYLINDER_GEOMETRY_ID);
@@ -70,6 +80,11 @@ public class AssignBlockTypeNode extends BaseNode {
         Object torusGeometryObj = inputValues.get(INPUT_TORUS_GEOMETRY_ID);
 
         String blockType = getInputString(INPUT_BLOCK_TYPE_ID, "minecraft:stone");
+        if (blocksTreeObj instanceof DataTreeData blocksTree && blocksTree.getBranchCount() > 0) {
+            writeTreeAssignments(blocksTree, blockType);
+            return;
+        }
+
         BlockPosList positions = GeometryVoxelizer.resolveBlocks(
             coordsObj,
             geometryObj,
@@ -91,8 +106,47 @@ public class AssignBlockTypeNode extends BaseNode {
         }
 
         outputValues.put(OUTPUT_POSITIONS_ID, outputPositions);
+        outputValues.put(OUTPUT_POSITIONS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(outputPositions.getPositions())))));
         outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
+        outputValues.put(OUTPUT_BLOCK_IDS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(blockIds)))));
         outputValues.put(OUTPUT_PLACEMENTS_ID, placements);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(placements)))));
+    }
+
+    private void writeTreeAssignments(DataTreeData blocksTree, String blockType) {
+        BlockPosList outputPositions = new BlockPosList();
+        List<String> blockIds = new ArrayList<>();
+        List<BlockPlacementData> placements = new ArrayList<>();
+        List<DataTreeData.Branch> positionBranches = new ArrayList<>();
+        List<DataTreeData.Branch> blockIdBranches = new ArrayList<>();
+        List<DataTreeData.Branch> placementBranches = new ArrayList<>();
+
+        for (DataTreeData.Branch branch : blocksTree.getBranches()) {
+            List<Object> branchPositions = new ArrayList<>();
+            List<Object> branchBlockIds = new ArrayList<>();
+            List<Object> branchPlacements = new ArrayList<>();
+            for (Object item : branch.items()) {
+                if (item instanceof BlockPos pos) {
+                    BlockPlacementData placement = new BlockPlacementData(pos, blockType);
+                    outputPositions.add(pos);
+                    blockIds.add(blockType);
+                    placements.add(placement);
+                    branchPositions.add(pos);
+                    branchBlockIds.add(blockType);
+                    branchPlacements.add(placement);
+                }
+            }
+            positionBranches.add(new DataTreeData.Branch(branch.path(), branchPositions));
+            blockIdBranches.add(new DataTreeData.Branch(branch.path(), branchBlockIds));
+            placementBranches.add(new DataTreeData.Branch(branch.path(), branchPlacements));
+        }
+
+        outputValues.put(OUTPUT_POSITIONS_ID, outputPositions);
+        outputValues.put(OUTPUT_POSITIONS_TREE_ID, new DataTreeData(positionBranches));
+        outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
+        outputValues.put(OUTPUT_BLOCK_IDS_TREE_ID, new DataTreeData(blockIdBranches));
+        outputValues.put(OUTPUT_PLACEMENTS_ID, placements);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, new DataTreeData(placementBranches));
     }
 
     private String getInputString(String portId, String fallback) {

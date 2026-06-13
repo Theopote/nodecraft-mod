@@ -4,6 +4,7 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.datatypes.DataTreeData;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPlacementData;
 import com.nodecraft.nodesystem.util.BlockPosList;
@@ -21,14 +22,16 @@ import java.util.UUID;
 @NodeInfo(
     id = "material.basic_assignment.block_palette",
     displayName = "Block Palette",
-    description = "Assigns a repeating palette of block types to resolved positions",
+    description = "Assigns palette block types to flat positions or tree branches",
     category = "material.basic_assignment",
     order = 1
 )
 public class BlockPaletteNode extends BaseNode {
 
     private static final String INPUT_PLACEMENTS_ID = "input_placements";
+    private static final String INPUT_PLACEMENTS_TREE_ID = "input_placements_tree";
     private static final String INPUT_COORDINATES_ID = "input_coordinates";
+    private static final String INPUT_BLOCKS_TREE_ID = "input_blocks_tree";
     private static final String INPUT_GEOMETRY_ID = "input_geometry";
     private static final String INPUT_BOX_GEOMETRY_ID = "input_box_geometry";
     private static final String INPUT_CYLINDER_GEOMETRY_ID = "input_cylinder_geometry";
@@ -39,15 +42,20 @@ public class BlockPaletteNode extends BaseNode {
     private static final String INPUT_START_INDEX_ID = "input_start_index";
 
     private static final String OUTPUT_POSITIONS_ID = "output_positions";
+    private static final String OUTPUT_POSITIONS_TREE_ID = "output_positions_tree";
     private static final String OUTPUT_BLOCK_IDS_ID = "output_block_ids";
+    private static final String OUTPUT_BLOCK_IDS_TREE_ID = "output_block_ids_tree";
     private static final String OUTPUT_PLACEMENTS_ID = "output_placements";
+    private static final String OUTPUT_PLACEMENTS_TREE_ID = "output_placements_tree";
     private static final String OUTPUT_PALETTE_SIZE_ID = "output_palette_size";
 
     public BlockPaletteNode() {
         super(UUID.randomUUID(), "material.basic_assignment.block_palette");
 
         addInputPort(new BasePort(INPUT_PLACEMENTS_ID, "Block Placements", "Optional incoming placements to remap through the palette", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addInputPort(new BasePort(INPUT_PLACEMENTS_TREE_ID, "Block Placements Tree", "Optional incoming placements grouped by branch", NodeDataType.DATA_TREE, this));
         addInputPort(new BasePort(INPUT_COORDINATES_ID, "Coordinates", "Block coordinate list", NodeDataType.BLOCK_LIST, this));
+        addInputPort(new BasePort(INPUT_BLOCKS_TREE_ID, "Blocks Tree", "Optional block positions grouped by branch", NodeDataType.DATA_TREE, this));
         addInputPort(new BasePort(INPUT_GEOMETRY_ID, "Geometry", "Unified abstract geometry input", NodeDataType.GEOMETRY, this));
         addInputPort(new BasePort(INPUT_BOX_GEOMETRY_ID, "Box Geometry", "Box geometry data to materialize", NodeDataType.BOX_GEOMETRY, this));
         addInputPort(new BasePort(INPUT_CYLINDER_GEOMETRY_ID, "Cylinder Geometry", "Cylinder geometry data to materialize", NodeDataType.CYLINDER_GEOMETRY, this));
@@ -58,20 +66,37 @@ public class BlockPaletteNode extends BaseNode {
         addInputPort(new BasePort(INPUT_START_INDEX_ID, "Start Index", "Palette offset applied to the first resolved block", NodeDataType.INTEGER, this));
 
         addOutputPort(new BasePort(OUTPUT_POSITIONS_ID, "Positions", "Resolved block positions", NodeDataType.BLOCK_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_POSITIONS_TREE_ID, "Positions Tree", "Resolved block positions grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_ID, "Block IDs", "Block ids aligned with the positions list", NodeDataType.BLOCK_INFO_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_BLOCK_IDS_TREE_ID, "Block IDs Tree", "Block ids grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_PLACEMENTS_ID, "Block Placements", "Position and block pairs for baking", NodeDataType.BLOCK_PLACEMENT_LIST, this));
+        addOutputPort(new BasePort(OUTPUT_PLACEMENTS_TREE_ID, "Block Placements Tree", "Position and block pairs grouped by source branch", NodeDataType.DATA_TREE, this));
         addOutputPort(new BasePort(OUTPUT_PALETTE_SIZE_ID, "Palette Size", "Number of usable block ids in the palette", NodeDataType.INTEGER, this));
     }
 
     @Override
     public String getDescription() {
-        return "Assigns a repeating palette of block types to resolved positions";
+        return "Assigns palette block types to flat positions or tree branches";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         List<String> palette = resolvePalette();
         int startIndex = getInputInteger(INPUT_START_INDEX_ID, 0);
+
+        Object placementsTreeObj = inputValues.get(INPUT_PLACEMENTS_TREE_ID);
+        if (placementsTreeObj instanceof DataTreeData placementsTree && placementsTree.getBranchCount() > 0) {
+            writePlacementTreeAssignments(placementsTree, palette, startIndex);
+            outputValues.put(OUTPUT_PALETTE_SIZE_ID, palette.size());
+            return;
+        }
+
+        Object blocksTreeObj = inputValues.get(INPUT_BLOCKS_TREE_ID);
+        if (blocksTreeObj instanceof DataTreeData blocksTree && blocksTree.getBranchCount() > 0) {
+            writeBlockTreeAssignments(blocksTree, palette, startIndex);
+            outputValues.put(OUTPUT_PALETTE_SIZE_ID, palette.size());
+            return;
+        }
 
         List<BlockPlacementData> placements = resolvePlacements(palette, startIndex);
         BlockPosList positions = new BlockPosList();
@@ -86,9 +111,92 @@ public class BlockPaletteNode extends BaseNode {
         }
 
         outputValues.put(OUTPUT_POSITIONS_ID, positions);
+        outputValues.put(OUTPUT_POSITIONS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(positions.getPositions())))));
         outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
+        outputValues.put(OUTPUT_BLOCK_IDS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(blockIds)))));
         outputValues.put(OUTPUT_PLACEMENTS_ID, placements);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, new DataTreeData(List.of(new DataTreeData.Branch(List.of(0), new ArrayList<Object>(placements)))));
         outputValues.put(OUTPUT_PALETTE_SIZE_ID, palette.size());
+    }
+
+    private void writePlacementTreeAssignments(DataTreeData placementsTree, List<String> palette, int startIndex) {
+        BlockPosList positions = new BlockPosList();
+        List<String> blockIds = new ArrayList<>();
+        List<BlockPlacementData> placements = new ArrayList<>();
+        List<DataTreeData.Branch> positionBranches = new ArrayList<>();
+        List<DataTreeData.Branch> blockIdBranches = new ArrayList<>();
+        List<DataTreeData.Branch> placementBranches = new ArrayList<>();
+        String fallbackBlock = getInputString(INPUT_FALLBACK_BLOCK_TYPE_ID, "minecraft:stone");
+
+        int branchIndex = 0;
+        for (DataTreeData.Branch branch : placementsTree.getBranches()) {
+            String branchBlockId = getPaletteValue(palette, startIndex + branchIndex, fallbackBlock);
+            List<Object> branchPositions = new ArrayList<>();
+            List<Object> branchBlockIds = new ArrayList<>();
+            List<Object> branchPlacements = new ArrayList<>();
+            for (Object item : branch.items()) {
+                if (item instanceof BlockPlacementData placement && placement.pos() != null) {
+                    BlockPlacementData remapped = new BlockPlacementData(placement.pos(), branchBlockId, placement.stateData());
+                    positions.add(remapped.pos());
+                    blockIds.add(remapped.blockId());
+                    placements.add(remapped);
+                    branchPositions.add(remapped.pos());
+                    branchBlockIds.add(remapped.blockId());
+                    branchPlacements.add(remapped);
+                }
+            }
+            positionBranches.add(new DataTreeData.Branch(branch.path(), branchPositions));
+            blockIdBranches.add(new DataTreeData.Branch(branch.path(), branchBlockIds));
+            placementBranches.add(new DataTreeData.Branch(branch.path(), branchPlacements));
+            branchIndex++;
+        }
+
+        outputValues.put(OUTPUT_POSITIONS_ID, positions);
+        outputValues.put(OUTPUT_POSITIONS_TREE_ID, new DataTreeData(positionBranches));
+        outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
+        outputValues.put(OUTPUT_BLOCK_IDS_TREE_ID, new DataTreeData(blockIdBranches));
+        outputValues.put(OUTPUT_PLACEMENTS_ID, placements);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, new DataTreeData(placementBranches));
+    }
+
+    private void writeBlockTreeAssignments(DataTreeData blocksTree, List<String> palette, int startIndex) {
+        BlockPosList positions = new BlockPosList();
+        List<String> blockIds = new ArrayList<>();
+        List<BlockPlacementData> placements = new ArrayList<>();
+        List<DataTreeData.Branch> positionBranches = new ArrayList<>();
+        List<DataTreeData.Branch> blockIdBranches = new ArrayList<>();
+        List<DataTreeData.Branch> placementBranches = new ArrayList<>();
+        String fallbackBlock = getInputString(INPUT_FALLBACK_BLOCK_TYPE_ID, "minecraft:stone");
+
+        int branchIndex = 0;
+        for (DataTreeData.Branch branch : blocksTree.getBranches()) {
+            String branchBlockId = getPaletteValue(palette, startIndex + branchIndex, fallbackBlock);
+            List<Object> branchPositions = new ArrayList<>();
+            List<Object> branchBlockIds = new ArrayList<>();
+            List<Object> branchPlacements = new ArrayList<>();
+            for (Object item : branch.items()) {
+                if (item instanceof BlockPos pos) {
+                    BlockPlacementData placement = new BlockPlacementData(pos, branchBlockId);
+                    positions.add(pos);
+                    blockIds.add(branchBlockId);
+                    placements.add(placement);
+                    branchPositions.add(pos);
+                    branchBlockIds.add(branchBlockId);
+                    branchPlacements.add(placement);
+                }
+            }
+            positionBranches.add(new DataTreeData.Branch(branch.path(), branchPositions));
+            blockIdBranches.add(new DataTreeData.Branch(branch.path(), branchBlockIds));
+            placementBranches.add(new DataTreeData.Branch(branch.path(), branchPlacements));
+            branchIndex++;
+        }
+
+        outputValues.put(OUTPUT_POSITIONS_ID, positions);
+        outputValues.put(OUTPUT_POSITIONS_TREE_ID, new DataTreeData(positionBranches));
+        outputValues.put(OUTPUT_BLOCK_IDS_ID, blockIds);
+        outputValues.put(OUTPUT_BLOCK_IDS_TREE_ID, new DataTreeData(blockIdBranches));
+        outputValues.put(OUTPUT_PLACEMENTS_ID, placements);
+        outputValues.put(OUTPUT_PLACEMENTS_TREE_ID, new DataTreeData(placementBranches));
     }
 
     private List<BlockPlacementData> resolvePlacements(List<String> palette, int startIndex) {
