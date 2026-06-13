@@ -1654,7 +1654,7 @@ public final class AiAssistantPanel {
             if (parsed.isSuccess()) {
                 accepted.add(candidate);
             } else {
-                working.remove(working.size() - 1);
+                working.removeLast();
                 NodeCraft.LOGGER.warn(
                         "[AI_SEND] Rejected inferred connection {}.{} -> {}.{} because validation failed: {}",
                         candidate.sourceRef(),
