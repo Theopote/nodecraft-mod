@@ -236,6 +236,9 @@ Current implementation notes:
 - Sweep nodes expose section trees so downstream operations can work per profile/section.
 - Loft nodes expose section point trees and rail trees so users can operate on cross-section rows or connecting rails independently.
 - `SurfaceStripData` remains the compact reusable surface representation; tree outputs are parallel diagnostic/modeling views.
+- `Surface Strip To Geometry` accepts `Surface Strip Tree` and outputs `Geometry Tree`, preserving source branch paths.
+- `Bake Geometry To Blocks` accepts `Geometry Tree` and outputs `Blocks Tree`, preserving source branch paths.
+- `Bake Surface Strip To Blocks` accepts `Surface Strip Tree` and outputs `Blocks Tree`, preserving source branch paths.
 
 Bake nodes should eventually support:
 
