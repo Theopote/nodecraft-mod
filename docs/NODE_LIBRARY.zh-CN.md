@@ -763,12 +763,12 @@
 | Get Fluid Level | `world.query.get_fluid_level` | Gets the fluid state, type, and level for a block position | `GetFluidLevelNode` |
 | Is Grid Point | `world.query.is_grid_point` | Checks whether a geometric point already lies on the block grid without snapping | `IsGridPointNode` |
 | Filter Grid Points | `world.query.filter_grid_points` | Splits a point list into grid-aligned points and off-grid points without snapping | `FilterGridPointsNode` |
-| Point In Region | `world.query.is_point_in_region` | 检查点是否在指定区域内 | `IsPointInRegionNode` |
+| Point In Region | `world.query.is_point_in_region` | Tests whether the center of a block position lies inside a region. | `IsPointInRegionNode` |
 | Raycast | `world.query.raycast` | Casts a ray in world space and returns nearest block/entity hit information. | `RaycastNode` |
 | Flood Fill | `world.query.flood_fill` | Runs BFS flood fill from a seed block using 6 or 26-neighbor connectivity. | `FloodFillNode` |
-| Get Neighbor Blocks | `world.query.get_neighbors` | Returns 6 or 26 neighboring blocks around a center position. | `GetNeighborBlocksNode` |
+| Get Neighbor Blocks | `world.query.get_neighbors` | Returns axis-ray neighbors or cube-volume neighbors around a center position. | `GetNeighborBlocksNode` |
 | Get Entities In Region | `world.query.get_entities_in_region` | Gets entities inside a region with optional filtering | `GetEntitiesInRegionNode` |
-| Get Entity | `world.query.get_entity` | 根据实体ID或选择器获取实体信息 | `GetEntityNode` |
+| Get Entity | `world.query.get_entity` | Finds an entity by UUID or by type near the current player. | `GetEntityNode` |
 
 ## world.read（12）
 
