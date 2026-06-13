@@ -3,15 +3,11 @@
 	"id": "nodecraft",
 	"version": "${version}",
 	"name": "NodeCraft",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "An in-game visual node graph editor for procedural Minecraft building, previews, world operations, and AI-assisted graph planning.",
 	"authors": [
-		"Me!"
+		"NodeCraft contributors"
 	],
-	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
-	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/nodecraft/icon.png",
 	"environment": "*",
 	"entrypoints": {
@@ -34,7 +30,5 @@
 		"java": ">=21",
 		"fabric-api": "*"
 	},
-	"suggests": {
-		"another-mod": "*"
-	}
+	"suggests": {}
 }
