@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.util;
 
 import com.nodecraft.nodesystem.datatypes.BooleanSdfData;
+import com.nodecraft.nodesystem.datatypes.BentSdfData;
 import com.nodecraft.nodesystem.datatypes.BoxSdfData;
 import com.nodecraft.nodesystem.datatypes.CapsuleSdfData;
 import com.nodecraft.nodesystem.datatypes.DomainWarpedSdfData;
@@ -120,6 +121,9 @@ public final class SdfBoundsEstimator {
         if (sdf instanceof TwistedSdfData twisted) {
             return boundsForTwist(twisted);
         }
+        if (sdf instanceof BentSdfData bent) {
+            return boundsForBend(bent);
+        }
         return null;
     }
 
@@ -186,6 +190,29 @@ public final class SdfBoundsEstimator {
                 for (int iz = 0; iz < samples; iz++) {
                     double z = lerp(inner.min.z, inner.max.z, iz / (double) (samples - 1));
                     Vector3d point = twisted.twistPoint(new Vector3d(x, y, z));
+                    AxisAlignedBounds pointBounds = new AxisAlignedBounds(new Vector3d(point), new Vector3d(point));
+                    bounds = bounds == null ? pointBounds : bounds.union(pointBounds);
+                }
+            }
+        }
+        return bounds == null ? null : bounds.expanded(2.0d);
+    }
+
+    private static @Nullable AxisAlignedBounds boundsForBend(BentSdfData bent) {
+        AxisAlignedBounds inner = estimate(bent.getSource());
+        if (inner == null || !inner.isValid()) {
+            return null;
+        }
+
+        int samples = 5;
+        AxisAlignedBounds bounds = null;
+        for (int ix = 0; ix < samples; ix++) {
+            double x = lerp(inner.min.x, inner.max.x, ix / (double) (samples - 1));
+            for (int iy = 0; iy < samples; iy++) {
+                double y = lerp(inner.min.y, inner.max.y, iy / (double) (samples - 1));
+                for (int iz = 0; iz < samples; iz++) {
+                    double z = lerp(inner.min.z, inner.max.z, iz / (double) (samples - 1));
+                    Vector3d point = bent.bendPoint(new Vector3d(x, y, z));
                     AxisAlignedBounds pointBounds = new AxisAlignedBounds(new Vector3d(point), new Vector3d(point));
                     bounds = bounds == null ? pointBounds : bounds.union(pointBounds);
                 }
