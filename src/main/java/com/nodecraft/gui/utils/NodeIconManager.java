@@ -3,6 +3,7 @@ package com.nodecraft.gui.utils;
 import com.github.weisj.jsvg.SVGDocument;
 import com.github.weisj.jsvg.attributes.ViewBox;
 import com.github.weisj.jsvg.parser.SVGLoader;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.nodecraft.core.NodeCraft;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.resource.Resource;
@@ -33,8 +34,6 @@ public class NodeIconManager {
     private static final String SVG_EXTENSION = ".svg";
     private static final int ICON_RENDER_SIZE = 64;
 
-    private static final SVGLoader SVG_LOADER = new SVGLoader();
-
     private final Map<String, Integer> textureCache = new HashMap<>();
     private final Map<String, Integer> categoryColors = new HashMap<>();
 
@@ -54,6 +53,9 @@ public class NodeIconManager {
     }
 
     public void cleanup() {
+        if (!isOnRenderThread("cleanup node icon textures")) {
+            return;
+        }
         for (int id : textureCache.values()) {
             GL11.glDeleteTextures(id);
         }
@@ -75,6 +77,10 @@ public class NodeIconManager {
      * 5. Category-colored fallback texture.
      */
     public int loadNodeIcon(String nodeId, String category, String explicitIcon) {
+        if (!isOnRenderThread("load node icon")) {
+            return 0;
+        }
+
         String normalizedCategory = normalizeId(category);
 
         String explicitPath = normalizeIconPath(explicitIcon);
@@ -116,6 +122,10 @@ public class NodeIconManager {
     }
 
     public int loadIcon(String iconId) {
+        if (!isOnRenderThread("load icon")) {
+            return 0;
+        }
+
         String resourcePath = normalizeIconPath(iconId);
         if (resourcePath == null) {
             return 0;
@@ -238,7 +248,7 @@ public class NodeIconManager {
             }
 
             try (InputStream stream = resource.get().getInputStream()) {
-                SVGDocument document = SVG_LOADER.load(stream);
+                SVGDocument document = new SVGLoader().load(stream);
                 if (document == null) {
                     return 0;
                 }
@@ -329,6 +339,16 @@ public class NodeIconManager {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL11.GL_CLAMP);
         GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA, 16, 16, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, buffer);
         return textureId;
+    }
+
+    private boolean isOnRenderThread(String operation) {
+        try {
+            RenderSystem.assertOnRenderThread();
+            return true;
+        } catch (IllegalStateException e) {
+            NodeCraft.LOGGER.warn("Skipped {} outside the render thread.", operation);
+            return false;
+        }
     }
 
     private void initCategoryColors() {
