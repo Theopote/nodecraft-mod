@@ -40,33 +40,6 @@ public final class AiAssistantPanel {
     private static final int AI_HISTORY_MAX_CHARS_PER_MESSAGE = 1800;
     private static final int AI_HISTORY_MAX_TOTAL_CHARS = 9000;
     private static final int AI_LATEST_USER_MESSAGE_MAX_CHARS = 7000;
-    private static final int AI_REMOTE_SCHEMA_LIMIT_REPAIR = 96;
-    private static final int MAX_REMOTE_GRAPH_EXPANSION_ATTEMPTS = 1;
-    private static final String REMOTE_DSL_REPAIR_SYSTEM_HINT =
-            """
-                You are now in DSL repair mode.
-                You must fix ONLY invalid node type ids / invalid port ids based on the provided node library schema.
-                Do not add explanations. Return JSON object only.
-                Keep graph structure and user intent unchanged as much as possible.
-                Every node.type must exactly match a listed typeId.
-                Every connection.from.port and connection.to.port must exactly match declared port ids for those node types.
-                If a connection cannot be made type-safe using listed nodes and ports, remove that connection.
-                A smaller valid graph is better than an invalid complete graph.
-                """;
-            private static final String REMOTE_DSL_TYPE_REPAIR_HINT =
-                """
-                    Additional strict requirement for this retry:
-                    - Fix data type compatibility for all connections.
-                    - Do NOT connect scalar values (float/integer/double) directly to geometry inputs.
-                    - Do NOT connect vectors to geometry inputs.
-                    - Do NOT connect vectors to list inputs unless the input port explicitly accepts vector data.
-                    - Do NOT guess converters. Use a converter node only if it appears in the provided node library.
-                    - If no compatible path exists, delete the invalid connection and keep the valid nodes.
-                    - Ensure output ports and input ports exist on the corresponding node types.
-                    - If needed, replace incorrect intermediate nodes with valid ones from the provided node library.
-                    - Ensure the output is valid JSON: do NOT include trailing commas, unescaped characters, or markdown tags.
-                    """;
-            private static final int MAX_REMOTE_DSL_REPAIR_ATTEMPTS = 2;
     private static final String[] AI_PROVIDER_STRATEGY_OPTIONS = {
             AiSettingsStore.PROVIDER_AUTO,
             AiSettingsStore.PROVIDER_OPENAI_COMPAT,
@@ -900,18 +873,7 @@ public final class AiAssistantPanel {
         List<AiRemotePlannerService.ConversationMessage> conversationHistory =
                 buildConversationHistory(userPrompt, userPromptPayload);
         AiRemotePlanningOrchestrator.PreparedRequest preparedRequest = remotePlanningOrchestrator.prepareInitialRequest(
-                new AiRemotePlanningOrchestrator.RequestSettings(
-                        aiApiBaseUrl.get(),
-                        resolveEffectiveApiKey(),
-                        aiModel.get(),
-                        AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
-                        aiSystemPrompt.get(),
-                        aiMaxOutputTokens.get(),
-                        aiRequestTimeoutSeconds.get(),
-                        aiUseSelectionContext.get(),
-                        aiDebugLoggingEnabled.get(),
-                        aiIncludePromptPreviewInDebug.get()
-                ),
+                collectRemoteRequestSettings(),
                 userPrompt,
                 userPromptPayload,
                 looksLikeComplexGenerationPrompt(userPrompt)
@@ -921,7 +883,7 @@ public final class AiAssistantPanel {
                 preparedRequest.userIntent(),
                 userPrompt == null ? 0 : userPrompt.length(),
                 preparedRequest.promptFingerprint());
-        logAiDebug("[AI_SEND] Prompt preview: {}", sanitizeUserPromptForSnapshot(userPrompt));
+        logAiDebug("[AI_SEND] Prompt preview: {}", remotePlanningOrchestrator.sanitizeUserPromptForSnapshot(userPrompt));
         NodeCraft.LOGGER.info("[AI_SEND] Schema context selected. selectedSchemas={}, totalSchemas={}, limit={}",
                 preparedRequest.selectedSchemaCount(),
                 preparedRequest.totalSchemaCount(),
@@ -1221,7 +1183,7 @@ public final class AiAssistantPanel {
     }
 
     private boolean tryStartRemoteDslRepair(String originalPrompt, String invalidDslOrModelResponse, List<String> parseErrors) {
-        if (aiRemoteDslRepairAttempts >= MAX_REMOTE_DSL_REPAIR_ATTEMPTS) {
+        if (aiRemoteDslRepairAttempts >= remotePlanningOrchestrator.maxDslRepairAttempts()) {
             return false;
         }
         if (!aiEnableRemotePlanner.get()) {
@@ -1238,74 +1200,36 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        NodeRegistry registry = NodeRegistry.getInstance();
-        List<AiNodeSchemaCatalog.NodeSchema> allSchemas = AiNodeSchemaCatalog.collectAll(registry);
-        List<AiNodeSchemaCatalog.NodeSchema> relevantSchemas = AiNodeSchemaCatalog.selectRelevant(
-                allSchemas,
+        AiRemotePlanningOrchestrator.PreparedRetryRequest preparedRequest =
+                remotePlanningOrchestrator.prepareDslRepairRequest(
+                        collectRemoteRequestSettings(),
+                        originalPrompt,
+                        invalidDslOrModelResponse,
+                        parseErrors,
+                        aiRemoteDslRepairAttempts
+                );
+        boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(
                 originalPrompt,
-                AI_REMOTE_SCHEMA_LIMIT_REPAIR
+                preparedRequest.config(),
+                preparedRequest.conversation(),
+                preparedRequest.requestSnapshot()
         );
-
-        String systemPrompt = aiSystemPrompt.get();
-        if (systemPrompt == null || systemPrompt.isBlank()) {
-            systemPrompt = AiPromptBuilder.buildSystemPrompt(relevantSchemas);
-        } else {
-            systemPrompt = systemPrompt + "\n\n" + AiPromptBuilder.buildSystemPrompt(relevantSchemas);
-        }
-        String errorsText = parseErrors == null || parseErrors.isEmpty()
-            ? "(none)"
-            : String.join("; ", parseErrors);
-        boolean typeMismatchDetected = containsAny(errorsText.toLowerCase(Locale.ROOT), "type mismatch", "unsupported type relationship");
-        systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_REPAIR_SYSTEM_HINT;
-        if (typeMismatchDetected || aiRemoteDslRepairAttempts >= 1) {
-            systemPrompt = systemPrompt + "\n\n" + REMOTE_DSL_TYPE_REPAIR_HINT;
-        }
-
-        int nextAttempt = aiRemoteDslRepairAttempts + 1;
-        String repairPromptPayload = "Remote planner produced invalid DSL. Repair it now.\n\n"
-            + "Repair attempt: " + nextAttempt + " / " + MAX_REMOTE_DSL_REPAIR_ATTEMPTS + "\n"
-                + "Original user prompt:\n"
-                + (originalPrompt == null ? "" : originalPrompt)
-                + "\n\n"
-                + "Validation errors:\n"
-                + errorsText
-                + "\n\n"
-                + "Invalid DSL/model payload to repair:\n"
-                + (invalidDslOrModelResponse == null ? "" : invalidDslOrModelResponse)
-                + "\n\n"
-                + "Return repaired JSON only.";
-
-        List<AiRemotePlannerService.ConversationMessage> repairConversation = List.of(
-                new AiRemotePlannerService.ConversationMessage("user", repairPromptPayload)
-        );
-        AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
-                aiApiBaseUrl.get(),
-                resolveEffectiveApiKey(),
-                aiModel.get(),
-                AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
-                systemPrompt,
-                aiMaxOutputTokens.get(),
-                aiRequestTimeoutSeconds.get()
-        );
-
-        String requestSnapshot = buildRemoteRequestSnapshot(config, originalPrompt, repairPromptPayload, relevantSchemas.size());
-        boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(originalPrompt, config, repairConversation, requestSnapshot);
         if (!submitted) {
             return false;
         }
 
-        aiRemoteDslRepairAttempts = nextAttempt;
+        aiRemoteDslRepairAttempts = preparedRequest.nextAttempt();
         aiPlanStatusMessage = "Remote DSL validation failed. Running schema/type repair retry "
-            + nextAttempt + " / " + MAX_REMOTE_DSL_REPAIR_ATTEMPTS + "...";
+            + preparedRequest.nextAttempt() + " / " + preparedRequest.maxAttempts() + "...";
         addAiChatMessage("assistant", aiPlanStatusMessage);
         NodeCraft.LOGGER.info("[AI_SEND] Started remote DSL repair retry {}/{}. errors={}",
-            nextAttempt,
-            MAX_REMOTE_DSL_REPAIR_ATTEMPTS,
-            errorsText);
+                preparedRequest.nextAttempt(),
+                preparedRequest.maxAttempts(),
+                preparedRequest.diagnosticText());
         NodeCraft.LOGGER.info("[AI_SEND] Repair schema context selected. selectedSchemas={}, totalSchemas={}, limit={}",
-                relevantSchemas.size(),
-                allSchemas.size(),
-                AI_REMOTE_SCHEMA_LIMIT_REPAIR);
+                preparedRequest.selectedSchemaCount(),
+                preparedRequest.totalSchemaCount(),
+                preparedRequest.schemaLimit());
         return true;
     }
 
@@ -1313,21 +1237,12 @@ public final class AiAssistantPanel {
             String prompt,
             AiGraphPlanDslAdapterService.GraphPlan plan
     ) {
-        if (aiRemoteGraphExpansionAttempts >= MAX_REMOTE_GRAPH_EXPANSION_ATTEMPTS) {
-            return false;
-        }
-        if (AiIntentAnalysisService.classifyIntent(prompt) != UserIntent.GENERATE_NEW) {
-            return false;
-        }
-        if (isPlacementOnlyCanvasPrompt(prompt)) {
-            return false;
-        }
-        if (!looksLikeComplexGenerationPrompt(prompt)) {
-            return false;
-        }
-        int nodeCount = plan == null || plan.nodes() == null ? 0 : plan.nodes().size();
-        int connectionCount = plan == null || plan.connections() == null ? 0 : plan.connections().size();
-        return nodeCount <= 1 || connectionCount == 0;
+        return remotePlanningOrchestrator.shouldRequestConnectedGraphExpansion(
+                prompt,
+                plan,
+                aiRemoteGraphExpansionAttempts,
+                looksLikeComplexGenerationPrompt(prompt)
+        );
     }
 
     private boolean isPlacementOnlyCanvasPrompt(String prompt) {
@@ -1342,7 +1257,7 @@ public final class AiAssistantPanel {
             AiGraphPlanDslAdapterService.GraphPlan underspecifiedPlan,
             String originalModelPayload
     ) {
-        if (aiRemoteGraphExpansionAttempts >= MAX_REMOTE_GRAPH_EXPANSION_ATTEMPTS) {
+        if (aiRemoteGraphExpansionAttempts >= remotePlanningOrchestrator.maxGraphExpansionAttempts()) {
             return false;
         }
         if (!aiEnableRemotePlanner.get() || isRemotePlannerBusy()) {
@@ -1356,75 +1271,35 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        NodeRegistry registry = NodeRegistry.getInstance();
-        List<AiNodeSchemaCatalog.NodeSchema> allSchemas = AiNodeSchemaCatalog.collectAll(registry);
-        List<AiNodeSchemaCatalog.NodeSchema> relevantSchemas = AiNodeSchemaCatalog.selectRelevant(
-                allSchemas,
+        AiRemotePlanningOrchestrator.PreparedRetryRequest preparedRequest =
+                remotePlanningOrchestrator.prepareGraphExpansionRequest(
+                        collectRemoteRequestSettings(),
+                        originalPrompt,
+                        underspecifiedPlan,
+                        originalModelPayload,
+                        aiRemoteGraphExpansionAttempts
+                );
+        boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(
                 originalPrompt,
-                AI_REMOTE_SCHEMA_LIMIT_REPAIR
+                preparedRequest.config(),
+                preparedRequest.conversation(),
+                preparedRequest.requestSnapshot()
         );
-
-        String systemPrompt = aiSystemPrompt.get();
-        if (systemPrompt == null || systemPrompt.isBlank()) {
-            systemPrompt = AiPromptBuilder.buildSystemPrompt(relevantSchemas);
-        } else {
-            systemPrompt = systemPrompt + "\n\n" + AiPromptBuilder.buildSystemPrompt(relevantSchemas);
-        }
-
-        systemPrompt = systemPrompt + "\n\n"
-                + "You are now in connected graph expansion mode.\n"
-                + "The previous valid DSL was too small for the user's generation request.\n"
-                + "Return JSON only. Expand the plan into a connected workflow with at least 3 nodes and at least 2 valid connections when the library allows it.\n"
-                + "Use output.preview.* or output.execute.* nodes when compatible. Use world.write.* nodes only with compatible block/region/list inputs.\n"
-                + "Do not invent typeIds or ports. If no connected workflow is possible with the listed library, return {\"error\":\"connected_workflow_not_possible:<reason>\"}.\n";
-
-        int nextAttempt = aiRemoteGraphExpansionAttempts + 1;
-        String currentDsl = underspecifiedPlan == null
-                ? ""
-                : AiGraphPlanDslAdapterService.toDslJsonCompact(underspecifiedPlan);
-        String expansionPromptPayload = "Remote planner produced a valid but underspecified graph.\n\n"
-                + "Expansion attempt: " + nextAttempt + " / " + MAX_REMOTE_GRAPH_EXPANSION_ATTEMPTS + "\n"
-                + "Original user prompt:\n"
-                + (originalPrompt == null ? "" : originalPrompt)
-                + "\n\n"
-                + "Current underspecified DSL:\n"
-                + currentDsl
-                + "\n\n"
-                + "Original model payload:\n"
-                + (originalModelPayload == null ? "" : originalModelPayload)
-                + "\n\n"
-                + "Required outcome: return a connected NodeCraft graph, not a single standalone node. Return JSON only.";
-
-        List<AiRemotePlannerService.ConversationMessage> expansionConversation = List.of(
-                new AiRemotePlannerService.ConversationMessage("user", expansionPromptPayload)
-        );
-        AiRemotePlannerService.PlannerConfig config = new AiRemotePlannerService.PlannerConfig(
-                aiApiBaseUrl.get(),
-                resolveEffectiveApiKey(),
-                aiModel.get(),
-                AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
-                systemPrompt,
-                aiMaxOutputTokens.get(),
-                aiRequestTimeoutSeconds.get()
-        );
-
-        String requestSnapshot = buildRemoteRequestSnapshot(config, originalPrompt, expansionPromptPayload, relevantSchemas.size());
-        boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(originalPrompt, config, expansionConversation, requestSnapshot);
         if (!submitted) {
             return false;
         }
 
-        aiRemoteGraphExpansionAttempts = nextAttempt;
+        aiRemoteGraphExpansionAttempts = preparedRequest.nextAttempt();
         aiPlanStatusMessage = "Remote plan was valid but not connected. Requesting connected graph expansion...";
         addAiChatMessage("assistant", aiPlanStatusMessage);
         NodeCraft.LOGGER.info(
                 "[AI_SEND] Started connected graph expansion retry {}/{}. currentNodes={}, currentConnections={}, selectedSchemas={}, totalSchemas={}",
-                nextAttempt,
-                MAX_REMOTE_GRAPH_EXPANSION_ATTEMPTS,
+                preparedRequest.nextAttempt(),
+                preparedRequest.maxAttempts(),
                 underspecifiedPlan == null || underspecifiedPlan.nodes() == null ? 0 : underspecifiedPlan.nodes().size(),
                 underspecifiedPlan == null || underspecifiedPlan.connections() == null ? 0 : underspecifiedPlan.connections().size(),
-                relevantSchemas.size(),
-                allSchemas.size()
+                preparedRequest.selectedSchemaCount(),
+                preparedRequest.totalSchemaCount()
         );
         return true;
     }
@@ -1962,63 +1837,6 @@ public final class AiAssistantPanel {
         return headline + attemptInfo + (detail.isBlank() ? "" : " Detail: " + detail);
     }
 
-    private String buildRemoteRequestSnapshot(
-            AiRemotePlannerService.PlannerConfig config,
-            String userPrompt,
-            String userPromptPayload,
-            int schemaCount
-    ) {
-        String detectedLanguage = AiIntentAnalysisService.detectInputLanguage(userPrompt);
-        String normalizedIntentPreview = AiIntentAnalysisService.buildNormalizedIntentPreview(userPrompt);
-        String promptPreview = aiDebugLoggingEnabled.get() && aiIncludePromptPreviewInDebug.get()
-                ? sanitizeUserPromptForSnapshot(userPrompt)
-                : "(disabled)";
-        String promptFingerprint = computePromptFingerprint(userPrompt);
-
-        return "baseUrl: " + nullToEmpty(config.apiBaseUrl()) + "\n" +
-                "apiKeyMasked: " + maskSecret(config.apiKey()) + "\n" +
-                "model: " + nullToEmpty(config.model()) + "\n" +
-                "providerStrategy: " + nullToEmpty(config.providerStrategy()) + "\n" +
-                "maxOutputTokens: " + config.maxOutputTokens() + "\n" +
-                "timeoutSeconds: " + config.timeoutSeconds() + "\n" +
-                "selectionContextEnabled: " + aiUseSelectionContext.get() + "\n" +
-                "inputLanguageDetected: " + detectedLanguage + "\n" +
-                "normalizedIntentPreview: " + normalizedIntentPreview + "\n" +
-                "userPromptPreview: " + promptPreview + "\n" +
-                "userPromptFingerprint: " + promptFingerprint + "\n" +
-                "schemaCountInjected: " + schemaCount + "\n" +
-                "systemPromptLength: " + (config.systemPrompt() == null ? 0 : config.systemPrompt().length()) + "\n" +
-                "userPromptLength: " + (userPrompt == null ? 0 : userPrompt.length()) + "\n" +
-                "payloadLength: " + (userPromptPayload == null ? 0 : userPromptPayload.length()) + "\n";
-    }
-
-    private String sanitizeUserPromptForSnapshot(String prompt) {
-        if (prompt == null || prompt.isBlank()) {
-            return "(empty)";
-        }
-
-        String sanitized = prompt;
-        sanitized = sanitized.replaceAll("(?i)(api[_-]?key\\s*[:=]\\s*)([^\\s,;]+)", "$1***");
-        sanitized = sanitized.replaceAll("(?i)(password\\s*[:=]\\s*)([^\\s,;]+)", "$1***");
-        sanitized = sanitized.replaceAll("(?i)(token\\s*[:=]\\s*)([^\\s,;]+)", "$1***");
-        sanitized = sanitized.replaceAll("(?i)(authorization\\s*[:=]\\s*bearer\\s+)([^\\s,;]+)", "$1***");
-        sanitized = sanitized.replaceAll("(?i)\\bsk-[a-z0-9]{16,}\\b", "***");
-        sanitized = sanitized.replaceAll("(?i)\\b[a-z0-9_\\-]{32,}\\b", "***");
-        sanitized = sanitized.replaceAll("\\s+", " ").trim();
-
-        if (sanitized.length() <= 280) {
-            return sanitized;
-        }
-        return sanitized.substring(0, 280) + "...[truncated]";
-    }
-
-    private String computePromptFingerprint(String prompt) {
-        if (prompt == null || prompt.isBlank()) {
-            return "none";
-        }
-        return Integer.toHexString(prompt.hashCode());
-    }
-
     private void logAiDebug(String message, Object... args) {
         if (!aiDebugLoggingEnabled.get()) {
             return;
@@ -2026,21 +1844,23 @@ public final class AiAssistantPanel {
         NodeCraft.LOGGER.debug(message, args);
     }
 
-    private String maskSecret(String secret) {
-        if (secret == null || secret.isBlank()) {
-            return "(empty)";
-        }
-        int len = secret.length();
-        if (len <= 6) {
-            return "***";
-        }
-        String prefix = secret.substring(0, 4);
-        String suffix = secret.substring(Math.max(0, len - 2));
-        return prefix + "***" + suffix;
-    }
-
     private String resolveEffectiveApiKey() {
         return AiSettingsStore.resolveApiKey(collectAiSettingsData());
+    }
+
+    private AiRemotePlanningOrchestrator.RequestSettings collectRemoteRequestSettings() {
+        return new AiRemotePlanningOrchestrator.RequestSettings(
+                aiApiBaseUrl.get(),
+                resolveEffectiveApiKey(),
+                aiModel.get(),
+                AiProviderModelService.providerStrategyFromIndex(aiProviderStrategyIndex.get(), AI_PROVIDER_STRATEGY_OPTIONS),
+                aiSystemPrompt.get(),
+                aiMaxOutputTokens.get(),
+                aiRequestTimeoutSeconds.get(),
+                aiUseSelectionContext.get(),
+                aiDebugLoggingEnabled.get(),
+                aiIncludePromptPreviewInDebug.get()
+        );
     }
 
     private void maybeAutofillModelByProviderChange(String detectedProviderLabel, String[] suggestedModels) {
