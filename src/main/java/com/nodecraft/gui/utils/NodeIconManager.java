@@ -2,6 +2,7 @@ package com.nodecraft.gui.utils;
 
 import com.github.weisj.jsvg.SVGDocument;
 import com.github.weisj.jsvg.attributes.ViewBox;
+import com.github.weisj.jsvg.parser.LoaderContext;
 import com.github.weisj.jsvg.parser.SVGLoader;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.nodecraft.core.NodeCraft;
@@ -12,6 +13,7 @@ import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
 import java.awt.AlphaComposite;
+import java.awt.Component;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -248,7 +250,7 @@ public class NodeIconManager {
             }
 
             try (InputStream stream = resource.get().getInputStream()) {
-                SVGDocument document = new SVGLoader().load(stream);
+                SVGDocument document = new SVGLoader().load(stream, null, LoaderContext.createDefault());
                 if (document == null) {
                     return 0;
                 }
@@ -274,7 +276,7 @@ public class NodeIconManager {
             graphics.setComposite(AlphaComposite.Clear);
             graphics.fillRect(0, 0, width, height);
             graphics.setComposite(AlphaComposite.SrcOver);
-            document.render(null, graphics, new ViewBox(0, 0, width, height));
+            document.render((Component) null, graphics, new ViewBox(0, 0, width, height));
         } finally {
             graphics.dispose();
         }

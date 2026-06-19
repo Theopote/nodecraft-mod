@@ -190,7 +190,7 @@ public final class AiGraphDslSupport {
                     continue;
                 }
                 depth--;
-                if (depth == 0 && objectStart >= 0) {
+                if (depth == 0) {
                     String candidate = text.substring(objectStart, i + 1);
                     if (isValidJsonObject(candidate) && candidate.length() > best.length()) {
                         best = candidate;
