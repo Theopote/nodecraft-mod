@@ -6,32 +6,34 @@ import net.minecraft.client.render.Camera;
 import net.minecraft.client.util.math.MatrixStack;
 
 /**
- * 域可视化预览元素
- * 用于显示场和域的影响范围
+ * Placeholder for future field/domain visualization previews.
+ *
+ * This element is intentionally not registered in PreviewRenderer until there is a concrete
+ * payload contract and renderer implementation.
  */
 public class FieldVisualizationElement extends AbstractPreviewElement {
-    
+
     public FieldVisualizationElement(String id, String ownerNodeId, Object data, PreviewOptions options) {
         super(id, ownerNodeId, data, options);
     }
-    
+
     @Override
     protected void processData(Object data) {
-        // TODO: 实现域数据处理
+        // Future implementation: parse scalar/vector field preview payloads.
     }
-    
+
     @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
-        // TODO: 实现域渲染
+        // Intentionally no-op until field preview payloads are defined.
     }
-    
+
     @Override
     public boolean shouldRender(Camera camera) {
-        return true; // TODO: 实现渲染判断
+        return false;
     }
-    
+
     @Override
     public void cleanup() {
-        // TODO: 实现清理
+        // No resources allocated yet.
     }
-} 
+}
