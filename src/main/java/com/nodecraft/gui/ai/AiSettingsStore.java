@@ -35,13 +35,16 @@ public final class AiSettingsStore {
             int timeoutSeconds,
             int conversationHistoryTurns,
             boolean showApiKey,
+            boolean rememberApiKey,
             boolean enableRemotePlanner,
             boolean autoLayoutBeforeApply,
             boolean includeGraphContext,
             boolean previewOnlyMode,
             boolean patchApplyMode,
-                boolean patchRemoveScopedConnections,
-                boolean enterToSend
+            boolean patchRemoveScopedConnections,
+            boolean enterToSend,
+            boolean debugLoggingEnabled,
+            boolean includePromptPreviewInDebug
     ) {
     }
 
@@ -60,12 +63,15 @@ public final class AiSettingsStore {
                 6,
                 false,
                 false,
+                false,
                 true,
                 true,
                 false,
                 false,
                 false,
-                true
+                true,
+                false,
+                false
         );
     }
 
@@ -92,9 +98,10 @@ public final class AiSettingsStore {
                 return new LoadResult(current, "AI settings file is empty, using defaults.");
             }
 
+            boolean rememberApiKey = root.has("rememberApiKey") && root.get("rememberApiKey").getAsBoolean();
             current = new AiSettingsData(
                     root.has("apiBaseUrl") ? root.get("apiBaseUrl").getAsString() : current.apiBaseUrl(),
-                    root.has("apiKey") ? root.get("apiKey").getAsString() : current.apiKey(),
+                    rememberApiKey && root.has("apiKey") ? root.get("apiKey").getAsString() : current.apiKey(),
                     root.has("model") ? root.get("model").getAsString() : current.model(),
                         root.has("providerStrategy")
                             ? sanitizeProviderStrategy(root.get("providerStrategy").getAsString())
@@ -104,17 +111,20 @@ public final class AiSettingsStore {
                             ? clampMaxOutputTokens(root.get("maxOutputTokens").getAsInt())
                             : current.maxOutputTokens(),
                     root.has("timeoutSeconds") ? clampTimeout(root.get("timeoutSeconds").getAsInt()) : current.timeoutSeconds(),
-                        root.has("conversationHistoryTurns")
+                    root.has("conversationHistoryTurns")
                             ? clampConversationHistoryTurns(root.get("conversationHistoryTurns").getAsInt())
                             : current.conversationHistoryTurns(),
                     root.has("showApiKey") && root.get("showApiKey").getAsBoolean(),
+                    rememberApiKey,
                     root.has("enableRemotePlanner") && root.get("enableRemotePlanner").getAsBoolean(),
                     !root.has("autoLayoutBeforeApply") || root.get("autoLayoutBeforeApply").getAsBoolean(),
                     !root.has("includeGraphContext") || root.get("includeGraphContext").getAsBoolean(),
                     root.has("previewOnlyMode") && root.get("previewOnlyMode").getAsBoolean(),
                     root.has("patchApplyMode") && root.get("patchApplyMode").getAsBoolean(),
-                        root.has("patchRemoveScopedConnections") && root.get("patchRemoveScopedConnections").getAsBoolean(),
-                        !root.has("enterToSend") || root.get("enterToSend").getAsBoolean()
+                    root.has("patchRemoveScopedConnections") && root.get("patchRemoveScopedConnections").getAsBoolean(),
+                    !root.has("enterToSend") || root.get("enterToSend").getAsBoolean(),
+                    root.has("debugLoggingEnabled") && root.get("debugLoggingEnabled").getAsBoolean(),
+                    root.has("includePromptPreviewInDebug") && root.get("includePromptPreviewInDebug").getAsBoolean()
             );
 
             return new LoadResult(current, "AI settings loaded from disk.");
@@ -137,7 +147,7 @@ public final class AiSettingsStore {
 
             JsonObject root = new JsonObject();
             root.addProperty("apiBaseUrl", safe(data.apiBaseUrl()));
-            root.addProperty("apiKey", safe(data.apiKey()));
+            root.addProperty("apiKey", data.rememberApiKey() ? safe(data.apiKey()) : "");
             root.addProperty("model", safe(data.model()));
             root.addProperty("providerStrategy", sanitizeProviderStrategy(data.providerStrategy()));
             root.addProperty("systemPrompt", safe(data.systemPrompt()));
@@ -145,6 +155,7 @@ public final class AiSettingsStore {
             root.addProperty("timeoutSeconds", clampTimeout(data.timeoutSeconds()));
             root.addProperty("conversationHistoryTurns", clampConversationHistoryTurns(data.conversationHistoryTurns()));
             root.addProperty("showApiKey", data.showApiKey());
+            root.addProperty("rememberApiKey", data.rememberApiKey());
             root.addProperty("enableRemotePlanner", data.enableRemotePlanner());
             root.addProperty("autoLayoutBeforeApply", data.autoLayoutBeforeApply());
             root.addProperty("includeGraphContext", data.includeGraphContext());
@@ -152,6 +163,8 @@ public final class AiSettingsStore {
             root.addProperty("patchApplyMode", data.patchApplyMode());
             root.addProperty("patchRemoveScopedConnections", data.patchRemoveScopedConnections());
             root.addProperty("enterToSend", data.enterToSend());
+            root.addProperty("debugLoggingEnabled", data.debugLoggingEnabled());
+            root.addProperty("includePromptPreviewInDebug", data.includePromptPreviewInDebug());
 
             Files.writeString(settingsPath, GSON.toJson(root), StandardCharsets.UTF_8);
             return "AI settings saved.";
@@ -202,7 +215,7 @@ public final class AiSettingsStore {
         String provider = sanitizeProviderStrategy(data.providerStrategy());
         String keyStatus = isBlank(data.apiKey())
                 ? (isBlank(resolveApiKey(data)) ? "API Key: missing" : "API Key: env")
-                : "API Key: saved";
+                : (data.rememberApiKey() ? "API Key: saved" : "API Key: session");
         String layoutMode = data.autoLayoutBeforeApply() ? "Layout: Auto" : "Layout: Plan";
         return plannerMode + " | Provider: " + provider + " | Model: " + modelName + " | MaxTokens: "
             + clampMaxOutputTokens(data.maxOutputTokens()) + " | " + keyStatus + " | " + layoutMode;

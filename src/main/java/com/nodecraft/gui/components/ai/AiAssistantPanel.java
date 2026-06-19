@@ -106,12 +106,15 @@ public final class AiAssistantPanel {
     private final ImInt aiRequestTimeoutSeconds = new ImInt(60);
     private final ImInt aiConversationHistoryTurns = new ImInt(6);
     private final ImBoolean aiShowApiKey = new ImBoolean(false);
+    private final ImBoolean aiRememberApiKey = new ImBoolean(false);
     private final ImBoolean aiEnableRemotePlanner = new ImBoolean(false);
     private final ImBoolean aiAutoLayoutBeforeApply = new ImBoolean(true);
     private final ImBoolean aiPreviewOnlyMode = new ImBoolean(false);
     private final ImBoolean aiPatchApplyMode = new ImBoolean(true);
     private final ImBoolean aiPatchRemoveScopedConnections = new ImBoolean(false);
     private final ImBoolean aiEnterToSend = new ImBoolean(true);
+    private final ImBoolean aiDebugLoggingEnabled = new ImBoolean(false);
+    private final ImBoolean aiIncludePromptPreviewInDebug = new ImBoolean(false);
     private final Path aiSettingsPath;
     private String aiLastSubmittedPrompt = "";
     private String aiLastDetectedProviderLabel = "";
@@ -265,7 +268,10 @@ public final class AiAssistantPanel {
                         aiRequestTimeoutSeconds,
                         aiConversationHistoryTurns,
                         aiShowApiKey,
+                        aiRememberApiKey,
                         aiAutoLayoutBeforeApply,
+                        aiDebugLoggingEnabled,
+                        aiIncludePromptPreviewInDebug,
                         aiSettingsPath
                 ),
                 new AiAssistantSettingsPopupRenderer.Actions() {
@@ -493,13 +499,16 @@ public final class AiAssistantPanel {
                 aiRequestTimeoutSeconds.get(),
                 aiConversationHistoryTurns.get(),
                 aiShowApiKey.get(),
+                aiRememberApiKey.get(),
                 aiEnableRemotePlanner.get(),
                 aiAutoLayoutBeforeApply.get(),
                 aiIncludeGraphContext.get(),
                 aiPreviewOnlyMode.get(),
                 aiPatchApplyMode.get(),
                 aiPatchRemoveScopedConnections.get(),
-                aiEnterToSend.get()
+                aiEnterToSend.get(),
+                aiDebugLoggingEnabled.get(),
+                aiIncludePromptPreviewInDebug.get()
         );
     }
 
@@ -516,6 +525,7 @@ public final class AiAssistantPanel {
         aiRequestTimeoutSeconds.set(data.timeoutSeconds());
         aiConversationHistoryTurns.set(data.conversationHistoryTurns());
         aiShowApiKey.set(data.showApiKey());
+        aiRememberApiKey.set(data.rememberApiKey());
         aiEnableRemotePlanner.set(data.enableRemotePlanner());
         aiAutoLayoutBeforeApply.set(data.autoLayoutBeforeApply());
         aiIncludeGraphContext.set(data.includeGraphContext());
@@ -523,6 +533,8 @@ public final class AiAssistantPanel {
         aiPatchApplyMode.set(data.patchApplyMode());
         aiPatchRemoveScopedConnections.set(data.patchRemoveScopedConnections());
         aiEnterToSend.set(data.enterToSend());
+        aiDebugLoggingEnabled.set(data.debugLoggingEnabled());
+        aiIncludePromptPreviewInDebug.set(data.includePromptPreviewInDebug());
     }
 
     private void renderAiPlanPreviewSection() {
@@ -907,9 +919,11 @@ public final class AiAssistantPanel {
         } else if (userIntent == UserIntent.RESTRUCTURE) {
             systemPrompt = systemPrompt + "\n\n" + RESTRUCTURE_SYSTEM_HINT;
         }
-        NodeCraft.LOGGER.info("[AI_SEND] Intent classified. intent={}, promptPreview={}",
+        NodeCraft.LOGGER.info("[AI_SEND] Intent classified. intent={}, promptChars={}, promptFingerprint={}",
                 userIntent,
-                sanitizeUserPromptForSnapshot(userPrompt));
+                userPrompt == null ? 0 : userPrompt.length(),
+                computePromptFingerprint(userPrompt));
+        logAiDebug("[AI_SEND] Prompt preview: {}", sanitizeUserPromptForSnapshot(userPrompt));
         NodeCraft.LOGGER.info("[AI_SEND] Schema context selected. selectedSchemas={}, totalSchemas={}, limit={}",
                 relevantSchemas.size(),
                 allSchemas.size(),
@@ -1100,7 +1114,9 @@ public final class AiAssistantPanel {
 
         if (pollResult.hasException()) {
             String error = "Remote planner failed: " + pollResult.exceptionMessage();
-            NodeCraft.LOGGER.warn("[AI_SEND] Remote planner completed with exception. message={}", pollResult.exceptionMessage());
+            NodeCraft.LOGGER.warn("[AI_SEND] Remote planner completed with exception. messageChars={}",
+                    pollResult.exceptionMessage() == null ? 0 : pollResult.exceptionMessage().length());
+            logAiDebug("[AI_SEND] Remote planner exception detail: {}", pollResult.exceptionMessage());
             aiPlanStatusMessage = error;
             addAiChatMessage("assistant", error);
             return;
@@ -1119,12 +1135,13 @@ public final class AiAssistantPanel {
         if (!result.success()) {
             String error = formatRemoteErrorMessage(result);
             NodeCraft.LOGGER.warn(
-                    "[AI_SEND] Remote planner failed. category={}, statusCode={}, attempts={}, detail={}",
+                    "[AI_SEND] Remote planner failed. category={}, statusCode={}, attempts={}, detailChars={}",
                     result.errorCategory(),
                     result.statusCode(),
                     result.attempts(),
-                    result.errorMessage()
+                    result.errorMessage() == null ? 0 : result.errorMessage().length()
             );
+            logAiDebug("[AI_SEND] Remote planner failure detail: {}", result.errorMessage());
             aiPlanStatusMessage = error;
             addAiChatMessage("assistant", error);
             setPendingAiPlan(null);
@@ -1979,7 +1996,9 @@ public final class AiAssistantPanel {
     ) {
         String detectedLanguage = AiIntentAnalysisService.detectInputLanguage(userPrompt);
         String normalizedIntentPreview = AiIntentAnalysisService.buildNormalizedIntentPreview(userPrompt);
-        String promptPreview = sanitizeUserPromptForSnapshot(userPrompt);
+        String promptPreview = aiDebugLoggingEnabled.get() && aiIncludePromptPreviewInDebug.get()
+                ? sanitizeUserPromptForSnapshot(userPrompt)
+                : "(disabled)";
         String promptFingerprint = computePromptFingerprint(userPrompt);
 
         return "baseUrl: " + nullToEmpty(config.apiBaseUrl()) + "\n" +
@@ -2024,6 +2043,13 @@ public final class AiAssistantPanel {
             return "none";
         }
         return Integer.toHexString(prompt.hashCode());
+    }
+
+    private void logAiDebug(String message, Object... args) {
+        if (!aiDebugLoggingEnabled.get()) {
+            return;
+        }
+        NodeCraft.LOGGER.debug(message, args);
     }
 
     private String maskSecret(String secret) {

@@ -48,7 +48,7 @@ The AI Assistant can create or modify graph plans from natural-language prompts.
 Supported configuration includes:
 
 - API base URL
-- API key or environment variables
+- API key from a local proxy, environment variables, or the current in-memory settings session
 - Model name
 - Provider strategy
 - Request timeout
@@ -65,19 +65,25 @@ Environment variables checked for API keys:
 Remote planning runs inside the Minecraft client process. When remote planning is enabled,
 NodeCraft reads the API key from the settings panel or from one of the environment variables
 above, then sends it to the configured API endpoint as the provider's authentication header.
-Environment variables only avoid storing the key in NodeCraft's settings file; they do not
-encrypt the key or isolate it from the running client process.
 
-Use remote planning only in trusted private environments. Any local tool, injected code,
-untrusted mod, debugger, or JVM heap dump with access to the Minecraft process may be able to
-recover the effective API key while it is in use. If an API key is entered in the settings panel
-and saved, it is stored as plain text in the Minecraft game directory under
-`nodecraft/config/ai_settings.json`.
-
-For stronger key isolation, run a local proxy service that holds the provider API key and point
+Recommended default: run a local proxy service that holds the provider API key and point
 NodeCraft's API base URL at that local proxy instead of entering the provider key in the client.
 The proxy can enforce its own authentication, rate limits, model allowlist, logging policy, and
 request filtering while keeping the provider key out of the Minecraft process.
+
+If you do not use a proxy, prefer environment variables. Environment variables avoid storing the
+key in NodeCraft's settings file; they do not encrypt the key or isolate it from the running
+client process.
+
+Use remote planning only in trusted private environments. Any local tool, injected code,
+untrusted mod, debugger, or JVM heap dump with access to the Minecraft process may be able to
+recover the effective API key while it is in use. API keys entered in the settings panel are not
+saved by default. If "Remember API key on disk" is explicitly enabled, the key is stored as plain
+text in the Minecraft game directory under `nodecraft/config/ai_settings.json`.
+
+AI request logs avoid prompt previews by default. The debug console and debug logging can include
+additional request metadata, but prompt previews are only included when the explicit debug prompt
+preview option is enabled.
 
 Generated plans are validated before they can be applied. Connection creation uses the same type compatibility rules as the editor.
 

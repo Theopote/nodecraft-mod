@@ -30,7 +30,10 @@ final class AiAssistantSettingsPopupRenderer {
             ImInt requestTimeoutSeconds,
             ImInt conversationHistoryTurns,
             ImBoolean showApiKey,
+            ImBoolean rememberApiKey,
             ImBoolean autoLayoutBeforeApply,
+            ImBoolean debugLoggingEnabled,
+            ImBoolean includePromptPreviewInDebug,
             Path settingsPath
     ) {
     }
@@ -84,12 +87,15 @@ final class AiAssistantSettingsPopupRenderer {
         ImGui.inputText("##ai_api_key", state.apiKey(), keyFlags);
         ImGui.popItemWidth();
         ImGui.checkbox("Show API key", state.showApiKey());
+        ImGui.checkbox("Remember API key on disk", state.rememberApiKey());
         ImGui.textDisabled("Leave empty to use env: " + AiSettingsStore.API_KEY_ENV
                 + ", " + AiSettingsStore.OPENAI_API_KEY_ENV
                 + ", or " + AiSettingsStore.ANTHROPIC_API_KEY_ENV + ".");
-        if (state.apiKey().get() != null && !state.apiKey().get().isBlank()) {
+        if (state.rememberApiKey().get() && state.apiKey().get() != null && !state.apiKey().get().isBlank()) {
             ImGui.textColored(0.95f, 0.72f, 0.22f, 1.0f,
-                    "Saved API keys are stored as plain text in this config file.");
+                    "Remembered API keys are stored as plain text in this config file.");
+        } else {
+            ImGui.textDisabled("By default, API keys stay in memory for this session only.");
         }
 
         ImGui.text("Model");
@@ -147,6 +153,15 @@ final class AiAssistantSettingsPopupRenderer {
             ImGui.pushItemWidth(wideFieldWidth);
             ImGui.inputTextMultiline("##ai_system_prompt", state.systemPrompt(), wideFieldWidth, 100.0f);
             ImGui.popItemWidth();
+
+            ImGui.checkbox("Enable AI debug logging", state.debugLoggingEnabled());
+            if (!state.debugLoggingEnabled().get()) {
+                ImGui.beginDisabled();
+            }
+            ImGui.checkbox("Include prompt preview in debug data", state.includePromptPreviewInDebug());
+            if (!state.debugLoggingEnabled().get()) {
+                ImGui.endDisabled();
+            }
             ImGui.treePop();
         }
 
@@ -174,6 +189,7 @@ final class AiAssistantSettingsPopupRenderer {
         if (ImGui.treeNode("Storage")) {
             ImGui.textDisabled("Config file: " + state.settingsPath().toAbsolutePath());
             ImGui.textDisabled("Settings are persisted to disk and loaded on startup.");
+            ImGui.textDisabled("API keys are excluded unless Remember API key on disk is enabled.");
             ImGui.treePop();
         }
 
