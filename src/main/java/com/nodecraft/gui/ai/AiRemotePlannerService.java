@@ -16,7 +16,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
@@ -30,19 +29,28 @@ import java.util.function.Consumer;
 public class AiRemotePlannerService {
 
     private static final int MAX_ATTEMPTS = 3;
-    private static final int EXECUTOR_THREADS = 2;
-    private static final int EXECUTOR_QUEUE_CAPACITY = 16;
+    private static final int EXECUTOR_CORE_THREADS = 2;
+    private static final int EXECUTOR_MAX_THREADS = 4;
+    private static final int EXECUTOR_QUEUE_CAPACITY = 32;
+    private static final int CONNECT_TIMEOUT_SECONDS = 30;
     private static final String OPENAI_MAX_TOKENS_FIELD = "max_tokens";
     private static final String OPENAI_MAX_COMPLETION_TOKENS_FIELD = "max_completion_tokens";
-    private final ExecutorService executor = new ThreadPoolExecutor(
-            EXECUTOR_THREADS,
-            EXECUTOR_THREADS,
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            EXECUTOR_CORE_THREADS,
+            EXECUTOR_MAX_THREADS,
             30L,
             TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(EXECUTOR_QUEUE_CAPACITY),
             new AiPlannerThreadFactory(),
             new ThreadPoolExecutor.AbortPolicy()
     );
+    private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
+            .build();
+
+    public AiRemotePlannerService() {
+        executor.allowCoreThreadTimeOut(true);
+    }
 
     private static final class AiPlannerThreadFactory implements ThreadFactory {
         private int sequence = 1;
@@ -116,7 +124,7 @@ public class AiRemotePlannerService {
             );
         }
         try {
-            return CompletableFuture.supplyAsync(() -> requestPlan(config, conversation, onToken), executor);
+            return requestPlanWithRetriesAsync(config, conversation, onToken, 1);
         } catch (RejectedExecutionException e) {
             return CompletableFuture.completedFuture(
                     RemotePlanResult.fail("Remote planner is busy. Please retry shortly.", -1, "", "request", 1)
@@ -159,15 +167,12 @@ public class AiRemotePlannerService {
 
         String baseUrl = config.apiBaseUrl().trim();
         int timeoutSeconds = Math.max(5, Math.min(600, config.timeoutSeconds()));
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(Math.min(timeoutSeconds, 30)))
-                .build();
 
         try {
             boolean useAnthropic = shouldUseAnthropic(config, baseUrl);
             HttpResponse<String> response = useAnthropic
-                    ? sendAnthropicConnectionTest(client, config, timeoutSeconds)
-                    : sendOpenAIConnectionTest(client, config, timeoutSeconds);
+                    ? sendAnthropicConnectionTest(httpClient, config, timeoutSeconds)
+                    : sendOpenAIConnectionTest(httpClient, config, timeoutSeconds);
 
             if (response.statusCode() >= 300) {
                 return RemotePlanResult.fail(
@@ -256,99 +261,121 @@ public class AiRemotePlannerService {
         return body;
     }
 
-        private RemotePlanResult requestPlan(
+    private CompletableFuture<RemotePlanResult> requestPlanWithRetriesAsync(
             PlannerConfig config,
             List<ConversationMessage> conversation,
-            Consumer<String> onToken
-        ) {
+            Consumer<String> onToken,
+            int attempt
+    ) {
+        if (executor.isShutdown()) {
+            return CompletableFuture.completedFuture(
+                    RemotePlanResult.fail("Remote planner is shut down.", -1, "", "canceled", attempt)
+            );
+        }
+
+        CompletableFuture<RemotePlanResult> attemptFuture;
+        try {
+            attemptFuture = CompletableFuture
+                    .supplyAsync(() -> requestPlanAttempt(config, conversation, onToken, attempt), executor)
+                    .handle((result, throwable) -> {
+                        if (throwable == null) {
+                            return result;
+                        }
+                        return RemotePlanResult.fail(
+                                "Remote planner request failed: " + throwable.getMessage(),
+                                -1,
+                                "",
+                                "unknown",
+                                attempt
+                        );
+                    });
+        } catch (RejectedExecutionException e) {
+            return CompletableFuture.completedFuture(
+                    RemotePlanResult.fail("Remote planner is busy. Please retry shortly.", -1, "", "request", attempt)
+            );
+        }
+
+        return attemptFuture.thenCompose(result -> {
+            if (result.success() || !isRetryable(result) || attempt >= MAX_ATTEMPTS) {
+                return CompletableFuture.completedFuture(result);
+            }
+            return scheduleRetryDelay(attempt)
+                    .thenCompose(ignored -> requestPlanWithRetriesAsync(config, conversation, onToken, attempt + 1));
+        });
+    }
+
+    private CompletableFuture<Void> scheduleRetryDelay(int attempt) {
+        return CompletableFuture.runAsync(
+                () -> {
+                },
+                CompletableFuture.delayedExecutor(resolveBackoffDelayMs(attempt), TimeUnit.MILLISECONDS)
+        );
+    }
+
+    private long resolveBackoffDelayMs(int attempt) {
+        return switch (attempt) {
+            case 1 -> 400L;
+            case 2 -> 900L;
+            default -> 1600L;
+        };
+    }
+
+    private RemotePlanResult requestPlanAttempt(
+            PlannerConfig config,
+            List<ConversationMessage> conversation,
+            Consumer<String> onToken,
+            int attempt
+    ) {
         if (config == null) {
-            return RemotePlanResult.fail("Remote planner config is null.", -1, "", "config", 1);
+            return RemotePlanResult.fail("Remote planner config is null.", -1, "", "config", attempt);
         }
         if (isBlank(config.apiBaseUrl())) {
-            return RemotePlanResult.fail("API base URL is empty.", -1, "", "config", 1);
+            return RemotePlanResult.fail("API base URL is empty.", -1, "", "config", attempt);
         }
         if (isBlank(config.apiKey())) {
-            return RemotePlanResult.fail("API key is empty.", -1, "", "config", 1);
+            return RemotePlanResult.fail("API key is empty.", -1, "", "config", attempt);
         }
         if (isBlank(config.model())) {
-            return RemotePlanResult.fail("Model is empty.", -1, "", "config", 1);
+            return RemotePlanResult.fail("Model is empty.", -1, "", "config", attempt);
         }
 
         List<ConversationMessage> normalizedConversation = normalizeConversation(conversation);
         if (normalizedConversation.isEmpty()) {
-            return RemotePlanResult.fail("Conversation payload is empty.", -1, "", "request", 1);
+            return RemotePlanResult.fail("Conversation payload is empty.", -1, "", "request", attempt);
         }
 
         String baseUrl = config.apiBaseUrl().trim();
         int timeoutSeconds = Math.max(5, Math.min(600, config.timeoutSeconds()));
 
-        HttpClient client = HttpClient.newBuilder()
-                .connectTimeout(Duration.ofSeconds(Math.min(timeoutSeconds, 30)))
-                .build();
-
-        RemotePlanResult lastFailure = null;
-        for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-            try {
-                boolean useAnthropic = shouldUseAnthropic(config, baseUrl);
-                RemotePlanResult result = useAnthropic
-                    ? requestAnthropicStreaming(client, config, normalizedConversation, timeoutSeconds, attempt, onToken)
-                    : requestOpenAICompatibleStreaming(client, config, normalizedConversation, timeoutSeconds, attempt, onToken);
-
-                if (result.success()) {
-                    return result;
-                }
-
-                lastFailure = result;
-                if (!isRetryable(result) || attempt >= MAX_ATTEMPTS) {
-                    return result;
-                }
-
-                backoffSleep(attempt);
-            } catch (InterruptedException ie) {
-                Thread.currentThread().interrupt();
-                return RemotePlanResult.fail("Remote planner request was canceled.", -1, "", "canceled", attempt);
-            } catch (UncheckedIOException uioe) {
-                // UncheckedIOException is thrown when a network error occurs while lazily consuming
-                // the SSE line stream from BodyHandlers.ofLines(). Treat it as a retryable network error.
-                lastFailure = RemotePlanResult.fail(
-                        "Network error (stream): " + uioe.getMessage(),
-                        -1,
-                        "",
-                        "network",
-                        attempt
-                );
-                if (attempt >= MAX_ATTEMPTS) {
-                    return lastFailure;
-                }
-                try {
-                    backoffSleep(attempt);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            } catch (IOException ioe) {
-                lastFailure = RemotePlanResult.fail(
-                        "Network error: " + ioe.getMessage(),
-                        -1,
-                        "",
-                        "network",
-                        attempt
-                );
-                if (attempt >= MAX_ATTEMPTS) {
-                    return lastFailure;
-                }
-                try {
-                    backoffSleep(attempt);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-            } catch (Exception e) {
-                return RemotePlanResult.fail("Remote planner request failed: " + e.getMessage(), -1, "", "unknown", attempt);
-            }
+        try {
+            boolean useAnthropic = shouldUseAnthropic(config, baseUrl);
+            return useAnthropic
+                    ? requestAnthropicStreaming(httpClient, config, normalizedConversation, timeoutSeconds, attempt, onToken)
+                    : requestOpenAICompatibleStreaming(httpClient, config, normalizedConversation, timeoutSeconds, attempt, onToken);
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return RemotePlanResult.fail("Remote planner request was canceled.", -1, "", "canceled", attempt);
+        } catch (UncheckedIOException uioe) {
+            // UncheckedIOException is thrown when a network error occurs while lazily consuming
+            // the SSE line stream from BodyHandlers.ofLines(). Treat it as a retryable network error.
+            return RemotePlanResult.fail(
+                    "Network error (stream): " + uioe.getMessage(),
+                    -1,
+                    "",
+                    "network",
+                    attempt
+            );
+        } catch (IOException ioe) {
+            return RemotePlanResult.fail(
+                    "Network error: " + ioe.getMessage(),
+                    -1,
+                    "",
+                    "network",
+                    attempt
+            );
+        } catch (Exception e) {
+            return RemotePlanResult.fail("Remote planner request failed: " + e.getMessage(), -1, "", "unknown", attempt);
         }
-
-        return lastFailure != null
-                ? lastFailure
-                : RemotePlanResult.fail("Remote planner request failed with unknown cause.", -1, "", "unknown", MAX_ATTEMPTS);
     }
 
         private RemotePlanResult requestOpenAICompatibleStreaming(
@@ -761,15 +788,6 @@ public class AiRemotePlannerService {
             return "request";
         }
         return "unknown";
-    }
-
-    private void backoffSleep(int attempt) throws InterruptedException {
-        long delayMs = switch (attempt) {
-            case 1 -> 400L;
-            case 2 -> 900L;
-            default -> 1600L;
-        };
-        Thread.sleep(delayMs);
     }
 
     private String extractOpenAIContent(String body) {
