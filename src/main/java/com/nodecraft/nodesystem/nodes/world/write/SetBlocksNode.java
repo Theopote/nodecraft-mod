@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.util.BlockPosList;
 import net.minecraft.block.BlockState;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,7 +18,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "world.write.set_blocks",
     displayName = "Set Blocks",
-    description = "Sets blocks at explicit coordinates",
+    description = "Sets blocks at explicit coordinates, with optional shared block-entity NBT",
     category = "world.write",
     order = 1
 )
@@ -31,8 +32,12 @@ public class SetBlocksNode extends BaseNode {
     private static final String INPUT_SPAWN_DROPS_ID = "input_spawn_drops";
     private static final String INPUT_BATCH_UPDATES_ID = "input_batch_updates";
     private static final String INPUT_MAX_BLOCKS_ID = "input_max_blocks";
+    private static final String INPUT_NBT_ID = WorldWriteNbtUtils.INPUT_NBT_ID;
+    private static final String INPUT_NBT_STRING_ID = WorldWriteNbtUtils.INPUT_NBT_STRING_ID;
+    private static final String INPUT_MERGE_NBT_ID = WorldWriteNbtUtils.INPUT_MERGE_NBT_ID;
 
     private static final String OUTPUT_SUCCESS_COUNT_ID = "output_success_count";
+    private static final String OUTPUT_NBT_SUCCESS_COUNT_ID = "output_nbt_success_count";
     private static final String OUTPUT_TOTAL_COUNT_ID = "output_total_count";
     private static final String OUTPUT_ALL_SUCCESS_ID = "output_all_success";
     private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
@@ -55,8 +60,12 @@ public class SetBlocksNode extends BaseNode {
         addInputPort(new BasePort(INPUT_SPAWN_DROPS_ID, "Spawn Drops", "Whether replacing blocks should drop items first", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_BATCH_UPDATES_ID, "Batch Updates", "Reserved batch-update toggle", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_MAX_BLOCKS_ID, "Max Blocks", "Safety limit for the number of writes", NodeDataType.INTEGER, this));
+        addInputPort(new BasePort(INPUT_NBT_ID, "NBT", "Optional shared block-entity NBT to apply after placement", NodeDataType.NBT_COMPOUND, this));
+        addInputPort(new BasePort(INPUT_NBT_STRING_ID, "NBT String", "Optional shared SNBT string to apply after placement", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_MERGE_NBT_ID, "Merge NBT", "Merge incoming NBT with each block entity NBT instead of replacing", NodeDataType.BOOLEAN, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_COUNT_ID, "Success Count", "Number of successful writes", NodeDataType.INTEGER, this));
+        addOutputPort(new BasePort(OUTPUT_NBT_SUCCESS_COUNT_ID, "NBT Success Count", "Number of block entities that received optional NBT", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_TOTAL_COUNT_ID, "Total Count", "Number of attempted writes", NodeDataType.INTEGER, this));
         addOutputPort(new BasePort(OUTPUT_ALL_SUCCESS_ID, "All Success", "Whether every attempted write succeeded", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why the batch did not run or the first write error", NodeDataType.STRING, this));
@@ -64,12 +73,13 @@ public class SetBlocksNode extends BaseNode {
 
     @Override
     public String getDescription() {
-        return "Sets blocks at explicit coordinates";
+        return "Sets blocks at explicit coordinates, with optional shared block-entity NBT";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         int successCount = 0;
+        int nbtSuccessCount = 0;
         int totalCount = 0;
         boolean allSuccess = true;
         String error = "";
@@ -106,6 +116,13 @@ public class SetBlocksNode extends BaseNode {
             } else {
                 int flags = WorldWriteUtils.flags(notify);
                 WorldWriteHistoryService.UndoRecord undoRecord = recordUndo ? new WorldWriteHistoryService.UndoRecord() : null;
+                boolean hasNbtInput = WorldWriteNbtUtils.hasNbtInput(inputValues);
+                NbtCompound incomingNbt = WorldWriteNbtUtils.resolveIncomingNbt(inputValues);
+                boolean mergeNbt = WorldWriteNbtUtils.mergeRequested(inputValues);
+                if (hasNbtInput && incomingNbt == null) {
+                    allSuccess = false;
+                    error = "Invalid NBT input";
+                }
 
                 if (batch) {
                     // Reserved for future world-level batch APIs.
@@ -135,6 +152,17 @@ public class SetBlocksNode extends BaseNode {
                         boolean success = context.getWorld().setBlockState(pos, targetState, flags);
                         if (success) {
                             successCount++;
+                            if (incomingNbt != null) {
+                                boolean nbtSuccess = WorldWriteNbtUtils.applyToBlockEntity(context, pos, incomingNbt, mergeNbt, notify);
+                                if (nbtSuccess) {
+                                    nbtSuccessCount++;
+                                } else {
+                                    allSuccess = false;
+                                    if (error.isEmpty()) {
+                                        error = "NBT was not applied at " + pos;
+                                    }
+                                }
+                            }
                             if (undoRecord != null) {
                                 undoRecord.add(pos, previousState);
                             }
@@ -158,6 +186,7 @@ public class SetBlocksNode extends BaseNode {
         }
 
         outputValues.put(OUTPUT_SUCCESS_COUNT_ID, successCount);
+        outputValues.put(OUTPUT_NBT_SUCCESS_COUNT_ID, nbtSuccessCount);
         outputValues.put(OUTPUT_TOTAL_COUNT_ID, totalCount);
         outputValues.put(OUTPUT_ALL_SUCCESS_ID, allSuccess);
         outputValues.put(OUTPUT_ERROR_ID, error);

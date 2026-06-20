@@ -837,13 +837,13 @@
 
 | Node Name | Node ID | Description | Class |
 |---|---|---|---|
-| Set Block | `world.write.set_block` | Places one block at one block position | `SetBlockNode` |
-| Set Blocks | `world.write.set_blocks` | Sets blocks at explicit coordinates | `SetBlocksNode` |
+| Set Block | `world.write.set_block` | Places one block at one block position, with optional block-entity NBT or SNBT applied after placement | `SetBlockNode` |
+| Set Blocks | `world.write.set_blocks` | Sets blocks at explicit coordinates, with optional shared block-entity NBT or SNBT applied after placement | `SetBlocksNode` |
 | Fill Region | `world.write.fill_region` | Fills a region with a block | `FillRegionNode` |
 | Replace Blocks | `world.write.replace_blocks` | Replaces matching blocks in a region or coordinate list | `ReplaceBlocksNode` |
 | Clone Region | `world.write.clone_region` | 复制区域到另一个位置 | `CloneRegionNode` |
 | Clear Blocks | `world.write.remove_blocks` | Clears blocks at explicit coordinates by replacing them with air | `RemoveBlocksNode` |
-| Set Block NBT | `world.write.set_block_nbt` | Writes NBT data to a block entity at a target position. | `SetBlockNbtNode` |
+| Set Block NBT | `world.write.set_block_nbt` | Writes or merges NBT data to an existing block entity at a target position. | `SetBlockNbtNode` |
 | Undo Last World Write | `world.write.undo_last_write` | Reverts the most recent recorded world.write block placement operation | `UndoLastWorldWriteNode` |
 | Peek Last World Write Undo | `world.write.peek_last_undo` | Inspects the latest world.write undo record and outputs affected count and region bounds | `PeekLastWorldWriteUndoNode` |
 | Clear World Write Undo History | `world.write.clear_undo_history` | Clears all recorded world.write undo history entries | `ClearWorldWriteUndoHistoryNode` |

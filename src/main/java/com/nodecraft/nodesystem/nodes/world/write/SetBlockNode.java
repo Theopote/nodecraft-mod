@@ -6,8 +6,8 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
-import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
@@ -19,7 +19,7 @@ import java.util.UUID;
 @NodeInfo(
     id = "world.write.set_block",
     displayName = "Set Block",
-    description = "Places one block at one block position",
+    description = "Places one block at one block position, with optional block-entity NBT",
     category = "world.write",
     order = 0
 )
@@ -30,8 +30,12 @@ public class SetBlockNode extends BaseNode {
     private static final String INPUT_TRIGGER_ID = WorldWriteUtils.INPUT_TRIGGER_ID;
     private static final String INPUT_NOTIFY_ID = "input_notify";
     private static final String INPUT_SPAWN_DROPS_ID = "input_spawn_drops";
+    private static final String INPUT_NBT_ID = WorldWriteNbtUtils.INPUT_NBT_ID;
+    private static final String INPUT_NBT_STRING_ID = WorldWriteNbtUtils.INPUT_NBT_STRING_ID;
+    private static final String INPUT_MERGE_NBT_ID = WorldWriteNbtUtils.INPUT_MERGE_NBT_ID;
 
     private static final String OUTPUT_SUCCESS_ID = "output_success";
+    private static final String OUTPUT_NBT_SUCCESS_ID = "output_nbt_success";
     private static final String OUTPUT_ERROR_ID = WorldWriteUtils.OUTPUT_ERROR_ID;
     private static final String OUTPUT_PREVIOUS_BLOCK_ID = "output_previous_block";
 
@@ -48,20 +52,25 @@ public class SetBlockNode extends BaseNode {
         addInputPort(new BasePort(INPUT_TRIGGER_ID, "Trigger", "When connected, false prevents this write from running", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_NOTIFY_ID, "Notify Update", "Whether neighbor and listener updates should fire", NodeDataType.BOOLEAN, this));
         addInputPort(new BasePort(INPUT_SPAWN_DROPS_ID, "Spawn Drops", "Whether replacing a block should drop items first", NodeDataType.BOOLEAN, this));
+        addInputPort(new BasePort(INPUT_NBT_ID, "NBT", "Optional block-entity NBT to apply after placement", NodeDataType.NBT_COMPOUND, this));
+        addInputPort(new BasePort(INPUT_NBT_STRING_ID, "NBT String", "Optional SNBT string to apply after placement", NodeDataType.STRING, this));
+        addInputPort(new BasePort(INPUT_MERGE_NBT_ID, "Merge NBT", "Merge incoming NBT with block entity NBT instead of replacing", NodeDataType.BOOLEAN, this));
 
         addOutputPort(new BasePort(OUTPUT_SUCCESS_ID, "Success", "Whether block placement succeeded", NodeDataType.BOOLEAN, this));
+        addOutputPort(new BasePort(OUTPUT_NBT_SUCCESS_ID, "NBT Success", "Whether optional block-entity NBT was applied", NodeDataType.BOOLEAN, this));
         addOutputPort(new BasePort(OUTPUT_ERROR_ID, "Error", "Why placement did not run or failed", NodeDataType.STRING, this));
         addOutputPort(new BasePort(OUTPUT_PREVIOUS_BLOCK_ID, "Previous Block", "Block state that was replaced", NodeDataType.BLOCK_INFO, this));
     }
 
     @Override
     public String getDescription() {
-        return "Places one block at one block position";
+        return "Places one block at one block position, with optional block-entity NBT";
     }
 
     @Override
     public void processNode(@Nullable ExecutionContext context) {
         boolean success = false;
+        boolean nbtSuccess = false;
         String error = "";
         Object previousBlock = null;
 
@@ -95,7 +104,23 @@ public class SetBlockNode extends BaseNode {
                     record.add(pos, previousState);
                     WorldWriteHistoryService.getInstance().push(record);
                 }
-                if (!success) {
+                if (success) {
+                    NbtCompound incomingNbt = WorldWriteNbtUtils.resolveIncomingNbt(inputValues);
+                    if (incomingNbt != null) {
+                        nbtSuccess = WorldWriteNbtUtils.applyToBlockEntity(
+                            context,
+                            pos,
+                            incomingNbt,
+                            WorldWriteNbtUtils.mergeRequested(inputValues),
+                            notify
+                        );
+                        if (!nbtSuccess && error.isEmpty()) {
+                            error = "Block placed, but NBT was not applied";
+                        }
+                    } else if (WorldWriteNbtUtils.hasNbtInput(inputValues)) {
+                        error = "Invalid NBT input";
+                    }
+                } else {
                     error = "World rejected block placement";
                 }
             } catch (Exception e) {
@@ -105,6 +130,7 @@ public class SetBlockNode extends BaseNode {
         }
 
         outputValues.put(OUTPUT_SUCCESS_ID, success);
+        outputValues.put(OUTPUT_NBT_SUCCESS_ID, nbtSuccess);
         outputValues.put(OUTPUT_ERROR_ID, error);
         outputValues.put(OUTPUT_PREVIOUS_BLOCK_ID, previousBlock);
     }
