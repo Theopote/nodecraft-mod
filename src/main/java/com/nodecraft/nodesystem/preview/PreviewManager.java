@@ -513,6 +513,13 @@ public final class PreviewManager {
         clearTrackedWorldRequestState(nodeId);
     }
 
+    public static void hideNodePreviewType(String nodeId, String previewType) {
+        if (nodeId == null || previewType == null || previewType.isBlank()) {
+            return;
+        }
+        clearTypePreviewState(nodeId, previewType);
+    }
+
     public static void clearAllPreviews() {
         RENDERER.clearAllPreviews();
     }

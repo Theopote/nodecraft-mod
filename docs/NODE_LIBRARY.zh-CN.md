@@ -531,7 +531,7 @@
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
-| Geometry Viewer | `output.preview.geometry_viewer` | Previews geometry visually without committing changes to the world. | `GeometryViewerNode` |
+| Geometry Viewer | `output.preview.geometry_viewer` | Previews geometry visually without committing changes to the world, with optional LOD sampling, bounding-box labels, pivot axes, and dominant direction vectors. | `GeometryViewerNode` |
 | Preview Blocks | `output.preview.preview_blocks` | Previews block coordinates, placements, or placement trees as temporary ghost blocks. | `PreviewBlocksNode` |
 | Preview Points | `output.preview.preview_points` | Previews one or more reference points before voxelization | `PreviewPointsNode` |
 | Preview Vectors | `output.preview.preview_vectors` | Previews vectors and directions before voxelization | `PreviewVectorsNode` |

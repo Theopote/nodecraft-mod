@@ -8,7 +8,11 @@ import com.nodecraft.nodesystem.api.NodeProperty;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.preview.PreviewBackend;
+import com.nodecraft.nodesystem.preview.PreviewGuideBuilder;
 import com.nodecraft.nodesystem.preview.PreviewManager;
+import com.nodecraft.nodesystem.preview.PreviewOptions;
+import com.nodecraft.nodesystem.preview.PreviewSampling;
+import com.nodecraft.nodesystem.preview.TextLabelPreviewData;
 import com.nodecraft.nodesystem.preview.protocol.PreviewBlocksPayload;
 import com.nodecraft.nodesystem.preview.protocol.PreviewPayloadAdapters;
 import com.nodecraft.nodesystem.preview.protocol.PreviewRequest;
@@ -24,7 +28,9 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Vector3f;
 
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -95,7 +101,27 @@ public class GeometryViewerNode extends BaseCustomUINode {
     @NodeProperty(displayName = "Ghost Render Mode", category = "Display", order = 8)
     private GhostRenderMode ghostRenderMode = GhostRenderMode.BLOCK_COLOR;
 
+    @NodeProperty(displayName = "Max Preview Blocks", category = "Performance", order = 9)
+    private int maxPreviewBlocks = 20000;
+
+    @NodeProperty(displayName = "Draft Preview Blocks", category = "Performance", order = 10)
+    private int draftPreviewBlocks = 5000;
+
+    @NodeProperty(displayName = "Draft Settle Ms", category = "Performance", order = 11)
+    private int draftSettleMillis = 250;
+
+    @NodeProperty(displayName = "Show Dimension Labels", category = "Guides", order = 12)
+    private boolean showDimensionLabels = true;
+
+    @NodeProperty(displayName = "Show Pivot Axes", category = "Guides", order = 13)
+    private boolean showPivotAxes = true;
+
+    @NodeProperty(displayName = "Show Direction Vector", category = "Guides", order = 14)
+    private boolean showDirectionVector = true;
+
     private volatile int lastBlockCount = 0;
+    private volatile int lastRenderedPreviewCount = 0;
+    private volatile boolean lastPreviewSampled = false;
     private volatile String statusMessage = "Waiting for input...";
 
     private volatile int cachedGeometrySignature = 0;
@@ -105,9 +131,16 @@ public class GeometryViewerNode extends BaseCustomUINode {
     private volatile String cachedBlockType = null;
     private volatile PreviewBackend cachedPreviewBackend = null;
     private volatile GhostRenderMode cachedGhostRenderMode = null;
+    private volatile int cachedMaxPreviewBlocks = -1;
+    private volatile int cachedDraftPreviewBlocks = -1;
+    private volatile boolean cachedShowDimensionLabels = false;
+    private volatile boolean cachedShowPivotAxes = false;
+    private volatile boolean cachedShowDirectionVector = false;
     private volatile String cachedPreviewId = null;
     private volatile long lastNonEmptyInputAt = 0L;
+    private volatile long lastPreviewInputChangeAt = 0L;
     private volatile long lastTrackedWorldRefreshAt = 0L;
+    private volatile boolean pendingFullPreviewRefresh = false;
     private static final long EMPTY_INPUT_HOLD_MS = 750;
     private static final long TRACKED_WORLD_REFRESH_THROTTLE_MS = 200;
 
@@ -183,20 +216,33 @@ public class GeometryViewerNode extends BaseCustomUINode {
             || !Objects.equals(outlineColor, cachedOutlineColor)
             || !Objects.equals(effectiveBlockType, cachedBlockType)
             || cachedPreviewBackend != previewBackend
-            || cachedGhostRenderMode != ghostRenderMode;
+            || cachedGhostRenderMode != ghostRenderMode
+            || cachedMaxPreviewBlocks != sanitizePreviewLimit(maxPreviewBlocks, 20000)
+            || cachedDraftPreviewBlocks != sanitizePreviewLimit(draftPreviewBlocks, 5000)
+            || cachedShowDimensionLabels != showDimensionLabels
+            || cachedShowPivotAxes != showPivotAxes
+            || cachedShowDirectionVector != showDirectionVector;
+
+        long now = System.currentTimeMillis();
+        if (previewDirty) {
+            lastPreviewInputChangeAt = now;
+        }
+        boolean draftPreview = shouldUseDraftPreview(now, blockCount);
+        boolean settledFullRefreshDue = pendingFullPreviewRefresh && !draftPreview;
 
         boolean trackedWorldRefreshSuppressed = previewBackend == PreviewBackend.TRACKED_WORLD
             && hasWorldContext
             && !previewDirty
+            && !settledFullRefreshDue
             && cachedPreviewId != null
-            && (System.currentTimeMillis() - lastTrackedWorldRefreshAt) < TRACKED_WORLD_REFRESH_THROTTLE_MS;
+            && (now - lastTrackedWorldRefreshAt) < TRACKED_WORLD_REFRESH_THROTTLE_MS;
 
         if (previewEnabled && blocksList != null && !blocksList.isEmpty()) {
-            lastNonEmptyInputAt = System.currentTimeMillis();
+            lastNonEmptyInputAt = now;
             if (trackedWorldRefreshSuppressed) {
                 statusMessage = buildSteadyStateStatus(context);
-            } else if (previewDirty) {
-                if (refreshPreview(context, blocksList, effectiveBlockType, trans, color, outlineColor)) {
+            } else if (previewDirty || settledFullRefreshDue) {
+                if (refreshPreview(context, blocksList, effectiveBlockType, trans, color, outlineColor, draftPreview)) {
                     cachePreviewState(geometrySignature, trans, color, outlineColor, effectiveBlockType);
                 } else {
                     clearAllPreviewState(context);
@@ -235,6 +281,11 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedBlockType = effectiveBlockType;
         cachedPreviewBackend = previewBackend;
         cachedGhostRenderMode = ghostRenderMode;
+        cachedMaxPreviewBlocks = sanitizePreviewLimit(maxPreviewBlocks, 20000);
+        cachedDraftPreviewBlocks = sanitizePreviewLimit(draftPreviewBlocks, 5000);
+        cachedShowDimensionLabels = showDimensionLabels;
+        cachedShowPivotAxes = showPivotAxes;
+        cachedShowDirectionVector = showDirectionVector;
     }
 
     private boolean refreshPreview(
@@ -243,7 +294,8 @@ public class GeometryViewerNode extends BaseCustomUINode {
         String effectiveBlockType,
         float trans,
         String colorHex,
-        String outlineColorHex
+        String outlineColorHex,
+        boolean draftPreview
     ) {
         try {
         if (previewBackend == PreviewBackend.TRACKED_WORLD) {
@@ -255,11 +307,17 @@ public class GeometryViewerNode extends BaseCustomUINode {
             }
         }
 
-        PreviewBlocksPayload payload = PreviewPayloadAdapters.fromBlockPosList(blocksList, effectiveBlockType);
+        PreviewSampling.BlockSample blockSample = previewBackend == PreviewBackend.GHOST
+            ? PreviewSampling.sampleBlocks(blocksList, resolvePreviewLimit(draftPreview))
+            : PreviewSampling.sampleBlocks(blocksList, Integer.MAX_VALUE);
+        PreviewBlocksPayload payload = PreviewPayloadAdapters.fromBlockPosList(blockSample.blocks(), effectiveBlockType);
         if (payload.getBlocks().isEmpty()) {
             statusMessage = "Waiting for input...";
             return false;
         }
+        lastRenderedPreviewCount = payload.getBlocks().size();
+        lastPreviewSampled = blockSample.sampled();
+        pendingFullPreviewRefresh = previewBackend == PreviewBackend.GHOST && draftPreview && blockSample.sampled();
 
         String effectiveColorHex = (colorHex != null && !colorHex.isBlank()) ? colorHex.trim() : previewColor;
         String effectiveOutlineColorHex = (outlineColorHex != null && !outlineColorHex.isBlank()) ? outlineColorHex.trim() : ghostOutlineColor;
@@ -286,9 +344,12 @@ public class GeometryViewerNode extends BaseCustomUINode {
 
         if (previewBackend == PreviewBackend.GHOST) {
             NodeCraft.LOGGER.info(
-                "GeometryViewerNode[{}] ghost request: blocks={}, blockType={}, mode={}, opacity={}, outline={}, fillColor={}, outlineColor={}",
+                "GeometryViewerNode[{}] ghost request: blocks={}/{}, sampled={}, stride={}, blockType={}, mode={}, opacity={}, outline={}, fillColor={}, outlineColor={}",
                 getId(),
                 payload.getBlocks().size(),
+                blockSample.totalCount(),
+                blockSample.sampled(),
+                blockSample.stride(),
                 effectiveBlockType,
                 ghostRenderMode,
                 trans,
@@ -316,10 +377,13 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (previewBackend == PreviewBackend.GHOST) {
             cachedPreviewId = previewId;
             NodeCraft.LOGGER.info("GeometryViewerNode[{}] ghost preview created: previewId={}", getId(), previewId);
-            statusMessage = "Previewing " + payload.getBlocks().size() + " ghost blocks (" + ghostRenderMode + ")";
+            refreshGuidePreviews(blocksList);
+            statusMessage = buildGhostStatus(blockSample, draftPreview);
         } else {
             cachedPreviewId = previewId;
+            pendingFullPreviewRefresh = false;
             lastTrackedWorldRefreshAt = System.currentTimeMillis();
+            refreshGuidePreviews(blocksList);
             int trackedCount = context != null && context.getWorld() != null
                 ? TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
                 : 0;
@@ -337,6 +401,89 @@ public class GeometryViewerNode extends BaseCustomUINode {
             );
             return false;
         }
+    }
+
+    private void refreshGuidePreviews(BlockPosList blocksList) {
+        String ownerId = getId().toString();
+        var guideData = PreviewGuideBuilder.fromBlocks(blocksList);
+        if (guideData.isEmpty()) {
+            PreviewManager.hideNodePreviewType(ownerId, "text_labels");
+            PreviewManager.hideNodePreviewType(ownerId, "frame_axes");
+            PreviewManager.hideNodePreviewType(ownerId, "vectors");
+            return;
+        }
+
+        PreviewGuideBuilder.GuideData guide = guideData.get();
+        if (showDimensionLabels) {
+            PreviewOptions labelOptions = new PreviewOptions()
+                .setColor(1.0f, 1.0f, 1.0f)
+                .setOpacity(0.92f);
+            labelOptions.fontSize = 0.028f;
+            labelOptions.showBackground = true;
+            PreviewManager.showTextLabels(
+                ownerId,
+                List.of(guide.dimensionsLabel(), guide.pivotLabel()),
+                labelOptions
+            );
+        } else {
+            PreviewManager.hideNodePreviewType(ownerId, "text_labels");
+        }
+
+        if (showPivotAxes) {
+            PreviewOptions frameOptions = new PreviewOptions()
+                .setOpacity(0.9f)
+                .setLineWidth(2.0f);
+            PreviewManager.showFrameAxes(ownerId, guide.frameAxes(), frameOptions);
+        } else {
+            PreviewManager.hideNodePreviewType(ownerId, "frame_axes");
+        }
+
+        if (showDirectionVector) {
+            PreviewOptions vectorOptions = PreviewOptions.createVectorArrows()
+                .setOpacity(0.9f)
+                .setLineWidth(2.0f);
+            vectorOptions.color = new Vector3f(1.0f, 0.85f, 0.15f);
+            vectorOptions.lengthScale = (float) guide.axisLength();
+            vectorOptions.arrowSize = 0.35f;
+            PreviewManager.showVectors(
+                ownerId,
+                List.of(guide.tangentDirection()),
+                List.of(guide.pivot()),
+                vectorOptions
+            );
+        } else {
+            PreviewManager.hideNodePreviewType(ownerId, "vectors");
+        }
+    }
+
+    private int sanitizePreviewLimit(int value, int fallback) {
+        return value > 0 ? value : fallback;
+    }
+
+    private boolean shouldUseDraftPreview(long now, int blockCount) {
+        if (previewBackend != PreviewBackend.GHOST) {
+            return false;
+        }
+        int draftLimit = resolvePreviewLimit(true);
+        int settleMs = Math.max(0, draftSettleMillis);
+        return blockCount > draftLimit && (now - lastPreviewInputChangeAt) < settleMs;
+    }
+
+    private int resolvePreviewLimit(boolean draftPreview) {
+        int maxLimit = sanitizePreviewLimit(maxPreviewBlocks, 20000);
+        if (!draftPreview) {
+            return maxLimit;
+        }
+        return Math.min(maxLimit, sanitizePreviewLimit(draftPreviewBlocks, 5000));
+    }
+
+    private String buildGhostStatus(PreviewSampling.BlockSample blockSample, boolean draftPreview) {
+        if (blockSample.sampled()) {
+            String phase = draftPreview ? "draft" : "sampled";
+            return "Previewing " + blockSample.renderedCount() + "/" + blockSample.totalCount()
+                + " ghost blocks (" + phase + ", stride " + blockSample.stride() + ", " + ghostRenderMode + ")";
+        }
+        return "Previewing " + blockSample.renderedCount() + " ghost blocks (" + ghostRenderMode + ")";
     }
 
     private String sanitizeBlockType(@Nullable String requestedBlockType) {
@@ -360,7 +507,10 @@ public class GeometryViewerNode extends BaseCustomUINode {
                 + TrackedPreviewPlacementService.getInstance().getTrackedCount(context.getWorld(), getId().toString())
                 + " tracked blocks";
         }
-        return "Previewing " + lastBlockCount + " ghost blocks (" + ghostRenderMode + ")";
+        if (lastPreviewSampled) {
+            return "Previewing " + lastRenderedPreviewCount + "/" + lastBlockCount + " ghost blocks (sampled, " + ghostRenderMode + ")";
+        }
+        return "Previewing " + lastRenderedPreviewCount + " ghost blocks (" + ghostRenderMode + ")";
     }
 
     private void clearAllPreviewState(@Nullable ExecutionContext context) {
@@ -371,7 +521,15 @@ public class GeometryViewerNode extends BaseCustomUINode {
         cachedBlockType = null;
         cachedPreviewBackend = null;
         cachedGhostRenderMode = null;
+        cachedMaxPreviewBlocks = -1;
+        cachedDraftPreviewBlocks = -1;
+        cachedShowDimensionLabels = false;
+        cachedShowPivotAxes = false;
+        cachedShowDirectionVector = false;
         cachedPreviewId = null;
+        lastRenderedPreviewCount = 0;
+        lastPreviewSampled = false;
+        pendingFullPreviewRefresh = false;
         PreviewManager.hideNodePreviews(getId().toString());
         TrackedPreviewPlacementService.getInstance().clearTrackedPreviewAcrossWorlds(getId().toString());
     }
@@ -482,7 +640,7 @@ public class GeometryViewerNode extends BaseCustomUINode {
             layout.addVerticalSpacing(getMediumPadding());
             int statusColor = previewEnabled ? 0xFF44AADD : 0xFF888888;
             ImGui.pushStyleColor(ImGuiCol.Text, statusColor);
-            ImGui.text(statusMessage + "  |  " + lastBlockCount + " blocks");
+            ImGui.text(statusMessage + "  |  source " + lastBlockCount + " blocks");
             ImGui.popStyleColor();
             layout.addVerticalSpacing(getMediumPadding());
             return false;
@@ -591,6 +749,12 @@ public class GeometryViewerNode extends BaseCustomUINode {
         state.put("previewBackend", previewBackend.name());
         state.put("previewSolidGeometry", previewSolidGeometry);
         state.put("ghostRenderMode", ghostRenderMode.name());
+        state.put("maxPreviewBlocks", maxPreviewBlocks);
+        state.put("draftPreviewBlocks", draftPreviewBlocks);
+        state.put("draftSettleMillis", draftSettleMillis);
+        state.put("showDimensionLabels", showDimensionLabels);
+        state.put("showPivotAxes", showPivotAxes);
+        state.put("showDirectionVector", showDirectionVector);
         return state;
     }
 
@@ -630,6 +794,24 @@ public class GeometryViewerNode extends BaseCustomUINode {
         if (map.get("ghostRenderMode") instanceof String value) {
             setGhostRenderMode(GhostRenderMode.fromState(value));
         }
+        if (map.get("maxPreviewBlocks") instanceof Number value) {
+            setMaxPreviewBlocks(value.intValue());
+        }
+        if (map.get("draftPreviewBlocks") instanceof Number value) {
+            setDraftPreviewBlocks(value.intValue());
+        }
+        if (map.get("draftSettleMillis") instanceof Number value) {
+            setDraftSettleMillis(value.intValue());
+        }
+        if (map.get("showDimensionLabels") instanceof Boolean value) {
+            setShowDimensionLabels(value);
+        }
+        if (map.get("showPivotAxes") instanceof Boolean value) {
+            setShowPivotAxes(value);
+        }
+        if (map.get("showDirectionVector") instanceof Boolean value) {
+            setShowDirectionVector(value);
+        }
     }
 
     public GhostRenderMode getGhostRenderMode() {
@@ -640,6 +822,75 @@ public class GeometryViewerNode extends BaseCustomUINode {
         GhostRenderMode sanitized = value != null ? value : GhostRenderMode.BLOCK_COLOR;
         if (ghostRenderMode != sanitized) {
             ghostRenderMode = sanitized;
+            markDirty();
+        }
+    }
+
+    public int getMaxPreviewBlocks() {
+        return maxPreviewBlocks;
+    }
+
+    public void setMaxPreviewBlocks(int value) {
+        int sanitized = sanitizePreviewLimit(value, 20000);
+        if (maxPreviewBlocks != sanitized) {
+            maxPreviewBlocks = sanitized;
+            markDirty();
+        }
+    }
+
+    public int getDraftPreviewBlocks() {
+        return draftPreviewBlocks;
+    }
+
+    public void setDraftPreviewBlocks(int value) {
+        int sanitized = sanitizePreviewLimit(value, 5000);
+        if (draftPreviewBlocks != sanitized) {
+            draftPreviewBlocks = sanitized;
+            markDirty();
+        }
+    }
+
+    public int getDraftSettleMillis() {
+        return draftSettleMillis;
+    }
+
+    public void setDraftSettleMillis(int value) {
+        int sanitized = Math.max(0, value);
+        if (draftSettleMillis != sanitized) {
+            draftSettleMillis = sanitized;
+            markDirty();
+        }
+    }
+
+    public boolean isShowDimensionLabels() {
+        return showDimensionLabels;
+    }
+
+    public void setShowDimensionLabels(boolean value) {
+        if (showDimensionLabels != value) {
+            showDimensionLabels = value;
+            markDirty();
+        }
+    }
+
+    public boolean isShowPivotAxes() {
+        return showPivotAxes;
+    }
+
+    public void setShowPivotAxes(boolean value) {
+        if (showPivotAxes != value) {
+            showPivotAxes = value;
+            markDirty();
+        }
+    }
+
+    public boolean isShowDirectionVector() {
+        return showDirectionVector;
+    }
+
+    public void setShowDirectionVector(boolean value) {
+        if (showDirectionVector != value) {
+            showDirectionVector = value;
             markDirty();
         }
     }
