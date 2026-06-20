@@ -393,9 +393,14 @@ public class ImGuiRenderer {
 
             if (ImGui.getIO().hasConfigFlags(ImGuiConfigFlags.ViewportsEnable)) {
                 final long backupCurrentContext = GLFW.glfwGetCurrentContext();
-                ImGui.updatePlatformWindows();
-                ImGui.renderPlatformWindowsDefault();
-                GLFW.glfwMakeContextCurrent(backupCurrentContext);
+                ImGuiGLStateGuard stateGuard = ImGuiGLStateGuard.enter();
+                try {
+                    ImGui.updatePlatformWindows();
+                    ImGui.renderPlatformWindowsDefault();
+                } finally {
+                    GLFW.glfwMakeContextCurrent(backupCurrentContext);
+                    stateGuard.close();
+                }
                 ensureWindowLayering();
             }
 
