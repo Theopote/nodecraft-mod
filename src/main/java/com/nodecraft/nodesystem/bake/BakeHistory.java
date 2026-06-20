@@ -29,11 +29,11 @@ public class BakeHistory {
     }
 
     public UndoRecord pop() {
-        return undoStack.isEmpty() ? null : undoStack.remove(undoStack.size() - 1);
+        return undoStack.isEmpty() ? null : undoStack.removeLast();
     }
 
     public UndoRecord peek() {
-        return undoStack.isEmpty() ? null : undoStack.get(undoStack.size() - 1);
+        return undoStack.isEmpty() ? null : undoStack.getLast();
     }
 
     public boolean undoLast(World world) {
@@ -50,7 +50,7 @@ public class BakeHistory {
     }
 
     public boolean redoLast(World world) {
-        UndoRecord record = redoStack.isEmpty() ? null : redoStack.remove(redoStack.size() - 1);
+        UndoRecord record = redoStack.isEmpty() ? null : redoStack.removeLast();
         if (record == null || world == null) {
             return false;
         }
@@ -81,7 +81,7 @@ public class BakeHistory {
 
     private void trim(List<UndoRecord> stack) {
         while (stack.size() > MAX_UNDO_STACK_SIZE) {
-            stack.remove(0);
+            stack.removeFirst();
         }
     }
 
