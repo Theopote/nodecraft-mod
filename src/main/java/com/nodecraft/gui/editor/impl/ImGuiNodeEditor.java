@@ -574,9 +574,11 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             subgraphRenameBuffer,
             ImGuiInputTextFlags.EnterReturnsTrue
         );
-        submit |= ImGui.button("Rename", 92.0f, 26.0f);
+        ImGui.spacing();
+        submit |= ImGui.button("Rename", 120.0f, 0.0f);
         ImGui.sameLine();
-        boolean cancel = ImGui.button("Cancel", 92.0f, 26.0f);
+        boolean cancel = ImGui.button("Cancel", 120.0f, 0.0f);
+        ImGui.spacing();
         if (submit && renameSubgraphNode(subgraphRenameNodeId, subgraphRenameBuffer.get())) {
             subgraphRenameNodeId = null;
             ImGui.closeCurrentPopup();
