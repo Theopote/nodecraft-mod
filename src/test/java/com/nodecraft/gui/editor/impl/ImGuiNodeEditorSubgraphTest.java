@@ -5,6 +5,7 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.graph.GraphSerializer;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.organization.GraphInputNode;
 import com.nodecraft.nodesystem.nodes.utilities.organization.GraphOutputNode;
@@ -21,6 +22,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ImGuiNodeEditorSubgraphTest {
@@ -38,6 +40,7 @@ class ImGuiNodeEditorSubgraphTest {
 
     @AfterEach
     void clearRegistry() {
+        ImGuiNodeEditor.getInstance().getHistory().clear();
         registry.clear();
     }
 
@@ -86,6 +89,34 @@ class ImGuiNodeEditorSubgraphTest {
     }
 
     @Test
+    void createAndDissolveAreSingleUndoRedoTransactions() {
+        ImGuiNodeEditor editor = prepareLinearSelectionGraph();
+        editor.getHistory().clear();
+
+        assertTrue(editor.createSubgraphFromSelection());
+        assertEquals(ImGuiNodeHistory.ActionType.GRAPH_TRANSACTION, editor.getHistory().getUndoTopActionType());
+        assertTrue(editor.undo());
+        assertEquals(4, editor.getCurrentGraph().getNodes().size());
+        assertEquals(3, editor.getCurrentGraph().getConnections().size());
+        assertFalse(editor.getCurrentGraph().getNodes().stream().anyMatch(SubgraphNode.class::isInstance));
+
+        assertTrue(editor.redo());
+        assertEquals(3, editor.getCurrentGraph().getNodes().size());
+        SubgraphNode wrapper = findSubgraphNode(editor.getCurrentGraph());
+        assertNotNull(wrapper);
+
+        editor.clearSelectedNodes();
+        editor.getSelectedNodeIds().add(wrapper.getId());
+        editor.setSelectedNodeId(wrapper.getId());
+        assertTrue(editor.dissolveSelectedSubgraph());
+        assertEquals(ImGuiNodeHistory.ActionType.GRAPH_TRANSACTION, editor.getHistory().getUndoTopActionType());
+        assertTrue(editor.undo());
+        assertNotNull(findSubgraphNode(editor.getCurrentGraph()));
+        assertTrue(editor.redo());
+        assertFalse(editor.getCurrentGraph().getNodes().stream().anyMatch(SubgraphNode.class::isInstance));
+    }
+
+    @Test
     void opensAndClosesEmbeddedSubgraphEditor() {
         NodeGraph graph = new NodeGraph("open close");
         PassNode source = new PassNode();
@@ -120,6 +151,76 @@ class ImGuiNodeEditorSubgraphTest {
         assertEquals(graph, editor.getCurrentGraph());
         assertEquals(wrapperId, editor.getSelectedNodeId());
         assertTrue(editor.getCurrentGraph().getNode(wrapperId) instanceof SubgraphNode);
+    }
+
+    @Test
+    void closingSubgraphCommitsInnerEditsAsOneParentTransaction() {
+        ImGuiNodeEditor editor = prepareLinearSelectionGraph();
+        editor.getHistory().clear();
+        assertTrue(editor.createSubgraphFromSelection());
+
+        SubgraphNode wrapper = findSubgraphNode(editor.getCurrentGraph());
+        assertNotNull(wrapper);
+        editor.clearSelectedNodes();
+        editor.getSelectedNodeIds().add(wrapper.getId());
+        editor.setSelectedNodeId(wrapper.getId());
+        assertTrue(editor.openSelectedSubgraph());
+        assertNotNull(editor.addNode("test.pass", 400, 100));
+        assertTrue(editor.closeCurrentSubgraph());
+        assertEquals(ImGuiNodeHistory.ActionType.GRAPH_TRANSACTION, editor.getHistory().getUndoTopActionType());
+        assertEquals(5, embeddedNodeCount(findSubgraphNode(editor.getCurrentGraph())));
+
+        assertTrue(editor.undo());
+        assertEquals(4, embeddedNodeCount(findSubgraphNode(editor.getCurrentGraph())));
+        assertTrue(editor.redo());
+        assertEquals(5, embeddedNodeCount(findSubgraphNode(editor.getCurrentGraph())));
+    }
+
+    private static ImGuiNodeEditor prepareLinearSelectionGraph() {
+        NodeGraph graph = new NodeGraph("transaction");
+        PassNode source = new PassNode();
+        PassNode selectedA = new PassNode();
+        PassNode selectedB = new PassNode();
+        PassNode sink = new PassNode();
+        graph.addNode(source);
+        graph.addNode(selectedA);
+        graph.addNode(selectedB);
+        graph.addNode(sink);
+        graph.connect(source.getId(), "out", selectedA.getId(), "in");
+        graph.connect(selectedA.getId(), "out", selectedB.getId(), "in");
+        graph.connect(selectedB.getId(), "out", sink.getId(), "in");
+
+        Map<UUID, NodePosition> positions = new HashMap<>();
+        positions.put(source.getId(), new NodePosition(0, 0));
+        positions.put(selectedA.getId(), new NodePosition(100, 0));
+        positions.put(selectedB.getId(), new NodePosition(220, 0));
+        positions.put(sink.getId(), new NodePosition(340, 0));
+
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        editor.setCurrentGraph(graph);
+        editor.setNodePositions(positions);
+        editor.clearSelectedNodes();
+        editor.getSelectedNodeIds().add(selectedA.getId());
+        editor.getSelectedNodeIds().add(selectedB.getId());
+        editor.setSelectedNodeId(selectedA.getId());
+        return editor;
+    }
+
+    private static SubgraphNode findSubgraphNode(NodeGraph graph) {
+        return graph.getNodes().stream()
+            .filter(SubgraphNode.class::isInstance)
+            .map(SubgraphNode.class::cast)
+            .findFirst()
+            .orElse(null);
+    }
+
+    private static int embeddedNodeCount(SubgraphNode node) {
+        assertNotNull(node);
+        Object state = node.getNodeState();
+        assertTrue(state instanceof Map<?, ?>);
+        Object json = ((Map<?, ?>) state).get("embeddedGraphJson");
+        assertTrue(json instanceof String);
+        return GraphSerializer.fromJson((String) json).nodes.size();
     }
 
     private static boolean hasConnectionFrom(NodeGraph graph, UUID sourceNodeId) {
