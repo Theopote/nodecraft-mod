@@ -3,6 +3,7 @@ package com.nodecraft.gui.editor.impl;
 import java.util.Map;
 import java.util.UUID;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.io.SavedGraph;
 import com.nodecraft.nodesystem.api.INode;
 import imgui.ImVec2;
 import org.jetbrains.annotations.Nullable;
@@ -135,6 +136,8 @@ public interface ICanvasEditor {
     boolean openSelectedSubgraph();
 
     boolean dissolveSelectedSubgraph();
+
+    boolean restoreGraphSnapshot(SavedGraph snapshot);
     
     /**
      * 妫€鏌ユ槸鍚︽湁鏈繚瀛樼殑鏇存敼

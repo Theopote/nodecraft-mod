@@ -1210,15 +1210,19 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         String subgraphName = currentGraph.getName() != null && !currentGraph.getName().isBlank()
             ? currentGraph.getName() + " Selection"
             : "Extracted Subgraph";
+        boolean wasRecording = history != null && history.isRecording();
+        SavedGraph beforeSnapshot = null;
 
         try {
             syncGraphNodePositions(currentGraph, nodePositions);
+            if (wasRecording) {
+                beforeSnapshot = toSavedGraphWithPositions(currentGraph, nodePositions);
+            }
             SubgraphExtractionService.ExtractionResult extraction = SubgraphExtractionService.extract(currentGraph, selection, subgraphName);
             String embeddedGraphJson = GraphSerializer.toJson(extraction.savedGraph());
             Map<String, Object> subgraphState = buildSubgraphNodeState(extraction, subgraphName, embeddedGraphJson);
             NodePosition wrapperPosition = selectionCenter(selection);
 
-            boolean wasRecording = history != null && history.isRecording();
             if (wasRecording) {
                 history.pauseRecording();
             }
@@ -1245,6 +1249,12 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
                 clearSelectedNodes();
                 setSelectedNodeId(wrapper.getId());
                 markGraphStructureDirty();
+                if (wasRecording) {
+                    SavedGraph afterSnapshot = toSavedGraphWithPositions(currentGraph, nodePositions);
+                    history.resumeRecording();
+                    history.recordGraphTransaction("Create Subgraph", beforeSnapshot, afterSnapshot);
+                    history.pauseRecording();
+                }
                 NodeCraft.LOGGER.info(
                     "Created subgraph '{}' from {} nodes. inputs={}, outputs={}",
                     subgraphName,
@@ -1299,6 +1309,9 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
                 setSelectedNodeId(context.wrapperNodeId());
             }
             markGraphStructureDirty();
+            SavedGraph parentAfter = toSavedGraphWithPositions(currentGraph, nodePositions);
+            history.exitScope();
+            history.recordGraphTransaction("Edit Subgraph", context.parentSnapshotBefore(), parentAfter);
             NodeCraft.LOGGER.info("Closed subgraph editor and wrote changes back to wrapper {}", context.wrapperNodeId());
             return true;
         } catch (Exception e) {
@@ -1310,6 +1323,24 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
 
     public boolean isEditingSubgraph() {
         return !subgraphEditStack.isEmpty();
+    }
+
+    @Override
+    public boolean restoreGraphSnapshot(SavedGraph snapshot) {
+        if (snapshot == null) {
+            return false;
+        }
+        try {
+            LoadedGraph loadedGraph = loadSavedGraphForEditing(snapshot);
+            currentGraph = loadedGraph.graph();
+            nodePositions = loadedGraph.positions();
+            clearSelectedNodes();
+            markGraphStructureDirty();
+            return true;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("Failed to restore graph history snapshot: {}", e.getMessage(), e);
+            return false;
+        }
     }
 
     private boolean openSubgraphNode(UUID wrapperNodeId) {
@@ -1334,7 +1365,14 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             }
 
             syncGraphNodePositions(currentGraph, nodePositions);
-            subgraphEditStack.push(new SubgraphEditContext(currentGraph, copyNodePositions(nodePositions), wrapperNodeId));
+            SavedGraph parentSnapshotBefore = toSavedGraphWithPositions(currentGraph, nodePositions);
+            subgraphEditStack.push(new SubgraphEditContext(
+                currentGraph,
+                copyNodePositions(nodePositions),
+                wrapperNodeId,
+                parentSnapshotBefore
+            ));
+            history.enterScope();
             currentGraph = loadedGraph.graph();
             nodePositions = loadedGraph.positions();
             clearSelectedNodes();
@@ -1362,6 +1400,10 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         if (embeddedGraphJson == null || embeddedGraphJson.isBlank()) {
             return false;
         }
+
+        boolean wasRecording = history != null && history.isRecording();
+        syncGraphNodePositions(currentGraph, nodePositions);
+        SavedGraph beforeSnapshot = wasRecording ? toSavedGraphWithPositions(currentGraph, nodePositions) : null;
 
         try {
             SavedGraph savedGraph = GraphSerializer.fromJson(embeddedGraphJson);
@@ -1504,6 +1546,13 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             selectedNodeIds.addAll(restoredNodeIds.values());
             setSelectedNodeId(restoredNodeIds.values().iterator().next());
             markGraphStructureDirty();
+            if (wasRecording) {
+                history.recordGraphTransaction(
+                    "Dissolve Subgraph",
+                    beforeSnapshot,
+                    toSavedGraphWithPositions(currentGraph, nodePositions)
+                );
+            }
             NodeCraft.LOGGER.info("Dissolved subgraph node {} into {} nodes", wrapperNodeId, restoredNodeIds.size());
             return true;
         } catch (Exception e) {
@@ -1764,7 +1813,12 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
     private record LoadedGraph(NodeGraph graph, Map<UUID, NodePosition> positions) {
     }
 
-    private record SubgraphEditContext(NodeGraph parentGraph, Map<UUID, NodePosition> parentPositions, UUID wrapperNodeId) {
+    private record SubgraphEditContext(
+        NodeGraph parentGraph,
+        Map<UUID, NodePosition> parentPositions,
+        UUID wrapperNodeId,
+        SavedGraph parentSnapshotBefore
+    ) {
     }
 
     @Override

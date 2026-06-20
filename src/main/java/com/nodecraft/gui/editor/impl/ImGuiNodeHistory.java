@@ -1,6 +1,8 @@
 package com.nodecraft.gui.editor.impl;
 
 import java.util.ArrayList;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +16,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.io.SavedGraph;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 
 /**
@@ -31,6 +34,7 @@ public class ImGuiNodeHistory {
     private final ICanvasEditor editor;
     private final Stack<HistoryAction> undoStack = new Stack<>();
     private final Stack<HistoryAction> redoStack = new Stack<>();
+    private final Deque<HistoryScope> scopeStack = new ArrayDeque<>();
     private final int maxHistorySize = 30; // 最大历史记录数量
     private boolean isRecording = true; // 是否记录历史
     
@@ -69,6 +73,48 @@ public class ImGuiNodeHistory {
      */
     public boolean isRecording() {
         return isRecording;
+    }
+
+    public void enterScope() {
+        scopeStack.push(new HistoryScope(copyStack(undoStack), copyStack(redoStack), isRecording));
+        undoStack.clear();
+        redoStack.clear();
+        scopeStack.clear();
+        isRecording = true;
+        isRecording = true;
+        NodeCraft.LOGGER.debug("Entered nested graph history scope. depth={}", scopeStack.size());
+    }
+
+    public boolean exitScope() {
+        if (scopeStack.isEmpty()) {
+            return false;
+        }
+        HistoryScope scope = scopeStack.pop();
+        undoStack.clear();
+        undoStack.addAll(scope.undoStack());
+        redoStack.clear();
+        redoStack.addAll(scope.redoStack());
+        isRecording = scope.recording();
+        NodeCraft.LOGGER.debug("Exited nested graph history scope. depth={}", scopeStack.size());
+        return true;
+    }
+
+    public void recordGraphTransaction(String label, SavedGraph before, SavedGraph after) {
+        if (!isRecording || before == null || after == null) {
+            return;
+        }
+        addAction(new GraphTransactionAction(label, deepCopyGraph(before), deepCopyGraph(after)));
+    }
+
+    private static Stack<HistoryAction> copyStack(Stack<HistoryAction> source) {
+        Stack<HistoryAction> copy = new Stack<>();
+        copy.addAll(source);
+        return copy;
+    }
+
+    private static SavedGraph deepCopyGraph(SavedGraph graph) {
+        com.google.gson.Gson gson = new com.google.gson.Gson();
+        return gson.fromJson(gson.toJson(graph), SavedGraph.class);
     }
     
     /**
@@ -399,6 +445,41 @@ public class ImGuiNodeHistory {
     private void markEditorDirty() {
         if (editor instanceof ImGuiNodeEditor nodeEditor) {
             nodeEditor.notifyGraphStructureChanged();
+        }
+    }
+
+    private static class GraphTransactionAction extends HistoryAction {
+        private final String label;
+        private final SavedGraph before;
+        private final SavedGraph after;
+
+        private GraphTransactionAction(String label, SavedGraph before, SavedGraph after) {
+            this.label = label != null ? label : "Graph Transaction";
+            this.before = before;
+            this.after = after;
+        }
+
+        @Override
+        public ActionType getType() {
+            return ActionType.GRAPH_TRANSACTION;
+        }
+
+        @Override
+        public boolean undo(ICanvasEditor editor) {
+            boolean restored = editor.restoreGraphSnapshot(deepCopyGraph(before));
+            if (restored) {
+                NodeCraft.LOGGER.info("Undid graph transaction: {}", label);
+            }
+            return restored;
+        }
+
+        @Override
+        public boolean redo(ICanvasEditor editor) {
+            boolean restored = editor.restoreGraphSnapshot(deepCopyGraph(after));
+            if (restored) {
+                NodeCraft.LOGGER.info("Redid graph transaction: {}", label);
+            }
+            return restored;
         }
     }
 
@@ -881,6 +962,9 @@ public class ImGuiNodeHistory {
             this.targetPortId = targetPortId;
         }
     }
+
+    private record HistoryScope(Stack<HistoryAction> undoStack, Stack<HistoryAction> redoStack, boolean recording) {
+    }
     
     /**
      * 操作类型枚举
@@ -891,6 +975,7 @@ public class ImGuiNodeHistory {
         REMOVE_NODES,
         ADD_CONNECTION,
         REMOVE_CONNECTION,
+        GRAPH_TRANSACTION,
         AI_PATCH
     }
     
