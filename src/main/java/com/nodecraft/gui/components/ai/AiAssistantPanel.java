@@ -1229,7 +1229,8 @@ public final class AiAssistantPanel {
                         originalPrompt,
                         invalidDslOrModelResponse,
                         parseErrors,
-                        aiRemoteDslRepairAttempts
+                        aiRemoteDslRepairAttempts,
+                        AiPromptBuilder.serializeWorldContext(aiLastWorldContextSnapshot)
                 );
         boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(
                 originalPrompt,
@@ -1300,7 +1301,8 @@ public final class AiAssistantPanel {
                         originalPrompt,
                         underspecifiedPlan,
                         originalModelPayload,
-                        aiRemoteGraphExpansionAttempts
+                        aiRemoteGraphExpansionAttempts,
+                        AiPromptBuilder.serializeWorldContext(aiLastWorldContextSnapshot)
                 );
         boolean submitted = aiAssistantComponent.submitRemotePlannerRequest(
                 originalPrompt,

@@ -194,4 +194,8 @@ public final class AiPromptBuilder {
                 + worldContextJson + "\n\n"
                 + "Return JSON only.";
     }
+
+    public static String serializeWorldContext(AiWorldContextSnapshot worldContext) {
+        return worldContext == null ? "" : GSON.toJson(worldContext);
+    }
 }

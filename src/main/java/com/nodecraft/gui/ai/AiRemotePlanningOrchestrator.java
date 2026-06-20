@@ -163,7 +163,8 @@ public final class AiRemotePlanningOrchestrator {
             String originalPrompt,
             String invalidDslOrModelResponse,
             List<String> parseErrors,
-            int currentAttempt
+            int currentAttempt,
+            String frozenWorldContextJson
     ) {
         SchemaSelection schemaSelection = selectRepairSchemas(originalPrompt);
         String systemPrompt = buildBaseSystemPrompt(settings.systemPrompt(), schemaSelection.relevantSchemas())
@@ -192,6 +193,7 @@ public final class AiRemotePlanningOrchestrator {
                 + "Invalid DSL/model payload to repair:\n"
                 + nullToEmpty(invalidDslOrModelResponse)
                 + "\n\n"
+                + buildFrozenWorldContextSection(frozenWorldContextJson)
                 + "Return repaired JSON only.";
 
         return buildPreparedRetryRequest(
@@ -234,7 +236,8 @@ public final class AiRemotePlanningOrchestrator {
             String originalPrompt,
             AiGraphPlanDslAdapterService.GraphPlan underspecifiedPlan,
             String originalModelPayload,
-            int currentAttempt
+            int currentAttempt,
+            String frozenWorldContextJson
     ) {
         SchemaSelection schemaSelection = selectRepairSchemas(originalPrompt);
         String systemPrompt = buildBaseSystemPrompt(settings.systemPrompt(), schemaSelection.relevantSchemas())
@@ -255,6 +258,7 @@ public final class AiRemotePlanningOrchestrator {
                 + "Original model payload:\n"
                 + nullToEmpty(originalModelPayload)
                 + "\n\n"
+                + buildFrozenWorldContextSection(frozenWorldContextJson)
                 + "Required outcome: return a connected NodeCraft graph, not a single standalone node. Return JSON only.";
 
         return buildPreparedRetryRequest(
@@ -386,6 +390,15 @@ public final class AiRemotePlanningOrchestrator {
                 SCHEMA_LIMIT_REPAIR
         );
         return new SchemaSelection(allSchemas, relevantSchemas);
+    }
+
+    private static String buildFrozenWorldContextSection(String frozenWorldContextJson) {
+        if (frozenWorldContextJson == null || frozenWorldContextJson.isBlank()) {
+            return "";
+        }
+        return "CURRENT_WORLD_CONTEXT from the original request (frozen JSON snapshot):\n"
+                + frozenWorldContextJson
+                + "\n\n";
     }
 
     private boolean isPlacementOnlyCanvasPrompt(String prompt, boolean complexGenerationPrompt) {
