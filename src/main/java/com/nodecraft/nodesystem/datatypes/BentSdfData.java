@@ -1,0 +1,145 @@
+package com.nodecraft.nodesystem.datatypes;
+
+import org.joml.Vector3d;
+
+/**
+ * Applies an axial bend domain transform before sampling an input SDF.
+ */
+public class BentSdfData implements SignedDistanceFieldData {
+    private static final double EPS = 1.0e-9d;
+
+    public enum ClampMode {
+        CLAMP,
+        REPEAT,
+        UNBOUNDED
+    }
+
+    private final SignedDistanceFieldData source;
+    private final Vector3d axisOrigin;
+    private final Vector3d axisDirection;
+    private final Vector3d bendNormal;
+    private final Vector3d binormal;
+    private final double angleRadians;
+    private final double bendLength;
+    private final ClampMode clampMode;
+
+    public BentSdfData(SignedDistanceFieldData source,
+                       Vector3d axisOrigin,
+                       Vector3d axisDirection,
+                       Vector3d bendNormal,
+                       double bendDegrees,
+                       double bendLength,
+                       ClampMode clampMode) {
+        this.source = source;
+        this.axisOrigin = new Vector3d(axisOrigin);
+        this.axisDirection = normalizeOr(axisDirection, new Vector3d(0.0d, 1.0d, 0.0d));
+        this.bendNormal = normalizeBendNormal(bendNormal, this.axisDirection);
+        this.binormal = new Vector3d(this.axisDirection).cross(this.bendNormal).normalize();
+        this.angleRadians = Math.toRadians(bendDegrees);
+        this.bendLength = Math.max(EPS, Math.abs(bendLength));
+        this.clampMode = clampMode == null ? ClampMode.CLAMP : clampMode;
+    }
+
+    public SignedDistanceFieldData getSource() {
+        return source;
+    }
+
+    public Vector3d getAxisOrigin() {
+        return new Vector3d(axisOrigin);
+    }
+
+    public Vector3d getAxisDirection() {
+        return new Vector3d(axisDirection);
+    }
+
+    public Vector3d getBendNormal() {
+        return new Vector3d(bendNormal);
+    }
+
+    public double getBendDegrees() {
+        return Math.toDegrees(angleRadians);
+    }
+
+    public double getBendLength() {
+        return bendLength;
+    }
+
+    public ClampMode getClampMode() {
+        return clampMode;
+    }
+
+    @Override
+    public double sampleDistance(Vector3d point) {
+        return source.sampleDistance(unbendPoint(point));
+    }
+
+    public Vector3d bendPoint(Vector3d point) {
+        return remapPoint(point, 1.0d);
+    }
+
+    public Vector3d unbendPoint(Vector3d point) {
+        return remapPoint(point, -1.0d);
+    }
+
+    private Vector3d remapPoint(Vector3d point, double direction) {
+        Vector3d offset = new Vector3d(point).sub(axisOrigin);
+        double axialDistance = offset.dot(axisDirection);
+        Vector3d axialComponent = new Vector3d(axisDirection).mul(axialDistance);
+        Vector3d radialComponent = new Vector3d(offset).sub(axialComponent);
+
+        double factor = applyClampMode(axialDistance / bendLength);
+        double theta = angleRadians * factor * direction;
+        if (Math.abs(angleRadians) <= EPS) {
+            return new Vector3d(point);
+        }
+
+        double curvature = angleRadians / bendLength;
+        double radius = 1.0d / curvature;
+        Vector3d centerline = new Vector3d(axisOrigin)
+            .add(new Vector3d(bendNormal).mul(radius * (1.0d - Math.cos(theta))))
+            .add(new Vector3d(axisDirection).mul(radius * Math.sin(theta)));
+        Vector3d rotatedRadial = rotateAroundAxis(radialComponent, binormal, theta);
+        return centerline.add(rotatedRadial);
+    }
+
+    private double applyClampMode(double normalizedDistance) {
+        return switch (clampMode) {
+            case CLAMP -> Math.max(0.0d, Math.min(1.0d, normalizedDistance));
+            case REPEAT -> normalizedDistance - Math.floor(normalizedDistance);
+            case UNBOUNDED -> normalizedDistance;
+        };
+    }
+
+    private static Vector3d normalizeBendNormal(Vector3d normal, Vector3d axis) {
+        Vector3d projected = normal == null ? defaultNormal(axis) : new Vector3d(normal);
+        projected.sub(new Vector3d(axis).mul(projected.dot(axis)));
+        if (projected.lengthSquared() <= EPS) {
+            projected = defaultNormal(axis);
+        }
+        return projected.normalize();
+    }
+
+    private static Vector3d defaultNormal(Vector3d axis) {
+        Vector3d fallback = Math.abs(axis.y) < 0.9d
+            ? new Vector3d(0.0d, 1.0d, 0.0d)
+            : new Vector3d(1.0d, 0.0d, 0.0d);
+        fallback.sub(new Vector3d(axis).mul(fallback.dot(axis)));
+        return fallback.normalize();
+    }
+
+    private static Vector3d normalizeOr(Vector3d value, Vector3d fallback) {
+        if (value == null || value.lengthSquared() <= EPS) {
+            return fallback.normalize();
+        }
+        return new Vector3d(value).normalize();
+    }
+
+    private static Vector3d rotateAroundAxis(Vector3d vector, Vector3d axis, double angle) {
+        double cos = Math.cos(angle);
+        double sin = Math.sin(angle);
+        Vector3d term1 = new Vector3d(vector).mul(cos);
+        Vector3d term2 = new Vector3d(axis).cross(vector, new Vector3d()).mul(sin);
+        Vector3d term3 = new Vector3d(axis).mul(axis.dot(vector) * (1.0d - cos));
+        return term1.add(term2).add(term3);
+    }
+}
