@@ -1,7 +1,7 @@
 # NodeCraft 节点库
 
 - **统计范围**：`src/main/java/com/nodecraft/nodesystem/nodes`
-- **节点总数**：**515**
+- **节点总数**：**517**
 - **分类总数**：**54**
 - **说明**：「节点名称」与「说明」列来自各节点类上的 `@NodeInfo` （与编辑器展示一致），若源码未写注解说明，则该列为 `-`。
 
@@ -22,7 +22,7 @@
 | `input.type_selectors` | 5 |
 | `input.values` | 6 |
 | `material.basic_assignment` | 3 |
-| `material.block_state` | 6 |
+| `material.block_state` | 8 |
 | `material.directional_mapping` | 2 |
 | `material.gradient_mapping` | 5 |
 | `material.pattern_mapping` | 4 |
@@ -295,7 +295,7 @@
 | Block Palette | `material.basic_assignment.block_palette` | Assigns palette block types to flat positions or tree branches | `BlockPaletteNode` |
 | Weighted Block Palette | `material.basic_assignment.weighted_palette` | Assigns weighted random block types to flat positions or tree branches. | `WeightedBlockPaletteNode` |
 
-## material.block_state（6）
+## material.block_state（8）
 
 | 节点名称 | 节点 ID | 说明 | 类名 |
 |---|---|---|---|
@@ -305,6 +305,8 @@
 | Waterlogged State | `material.block_state.waterlogged` | Assigns the waterlogged block-state property to placements or voxelized geometry. | `WaterloggedStateNode` |
 | Facing From Normal | `material.block_state.facing_from_normal` | Converts normal vectors to nearest facing direction and optionally writes facing state to placements. | `FacingFromNormalNode` |
 | Slab / Stair Auto-Fill | `material.block_state.slab_autofill` | Generates slab or stair placements from normals to smooth stepped transitions. | `SlabStairAutofillNode` |
+| Build BlockState | `material.block_state.build_block_state` | Builds block-state key/value data from a block id, base state, and dynamic property override | `BuildBlockStateNode` |
+| Orient BlockState | `material.block_state.orient_block_state` | Derives facing, axis, and stair half block-state properties from a normal or tangent vector | `OrientBlockStateNode` |
 
 ## material.directional_mapping（2）
 
