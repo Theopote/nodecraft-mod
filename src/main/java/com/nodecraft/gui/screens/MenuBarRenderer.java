@@ -163,13 +163,11 @@ public class MenuBarRenderer {
                     }
                 }
                 
-                // 分组功能暂未实现
-                if (ImGui.menuItem("组选择", null, false, false)) {
-                    NodeCraft.LOGGER.info("组选择功能尚未实现");
-                }
-                
-                if (ImGui.menuItem("解组选择", null, false, false)) {
-                    NodeCraft.LOGGER.info("解组选择功能尚未实现");
+                boolean canDissolveSubgraph = editor != null && editor.getSelectedNodeIds().size() == 1;
+                if (ImGui.menuItem("Dissolve Subgraph", null, false, canDissolveSubgraph)) {
+                    if (editor != null && !editor.dissolveSelectedSubgraph()) {
+                        new MessageDialog("Subgraph", "Selected node is not a dissolvable subgraph.").show();
+                    }
                 }
                 
                 ImGui.endMenu();

@@ -86,6 +86,18 @@ public class ImGuiNodeMenus {
                         
                         ImGui.separator();
 
+                        if (contextTargets.size() > 1) {
+                            if (ImGui.menuItem("Create Subgraph From Selection")) {
+                                createSubgraphFromTargets(contextTargets, rightClickedNodeId);
+                            }
+                            ImGui.separator();
+                        } else if (isSubgraphNode(node)) {
+                            if (ImGui.menuItem("Dissolve Subgraph")) {
+                                dissolveSubgraphTarget(rightClickedNodeId);
+                            }
+                            ImGui.separator();
+                        }
+
                         if (ImGui.menuItem(isBatchOperation ? "Copy Selected" : "Copy", "Ctrl+C")) {
                             copyNodes(contextTargets, rightClickedNodeId);
                         }
@@ -397,6 +409,70 @@ public class ImGuiNodeMenus {
      * @param nodeId 节点ID
      * @param color 颜色值
      */
+    private void createSubgraphFromTargets(Set<UUID> nodeIds, UUID contextNodeId) {
+        if (nodeIds == null || nodeIds.size() <= 1) {
+            return;
+        }
+
+        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
+        UUID backupPrimary = editor.getSelectedNodeId();
+
+        try {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(nodeIds);
+            if (contextNodeId != null && nodeIds.contains(contextNodeId)) {
+                editor.setSelectedNodeId(contextNodeId);
+            } else {
+                editor.setSelectedNodeId(nodeIds.iterator().next());
+            }
+
+            if (!editor.createSubgraphFromSelection()) {
+                NodeCraft.LOGGER.warn("Failed to create subgraph from {} selected nodes", nodeIds.size());
+                editor.clearSelectedNodes();
+                editor.getSelectedNodeIds().addAll(backupSelection);
+                editor.setSelectedNodeId(backupPrimary);
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("Failed to create subgraph from context selection: {}", e.getMessage(), e);
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(backupSelection);
+            editor.setSelectedNodeId(backupPrimary);
+        }
+    }
+
+    private void dissolveSubgraphTarget(UUID nodeId) {
+        if (nodeId == null) {
+            return;
+        }
+
+        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
+        UUID backupPrimary = editor.getSelectedNodeId();
+
+        try {
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().add(nodeId);
+            editor.setSelectedNodeId(nodeId);
+            if (!editor.dissolveSelectedSubgraph()) {
+                editor.clearSelectedNodes();
+                editor.getSelectedNodeIds().addAll(backupSelection);
+                editor.setSelectedNodeId(backupPrimary);
+            }
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("Failed to dissolve subgraph from context menu: {}", e.getMessage(), e);
+            editor.clearSelectedNodes();
+            editor.getSelectedNodeIds().addAll(backupSelection);
+            editor.setSelectedNodeId(backupPrimary);
+        }
+    }
+
+    private static boolean isSubgraphNode(INode node) {
+        if (node == null || node.getTypeId() == null) {
+            return false;
+        }
+        String canonicalId = NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId());
+        return "utilities.organization.subgraph".equals(canonicalId);
+    }
+
     private void setNodeColor(UUID nodeId, int color) {
         if (nodeId == null || editor.getCurrentGraph() == null) {
             NodeCraft.LOGGER.warn("无法设置节点颜色：节点ID为空或图表为空");

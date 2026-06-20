@@ -21,6 +21,10 @@ import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.GraphSerializer;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.graph.SubgraphExtractionService;
+import com.nodecraft.nodesystem.io.SavedConnection;
+import com.nodecraft.nodesystem.io.SavedGraph;
+import com.nodecraft.nodesystem.io.SavedNode;
+import com.nodecraft.nodesystem.io.SavedPosition;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 
 import imgui.ImDrawList;
@@ -1243,6 +1247,171 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         }
     }
 
+    public boolean dissolveSelectedSubgraph() {
+        if (currentGraph == null || selectedNodeIds.size() != 1) {
+            return false;
+        }
+
+        UUID wrapperNodeId = selectedNodeIds.iterator().next();
+        INode wrapperNode = currentGraph.getNode(wrapperNodeId);
+        if (!isSubgraphNode(wrapperNode)) {
+            return false;
+        }
+
+        String embeddedGraphJson = stateString(wrapperNode instanceof BaseNode baseNode ? baseNode.getNodeState() : null, "embeddedGraphJson");
+        if (embeddedGraphJson == null || embeddedGraphJson.isBlank()) {
+            return false;
+        }
+
+        try {
+            SavedGraph savedGraph = GraphSerializer.fromJson(embeddedGraphJson);
+            if (savedGraph == null || savedGraph.nodes == null || savedGraph.nodes.isEmpty()) {
+                return false;
+            }
+
+            Map<String, String> graphInputKeys = new HashMap<>();
+            Map<String, String> graphOutputKeys = new HashMap<>();
+            for (SavedNode savedNode : savedGraph.nodes) {
+                if (savedNode == null || savedNode.nodeId == null) {
+                    continue;
+                }
+                if (SubgraphExtractionService.GRAPH_INPUT_TYPE_ID.equals(savedNode.typeId)) {
+                    graphInputKeys.put(savedNode.nodeId, stateString(savedNode.state, "inputName"));
+                } else if (SubgraphExtractionService.GRAPH_OUTPUT_TYPE_ID.equals(savedNode.typeId)) {
+                    graphOutputKeys.put(savedNode.nodeId, stateString(savedNode.state, "outputName"));
+                }
+            }
+
+            Map<String, java.util.List<BoundaryInputTarget>> inputTargets = new HashMap<>();
+            Map<String, java.util.List<BoundaryOutputSource>> outputSources = new HashMap<>();
+            if (savedGraph.connections != null) {
+                for (SavedConnection connection : savedGraph.connections) {
+                    String inputKey = graphInputKeys.get(connection.sourceNodeId);
+                    if (inputKey != null) {
+                        inputTargets.computeIfAbsent(keyToken(inputKey), ignored -> new ArrayList<>())
+                            .add(new BoundaryInputTarget(connection.targetNodeId, connection.targetPortId));
+                    }
+
+                    String outputKey = graphOutputKeys.get(connection.targetNodeId);
+                    if (outputKey != null) {
+                        outputSources.computeIfAbsent(keyToken(outputKey), ignored -> new ArrayList<>())
+                            .add(new BoundaryOutputSource(connection.sourceNodeId, connection.sourcePortId));
+                    }
+                }
+            }
+
+            java.util.List<NodeGraph.Connection> wrapperInputs = new ArrayList<>();
+            java.util.List<NodeGraph.Connection> wrapperOutputs = new ArrayList<>();
+            for (NodeGraph.Connection connection : currentGraph.getConnections()) {
+                if (connection.targetNode.getId().equals(wrapperNodeId)) {
+                    wrapperInputs.add(connection);
+                } else if (connection.sourceNode.getId().equals(wrapperNodeId)) {
+                    wrapperOutputs.add(connection);
+                }
+            }
+
+            NodePosition wrapperPosition = nodePositions.getOrDefault(wrapperNodeId, new NodePosition(0.0f, 0.0f));
+            NodePosition savedCenter = savedGraphCenter(savedGraph);
+            float offsetX = wrapperPosition.x - savedCenter.x;
+            float offsetY = wrapperPosition.y - savedCenter.y;
+
+            Map<String, UUID> restoredNodeIds = new HashMap<>();
+            NodeRegistry registry = NodeRegistry.getInstance();
+            int fallbackIndex = 0;
+            for (SavedNode savedNode : savedGraph.nodes) {
+                if (savedNode == null
+                        || savedNode.nodeId == null
+                        || graphInputKeys.containsKey(savedNode.nodeId)
+                        || graphOutputKeys.containsKey(savedNode.nodeId)) {
+                    continue;
+                }
+
+                INode restored = registry.createNodeInstance(savedNode.typeId);
+                if (!(restored instanceof BaseNode restoredBase)) {
+                    NodeCraft.LOGGER.warn("Skipping subgraph node during dissolve because it cannot be recreated: {}", savedNode.typeId);
+                    continue;
+                }
+
+                restoredBase.setNodeState(savedNode.state);
+                currentGraph.addNode(restoredBase);
+                restoredNodeIds.put(savedNode.nodeId, restoredBase.getId());
+
+                SavedPosition savedPosition = savedGraph.nodePositions != null ? savedGraph.nodePositions.get(savedNode.nodeId) : null;
+                float x = savedPosition != null ? savedPosition.x + offsetX : wrapperPosition.x + fallbackIndex * 24.0f;
+                float y = savedPosition != null ? savedPosition.y + offsetY : wrapperPosition.y + fallbackIndex * 18.0f;
+                nodePositions.put(restoredBase.getId(), new NodePosition(x, y));
+                restoredBase.setPosition(x, y);
+                fallbackIndex++;
+            }
+
+            if (restoredNodeIds.isEmpty()) {
+                return false;
+            }
+
+            if (savedGraph.connections != null) {
+                for (SavedConnection connection : savedGraph.connections) {
+                    UUID sourceId = restoredNodeIds.get(connection.sourceNodeId);
+                    UUID targetId = restoredNodeIds.get(connection.targetNodeId);
+                    if (sourceId != null && targetId != null) {
+                        currentGraph.connect(sourceId, connection.sourcePortId, targetId, connection.targetPortId);
+                    }
+                }
+            }
+
+            currentGraph.removeNode(wrapperNodeId);
+            removeNodePosition(wrapperNodeId);
+            removeSelectedNode(wrapperNodeId);
+
+            for (NodeGraph.Connection wrapperInput : wrapperInputs) {
+                String inputKey = dynamicKeyFromInputPortId(wrapperInput.targetPort.getId());
+                java.util.List<BoundaryInputTarget> targets = inputTargets.get(inputKey);
+                if (targets == null) {
+                    continue;
+                }
+                for (BoundaryInputTarget target : targets) {
+                    UUID restoredTargetId = restoredNodeIds.get(target.nodeId());
+                    if (restoredTargetId != null) {
+                        currentGraph.connect(
+                            wrapperInput.sourceNode.getId(),
+                            wrapperInput.sourcePort.getId(),
+                            restoredTargetId,
+                            target.portId()
+                        );
+                    }
+                }
+            }
+
+            for (NodeGraph.Connection wrapperOutput : wrapperOutputs) {
+                String outputKey = dynamicKeyFromOutputPortId(wrapperOutput.sourcePort.getId());
+                java.util.List<BoundaryOutputSource> sources = outputSources.get(outputKey);
+                if (sources == null) {
+                    continue;
+                }
+                for (BoundaryOutputSource source : sources) {
+                    UUID restoredSourceId = restoredNodeIds.get(source.nodeId());
+                    if (restoredSourceId != null) {
+                        currentGraph.connect(
+                            restoredSourceId,
+                            source.portId(),
+                            wrapperOutput.targetNode.getId(),
+                            wrapperOutput.targetPort.getId()
+                        );
+                    }
+                }
+            }
+
+            clearSelectedNodes();
+            selectedNodeIds.addAll(restoredNodeIds.values());
+            setSelectedNodeId(restoredNodeIds.values().iterator().next());
+            markGraphStructureDirty();
+            NodeCraft.LOGGER.info("Dissolved subgraph node {} into {} nodes", wrapperNodeId, restoredNodeIds.size());
+            return true;
+        } catch (Exception e) {
+            NodeCraft.LOGGER.error("Failed to dissolve selected subgraph: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
     private Map<String, Object> buildSubgraphNodeState(
         SubgraphExtractionService.ExtractionResult extraction,
         String subgraphName,
@@ -1313,6 +1482,50 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         return new NodePosition((minX + maxX) / 2.0f - 100.0f, (minY + maxY) / 2.0f - 45.0f);
     }
 
+    private static boolean isSubgraphNode(INode node) {
+        if (node == null || node.getTypeId() == null) {
+            return false;
+        }
+        String canonicalId = NodeRegistry.getInstance().resolveCanonicalNodeId(node.getTypeId());
+        return "utilities.organization.subgraph".equals(canonicalId);
+    }
+
+    private static String stateString(Object state, String key) {
+        if (!(state instanceof Map<?, ?> map) || key == null) {
+            return null;
+        }
+        Object value = map.get(key);
+        return value instanceof String stringValue ? stringValue : null;
+    }
+
+    private static NodePosition savedGraphCenter(SavedGraph savedGraph) {
+        if (savedGraph == null || savedGraph.nodePositions == null || savedGraph.nodePositions.isEmpty()) {
+            return new NodePosition(0.0f, 0.0f);
+        }
+
+        float minX = Float.MAX_VALUE;
+        float minY = Float.MAX_VALUE;
+        float maxX = -Float.MAX_VALUE;
+        float maxY = -Float.MAX_VALUE;
+        boolean found = false;
+
+        for (Map.Entry<String, SavedPosition> entry : savedGraph.nodePositions.entrySet()) {
+            SavedPosition position = entry.getValue();
+            if (position == null) {
+                continue;
+            }
+            minX = Math.min(minX, position.x);
+            minY = Math.min(minY, position.y);
+            maxX = Math.max(maxX, position.x);
+            maxY = Math.max(maxY, position.y);
+            found = true;
+        }
+
+        return found
+            ? new NodePosition((minX + maxX) / 2.0f, (minY + maxY) / 2.0f)
+            : new NodePosition(0.0f, 0.0f);
+    }
+
     private static String joinAdditionalKeys(List<String> keys) {
         if (keys == null || keys.size() <= 1) {
             return "";
@@ -1328,12 +1541,28 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         return "dynamic_output_key_" + keyToken(key);
     }
 
+    private static String dynamicKeyFromInputPortId(String portId) {
+        String prefix = "dynamic_input_key_";
+        return portId != null && portId.startsWith(prefix) ? portId.substring(prefix.length()) : null;
+    }
+
+    private static String dynamicKeyFromOutputPortId(String portId) {
+        String prefix = "dynamic_output_key_";
+        return portId != null && portId.startsWith(prefix) ? portId.substring(prefix.length()) : null;
+    }
+
     private static String keyToken(String key) {
         if (key == null || key.isBlank()) {
             return "empty";
         }
         String normalized = key.trim().replaceAll("[^a-zA-Z0-9_]", "_");
         return normalized.isEmpty() ? "empty" : normalized;
+    }
+
+    private record BoundaryInputTarget(String nodeId, String portId) {
+    }
+
+    private record BoundaryOutputSource(String nodeId, String portId) {
     }
 
     @Override

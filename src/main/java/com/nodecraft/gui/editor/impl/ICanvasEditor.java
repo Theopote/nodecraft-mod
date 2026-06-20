@@ -129,6 +129,10 @@ public interface ICanvasEditor {
      * @return 鏄惁鎴愬姛鍒犻櫎
      */
     boolean deleteSelectedNodes();
+
+    boolean createSubgraphFromSelection();
+
+    boolean dissolveSelectedSubgraph();
     
     /**
      * 妫€鏌ユ槸鍚︽湁鏈繚瀛樼殑鏇存敼
