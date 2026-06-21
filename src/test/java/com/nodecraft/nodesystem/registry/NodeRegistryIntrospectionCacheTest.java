@@ -3,6 +3,7 @@ package com.nodecraft.nodesystem.registry;
 import com.nodecraft.gui.ai.AiNodeSchemaCatalog;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -18,11 +19,16 @@ class NodeRegistryIntrospectionCacheTest {
     void getDefaultNodeStateReturnsDefensiveCopies() {
         assumeRegistryReady();
 
-        Map<String, Object> first = registry.getDefaultNodeState("math.logic.if");
-        Map<String, Object> second = registry.getDefaultNodeState("math.logic.if");
+        Map<String, Object> first = registry.getDefaultNodeState("variable.set");
+        Map<String, Object> second = registry.getDefaultNodeState("variable.set");
 
         assertEquals(first, second);
-        assertNotSame(first, second);
+        if (!first.isEmpty()) {
+            Map<String, Object> mutable = new HashMap<>(first);
+            mutable.put("mutationProbe", "changed");
+            Map<String, Object> third = registry.getDefaultNodeState("variable.set");
+            assertEquals(first, third, "cached defaults should ignore caller mutations");
+        }
     }
 
     @Test

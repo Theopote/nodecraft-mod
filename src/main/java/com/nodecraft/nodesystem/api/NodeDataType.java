@@ -21,6 +21,7 @@ public enum NodeDataType {
     DOUBLE("double", "Double", Double.class),
     MATRIX3("matrix3", "Matrix3", Matrix3d.class),
     BOOLEAN("boolean", "Boolean", Boolean.class),
+    EXEC("exec", "Execution", Void.class),
 
     FLOAT("float", "Float", Float.class),
     NUMERIC_RANGE("numeric_range", "Numeric Range", NumericRangeData.class),
@@ -142,6 +143,10 @@ public enum NodeDataType {
 
         if (this == FLOAT && value instanceof Float) {
             return true;
+        }
+
+        if (this == EXEC) {
+            return value == null || value instanceof Boolean;
         }
 
         if ((this == VECTOR || this == POSITION) && value instanceof Vector3) {

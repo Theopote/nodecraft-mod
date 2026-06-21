@@ -122,4 +122,5 @@ Graph nodes are long-lived; optimize metadata introspection, not execution pooli
 ## Related backlog
 
 - Execution-flow control (exec ports, loops) unlocks more graph semantics than raw perf tuning
+- See `docs/execution-flow-control.md` for P0 exec-flow status
 - Geometry kernel micro-optimizations beyond bounds caps (parallel SDF, sparse grids)

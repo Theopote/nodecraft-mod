@@ -25,6 +25,12 @@ public final class TypeConversionRegistry {
         NodeDataType output = outputType == null ? NodeDataType.ANY : outputType;
         NodeDataType input = inputType == null ? NodeDataType.ANY : inputType;
 
+        if (output == NodeDataType.EXEC || input == NodeDataType.EXEC) {
+            return output == NodeDataType.EXEC && input == NodeDataType.EXEC
+                    ? ConversionPolicy.IMPLICIT_SAFE
+                    : ConversionPolicy.UNSUPPORTED;
+        }
+
         if (input == NodeDataType.ANY || output == NodeDataType.ANY || output == input) {
             return ConversionPolicy.IMPLICIT_SAFE;
         }

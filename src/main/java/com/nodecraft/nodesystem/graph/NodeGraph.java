@@ -13,6 +13,7 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.execution.ExecutionPortKind;
 import com.nodecraft.nodesystem.execution.NodeExecutionCache;
 
 /**
@@ -359,6 +360,9 @@ public class NodeGraph {
         while (!queue.isEmpty()) {
             UUID current = queue.removeFirst();
             for (Connection connection : connections) {
+                if (!ExecutionPortKind.isDataConnection(connection)) {
+                    continue;
+                }
                 if (!connection.sourceNode.getId().equals(current)) {
                     continue;
                 }

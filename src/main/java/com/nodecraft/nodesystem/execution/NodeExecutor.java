@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -25,21 +26,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Executes a node graph as a DAG dataflow engine using static topological order.
+ * Executes a node graph using either pure dataflow scheduling or exec-edge scheduling.
  *
- * <p>Each node is evaluated at most once per run in topological order. The
- * {@link ExecutorService} only offloads {@link #executeAsync()} onto a single
- * background worker thread; node bodies still run serially inside that worker.</p>
+ * <p>When the graph has no {@link NodeDataType#EXEC} connections, nodes run once in dataflow
+ * topological order (legacy behaviour). When exec edges exist, only the exec frontier runs
+ * nodes; data inputs are pulled lazily from upstream data ports.</p>
  *
- * <p>Data dependencies come from port connections; cycles are rejected. Flow control
- * nodes route values in a single pass and do not skip unselected branches.</p>
- *
- * <p>Parallel-ready batches are computed by {@link GraphExecutionPlanner} but are not
- * executed concurrently yet. See {@link #getLastExecutionProfile()} for per-run timing.</p>
- *
- * <p>Partial execution scope: when a scope is provided, only nodes inside that scope
- * are recomputed. Upstream nodes outside the scope reuse their previously computed
- * outputs.</p>
+ * <p>Flow-control nodes such as {@code flow.control.branch} still operate as data routers today.
+ * Exec ports are the foundation for true branch skipping in a follow-up phase.</p>
  */
 public class NodeExecutor {
 
@@ -49,6 +43,7 @@ public class NodeExecutor {
     private final ExecutionContext context;
     private final Set<UUID> executionScopeNodeIds;
     private final IncrementalExecutionOptions incrementalOptions;
+    private final ExecutionRunLimits runLimits;
     private final Map<UUID, NodeState> nodeStates = new HashMap<>();
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     private volatile CompletableFuture<Boolean> executionFuture;
@@ -81,10 +76,21 @@ public class NodeExecutor {
             Set<UUID> executionScopeNodeIds,
             IncrementalExecutionOptions incrementalOptions
     ) {
+        this(graph, context, executionScopeNodeIds, incrementalOptions, ExecutionRunLimits.defaults());
+    }
+
+    public NodeExecutor(
+            NodeGraph graph,
+            ExecutionContext context,
+            Set<UUID> executionScopeNodeIds,
+            IncrementalExecutionOptions incrementalOptions,
+            ExecutionRunLimits runLimits
+    ) {
         this.graph = graph;
         this.context = context;
         this.executionScopeNodeIds = executionScopeNodeIds == null ? null : new HashSet<>(executionScopeNodeIds);
         this.incrementalOptions = incrementalOptions == null ? IncrementalExecutionOptions.defaults() : incrementalOptions;
+        this.runLimits = runLimits == null ? ExecutionRunLimits.defaults() : runLimits;
     }
 
     public ExecutionProfiler.Profile getLastExecutionProfile() {
@@ -159,17 +165,26 @@ public class NodeExecutor {
 
         GraphExecutionPlanner.ExecutionPlan plan = GraphExecutionPlanner.plan(graph);
         if (plan.hasCycle()) {
-            LOGGER.error("Node graph contains a cycle and cannot be executed.");
+            LOGGER.error("Node graph contains a data dependency cycle and cannot be executed.");
             clearGraphPreviews();
             lastExecutionProfile = new ExecutionProfiler.Profile(0L, 0, List.of());
             return false;
         }
 
+        ExecutionFlowGraph flowGraph = ExecutionFlowGraph.analyze(graph);
+        if (flowGraph.hasExecEdges()) {
+            return executeExecFlowGraph(flowGraph);
+        }
+        return executeDataflowGraph(plan);
+    }
+
+    private boolean executeDataflowGraph(GraphExecutionPlanner.ExecutionPlan plan) {
         List<INode> sortedNodes = plan.topologicalOrder();
         boolean partialExecution = executionScopeNodeIds != null && !executionScopeNodeIds.isEmpty();
+        ExecutionRunGuard guard = new ExecutionRunGuard(runLimits);
         profiler.beginRun();
         LOGGER.debug(
-                "Starting {} node graph execution. nodes={}, levels={}, maxParallelWidth={}, scopeSize={}",
+                "Starting {} dataflow graph execution. nodes={}, levels={}, maxParallelWidth={}, scopeSize={}",
                 partialExecution ? "partial" : "full",
                 sortedNodes.size(),
                 plan.levels().size(),
@@ -190,45 +205,153 @@ public class NodeExecutor {
                 nodeStates.put(node.getId(), NodeState.VISITED);
                 continue;
             }
-
-            Map<String, Object> inputs = collectNodeInputs(node);
-            long startedAt = System.nanoTime();
-            try {
-                if (node instanceof BaseNode baseNode && context != null) {
-                    if (requiresWorldThread(node)) {
-                        context.callOnWorldThread(() -> {
-                            baseNode.compute(inputs, context);
-                            return null;
-                        });
-                    } else {
-                        baseNode.compute(inputs, context);
-                    }
-                } else {
-                    node.compute(inputs);
-                }
-                executionCache.record(node);
-                recomputedThisRun.add(node.getId());
-                profiler.recordNode(node, System.nanoTime() - startedAt);
+            if (computeNode(node, recomputedThisRun, executionCache, guard)) {
                 executedCount++;
-                nodeStates.put(node.getId(), NodeState.VISITED);
-            } catch (Exception e) {
-                LOGGER.error("Node {} failed during execution: {}", node.getDisplayName(), e.getMessage(), e);
-                nodeStates.put(node.getId(), NodeState.ERROR);
-                lastExecutionProfile = profiler.finish();
-                clearGraphPreviews();
+            } else {
                 return false;
             }
         }
 
         lastExecutionProfile = profiler.finish();
         LOGGER.debug(
-                "Node graph execution finished. executed={}/{}, mode={}, profile={}",
+                "Dataflow graph execution finished. executed={}/{}, mode={}, profile={}",
                 executedCount,
                 sortedNodes.size(),
                 partialExecution ? "partial" : "full",
                 lastExecutionProfile.formatSummary(5)
         );
         return true;
+    }
+
+    private boolean executeExecFlowGraph(ExecutionFlowGraph flowGraph) {
+        if (flowGraph.entryNodeIds().isEmpty()) {
+            LOGGER.error("Exec graph has edges but no entry nodes (every exec port has an incoming exec wire).");
+            lastExecutionProfile = new ExecutionProfiler.Profile(0L, 0, List.of());
+            return false;
+        }
+
+        boolean partialExecution = executionScopeNodeIds != null && !executionScopeNodeIds.isEmpty();
+        ExecutionRunGuard guard = new ExecutionRunGuard(runLimits);
+        profiler.beginRun();
+        LOGGER.debug(
+                "Starting exec-flow graph execution. entries={}, reachable={}, scopeSize={}",
+                flowGraph.entryNodeIds().size(),
+                flowGraph.reachableExecNodeIds().size(),
+                partialExecution ? executionScopeNodeIds.size() : 0
+        );
+
+        int executedCount = 0;
+        Set<UUID> recomputedThisRun = new HashSet<>();
+        NodeExecutionCache executionCache = graph.getExecutionCache();
+        ArrayDeque<UUID> frontier = new ArrayDeque<>(flowGraph.entryNodeIds());
+
+        while (!frontier.isEmpty()) {
+            if (Thread.currentThread().isInterrupted()) {
+                lastExecutionProfile = profiler.finish();
+                clearGraphPreviews();
+                return false;
+            }
+
+            UUID nodeId = frontier.removeFirst();
+            INode node = graph.getNode(nodeId);
+            if (node == null) {
+                continue;
+            }
+
+            Set<UUID> visiting = new HashSet<>();
+            ensureDataUpstreamForInputs(node, recomputedThisRun, executionCache, guard, visiting);
+
+            if (!shouldExecuteNode(node, recomputedThisRun, executionCache)) {
+                nodeStates.put(node.getId(), NodeState.VISITED);
+            } else if (computeNode(node, recomputedThisRun, executionCache, guard)) {
+                executedCount++;
+            } else {
+                return false;
+            }
+
+            for (UUID nextId : flowGraph.execSuccessors(nodeId)) {
+                frontier.addLast(nextId);
+            }
+        }
+
+        lastExecutionProfile = profiler.finish();
+        LOGGER.debug(
+                "Exec-flow graph execution finished. executed={}, profile={}",
+                executedCount,
+                lastExecutionProfile.formatSummary(5)
+        );
+        return true;
+    }
+
+    private void ensureDataUpstreamForInputs(
+            INode node,
+            Set<UUID> recomputedThisRun,
+            NodeExecutionCache executionCache,
+            ExecutionRunGuard guard,
+            Set<UUID> visiting
+    ) {
+        for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (!ExecutionPortKind.isDataConnection(connection)) {
+                continue;
+            }
+            if (!connection.targetNode.getId().equals(node.getId())) {
+                continue;
+            }
+
+            INode upstream = connection.sourceNode;
+            UUID upstreamId = upstream.getId();
+            if (nodeStates.get(upstreamId) == NodeState.VISITED) {
+                continue;
+            }
+            if (!visiting.add(upstreamId)) {
+                continue;
+            }
+
+            ensureDataUpstreamForInputs(upstream, recomputedThisRun, executionCache, guard, visiting);
+
+            if (!shouldExecuteNode(upstream, recomputedThisRun, executionCache)) {
+                nodeStates.put(upstreamId, NodeState.VISITED);
+            } else {
+                computeNode(upstream, recomputedThisRun, executionCache, guard);
+            }
+            visiting.remove(upstreamId);
+        }
+    }
+
+    private boolean computeNode(
+            INode node,
+            Set<UUID> recomputedThisRun,
+            NodeExecutionCache executionCache,
+            ExecutionRunGuard guard
+    ) {
+        Map<String, Object> inputs = collectNodeInputs(node);
+        long startedAt = System.nanoTime();
+        try {
+            if (node instanceof BaseNode baseNode && context != null) {
+                if (requiresWorldThread(node)) {
+                    context.callOnWorldThread(() -> {
+                        baseNode.compute(inputs, context);
+                        return null;
+                    });
+                } else {
+                    baseNode.compute(inputs, context);
+                }
+            } else {
+                node.compute(inputs);
+            }
+            executionCache.record(node);
+            recomputedThisRun.add(node.getId());
+            profiler.recordNode(node, System.nanoTime() - startedAt);
+            guard.recordStep();
+            nodeStates.put(node.getId(), NodeState.VISITED);
+            return true;
+        } catch (Exception e) {
+            LOGGER.error("Node {} failed during execution: {}", node.getDisplayName(), e.getMessage(), e);
+            nodeStates.put(node.getId(), NodeState.ERROR);
+            lastExecutionProfile = profiler.finish();
+            clearGraphPreviews();
+            return false;
+        }
     }
 
     private void clearGraphPreviews() {
@@ -262,6 +385,9 @@ public class NodeExecutor {
 
     private boolean requiresRecomputeDueToScopedUpstream(INode node, Set<UUID> recomputedThisRun) {
         for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (!ExecutionPortKind.isDataConnection(connection)) {
+                continue;
+            }
             if (!connection.targetNode.getId().equals(node.getId())) {
                 continue;
             }
@@ -291,6 +417,9 @@ public class NodeExecutor {
         }
 
         for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (!ExecutionPortKind.isDataConnection(connection)) {
+                continue;
+            }
             if (connection.targetNode.getId().equals(node.getId())) {
                 Object value = connection.sourceNode.getOutput(connection.sourcePort.getId());
                 mergeCollectedInput(inputs, inputPortsById.get(connection.targetPort.getId()), value);

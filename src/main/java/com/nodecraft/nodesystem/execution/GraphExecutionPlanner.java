@@ -1,6 +1,7 @@
 package com.nodecraft.nodesystem.execution;
 
 import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.execution.ExecutionPortKind;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 
 import java.util.ArrayList;
@@ -62,6 +63,9 @@ public final class GraphExecutionPlanner {
         for (INode node : topologicalOrder) {
             int level = 0;
             for (NodeGraph.Connection connection : graph.getConnections()) {
+                if (!ExecutionPortKind.isDataConnection(connection)) {
+                    continue;
+                }
                 if (!connection.targetNode.getId().equals(node.getId())) {
                     continue;
                 }
@@ -95,6 +99,9 @@ public final class GraphExecutionPlanner {
         if (!visited.contains(node.getId())) {
             temporaryMarked.add(node.getId());
             for (NodeGraph.Connection connection : graph.getConnections()) {
+                if (!ExecutionPortKind.isDataConnection(connection)) {
+                    continue;
+                }
                 if (connection.targetNode.getId().equals(node.getId())
                         && !visit(connection.sourceNode, graph, visited, temporaryMarked, result)) {
                     return false;

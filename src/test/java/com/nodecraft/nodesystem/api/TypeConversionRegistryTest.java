@@ -11,6 +11,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class TypeConversionRegistryTest {
 
     @Test
+    void execTypeOnlyConnectsToExecType() {
+        assertTrue(NodeDataType.isConnectableTo(NodeDataType.EXEC, NodeDataType.EXEC));
+        assertFalse(NodeDataType.isConnectableTo(NodeDataType.EXEC, NodeDataType.BOOLEAN));
+        assertFalse(NodeDataType.isConnectableTo(NodeDataType.ANY, NodeDataType.EXEC));
+        assertEquals(TypeConversionRegistry.ConversionPolicy.UNSUPPORTED,
+                TypeConversionRegistry.classify(NodeDataType.EXEC, NodeDataType.BOOLEAN));
+    }
+
+    @Test
     void anyTypeIsImplicitlyConnectable() {
         assertEquals(TypeConversionRegistry.ConversionPolicy.IMPLICIT_SAFE,
             TypeConversionRegistry.classify(NodeDataType.ANY, NodeDataType.GEOMETRY));
