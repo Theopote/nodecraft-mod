@@ -13,6 +13,7 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
+import com.nodecraft.nodesystem.execution.NodeExecutionCache;
 
 /**
  * 节点图类，表示一组相互连接的节点网络
@@ -24,6 +25,7 @@ public class NodeGraph {
     private final List<INode> nodes = new ArrayList<>();
     private final Map<UUID, INode> nodeMap = new HashMap<>();
     private final List<Connection> connections = new ArrayList<>();
+    private final NodeExecutionCache executionCache = new NodeExecutionCache();
     
     /**
      * 构造一个空的节点图
@@ -65,6 +67,10 @@ public class NodeGraph {
     public void setName(String name) {
         this.name = name;
     }
+
+    public NodeExecutionCache getExecutionCache() {
+        return executionCache;
+    }
     
     /**
      * 添加节点到图中
@@ -78,6 +84,7 @@ public class NodeGraph {
         
         nodes.add(node);
         nodeMap.put(node.getId(), node);
+        executionCache.clear();
         return true;
     }
     
@@ -109,6 +116,7 @@ public class NodeGraph {
         nodes.remove(node);
         nodeMap.remove(nodeId);
         cleanupRemovedNodeSideEffects(node);
+        executionCache.clear();
         return true;
     }
 
@@ -196,6 +204,7 @@ public class NodeGraph {
             return false;
         }
 
+        executionCache.clear();
         return true;
     }
 
@@ -248,6 +257,7 @@ public class NodeGraph {
             
             // 移除连接
             connections.remove(connection);
+            executionCache.clear();
         }
     }
     

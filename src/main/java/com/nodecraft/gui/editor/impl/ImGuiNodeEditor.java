@@ -19,6 +19,8 @@ import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
+import com.nodecraft.nodesystem.execution.IncrementalExecutionOptions;
+import com.nodecraft.nodesystem.execution.IncrementalExecutionPlanner;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
 import com.nodecraft.nodesystem.graph.GraphSerializer;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -133,8 +135,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         if (currentGraph.getNode(node.getId()) == null) {
             return;
         }
-        invalidatedNodeIds.clear();
-        invalidatedNodeIds.addAll(currentGraph.getDirtyImpactNodeIds(node.getId()));
+        invalidatedNodeIds.addAll(IncrementalExecutionPlanner.resolveInvalidationScope(currentGraph, node.getId()));
         graphDirtyEpoch++;
         io.markDirty();
         NodeCraft.LOGGER.debug(
@@ -151,6 +152,9 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             return;
         }
         invalidatedNodeIds.clear();
+        if (currentGraph != null) {
+            currentGraph.getExecutionCache().clear();
+        }
         graphDirtyEpoch++;
         io.markDirty();
         NodeCraft.LOGGER.debug("Graph structure dirty. graphDirtyEpoch={}", graphDirtyEpoch);
@@ -2149,7 +2153,13 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         java.util.Set<UUID> executionScope = hasPendingDirtyExecution && !invalidatedNodeIds.isEmpty()
                 ? new HashSet<>(invalidatedNodeIds)
                 : null;
-        autoPreviewExecutor = new NodeExecutor(currentGraph, new ExecutionContext(world, serverPlayer), executionScope);
+        invalidatedNodeIds.clear();
+        autoPreviewExecutor = new NodeExecutor(
+                currentGraph,
+                new ExecutionContext(world, serverPlayer),
+                executionScope,
+                IncrementalExecutionOptions.previewDefaults()
+        );
         NodeCraft.LOGGER.debug(
                 "自动执行预览图: reason={}, dirtyVersion={}, nodes={}, mode={}, scopeSize={}",
                 triggerReason,

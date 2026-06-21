@@ -48,6 +48,7 @@ public class NodeExecutor {
     private final NodeGraph graph;
     private final ExecutionContext context;
     private final Set<UUID> executionScopeNodeIds;
+    private final IncrementalExecutionOptions incrementalOptions;
     private final Map<UUID, NodeState> nodeStates = new HashMap<>();
     private final AtomicBoolean isExecuting = new AtomicBoolean(false);
     private volatile CompletableFuture<Boolean> executionFuture;
@@ -71,9 +72,19 @@ public class NodeExecutor {
     }
 
     public NodeExecutor(NodeGraph graph, ExecutionContext context, Set<UUID> executionScopeNodeIds) {
+        this(graph, context, executionScopeNodeIds, IncrementalExecutionOptions.defaults());
+    }
+
+    public NodeExecutor(
+            NodeGraph graph,
+            ExecutionContext context,
+            Set<UUID> executionScopeNodeIds,
+            IncrementalExecutionOptions incrementalOptions
+    ) {
         this.graph = graph;
         this.context = context;
         this.executionScopeNodeIds = executionScopeNodeIds == null ? null : new HashSet<>(executionScopeNodeIds);
+        this.incrementalOptions = incrementalOptions == null ? IncrementalExecutionOptions.defaults() : incrementalOptions;
     }
 
     public ExecutionProfiler.Profile getLastExecutionProfile() {
@@ -167,13 +178,15 @@ public class NodeExecutor {
         );
 
         int executedCount = 0;
+        Set<UUID> recomputedThisRun = new HashSet<>();
+        NodeExecutionCache executionCache = graph.getExecutionCache();
         for (INode node : sortedNodes) {
             if (Thread.currentThread().isInterrupted()) {
                 lastExecutionProfile = profiler.finish();
                 clearGraphPreviews();
                 return false;
             }
-            if (!shouldExecuteNode(node)) {
+            if (!shouldExecuteNode(node, recomputedThisRun, executionCache)) {
                 nodeStates.put(node.getId(), NodeState.VISITED);
                 continue;
             }
@@ -193,6 +206,8 @@ public class NodeExecutor {
                 } else {
                     node.compute(inputs);
                 }
+                executionCache.record(node);
+                recomputedThisRun.add(node.getId());
                 profiler.recordNode(node, System.nanoTime() - startedAt);
                 executedCount++;
                 nodeStates.put(node.getId(), NodeState.VISITED);
@@ -227,8 +242,45 @@ public class NodeExecutor {
         }
     }
 
-    private boolean shouldExecuteNode(INode node) {
-        return executionScopeNodeIds == null || executionScopeNodeIds.isEmpty() || executionScopeNodeIds.contains(node.getId());
+    private boolean shouldExecuteNode(INode node, Set<UUID> recomputedThisRun, NodeExecutionCache executionCache) {
+        if (executionScopeNodeIds == null || executionScopeNodeIds.isEmpty()) {
+            return true;
+        }
+        if (!executionScopeNodeIds.contains(node.getId())) {
+            return false;
+        }
+        if (node instanceof BaseNode baseNode && baseNode.isDirty()) {
+            return true;
+        }
+        if (incrementalOptions.skipCachedNodesInPartialScope()
+                && executionCache.hasValidCachedOutput(node)
+                && !requiresRecomputeDueToScopedUpstream(node, recomputedThisRun)) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean requiresRecomputeDueToScopedUpstream(INode node, Set<UUID> recomputedThisRun) {
+        for (NodeGraph.Connection connection : graph.getConnections()) {
+            if (!connection.targetNode.getId().equals(node.getId())) {
+                continue;
+            }
+            UUID sourceId = connection.sourceNode.getId();
+            if (!executionScopeNodeIds.contains(sourceId)) {
+                continue;
+            }
+            if (recomputedThisRun.contains(sourceId)) {
+                return true;
+            }
+            NodeState upstreamState = nodeStates.get(sourceId);
+            if (upstreamState == null || upstreamState == NodeState.NOT_VISITED) {
+                return true;
+            }
+            if (connection.sourceNode instanceof BaseNode baseSource && baseSource.isDirty()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Map<String, Object> collectNodeInputs(INode node) {

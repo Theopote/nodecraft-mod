@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -89,6 +90,67 @@ class NodeExecutorIntegrationTest {
     }
 
     @Test
+    void partialExecutionSkipsCachedCleanNodesInScopeWhenPreviewOptionsEnabled() {
+        NodeGraph graph = new NodeGraph("partial-cache-skip");
+        CountingNode upstream = new CountingNode("upstream");
+        CountingNode middle = new CountingNode("middle");
+        CountingNode downstream = new CountingNode("downstream");
+        graph.addNode(upstream);
+        graph.addNode(middle);
+        graph.addNode(downstream);
+        graph.connect(upstream.getId(), "out", middle.getId(), "in");
+        graph.connect(middle.getId(), "out", downstream.getId(), "in");
+
+        NodeExecutor fullRun = new NodeExecutor(graph);
+        assertTrue(fullRun.executeSync());
+        assertEquals(1, upstream.executionCount());
+        assertEquals(1, middle.executionCount());
+        assertEquals(1, downstream.executionCount());
+
+        Set<UUID> unchangedScope = Set.of(middle.getId(), downstream.getId());
+        NodeExecutor partialRun = new NodeExecutor(
+                graph,
+                null,
+                unchangedScope,
+                IncrementalExecutionOptions.previewDefaults()
+        );
+        assertTrue(partialRun.executeSync());
+        assertEquals(1, upstream.executionCount());
+        assertEquals(1, middle.executionCount(), "clean cached nodes in scope should be skipped");
+        assertEquals(1, downstream.executionCount(), "clean cached nodes in scope should be skipped");
+    }
+
+    @Test
+    void partialExecutionWithPreviewOptionsRecomputesDirtyUpstreamChain() {
+        NodeGraph graph = new NodeGraph("partial-cache-chain");
+        CountingNode upstream = new CountingNode("upstream");
+        CountingNode middle = new CountingNode("middle");
+        CountingNode downstream = new CountingNode("downstream");
+        graph.addNode(upstream);
+        graph.addNode(middle);
+        graph.addNode(downstream);
+        graph.connect(upstream.getId(), "out", middle.getId(), "in");
+        graph.connect(middle.getId(), "out", downstream.getId(), "in");
+
+        assertTrue(new NodeExecutor(graph).executeSync());
+
+        upstream.markDirty();
+        Set<UUID> dirtyScope = IncrementalExecutionPlanner.resolveInvalidationScope(graph, upstream.getId());
+        assertEquals(3, dirtyScope.size(), "scope should include upstream, middle, and downstream");
+        assertTrue(dirtyScope.contains(middle.getId()), "middle should be in invalidation scope");
+        NodeExecutor partialRun = new NodeExecutor(
+                graph,
+                null,
+                dirtyScope,
+                IncrementalExecutionOptions.previewDefaults()
+        );
+        assertTrue(partialRun.executeSync());
+        assertEquals(2, upstream.executionCount(), "upstream");
+        assertEquals(2, middle.executionCount(), "middle");
+        assertEquals(2, downstream.executionCount(), "downstream");
+    }
+
+    @Test
     void recordsExecutionProfileAfterSuccessfulRun() {
         NodeGraph graph = new NodeGraph("profile");
         PassThroughNode source = new PassThroughNode("source", "value");
@@ -150,13 +212,15 @@ class NodeExecutorIntegrationTest {
 
         private CountingNode(String suffix) {
             super(java.util.UUID.randomUUID(), "test.count." + suffix);
+            addInputPort(new BasePort("in", "In", "input", NodeDataType.ANY, this));
             addOutputPort(new BasePort("out", "Out", "output", NodeDataType.STRING, this));
         }
 
         @Override
         public void processNode(@Nullable ExecutionContext context) {
             executions.incrementAndGet();
-            outputValues.put("out", payload);
+            Object incoming = inputValues.get("in");
+            outputValues.put("out", incoming != null ? incoming : payload);
         }
 
         int executionCount() {
@@ -165,6 +229,7 @@ class NodeExecutorIntegrationTest {
 
         void setPayload(String payload) {
             this.payload = payload;
+            markDirty();
         }
     }
 }

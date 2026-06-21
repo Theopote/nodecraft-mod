@@ -42,7 +42,30 @@ Enable debug logging for `com.nodecraft.nodesystem.execution.NodeExecutor` to se
 
 Use `executor.getLastExecutionProfile()` from tests or editor tooling for programmatic inspection.
 
-## Related backlog (review 4.1 / 4.2)
+## Incremental execution (4.2)
 
-- Incremental execution cache and smarter dirty propagation (partial scope is only the first step)
+Partial re-execution avoids recomputing the whole graph when only part of it changed.
+
+| Component | Location | Role |
+|-----------|----------|------|
+| Invalidation scope | `IncrementalExecutionPlanner#resolveInvalidationScope` | Changed node + all downstream dependents |
+| Dirty merge (editor) | `ImGuiNodeEditor#handleNodeDirty` | Unions scopes across debounced dirty events |
+| Execution cache | `NodeGraph#getExecutionCache` / `NodeExecutionCache` | Stores last successful `dirtyVersion` per node |
+| Preview skip | `IncrementalExecutionOptions.previewDefaults()` | Skips clean cached nodes still inside partial scope |
+
+### How a partial preview run works
+
+1. A node parameter changes → `BaseNode#markDirty()` bumps `dirtyVersion`.
+2. The editor merges `resolveInvalidationScope(graph, nodeId)` into `invalidatedNodeIds`.
+3. After debounce, `NodeExecutor` runs with that scope and `previewDefaults()`.
+4. Nodes **outside** the scope reuse their in-memory outputs (existing behaviour).
+5. Nodes **inside** the scope with a valid cache and no recomputed upstream-in-scope neighbour are skipped.
+6. After a successful run, `NodeExecutionCache#record` stores each executed node's version.
+
+Graph topology changes (`connect`, `removeNode`, etc.) clear both the editor invalidation set and `NodeExecutionCache`.
+
+Manual full runs (`MenuBarRenderer`, tests) use `IncrementalExecutionOptions.defaults()` — no cache skip inside partial scope.
+
+## Related backlog
+
 - Geometry kernel optimizations (voxelizer, SDF sampling) usually dominate graph overhead
