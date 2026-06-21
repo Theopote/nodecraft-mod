@@ -1,8 +1,11 @@
 package com.nodecraft.gui.components.node;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
 import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.compat.DeprecatedNodeCatalog;
 import com.nodecraft.nodesystem.graph.NodeGraph;
+import com.nodecraft.nodesystem.registry.NodeRegistry;
 import com.nodecraft.nodesystem.nodes.output.execute.ApplyChangesNode;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalForkNode;
 import com.nodecraft.nodesystem.nodes.utilities.assist.SignalMergeNode;
@@ -17,6 +20,34 @@ import java.util.function.Supplier;
 public final class NodeActionPanel {
 
     private NodeActionPanel() {
+    }
+
+    public static void renderDeprecatedNodeControls(INode selectedNode, Runnable replaceAction) {
+        if (!DeprecatedNodeCatalog.isLiveReplaceable(selectedNode)) {
+            return;
+        }
+
+        ImGui.pushStyleColor(ImGuiCol.Text, 1.0f, 0.75f, 0.2f, 1.0f);
+        ImGui.textWrapped("Deprecated Node");
+        ImGui.popStyleColor();
+
+        DeprecatedNodeCatalog.ReplacementSpec spec = DeprecatedNodeCatalog.getReplacementSpec(selectedNode.getTypeId());
+        if (spec != null) {
+            ImGui.textWrapped(spec.migrationHint());
+        }
+
+        String buttonLabel = "Replace Deprecated Node";
+        if (spec != null) {
+            var replacementInfo = NodeRegistry.getInstance().getNodeInfo(spec.replacementTypeId());
+            if (replacementInfo != null) {
+                buttonLabel = "Replace with " + replacementInfo.getDisplayName();
+            }
+        }
+
+        if (ImGui.button(buttonLabel)) {
+            replaceAction.run();
+        }
+        ImGui.separator();
     }
 
     public static void renderAssistNodeControls(INode selectedNode, Supplier<NodeGraph> graphSupplier) {

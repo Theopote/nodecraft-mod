@@ -6,9 +6,12 @@ import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
+import com.nodecraft.nodesystem.io.SavedConnection;
 import com.nodecraft.nodesystem.io.SavedGraph;
 import com.nodecraft.nodesystem.io.SavedNode;
+import com.nodecraft.nodesystem.nodes.geometry.boolops.SdfBooleanNode;
 import com.nodecraft.nodesystem.nodes.math.logic.IfNode;
+import com.nodecraft.nodesystem.nodes.output.execute.GeometryToBlocksNode;
 import com.nodecraft.nodesystem.nodes.variable.SetVariableNode;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import org.jetbrains.annotations.Nullable;
@@ -34,6 +37,8 @@ class GraphSerializerTest {
         registry.registerNode(new NodeInfo("test.pass", "Pass", "pass-through test node", "test", 0, PassNode.class));
         registry.registerNode(new NodeInfo("math.logic.if", "If", "if node", "math.logic", 0, IfNode.class));
         registry.registerNode(new NodeInfo("variable.set", "Set Variable", "set variable", "variable", 0, SetVariableNode.class));
+        registry.registerNode(new NodeInfo("output.execute.bake_geometry_to_blocks", "Bake Geometry To Blocks", "bake geometry", "output.execute", 0, GeometryToBlocksNode.class));
+        registry.registerNode(new NodeInfo("geometry.boolean.sdf_boolean", "SDF Boolean", "sdf boolean", "geometry.boolean", 0, SdfBooleanNode.class));
     }
 
     @AfterEach
@@ -169,6 +174,95 @@ class GraphSerializerTest {
         assertEquals(1, report.migratedNodeCount());
         assertEquals("input.basic.boolean_toggle", legacyNode.typeId);
         assertTrue(report.migratedTypeIds().stream().anyMatch(entry -> entry.contains("input.numeric.boolean_toggle")));
+    }
+
+    @Test
+    void migrateCompatibilityNodesRemapsLegacyBakeNodeStateAndInputPort() {
+        SavedGraph savedGraph = new SavedGraph();
+        savedGraph.graphName = "legacy bake";
+        SavedNode bakeNode = new SavedNode();
+        bakeNode.nodeId = UUID.randomUUID().toString();
+        bakeNode.typeId = "output.execute.bake_box_to_blocks";
+        bakeNode.state = Map.of("fillBox", false);
+        SavedConnection connection = new SavedConnection();
+        connection.sourceNodeId = UUID.randomUUID().toString();
+        connection.sourcePortId = "output_box_geometry";
+        connection.targetNodeId = bakeNode.nodeId;
+        connection.targetPortId = "input_box_geometry";
+        savedGraph.nodes = List.of(bakeNode);
+        savedGraph.connections = List.of(connection);
+
+        GraphSerializer.MigrationReport report = GraphSerializer.migrateCompatibilityNodes(savedGraph);
+
+        assertTrue(report.hasChanges());
+        assertEquals("output.execute.bake_geometry_to_blocks", bakeNode.typeId);
+        assertEquals(false, ((Map<?, ?>) bakeNode.state).get("fillGeometry"));
+        assertEquals("input_geometry", connection.targetPortId);
+    }
+
+    @Test
+    void migrateCompatibilityNodesRemapsLegacySdfSmoothBooleanState() {
+        SavedGraph savedGraph = new SavedGraph();
+        SavedNode sdfNode = new SavedNode();
+        sdfNode.nodeId = UUID.randomUUID().toString();
+        sdfNode.typeId = "geometry.boolean.sdf_smooth_boolean";
+        sdfNode.state = Map.of("operation", "UNION", "defaultSmoothK", 2.5d);
+        savedGraph.nodes = List.of(sdfNode);
+
+        GraphSerializer.migrateCompatibilityNodes(savedGraph);
+
+        assertEquals("geometry.boolean.sdf_boolean", sdfNode.typeId);
+        assertEquals(2.5d, ((Map<?, ?>) sdfNode.state).get("smoothK"));
+    }
+
+    @Test
+    void fromSavedGraphLoadsMigratedLegacyBakeNode() {
+        SavedGraph savedGraph = new SavedGraph();
+        savedGraph.graphName = "legacy bake load";
+        SavedNode bakeNode = new SavedNode();
+        bakeNode.nodeId = UUID.randomUUID().toString();
+        bakeNode.typeId = "output.execute.bake_cylinder_to_blocks";
+        bakeNode.state = Map.of("fillCylinder", true);
+        savedGraph.nodes = List.of(bakeNode);
+        savedGraph.connections = List.of();
+
+        NodeGraph loaded = GraphSerializer.fromSavedGraph(savedGraph);
+
+        assertEquals(1, loaded.getNodes().size());
+        GeometryToBlocksNode geometryToBlocks = loaded.getNodes().stream()
+            .filter(GeometryToBlocksNode.class::isInstance)
+            .map(GeometryToBlocksNode.class::cast)
+            .findFirst()
+            .orElseThrow();
+        assertTrue(geometryToBlocks.isFillGeometry());
+    }
+
+    @Test
+    void fromSavedGraphLoadsMigratedLegacySdfBooleanNode() {
+        SavedGraph savedGraph = new SavedGraph();
+        SavedNode sdfNode = new SavedNode();
+        sdfNode.nodeId = UUID.randomUUID().toString();
+        sdfNode.typeId = "geometry.boolean.sdf_smooth_boolean";
+        sdfNode.state = Map.of("defaultSmoothK", 1.25d);
+        savedGraph.nodes = List.of(sdfNode);
+        savedGraph.connections = List.of();
+
+        NodeGraph loaded = GraphSerializer.fromSavedGraph(savedGraph);
+
+        SdfBooleanNode sdfBoolean = loaded.getNodes().stream()
+            .filter(SdfBooleanNode.class::isInstance)
+            .map(SdfBooleanNode.class::cast)
+            .findFirst()
+            .orElseThrow();
+        assertEquals(1.25d, readSmoothK(sdfBoolean));
+    }
+
+    private static double readSmoothK(SdfBooleanNode node) {
+        Object state = node.getNodeState();
+        if (state instanceof Map<?, ?> map && map.get("smoothK") instanceof Number number) {
+            return number.doubleValue();
+        }
+        return 0.0d;
     }
 
     public static final class PassNode extends BaseNode {

@@ -8,6 +8,7 @@ import com.nodecraft.nodesystem.io.SavedConnection;
 import com.nodecraft.nodesystem.io.SavedGraph;
 import com.nodecraft.nodesystem.io.SavedNode;
 import com.nodecraft.nodesystem.io.SavedPosition;
+import org.jetbrains.annotations.Nullable;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -145,66 +145,6 @@ public class GraphSerializer {
     public static NodeGraph fromJsonToGraph(String json) {
         SavedGraph savedGraph = fromJson(json);
         return fromSavedGraph(savedGraph);
-    }
-
-    /**
-     * Compatibility hook kept for callers that still invoke migration preflight.
-     * Performs best-effort type-id remapping for renamed/relocated nodes.
-     */
-    public static MigrationReport migrateCompatibilityNodes(SavedGraph savedGraph) {
-        if (savedGraph == null || savedGraph.nodes == null || savedGraph.nodes.isEmpty()) {
-            return MigrationReport.empty();
-        }
-
-        Map<String, String> typeIdRemap = legacyTypeIdRemap();
-        if (typeIdRemap.isEmpty()) {
-            return MigrationReport.empty();
-        }
-
-        int migrated = 0;
-        List<String> migratedTypes = new ArrayList<>();
-        List<String> notes = new ArrayList<>();
-
-        for (SavedNode savedNode : savedGraph.nodes) {
-            if (savedNode == null || savedNode.typeId == null || savedNode.typeId.isBlank()) {
-                continue;
-            }
-            String oldId = savedNode.typeId;
-            String newId = typeIdRemap.get(oldId);
-            if (newId == null || newId.equals(oldId)) {
-                continue;
-            }
-
-            savedNode.typeId = newId;
-            migrated++;
-            if (!migratedTypes.contains(oldId + "->" + newId)) {
-                migratedTypes.add(oldId + "->" + newId);
-            }
-        }
-
-        if (migrated > 0) {
-            notes.add("已自动映射旧节点类型 ID 到新版 ID，请保存以写回新格式。");
-        }
-        return migrated > 0
-            ? new MigrationReport(migrated, migratedTypes, notes)
-            : MigrationReport.empty();
-    }
-
-    private static Map<String, String> legacyTypeIdRemap() {
-        Map<String, String> remap = new HashMap<>();
-        // Legacy id kept in older graphs before input category normalization.
-        remap.put("input.numeric.boolean_toggle", "input.basic.boolean_toggle");
-        return Collections.unmodifiableMap(remap);
-    }
-
-    public record MigrationReport(int migratedNodeCount, List<String> migratedTypeIds, List<String> notes) {
-        public static MigrationReport empty() {
-            return new MigrationReport(0, List.of(), List.of());
-        }
-
-        public boolean hasChanges() {
-            return migratedNodeCount > 0;
-        }
     }
 
     public static NodeGraph loadFromFile(Path filePath) throws IOException {

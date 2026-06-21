@@ -173,12 +173,6 @@ public class NodeRegistry {
                 nodeInfo.getNodeClass());
         normalizedNodeInfo.setIcon(nodeInfo.getIcon());
 
-        if (shouldSkipRegistration(normalizedNodeInfo)) {
-            NodeCraft.LOGGER.debug("Skipped registration for deprecated development-only node: {} (ID: {})",
-                normalizedNodeInfo.getDisplayName(), normalizedId);
-            return false;
-        }
-
         if (nodeInfoMap.containsKey(normalizedId)) {
             NodeCraft.LOGGER.warn("Duplicate node registration attempted for ID: {} (title: {}). Skipping.",
                     normalizedId, nodeInfo.getDisplayName());
@@ -208,13 +202,6 @@ public class NodeRegistry {
             nodeInfoMap.remove(normalizedId);
             return false;
         }
-    }
-
-    private boolean shouldSkipRegistration(NodeInfo nodeInfo) {
-        if (nodeInfo == null || nodeInfo.getNodeClass() == null) {
-            return false;
-        }
-        return nodeInfo.getNodeClass().isAnnotationPresent(Deprecated.class);
     }
 
     /**

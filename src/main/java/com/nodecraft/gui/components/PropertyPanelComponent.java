@@ -765,6 +765,16 @@ public class PropertyPanelComponent implements EditorComponent {
     private void renderNodeProperties() {
         if (selectedNode == null) return;
 
+        NodeActionPanel.renderDeprecatedNodeControls(selectedNode, () -> {
+            try {
+                if (!ImGuiNodeEditor.getInstance().replaceSelectedDeprecatedNode()) {
+                    NodeCraft.LOGGER.warn("Failed to replace deprecated node {}", selectedNode.getDisplayName());
+                }
+            } catch (Exception e) {
+                NodeCraft.LOGGER.error("Failed to replace deprecated node: {}", e.getMessage(), e);
+            }
+        });
+
         NodeActionPanel.renderAssistNodeControls(selectedNode, this::getNodeGraph);
 
         List<PropertyDescriptor> properties = getPropertiesForNode(selectedNode.getClass()).stream()

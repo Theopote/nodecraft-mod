@@ -20,6 +20,8 @@ import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.execution.ExecutionContext;
 import com.nodecraft.nodesystem.execution.NodeExecutor;
+import com.nodecraft.nodesystem.compat.DeprecatedNodeCatalog;
+import com.nodecraft.nodesystem.compat.DeprecatedNodeReplacementService;
 import com.nodecraft.nodesystem.graph.GraphSerializer;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.graph.SubgraphExtractionService;
@@ -1699,6 +1701,49 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
             NodeCraft.LOGGER.error("Failed to dissolve selected subgraph: {}", e.getMessage(), e);
             return false;
         }
+    }
+
+    public boolean replaceSelectedDeprecatedNode() {
+        if (currentGraph == null || selectedNodeIds.size() != 1) {
+            return false;
+        }
+
+        UUID nodeId = selectedNodeIds.iterator().next();
+        INode selected = currentGraph.getNode(nodeId);
+        if (!(selected instanceof BaseNode baseNode) || !DeprecatedNodeCatalog.isLiveReplaceable(baseNode)) {
+            return false;
+        }
+
+        boolean wasRecording = history != null && history.isRecording();
+        syncGraphNodePositions(currentGraph, nodePositions);
+        SavedGraph beforeSnapshot = wasRecording ? toSavedGraphWithPositions(currentGraph, nodePositions) : null;
+        NodePosition previousPosition = nodePositions.get(nodeId);
+
+        DeprecatedNodeReplacementService.ReplaceResult result =
+            DeprecatedNodeReplacementService.replaceNode(currentGraph, baseNode);
+        if (!result.success() || result.newNodeId() == null) {
+            NodeCraft.LOGGER.warn("Deprecated node replacement failed: {}", result.message());
+            return false;
+        }
+
+        if (previousPosition != null) {
+            nodePositions.put(result.newNodeId(), previousPosition);
+        } else {
+            nodePositions.remove(nodeId);
+        }
+
+        clearSelectedNodes();
+        setSelectedNodeId(result.newNodeId());
+        markGraphStructureDirty();
+        if (wasRecording) {
+            history.recordGraphTransaction(
+                "Replace Deprecated Node",
+                beforeSnapshot,
+                toSavedGraphWithPositions(currentGraph, nodePositions)
+            );
+        }
+        NodeCraft.LOGGER.info("Replaced deprecated node {} with {}", nodeId, result.newNodeId());
+        return true;
     }
 
     private Map<String, Object> buildSubgraphNodeState(
