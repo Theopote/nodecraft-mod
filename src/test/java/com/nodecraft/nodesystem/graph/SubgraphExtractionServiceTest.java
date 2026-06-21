@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.graph;
 
+import com.nodecraft.core.exception.GraphException;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.core.BasePort;
@@ -86,7 +87,7 @@ class SubgraphExtractionServiceTest {
     void rejectsEmptySelection() {
         NodeGraph graph = new NodeGraph("empty");
 
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+        GraphException error = assertThrows(GraphException.class,
                 () -> SubgraphExtractionService.extract(graph, Set.of(), "Nope"));
 
         assertTrue(error.getMessage().contains("empty"));
@@ -96,7 +97,7 @@ class SubgraphExtractionServiceTest {
     void ignoresIdsThatAreNotInGraphButRequiresAtLeastOneSelectedNode() {
         NodeGraph graph = new NodeGraph("empty");
 
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+        GraphException error = assertThrows(GraphException.class,
                 () -> SubgraphExtractionService.extract(graph, Set.of(UUID.randomUUID()), "Nope"));
 
         assertTrue(error.getMessage().contains("does not contain"));

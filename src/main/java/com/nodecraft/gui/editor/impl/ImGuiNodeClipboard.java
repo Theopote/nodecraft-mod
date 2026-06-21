@@ -10,6 +10,7 @@ import java.util.UUID;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.core.exception.NodeValidationException;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -294,7 +295,7 @@ public class ImGuiNodeClipboard implements ClipboardOwner {
                     try {
                         // 验证类型是否真的存在
                         registry.createNodeInstance(typeId);
-                    } catch (IllegalArgumentException e) {
+                    } catch (NodeValidationException e) {
                         // 类型不存在，尝试查找替代
                         NodeCraft.LOGGER.warn("节点类型 '{}' 不存在，尝试查找替代类型", typeId);
                         

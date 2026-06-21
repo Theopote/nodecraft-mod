@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.math.scalar_math;
 
+import com.nodecraft.core.exception.ExpressionEvaluationException;
 import com.nodecraft.gui.editor.impl.BaseCustomUINode;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
@@ -83,10 +84,10 @@ public class ExpressionNode extends BaseCustomUINode {
             Map<String, Double> variables = readVariables();
             double result = new Parser(expression, variables).parse();
             if (!Double.isFinite(result)) {
-                throw new ExpressionException("Result is not finite");
+                throw new ExpressionEvaluationException("Result is not finite");
             }
             updateOutput(result, true, "");
-        } catch (ExpressionException e) {
+        } catch (ExpressionEvaluationException e) {
             updateOutput(Double.NaN, false, e.getMessage());
         }
     }
@@ -256,7 +257,7 @@ public class ExpressionNode extends BaseCustomUINode {
 
         private double parse() {
             if (text.isBlank()) {
-                throw new ExpressionException("Expression is empty");
+                throw new ExpressionEvaluationException("Expression is empty");
             }
             double value = parseExpression();
             skipWhitespace();
@@ -554,8 +555,8 @@ public class ExpressionNode extends BaseCustomUINode {
             return Character.isLetterOrDigit(c) || c == '_';
         }
 
-        private ExpressionException error(String message) {
-            return new ExpressionException(message + " at " + Math.min(index + 1, text.length()));
+        private ExpressionEvaluationException error(String message) {
+            return new ExpressionEvaluationException(message + " at " + Math.min(index + 1, text.length()));
         }
 
         @FunctionalInterface
@@ -566,12 +567,6 @@ public class ExpressionNode extends BaseCustomUINode {
         @FunctionalInterface
         private interface BinaryFunction {
             double apply(double a, double b);
-        }
-    }
-
-    private static final class ExpressionException extends RuntimeException {
-        private ExpressionException(String message) {
-            super(message);
         }
     }
 }

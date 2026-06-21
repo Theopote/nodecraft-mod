@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.execution;
 
+import com.nodecraft.core.exception.NodeExecutionException;
 import com.nodecraft.nodesystem.minecraft.DefaultPlayerAccessor;
 import com.nodecraft.nodesystem.minecraft.PlayerAccessor;
 import java.util.Collections;
@@ -67,9 +68,9 @@ public class ExecutionContext implements com.nodecraft.nodesystem.api.ExecutionC
                 return future.get();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                throw new IllegalStateException("Failed to run node work on the Minecraft server thread", e);
+                throw new NodeExecutionException("Failed to run node work on the Minecraft server thread", e);
             } catch (ExecutionException e) {
-                throw new IllegalStateException("Node work failed on the Minecraft server thread", e.getCause());
+                throw new NodeExecutionException("Node work failed on the Minecraft server thread", e.getCause());
             }
         }
         return supplier.get();

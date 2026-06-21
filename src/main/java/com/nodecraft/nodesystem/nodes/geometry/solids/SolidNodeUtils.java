@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.geometry.solids;
 
+import com.nodecraft.core.exception.GeometryException;
 import com.nodecraft.nodesystem.datatypes.LineData;
 import com.nodecraft.nodesystem.datatypes.BoxFaceData;
 import com.nodecraft.nodesystem.datatypes.PointData;
@@ -184,7 +185,7 @@ final class SolidNodeUtils {
             case 0, 1 -> 1;
             case 2, 3 -> 0;
             case 4, 5 -> 2;
-            default -> throw new IllegalArgumentException("Unsupported box face index: " + faceIndex);
+            default -> throw new GeometryException("Unsupported box face index: " + faceIndex);
         };
         int direction = switch (faceIndex) {
             case 1, 3, 5 -> 1;
@@ -198,7 +199,7 @@ final class SolidNodeUtils {
             case 0 -> vector.x;
             case 1 -> vector.y;
             case 2 -> vector.z;
-            default -> throw new IllegalArgumentException("Unsupported axis: " + axis);
+            default -> throw new GeometryException("Unsupported axis: " + axis);
         };
     }
 
@@ -207,7 +208,7 @@ final class SolidNodeUtils {
             case 0 -> vector.x = value;
             case 1 -> vector.y = value;
             case 2 -> vector.z = value;
-            default -> throw new IllegalArgumentException("Unsupported axis: " + axis);
+            default -> throw new GeometryException("Unsupported axis: " + axis);
         }
     }
 

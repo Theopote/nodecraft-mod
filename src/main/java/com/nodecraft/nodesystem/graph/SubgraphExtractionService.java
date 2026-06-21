@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.graph;
 
+import com.nodecraft.core.exception.GraphException;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.io.SavedConnection;
@@ -41,10 +42,10 @@ public final class SubgraphExtractionService {
 
     public static ExtractionResult extract(NodeGraph sourceGraph, Set<UUID> selectedNodeIds, String subgraphName) {
         if (sourceGraph == null) {
-            throw new IllegalArgumentException("sourceGraph is required");
+            throw new GraphException("sourceGraph is required");
         }
         if (selectedNodeIds == null || selectedNodeIds.isEmpty()) {
-            throw new IllegalArgumentException("selectedNodeIds is empty");
+            throw new GraphException("selectedNodeIds is empty");
         }
 
         Set<UUID> selected = new LinkedHashSet<>();
@@ -54,7 +55,7 @@ public final class SubgraphExtractionService {
             }
         }
         if (selected.isEmpty()) {
-            throw new IllegalArgumentException("selectedNodeIds does not contain nodes from the graph");
+            throw new GraphException("selectedNodeIds does not contain nodes from the graph");
         }
 
         SavedGraph fullSavedGraph = GraphSerializer.toSavedGraph(sourceGraph);

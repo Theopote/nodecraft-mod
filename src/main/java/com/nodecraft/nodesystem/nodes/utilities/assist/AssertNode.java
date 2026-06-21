@@ -1,5 +1,6 @@
 package com.nodecraft.nodesystem.nodes.utilities.assist;
 
+import com.nodecraft.core.exception.NodeExecutionException;
 import com.nodecraft.nodesystem.api.NodeDataType;
 import com.nodecraft.nodesystem.api.NodeInfo;
 import com.nodecraft.nodesystem.api.NodeProperty;
@@ -64,7 +65,7 @@ public class AssertNode extends BaseNode {
             outputValues.put(OUTPUT_MESSAGE_ID, message);
             outputValues.put(OUTPUT_VALID_ID, false);
             if (failHard) {
-                throw new IllegalStateException(message);
+                throw new NodeExecutionException(message);
             }
             return;
         }
