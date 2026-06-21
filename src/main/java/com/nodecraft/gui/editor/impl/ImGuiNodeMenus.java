@@ -8,7 +8,6 @@ import java.util.UUID;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.node.NodeInfo;
-import com.nodecraft.nodesystem.compat.DeprecatedNodeCatalog;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
@@ -98,12 +97,6 @@ public class ImGuiNodeMenus {
                             }
                             if (ImGui.menuItem("Dissolve Subgraph")) {
                                 dissolveSubgraphTarget(rightClickedNodeId);
-                            }
-                            ImGui.separator();
-                        } else if (DeprecatedNodeCatalog.isLiveReplaceable(node)) {
-                            String replaceLabel = buildDeprecatedReplaceLabel(node);
-                            if (ImGui.menuItem(replaceLabel)) {
-                                replaceDeprecatedNodeTarget(rightClickedNodeId);
                             }
                             ImGui.separator();
                         }
@@ -467,43 +460,6 @@ public class ImGuiNodeMenus {
             }
         } catch (Exception e) {
             NodeCraft.LOGGER.error("Failed to dissolve subgraph from context menu: {}", e.getMessage(), e);
-            editor.clearSelectedNodes();
-            editor.getSelectedNodeIds().addAll(backupSelection);
-            editor.setSelectedNodeId(backupPrimary);
-        }
-    }
-
-    private String buildDeprecatedReplaceLabel(INode node) {
-        DeprecatedNodeCatalog.ReplacementSpec spec = DeprecatedNodeCatalog.getReplacementSpec(node.getTypeId());
-        if (spec == null) {
-            return "Replace Deprecated Node";
-        }
-        NodeInfo replacementInfo = NodeRegistry.getInstance().getNodeInfo(spec.replacementTypeId());
-        if (replacementInfo == null) {
-            return "Replace Deprecated Node";
-        }
-        return "Replace with " + replacementInfo.getDisplayName();
-    }
-
-    private void replaceDeprecatedNodeTarget(UUID nodeId) {
-        if (nodeId == null) {
-            return;
-        }
-
-        Set<UUID> backupSelection = new HashSet<>(editor.getSelectedNodeIds());
-        UUID backupPrimary = editor.getSelectedNodeId();
-
-        try {
-            editor.clearSelectedNodes();
-            editor.getSelectedNodeIds().add(nodeId);
-            editor.setSelectedNodeId(nodeId);
-            if (!editor.replaceSelectedDeprecatedNode()) {
-                editor.clearSelectedNodes();
-                editor.getSelectedNodeIds().addAll(backupSelection);
-                editor.setSelectedNodeId(backupPrimary);
-            }
-        } catch (Exception e) {
-            NodeCraft.LOGGER.error("Failed to replace deprecated node from context menu: {}", e.getMessage(), e);
             editor.clearSelectedNodes();
             editor.getSelectedNodeIds().addAll(backupSelection);
             editor.setSelectedNodeId(backupPrimary);

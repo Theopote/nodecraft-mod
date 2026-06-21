@@ -189,18 +189,6 @@ public class ImGuiNodeIO {
                 savedGraph.connections = new ArrayList<>();
             }
 
-            GraphSerializer.MigrationReport migrationReport = GraphSerializer.migrateCompatibilityNodes(savedGraph);
-            if (migrationReport.hasChanges()) {
-                NodeCraft.LOGGER.warn(
-                    "加载图时已自动迁移 {} 个兼容节点类型映射，类型: {}",
-                    migrationReport.migratedNodeCount(),
-                    migrationReport.migratedTypeIds()
-                );
-                for (String note : migrationReport.notes()) {
-                    NodeCraft.LOGGER.warn("兼容迁移提示: {}", note);
-                }
-            }
-
             // 创建新图
             String graphName = savedGraph.graphName != null ? savedGraph.graphName : "Loaded Graph";
             NodeGraph newGraph = new NodeGraph(graphName);
@@ -302,20 +290,6 @@ public class ImGuiNodeIO {
             if (skippedUnknownNodeTypes > 0) {
                 lastOperationError = "已部分加载：" + skippedUnknownNodeTypes + " 个节点类型未注册，已跳过。";
                 NodeCraft.LOGGER.warn("{}", lastOperationError);
-            }
-            if (migrationReport.hasChanges()) {
-                String migratedSummary = String.join(", ", migrationReport.migratedTypeIds());
-                String deprecatedWarning = "已自动迁移 " + migrationReport.migratedNodeCount()
-                    + " 个旧节点类型（类型: " + migratedSummary + "）。请保存以写回新格式。";
-                if (!migrationReport.notes().isEmpty()) {
-                    deprecatedWarning = deprecatedWarning + " 注意: " + String.join(" | ", migrationReport.notes());
-                }
-                if (lastOperationError == null || lastOperationError.isBlank()) {
-                    lastOperationError = deprecatedWarning;
-                } else {
-                    lastOperationError = lastOperationError + "；" + deprecatedWarning;
-                }
-                markDirty();
             }
 
             NodeCraft.LOGGER.info("节点图成功从文件加载: {}", filePath);

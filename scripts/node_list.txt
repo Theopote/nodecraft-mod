@@ -31,7 +31,6 @@ geometry.boolean.sdf_gradient_point|geometry.boolean|SDF Gradient At Point
 geometry.boolean.sdf_noise_displace|geometry.boolean|SDF Noise Displace
 geometry.boolean.sdf_sample_point|geometry.boolean|SDF Sample Point
 geometry.boolean.sdf_sample_points|geometry.boolean|SDF Sample Points
-geometry.boolean.sdf_smooth_boolean|geometry.boolean|SDF Smooth Boolean (Legacy)
 geometry.boolean.sdf_sphere|geometry.boolean|SDF Sphere
 geometry.boolean.sdf_to_geometry|geometry.boolean|SDF To Geometry
 geometry.boolean.sdf_torus|geometry.boolean|SDF Torus

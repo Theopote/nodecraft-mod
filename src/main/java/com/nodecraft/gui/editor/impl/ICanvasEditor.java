@@ -137,8 +137,6 @@ public interface ICanvasEditor {
 
     boolean dissolveSelectedSubgraph();
 
-    boolean replaceSelectedDeprecatedNode();
-
     boolean restoreGraphSnapshot(SavedGraph snapshot);
     
     /**
