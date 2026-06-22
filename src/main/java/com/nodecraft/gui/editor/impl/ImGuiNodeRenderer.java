@@ -10,6 +10,7 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
+import com.nodecraft.nodesystem.execution.ExecFrontierSnapshot;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.nodesystem.nodes.utilities.assist.TagRelayNode;
 import com.nodecraft.nodesystem.nodes.utilities.organization.SubgraphNode;
@@ -289,6 +290,33 @@ public class ImGuiNodeRenderer {
                     Math.max(1.0f, nodeBorderThicknessScaled * 0.65f));
         }
 
+        ExecFrontierSnapshot execFrontier = editor.getActiveExecFrontierSnapshot();
+        if (execFrontier.isActiveNode(nodeId)) {
+            float pulseAlpha = 0.55f + 0.35f * Math.abs(highlightSinValue);
+            int execGlow = cache.adjustAlphaCached(NodeRenderConstants.EXEC_FRONTIER_NODE_COLOR, pulseAlpha);
+            drawList.addRect(
+                    nodeScreenX - 2.0f * canvasZoom,
+                    nodeScreenY - 2.0f * canvasZoom,
+                    nodeScreenX + finalNodeWidthScaled + 2.0f * canvasZoom,
+                    nodeScreenY + finalNodeHeightScaled + 2.0f * canvasZoom,
+                    execGlow,
+                    nodeCornerRadiusScaled + 2.0f * canvasZoom,
+                    0,
+                    Math.max(nodeBorderThicknessScaled * 2.0f, 2.5f * canvasZoom)
+            );
+        } else if (execFrontier.isPendingNode(nodeId)) {
+            drawList.addRect(
+                    nodeScreenX - 1.0f * canvasZoom,
+                    nodeScreenY - 1.0f * canvasZoom,
+                    nodeScreenX + finalNodeWidthScaled + 1.0f * canvasZoom,
+                    nodeScreenY + finalNodeHeightScaled + 1.0f * canvasZoom,
+                    NodeRenderConstants.EXEC_FRONTIER_PENDING_NODE_COLOR,
+                    nodeCornerRadiusScaled + 1.0f * canvasZoom,
+                    0,
+                    Math.max(nodeBorderThicknessScaled * 1.5f, 2.0f * canvasZoom)
+            );
+        }
+
         // 为禁用节点添加虚线边框覆盖
         if (isDisabled) {
             int dashedBorderColor = cache.adjustBrightnessCached(borderColor, 1.3f);
@@ -471,10 +499,14 @@ public class ImGuiNodeRenderer {
             float currentPortY = portYOffset + i * (scaledTextLineHeight + scaledPortVerticalSpacing) + scaledTextLineHeight / 2;
 
             boolean isPortHighlighted = shouldHighlight && nodeId.equals(hoveredNodeId) && port.getId().equals(hoveredPortId) && !isHoveredPortOutput;
-            int portColor = NodeRenderConstants.getInputPortFillColor(port, isPortHighlighted);
-            int portBorderColor = NodeRenderConstants.getPortBorderColor(port, true, isPortHighlighted, navHighlightColor);
+            ExecFrontierSnapshot execFrontier = editor.getActiveExecFrontierSnapshot();
+            boolean execPortActive = execFrontier.isActive()
+                    && NodeRenderConstants.isExecPort(port)
+                    && execFrontier.isActiveNode(nodeId);
+            int portColor = NodeRenderConstants.getInputPortFillColor(port, isPortHighlighted || execPortActive);
+            int portBorderColor = NodeRenderConstants.getPortBorderColor(port, true, isPortHighlighted || execPortActive, navHighlightColor);
 
-            if (isPortHighlighted) {
+            if (isPortHighlighted || execPortActive) {
                 float pulseScale = 1.0f + 0.3f * highlightSinValue;
                 float portOuterRadiusAnim = portRadiusScaled * pulseScale;
 
@@ -516,10 +548,14 @@ public class ImGuiNodeRenderer {
             float outputTextX = outputPortCircleX - portRadiusScaled - scaledPortCircleToTextPadding - (displayTextWidthUnscaled * canvasZoom);
 
             boolean isPortHighlighted = shouldHighlight && nodeId.equals(hoveredNodeId) && port.getId().equals(hoveredPortId) && isHoveredPortOutput;
-            int portColor = NodeRenderConstants.getOutputPortFillColor(port, isPortHighlighted);
-            int portBorderColor = NodeRenderConstants.getPortBorderColor(port, false, isPortHighlighted, navHighlightColor);
+            ExecFrontierSnapshot execFrontier = editor.getActiveExecFrontierSnapshot();
+            boolean execPortActive = execFrontier.isActive()
+                    && NodeRenderConstants.isExecPort(port)
+                    && execFrontier.isActiveNode(nodeId);
+            int portColor = NodeRenderConstants.getOutputPortFillColor(port, isPortHighlighted || execPortActive);
+            int portBorderColor = NodeRenderConstants.getPortBorderColor(port, false, isPortHighlighted || execPortActive, navHighlightColor);
 
-            if (isPortHighlighted) {
+            if (isPortHighlighted || execPortActive) {
                 float pulseScale = 1.0f + 0.3f * highlightSinValue;
                 float portOuterRadiusAnim = portRadiusScaled * pulseScale;
 

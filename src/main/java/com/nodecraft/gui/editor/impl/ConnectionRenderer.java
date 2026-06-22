@@ -3,6 +3,7 @@ package com.nodecraft.gui.editor.impl;
 import java.util.Map;
 import java.util.UUID;
 import com.nodecraft.nodesystem.api.NodeDataType;
+import com.nodecraft.nodesystem.execution.ExecFrontierSnapshot;
 import com.nodecraft.nodesystem.execution.ExecutionPortKind;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import imgui.ImDrawList;
@@ -186,6 +187,8 @@ public class ConnectionRenderer {
                                       int lineColor, int typeMismatchLineColor, float hoveredLineThickness, float normalLineThickness,
                                       float highlightPortRadius) {
 
+        ExecFrontierSnapshot execFrontier = editor.getActiveExecFrontierSnapshot();
+
         for (NodeGraph.Connection connection : connections) {
             ImVec2 sourcePortPos = getPortScreenPosition(connection.sourceNode.getId(), connection.sourcePort.getId(), portScreenPositions);
             ImVec2 targetPortPos = getPortScreenPosition(connection.targetNode.getId(), connection.targetPort.getId(), portScreenPositions);
@@ -217,12 +220,36 @@ public class ConnectionRenderer {
                 } else {
                     normalColor = lineColor;
                 }
-                int currentLineColor = isCurrentConnectionHovered
-                        ? (isExecConnection ? NodeRenderConstants.CONNECTION_COLOR_EXEC_HIGHLIGHT : hoveredLineColor)
-                        : normalColor;
-                float currentThickness = isCurrentConnectionHovered
-                        ? hoveredLineThickness
-                        : (isExecConnection ? normalLineThickness + (0.75f * canvasZoom) : normalLineThickness);
+
+                boolean isActiveExecWire = isExecConnection && execFrontier.isActive()
+                        && execFrontier.highlightsExecWire(
+                        connection.sourceNode.getId(),
+                        connection.sourcePort.getId(),
+                        connection.targetNode.getId(),
+                        connection.targetPort.getId()
+                );
+
+                int currentLineColor;
+                if (isActiveExecWire) {
+                    currentLineColor = NodeRenderConstants.CONNECTION_COLOR_EXEC_HIGHLIGHT;
+                } else if (isCurrentConnectionHovered) {
+                    currentLineColor = isExecConnection
+                            ? NodeRenderConstants.CONNECTION_COLOR_EXEC_HIGHLIGHT
+                            : hoveredLineColor;
+                } else {
+                    currentLineColor = normalColor;
+                }
+
+                float currentThickness;
+                if (isActiveExecWire) {
+                    currentThickness = hoveredLineThickness;
+                } else if (isCurrentConnectionHovered) {
+                    currentThickness = hoveredLineThickness;
+                } else if (isExecConnection) {
+                    currentThickness = normalLineThickness + (0.75f * canvasZoom);
+                } else {
+                    currentThickness = normalLineThickness;
+                }
 
                 drawList.addBezierCubic(
                         startX, startY,
@@ -233,7 +260,7 @@ public class ConnectionRenderer {
                         currentThickness
                 );
 
-                if (isCurrentConnectionHovered) {
+                if (isCurrentConnectionHovered || isActiveExecWire) {
                     int sourceHighlight = isExecConnection
                             ? NodeRenderConstants.PORT_COLOR_EXEC_HIGHLIGHT
                             : NodeRenderConstants.PORT_COLOR_OUTPUT_HIGHLIGHT;
