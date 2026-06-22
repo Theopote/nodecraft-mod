@@ -35,17 +35,84 @@ public final class NodeRecommendationRulesLoader {
 
             JsonObject root = JsonParser.parseReader(new InputStreamReader(stream, StandardCharsets.UTF_8))
                     .getAsJsonObject();
+            normalizeStringRuleArrays(root);
             NodeRecommendationRules rules = GSON.fromJson(root, NodeRecommendationRules.class);
             if (rules == null) {
                 return new NodeRecommendationRules();
             }
 
-            coalesceStringListRules(root, rules);
             validateAgainstRegistry(rules);
             return rules;
         } catch (Exception e) {
             NodeCraft.LOGGER.error("Failed to load node recommendation rules: {}", e.getMessage(), e);
             return new NodeRecommendationRules();
+        }
+    }
+
+    private static void normalizeStringRuleArrays(JsonObject root) {
+        if (root.has("sourceCategories")) {
+            JsonObject categories = root.getAsJsonObject("sourceCategories");
+            for (String categoryKey : categories.keySet()) {
+                JsonObject category = categories.getAsJsonObject(categoryKey);
+                if (category.has("outputTypes")) {
+                    normalizePortDirectionMap(category.getAsJsonObject("outputTypes"));
+                }
+                if (category.has("inputTypes")) {
+                    normalizePortDirectionMap(category.getAsJsonObject("inputTypes"));
+                }
+            }
+        }
+
+        if (root.has("outputTypes")) {
+            JsonObject outputTypes = root.getAsJsonObject("outputTypes");
+            for (String typeKey : outputTypes.keySet()) {
+                normalizeDirectionLists(outputTypes.getAsJsonObject(typeKey));
+            }
+        }
+
+        if (root.has("sourceNodes")) {
+            JsonObject sourceNodes = root.getAsJsonObject("sourceNodes");
+            for (String nodeKey : sourceNodes.keySet()) {
+                JsonObject nodeRule = sourceNodes.getAsJsonObject(nodeKey);
+                if (nodeRule.has("outputs")) {
+                    normalizePortDirectionMap(nodeRule.getAsJsonObject("outputs"));
+                }
+                if (nodeRule.has("inputs")) {
+                    normalizePortDirectionMap(nodeRule.getAsJsonObject("inputs"));
+                }
+            }
+        }
+    }
+
+    private static void normalizePortDirectionMap(JsonObject portMap) {
+        for (String portKey : portMap.keySet()) {
+            normalizeDirectionLists(portMap.getAsJsonObject(portKey));
+        }
+    }
+
+    private static void normalizeDirectionLists(JsonObject directionContainer) {
+        normalizeRuleArray(directionContainer, "downstream");
+        normalizeRuleArray(directionContainer, "upstream");
+    }
+
+    private static void normalizeRuleArray(JsonObject container, String key) {
+        if (!container.has(key)) {
+            return;
+        }
+        JsonElement element = container.get(key);
+        if (!element.isJsonArray()) {
+            return;
+        }
+        JsonArray array = element.getAsJsonArray();
+        for (int i = 0; i < array.size(); i++) {
+            JsonElement entry = array.get(i);
+            if (!entry.isJsonPrimitive()) {
+                continue;
+            }
+            JsonObject objectEntry = new JsonObject();
+            objectEntry.addProperty("nodeId", entry.getAsString());
+            objectEntry.addProperty("order", i * 10);
+            array.set(i, objectEntry);
         }
     }
 
@@ -69,71 +136,6 @@ public final class NodeRecommendationRulesLoader {
             NodeCraft.LOGGER.debug("Unable to read dev recommendation rules from filesystem: {}", e.getMessage());
         }
         return null;
-    }
-
-    private static void coalesceStringListRules(JsonObject root, NodeRecommendationRules rules) {
-        if (root.has("sourceCategories") && rules.sourceCategories != null) {
-            JsonObject categories = root.getAsJsonObject("sourceCategories");
-            for (Map.Entry<String, NodeRecommendationRules.SourceCategoryRule> entry : rules.sourceCategories.entrySet()) {
-                if (!categories.has(entry.getKey()) || entry.getValue().outputTypes == null) {
-                    continue;
-                }
-                JsonObject categoryJson = categories.getAsJsonObject(entry.getKey());
-                if (!categoryJson.has("outputTypes")) {
-                    continue;
-                }
-                JsonObject outputTypesJson = categoryJson.getAsJsonObject("outputTypes");
-                for (Map.Entry<String, NodeRecommendationRules.PortDirectionRule> typeEntry
-                        : entry.getValue().outputTypes.entrySet()) {
-                    if (!outputTypesJson.has(typeEntry.getKey())) {
-                        continue;
-                    }
-                    JsonObject typeJson = outputTypesJson.getAsJsonObject(typeEntry.getKey());
-                    NodeRecommendationRules.PortDirectionRule portRule = typeEntry.getValue();
-                    portRule.downstream = mergeStringEntryList(typeJson, "downstream", portRule.downstream);
-                    portRule.upstream = mergeStringEntryList(typeJson, "upstream", portRule.upstream);
-                }
-            }
-        }
-
-        if (root.has("outputTypes") && rules.outputTypes != null) {
-            JsonObject outputTypesJson = root.getAsJsonObject("outputTypes");
-            for (Map.Entry<String, NodeRecommendationRules.OutputTypeRule> entry : rules.outputTypes.entrySet()) {
-                if (!outputTypesJson.has(entry.getKey())) {
-                    continue;
-                }
-                JsonObject typeJson = outputTypesJson.getAsJsonObject(entry.getKey());
-                NodeRecommendationRules.OutputTypeRule typeRule = entry.getValue();
-                typeRule.downstream = mergeStringEntryList(typeJson, "downstream", typeRule.downstream);
-                typeRule.upstream = mergeStringEntryList(typeJson, "upstream", typeRule.upstream);
-            }
-        }
-    }
-
-    private static List<NodeRecommendationRules.RuleEntry> mergeStringEntryList(
-            JsonObject json,
-            String key,
-            List<NodeRecommendationRules.RuleEntry> existing) {
-        if (!json.has(key)) {
-            return existing == null ? List.of() : existing;
-        }
-        JsonArray array = json.getAsJsonArray(key);
-        if (array.isEmpty() || !array.get(0).isJsonPrimitive()) {
-            return existing == null ? List.of() : existing;
-        }
-
-        List<NodeRecommendationRules.RuleEntry> entries = new ArrayList<>();
-        for (int i = 0; i < array.size(); i++) {
-            JsonElement element = array.get(i);
-            if (!element.isJsonPrimitive()) {
-                continue;
-            }
-            NodeRecommendationRules.RuleEntry ruleEntry = new NodeRecommendationRules.RuleEntry();
-            ruleEntry.nodeId = element.getAsString();
-            ruleEntry.order = i * 10;
-            entries.add(ruleEntry);
-        }
-        return entries;
     }
 
     private static void validateAgainstRegistry(NodeRecommendationRules rules) {
