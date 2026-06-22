@@ -8,6 +8,9 @@ import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.graph.NodeGraph;
 import com.nodecraft.gui.components.panel.CanvasComponent;
 import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
+import com.nodecraft.gui.recommendation.NodeRecommendationPorts;
+import com.nodecraft.gui.recommendation.NodeRecommendationContext;
+import com.nodecraft.nodesystem.api.NodeDataType;
 
 import imgui.ImGui;
 import imgui.ImVec2;
@@ -469,13 +472,17 @@ public class ImGuiNodeInteraction {
 
         // 如果鼠标左键释放，尝试完成连接
         if (ImGuiInputAdapter.isMouseReleased(ImGuiMouseButton.Left)) {
+            UUID dragSourceNodeId = sourceNodeId;
+            String dragSourcePortId = sourcePortId;
+            boolean dragFromOutputPort = isFromOutputPort;
+
             currentState = InteractionState.IDLE; // 重置状态
             ImGui.getIO().setWantCaptureMouse(false); // 释放鼠标捕获
             float endX = ImGui.getMousePosX();
             float endY = ImGui.getMousePosY();
             NodeCraft.LOGGER.debug("尝试完成连接，鼠标释放@ ({}, {})", endX, endY);
 
-            if (sourceNodeId != null && sourcePortId != null) {
+            if (dragSourceNodeId != null && dragSourcePortId != null) {
                 Map.Entry<UUID, String> targetPortInfo = getClickedPort(new ImVec2(endX, endY), portScreenPositions);
 
                 if (targetPortInfo != null) {
@@ -484,7 +491,7 @@ public class ImGuiNodeInteraction {
                     NodeCraft.LOGGER.debug("检测到目标端口：节点 {} 端口 {}", targetNodeId, targetPortId);
 
                     // 不允许连接到同一节点
-                    if (targetNodeId.equals(sourceNodeId)) {
+                    if (targetNodeId.equals(dragSourceNodeId)) {
                         NodeCraft.LOGGER.warn("不能连接到同一节点的不同端口。");
                         return;
                     }
@@ -502,12 +509,12 @@ public class ImGuiNodeInteraction {
                     String inputPortId = null;
                     boolean isConnectionValid = false;
 
-                    if (this.isFromOutputPort) { // 从输出端口发起连接
+                    if (dragFromOutputPort) { // 从输出端口发起连接
                         // 目标必须是输入端口
                         for (IPort port : targetNode.getInputPorts()) {
                             if (port.getId().equals(targetPortId)) {
-                                outputNodeId = sourceNodeId;
-                                outputPortId = sourcePortId;
+                                outputNodeId = dragSourceNodeId;
+                                outputPortId = dragSourcePortId;
                                 inputNodeId = targetNodeId;
                                 inputPortId = targetPortId;
                                 isConnectionValid = true;
@@ -523,8 +530,8 @@ public class ImGuiNodeInteraction {
                             if (port.getId().equals(targetPortId)) {
                                 outputNodeId = targetNodeId;
                                 outputPortId = targetPortId;
-                                inputNodeId = sourceNodeId;
-                                inputPortId = sourcePortId;
+                                inputNodeId = dragSourceNodeId;
+                                inputPortId = dragSourcePortId;
                                 isConnectionValid = true;
                                 break;
                             }
@@ -542,6 +549,26 @@ public class ImGuiNodeInteraction {
                         } else {
                             NodeCraft.LOGGER.warn("无法完成端口连接 (connectPorts返回false)");
                         }
+                    }
+                } else if (editor instanceof ImGuiNodeEditor imguiEditor) {
+                    INode sourceNode = graph.getNode(dragSourceNodeId);
+                    if (sourceNode != null) {
+                        NodeDataType sourceDataType = NodeRecommendationPorts.resolvePortDataType(
+                                sourceNode,
+                                dragSourcePortId,
+                                dragFromOutputPort);
+                        float worldX = imguiEditor.screenToWorldX(endX);
+                        float worldY = imguiEditor.screenToWorldY(endY);
+                        imguiEditor.requestNodeRecommendation(
+                                NodeRecommendationContext.forPortDrag(
+                                        dragSourceNodeId,
+                                        dragSourcePortId,
+                                        sourceDataType,
+                                        dragFromOutputPort,
+                                        worldX,
+                                        worldY),
+                                endX,
+                                endY);
                     }
                 }
             }

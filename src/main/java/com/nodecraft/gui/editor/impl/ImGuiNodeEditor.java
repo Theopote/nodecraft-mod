@@ -14,6 +14,10 @@ import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.NodeEditorFactory;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
+import com.nodecraft.gui.recommendation.NodeRecommendationApplyResult;
+import com.nodecraft.gui.recommendation.NodeRecommendationContext;
+import com.nodecraft.gui.recommendation.NodeRecommendationPopupRenderer;
+import com.nodecraft.gui.recommendation.NodeRecommendations;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -61,6 +65,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
     private final ImGuiNodeMenus menus;
     private final ImGuiNodeHistory history;
     private final ImGuiNodeClipboard clipboard;
+    private final NodeRecommendationPopupRenderer recommendationPopup;
 
     // 编辑器状态
     private boolean isOpen = false;
@@ -126,6 +131,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         this.menus = new ImGuiNodeMenus(this, this.io);
         this.history = new ImGuiNodeHistory(this);
         this.clipboard = new ImGuiNodeClipboard(this);
+        this.recommendationPopup = new NodeRecommendationPopupRenderer(this, NodeRecommendations.get());
         BaseNode.addDirtyListener(this::handleNodeDirty);
     }
 
@@ -488,6 +494,7 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
 
             // 15. 处理节点搜索弹窗
             menus.renderNodeSearchPopup(); // 渲染搜索弹窗（如果弹窗已打开）
+            recommendationPopup.render();
             maybeAutoExecutePreviewGraph();
             renderSubgraphRenamePopup();
             renderSubgraphNavigationOverlay(canvasPos);
@@ -1093,6 +1100,36 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
      */
     public void requestNodeSearch(float x, float y) {
         menus.requestNodeSearch(x, y);
+    }
+
+    /**
+     * Opens the context-aware node recommendation popup at the given screen position.
+     */
+    public void requestNodeRecommendation(NodeRecommendationContext context, float screenX, float screenY) {
+        NodeRecommendations.get().initialize();
+        recommendationPopup.open(context, screenX, screenY);
+    }
+
+    /**
+     * Applies a recommendation and records graph/history side effects through the editor API.
+     */
+    public NodeRecommendationApplyResult applyRecommendation(
+            NodeRecommendationContext context,
+            com.nodecraft.gui.recommendation.NodeRecommendation recommendation) {
+        if (currentGraph == null || context == null || recommendation == null) {
+            return NodeRecommendationApplyResult.failure("Editor graph or recommendation missing");
+        }
+        return NodeRecommendations.get().apply(this, currentGraph, context, recommendation);
+    }
+
+    public float screenToWorldX(float screenX) {
+        ImVec2 canvasPos = ImGui.getWindowPos();
+        return (screenX - canvasPos.x - canvasOffsetX) / canvasZoom;
+    }
+
+    public float screenToWorldY(float screenY) {
+        ImVec2 canvasPos = ImGui.getWindowPos();
+        return (screenY - canvasPos.y - canvasOffsetY) / canvasZoom;
     }
 
     /**

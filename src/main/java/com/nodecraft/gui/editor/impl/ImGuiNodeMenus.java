@@ -8,6 +8,9 @@ import java.util.UUID;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.node.NodeInfo;
+import com.nodecraft.gui.recommendation.NodeRecommendation;
+import com.nodecraft.gui.recommendation.NodeRecommendationContext;
+import com.nodecraft.gui.recommendation.NodeRecommendations;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.registry.NodeRegistry;
@@ -178,6 +181,12 @@ public class ImGuiNodeMenus {
                             }
                         }
                         
+                        ImGui.separator();
+
+                        if (!isBatchOperation && editor.getCurrentGraph() != null) {
+                            renderDownstreamRecommendations(node);
+                        }
+
                         ImGui.separator();
                         
                         // 删除节点
@@ -833,4 +842,40 @@ public class ImGuiNodeMenus {
         }
         return single;
     }
-} 
+
+    private void renderDownstreamRecommendations(INode node) {
+        if (node == null || editor.getCurrentGraph() == null) {
+            return;
+        }
+
+        NodeRecommendations.get().initialize();
+        NodePosition nodePos = editor.getNodePosition(node.getId());
+        float placementX = nodePos != null ? (float) nodePos.x : (float) node.getPositionX();
+        float placementY = nodePos != null ? (float) nodePos.y : (float) node.getPositionY();
+        NodeRecommendationContext context = NodeRecommendationContext.forSelectedNode(
+                node.getId(),
+                placementX,
+                placementY,
+                8);
+
+        List<NodeRecommendation> recommendations = NodeRecommendations.get()
+                .recommend(editor.getCurrentGraph(), context);
+        if (recommendations.isEmpty()) {
+            return;
+        }
+
+        if (ImGui.beginMenu("添加下游节点")) {
+            try {
+                for (NodeRecommendation recommendation : recommendations) {
+                    if (ImGui.menuItem(recommendation.displayName())) {
+                        if (editor instanceof ImGuiNodeEditor imguiEditor) {
+                            imguiEditor.applyRecommendation(context, recommendation);
+                        }
+                    }
+                }
+            } finally {
+                ImGui.endMenu();
+            }
+        }
+    }
+}

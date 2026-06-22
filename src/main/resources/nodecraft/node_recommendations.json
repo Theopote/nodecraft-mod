@@ -1,0 +1,137 @@
+{
+  "version": 1,
+  "defaults": {
+    "limit": 8,
+    "workflowOrder": [
+      "output.preview",
+      "transform",
+      "geometry.boolean",
+      "pattern",
+      "material",
+      "output.execute",
+      "world.write"
+    ],
+    "excludeCategories": [
+      "utilities.organization",
+      "flow"
+    ],
+    "excludeNodeIds": [
+      "utilities.organization.subgraph_register"
+    ]
+  },
+  "sourceNodes": {
+    "geometry.primitives.box": {
+      "outputs": {
+        "output_geometry": {
+          "downstream": [
+            {
+              "nodeId": "transform.basic_transforms.transform_geometry",
+              "order": 0,
+              "reason": "变换几何体",
+              "connectPortId": "input_geometry"
+            },
+            {
+              "nodeId": "geometry.boolean.union",
+              "order": 10,
+              "reason": "合并多个部件",
+              "connectPortId": "input_geometry_0"
+            },
+            {
+              "nodeId": "geometry.boolean.difference",
+              "order": 11,
+              "reason": "布尔差集",
+              "connectPortId": "input_base"
+            },
+            {
+              "nodeId": "output.preview.geometry_viewer",
+              "order": 20,
+              "reason": "即时预览",
+              "connectPortId": "input_geometry"
+            },
+            {
+              "nodeId": "material.basic_assignment.assign_block_type",
+              "order": 30,
+              "reason": "分配方块材质",
+              "connectPortId": "input_geometry"
+            },
+            {
+              "nodeId": "output.execute.bake_geometry_to_blocks",
+              "order": 40,
+              "reason": "烘焙为方块",
+              "connectPortId": "input_geometry"
+            }
+          ]
+        },
+        "output_box_blocks": {
+          "downstream": [
+            {
+              "nodeId": "material.basic_assignment.assign_block_type",
+              "order": 0,
+              "connectPortId": "input_coordinates"
+            },
+            {
+              "nodeId": "output.execute.apply_changes",
+              "order": 10
+            }
+          ]
+        }
+      }
+    }
+  },
+  "sourceCategories": {
+    "geometry.primitives": {
+      "outputTypes": {
+        "geometry": {
+          "downstream": [
+            "transform.basic_transforms.transform_geometry",
+            "geometry.boolean.union",
+            "geometry.boolean.difference",
+            "output.preview.geometry_viewer",
+            "material.basic_assignment.assign_block_type",
+            "output.execute.bake_geometry_to_blocks"
+          ]
+        }
+      }
+    },
+    "geometry.boolean": {
+      "outputTypes": {
+        "geometry": {
+          "downstream": [
+            "material.basic_assignment.assign_block_type",
+            "output.preview.geometry_viewer",
+            "output.execute.bake_geometry_to_blocks",
+            "pattern.linear.linear_array_geometry"
+          ]
+        }
+      }
+    }
+  },
+  "outputTypes": {
+    "geometry": {
+      "downstream": [
+        "transform.basic_transforms.transform_geometry",
+        "geometry.boolean.union",
+        "output.preview.geometry_viewer",
+        "material.basic_assignment.assign_block_type",
+        "output.execute.bake_geometry_to_blocks"
+      ]
+    },
+    "point": {
+      "downstream": [
+        "geometry.primitives.box",
+        "world.selection.snap_point_to_block"
+      ]
+    },
+    "block_pos": {
+      "downstream": [
+        "world.read.get_block",
+        "world.write.set_block"
+      ]
+    }
+  },
+  "placement": {
+    "defaultOffset": { "dx": 280, "dy": 0 },
+    "portDragOffset": { "dx": 220, "dy": 0 },
+    "stackOffset": { "dx": 0, "dy": 120 }
+  }
+}

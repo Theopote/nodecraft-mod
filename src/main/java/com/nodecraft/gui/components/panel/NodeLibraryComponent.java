@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.HashSet;
 import java.util.Set;
@@ -25,6 +26,12 @@ import com.nodecraft.gui.components.node.NodeCategoryPresentationMapper.Category
 import com.nodecraft.gui.utils.NodeIconManager;
 import com.nodecraft.gui.utils.UserPreferences;
 import com.nodecraft.gui.components.search.NodeSearchManager;
+import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.recommendation.NodeRecommendation;
+import com.nodecraft.gui.recommendation.NodeRecommendationContext;
+import com.nodecraft.gui.recommendation.NodeRecommendations;
+import com.nodecraft.nodesystem.api.INode;
+import com.nodecraft.nodesystem.graph.NodeGraph;
 import org.lwjgl.opengl.GL11;
 
 import imgui.ImGui;
@@ -229,6 +236,7 @@ public class NodeLibraryComponent implements EditorComponent {
 
     // Search manager.
     private final NodeSearchManager searchManager = new NodeSearchManager();
+    private UUID selectedNodeId;
 
     /**
      * Callback used when the user selects a node from the library.
@@ -315,6 +323,8 @@ public class NodeLibraryComponent implements EditorComponent {
             try {
                 // Search bar.
                 renderSearchBar();
+
+                renderSuggestedSection();
 
                 ImGui.separator();
                 ImGui.spacing();
@@ -414,8 +424,64 @@ public class NodeLibraryComponent implements EditorComponent {
      */
     @Override
     public boolean handleEvent(String eventType, Object data) {
-        // This component does not currently handle external events.
-        return false;
+        switch (eventType) {
+            case "nodeSelected" -> {
+                if (data instanceof UUID nodeId) {
+                    selectedNodeId = nodeId;
+                } else {
+                    selectedNodeId = null;
+                }
+                return true;
+            }
+            case "nodeSelectionCleared", "graphChanged" -> {
+                selectedNodeId = null;
+                return true;
+            }
+            default -> {
+                return false;
+            }
+        }
+    }
+
+    private void renderSuggestedSection() {
+        if (selectedNodeId == null || !searchManager.getSearchTerm().isEmpty()) {
+            return;
+        }
+
+        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
+        NodeGraph graph = editor != null ? editor.getCurrentGraph() : null;
+        if (graph == null) {
+            return;
+        }
+
+        INode selectedNode = graph.getNode(selectedNodeId);
+        if (selectedNode == null) {
+            return;
+        }
+
+        NodeRecommendations.get().initialize();
+        NodeRecommendationContext context = NodeRecommendationContext.forSelectedNode(
+                selectedNodeId,
+                (float) selectedNode.getPositionX(),
+                (float) selectedNode.getPositionY(),
+                5);
+        List<NodeRecommendation> recommendations = NodeRecommendations.get().recommend(graph, context);
+        if (recommendations.isEmpty()) {
+            return;
+        }
+
+        ImGui.textColored(0.55f, 0.85f, 1.0f, 1.0f, "推荐下游");
+        for (NodeRecommendation recommendation : recommendations) {
+            if (ImGui.selectable("  " + recommendation.displayName() + "##suggest_" + recommendation.nodeId())) {
+                if (editor != null) {
+                    editor.applyRecommendation(context, recommendation);
+                }
+            }
+            if (ImGui.isItemHovered()) {
+                ImGui.setTooltip(recommendation.reason());
+            }
+        }
+        ImGui.spacing();
     }
 
     /**
