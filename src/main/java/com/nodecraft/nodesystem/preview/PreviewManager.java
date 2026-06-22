@@ -343,7 +343,7 @@ public final class PreviewManager {
             }
             payloads.add(new PreviewGeometryPayload(g));
         }
-        return RENDERER.upsertPreviews(nodeId, "geometry_surface", payloads, opts);
+        return RENDERER.upsertPreviews(nodeId, "geometry_surface", payloads, withDefaultGeometryLod(opts));
     }
 
     @Nullable
@@ -358,7 +358,15 @@ public final class PreviewManager {
             return null;
         }
         touchNonEmpty(nodeId, "geometry_surface");
-        return RENDERER.upsertPreview(nodeId, "geometry_surface", geometryPayload, opts);
+        return RENDERER.upsertPreview(nodeId, "geometry_surface", geometryPayload, withDefaultGeometryLod(opts));
+    }
+
+    private static PreviewOptions withDefaultGeometryLod(PreviewOptions opts) {
+        PreviewOptions applied = opts != null ? opts : new PreviewOptions();
+        if (applied.enableLOD == null) {
+            applied.enableLOD = true;
+        }
+        return applied;
     }
 
     @Nullable

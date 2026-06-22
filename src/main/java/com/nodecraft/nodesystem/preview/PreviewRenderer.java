@@ -144,6 +144,7 @@ public class PreviewRenderer {
             AbstractPreviewElement element = createPreviewElement(previewType, previewId, ownerNodeId, data, options);
             if (element != null) {
                 enforceActivePreviewLimit();
+                enforceMemoryBudget(null, element.estimateMemoryWeight());
                 activeElements.put(previewId, element);
 
                 // 维护节点到预览的映射，使用线程安全的CopyOnWriteArrayList
@@ -186,6 +187,8 @@ public class PreviewRenderer {
             if (options != null) {
                 element.updateOptions(options);
             }
+
+            enforceMemoryBudget(previewId, element.estimateMemoryWeight());
             
             // 如果渲染优先级改变，需要更新排序列表
             if (oldPriority != element.getRenderPriority()) {
@@ -374,6 +377,11 @@ public class PreviewRenderer {
         if (!globalPreviewEnabled || activeElements.isEmpty()) {
             return;
         }
+
+        purgeExpiredPreviews();
+        if (activeElements.isEmpty()) {
+            return;
+        }
         
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null || client.player == null) {
@@ -477,20 +485,86 @@ public class PreviewRenderer {
         }
     }
 
+    /**
+     * Removes previews whose {@code duration} option has elapsed since the last update.
+     *
+     * @return number of previews removed
+     */
+    public int purgeExpiredPreviews() {
+        List<String> expired = new ArrayList<>();
+        for (Map.Entry<String, AbstractPreviewElement> entry : activeElements.entrySet()) {
+            if (entry.getValue().hasExpired()) {
+                expired.add(entry.getKey());
+            }
+        }
+        for (String previewId : expired) {
+            hidePreview(previewId);
+        }
+        return expired.size();
+    }
+
     private void enforceActivePreviewLimit() {
         int limit = settings.maxActivePreviews;
         while (activeElements.size() >= limit) {
-            Iterator<String> iterator = activeElements.keySet().iterator();
-            if (!iterator.hasNext()) {
+            String oldestId = findOldestPreviewId(null);
+            if (oldestId == null) {
                 break;
             }
-            hidePreview(iterator.next());
+            hidePreview(oldestId);
             NodeCraft.LOGGER.warn(
-                    "Active preview limit {} reached; evicted an older preview element (remaining={})",
+                    "Active preview limit {} reached; evicted least-recently-updated preview (remaining={})",
                     limit,
                     activeElements.size()
             );
         }
+    }
+
+    private void enforceMemoryBudget(String excludePreviewId, int reservedWeight) {
+        long limit = settings.maxPreviewMemoryWeight;
+        if (limit <= 0L) {
+            return;
+        }
+        long totalWeight = reservedWeight;
+        for (Map.Entry<String, AbstractPreviewElement> entry : activeElements.entrySet()) {
+            if (Objects.equals(entry.getKey(), excludePreviewId)) {
+                continue;
+            }
+            totalWeight += entry.getValue().estimateMemoryWeight();
+        }
+        while (totalWeight > limit && !activeElements.isEmpty()) {
+            String oldestId = findOldestPreviewId(excludePreviewId);
+            if (oldestId == null) {
+                break;
+            }
+            AbstractPreviewElement evicted = activeElements.get(oldestId);
+            if (evicted == null) {
+                break;
+            }
+            totalWeight -= evicted.estimateMemoryWeight();
+            hidePreview(oldestId);
+            NodeCraft.LOGGER.warn(
+                    "Preview memory budget {} exceeded; evicted least-recently-updated preview (remainingWeight={}, active={})",
+                    limit,
+                    totalWeight,
+                    activeElements.size()
+            );
+        }
+    }
+
+    private String findOldestPreviewId(String excludePreviewId) {
+        String oldestId = null;
+        long oldestTime = Long.MAX_VALUE;
+        for (Map.Entry<String, AbstractPreviewElement> entry : activeElements.entrySet()) {
+            if (Objects.equals(entry.getKey(), excludePreviewId)) {
+                continue;
+            }
+            long updatedAt = entry.getValue().getLastUpdatedTime();
+            if (updatedAt < oldestTime) {
+                oldestTime = updatedAt;
+                oldestId = entry.getKey();
+            }
+        }
+        return oldestId;
     }
     
     /**
@@ -638,6 +712,8 @@ public class PreviewRenderer {
         // 性能设置
         public volatile int maxElementsPerFrame = 1000;
         public volatile int maxActivePreviews = 2048;
+        /** Soft cap on summed {@link AbstractPreviewElement#estimateMemoryWeight()} across active previews. */
+        public volatile long maxPreviewMemoryWeight = 500_000L;
         public volatile float lodDistance = 64.0f;
         
         /**
@@ -708,6 +784,14 @@ public class PreviewRenderer {
          */
         public void setMaxActivePreviews(int maxPreviews) {
             this.maxActivePreviews = Math.max(1, maxPreviews);
+        }
+
+        /**
+         * Sets the soft memory budget for active preview payloads.
+         * @param maxWeight summed weight units (&gt;0); use 0 to disable enforcement
+         */
+        public void setMaxPreviewMemoryWeight(long maxWeight) {
+            this.maxPreviewMemoryWeight = Math.max(0L, maxWeight);
         }
         
         /**

@@ -669,6 +669,11 @@ public class GhostBlockElement extends AbstractPreviewElement {
     }
     
     @Override
+    public int estimateMemoryWeight() {
+        return Math.max(1, blocks.size());
+    }
+
+    @Override
     public boolean shouldRender(Camera camera) {
         if (blocks.isEmpty()) {
             logShouldRenderSkip(camera, "empty_blocks", Double.NaN);

@@ -89,7 +89,10 @@ Bake-time voxelization remains CPU-bound; prefer tighter SDF bounds, smaller reg
 |-------|----------|------|
 | Block preview sampling | `PreviewSampling` + `GeometryViewerNode` | Down-samples ghost previews (`draftPreviewBlocks` / `maxPreviewBlocks`) |
 | Per-frame render budget | `PreviewRenderSettings.maxElementsPerFrame` | Caps how many preview elements draw each frame |
-| Active preview cap | `PreviewRenderSettings.maxActivePreviews` | Evicts oldest preview when registration exceeds limit |
+| Active preview cap | `PreviewRenderSettings.maxActivePreviews` | Evicts least-recently-updated preview when registration exceeds limit |
+| Preview memory budget | `PreviewRenderSettings.maxPreviewMemoryWeight` | Soft cap on summed block/triangle weights; evicts LRU previews when exceeded |
+| Expired preview purge | `PreviewRenderer.purgeExpiredPreviews()` | Removes timed previews from the active map (also runs each render frame) |
+| Geometry LOD default | `PreviewManager` / `PreviewStyle` | Geometry previews enable mesh LOD; distant fill skipped beyond `lodDistance` |
 | Empty-input grace | `PreviewManager.EMPTY_INPUT_GRACE_MS` | Avoids flicker when inputs briefly go empty |
 
 **Deferred**: execution-time node pooling (see node lifecycle section below).

@@ -193,6 +193,17 @@ public abstract class AbstractPreviewElement {
     protected long getTimeSinceLastUpdate() {
         return System.currentTimeMillis() - lastUpdatedTime;
     }
+
+    public long getLastUpdatedTime() {
+        return lastUpdatedTime;
+    }
+
+    /**
+     * 检查是否过期（如果设置了持续时间）
+     */
+    public boolean hasExpired() {
+        return isExpired();
+    }
     
     /**
      * 检查是否过期（如果设置了持续时间）
@@ -202,5 +213,12 @@ public abstract class AbstractPreviewElement {
             return getTimeSinceLastUpdate() > options.duration * 1000L;
         }
         return false;
+    }
+
+    /**
+     * 估算内存权重（方块数、三角面数等），用于全局预览内存预算。
+     */
+    public int estimateMemoryWeight() {
+        return 1;
     }
 } 

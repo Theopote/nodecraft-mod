@@ -651,6 +651,11 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
     }
 
     @Override
+    public int estimateMemoryWeight() {
+        return Math.max(1, triangles.size() + segments.size());
+    }
+
+    @Override
     public void render(MatrixStack matrices, Camera camera, float partialTicks, float globalOpacity) {
         List<Triangle> trianglesSnapshot = triangles;
         List<Segment> segmentsSnapshot = segments;
@@ -674,8 +679,13 @@ public class GeometrySurfaceElement extends AbstractPreviewElement {
         }
         Vec3d cameraPos = camera.getCameraPos();
         Matrix4f matrix = matrices.peek().getPositionMatrix();
+        ensureBoundsForVisibility();
+        double distance = cameraPos.distanceTo(boundsCenter);
+        float lodDistance = PreviewRenderer.getInstance().getSettings().lodDistance;
+        boolean skipFillForDistanceLod = Boolean.TRUE.equals(options != null ? options.enableLOD : null)
+            && distance > lodDistance;
 
-        if (showFill && !trianglesSnapshot.isEmpty()) {
+        if (showFill && !trianglesSnapshot.isEmpty() && !skipFillForDistanceLod) {
             VertexConsumer fillConsumer = provider.getBuffer(RenderLayers.debugFilledBox());
             for (Triangle triangle : trianglesSnapshot) {
                 addTriangle(fillConsumer, matrix, triangle, cameraPos, fillColor, alpha);

@@ -455,6 +455,7 @@ public final class PreviewStyle {
         if (durationTicks > 0) {
             o.setDuration(Math.max(1, (durationTicks + 19) / 20));
         }
+        o.enableLOD = true;
         return o;
     }
 
