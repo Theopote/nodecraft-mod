@@ -67,13 +67,15 @@ public class LeftPanelComponent implements EditorComponent {
         }
     }
 
+    private static final int TAB_CONTENT_FLAGS = ImGuiWindowFlags.NoScrollbar;
+
     private void renderNodeLibraryTab(float width, float height, float paddingX) {
         if (ImGui.beginChild(
                 "leftPanelNodeLibrary",
                 0,
                 0,
                 false,
-                ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+                TAB_CONTENT_FLAGS)) {
             try {
                 nodeLibraryComponent.renderContent(width, height, paddingX);
             } finally {
@@ -88,7 +90,7 @@ public class LeftPanelComponent implements EditorComponent {
                 0,
                 0,
                 false,
-                ImGuiWindowFlags.AlwaysVerticalScrollbar)) {
+                TAB_CONTENT_FLAGS)) {
             try {
                 presetLibraryPanel.render();
             } finally {
