@@ -6,6 +6,7 @@ import com.nodecraft.gui.preset.GraphPresetRules;
 import com.nodecraft.gui.utils.UserPreferences;
 import imgui.ImGui;
 import imgui.flag.ImGuiDragDropFlags;
+import imgui.flag.ImGuiPopupFlags;
 import imgui.flag.ImGuiTreeNodeFlags;
 import imgui.flag.ImGuiWindowFlags;
 import imgui.type.ImString;
@@ -156,7 +157,7 @@ public final class PresetLibraryPanel {
         ImGui.beginGroup();
         if (editable) {
             ImGui.button("::");
-            if (ImGui.isItemHovered()) {
+            if (ImGui.isItemHovered() && !isAnyPopupOpen()) {
                 ImGui.setTooltip("拖动以调整顺序或移动到其他分类");
             }
             if (ImGui.beginDragDropSource(ImGuiDragDropFlags.None)) {
@@ -189,21 +190,7 @@ public final class PresetLibraryPanel {
             ImGui.endDragDropTarget();
         }
 
-        if (ImGui.isItemHovered()) {
-            ImGui.beginTooltip();
-            if (preset.description != null && !preset.description.isBlank()) {
-                ImGui.textWrapped(preset.description);
-            }
-            if (applicable) {
-                ImGui.text("拖动到画布以创建节点链");
-            } else {
-                ImGui.textDisabled("筹备中");
-            }
-            if (editable) {
-                ImGui.textDisabled("右键：编辑 / 删除；拖 :: 可移动位置");
-            }
-            ImGui.endTooltip();
-        }
+        renderPresetHoverTooltip(preset, applicable, editable);
 
         if (editable && ImGui.beginPopupContextItem("preset_item_ctx")) {
             renderPresetContextMenu(presetView);
@@ -214,6 +201,46 @@ public final class PresetLibraryPanel {
             ImGui.endDisabled();
         }
         ImGui.popID();
+    }
+
+    private void renderPresetHoverTooltip(
+            GraphPresetRules.GraphPresetDefinition preset,
+            boolean applicable,
+            boolean editable
+    ) {
+        if (!ImGui.isItemHovered() || isAnyPopupOpen()) {
+            return;
+        }
+
+        StringBuilder tooltip = new StringBuilder();
+        if (preset.description != null && !preset.description.isBlank()) {
+            tooltip.append(preset.description.trim());
+        }
+        if (applicable) {
+            appendTooltipLine(tooltip, "拖动到画布以创建节点链");
+        } else {
+            appendTooltipLine(tooltip, "筹备中");
+        }
+        if (editable) {
+            appendTooltipLine(tooltip, "右键：编辑 / 删除；拖 :: 可移动位置");
+        }
+        if (!tooltip.isEmpty()) {
+            ImGui.setTooltip(tooltip.toString());
+        }
+    }
+
+    private static void appendTooltipLine(StringBuilder tooltip, String line) {
+        if (line == null || line.isBlank()) {
+            return;
+        }
+        if (!tooltip.isEmpty()) {
+            tooltip.append('\n');
+        }
+        tooltip.append(line);
+    }
+
+    private static boolean isAnyPopupOpen() {
+        return ImGui.isPopupOpen("", ImGuiPopupFlags.AnyPopupId);
     }
 
     private void renderPresetContextMenu(GraphPresetCatalog.PresetView presetView) {
