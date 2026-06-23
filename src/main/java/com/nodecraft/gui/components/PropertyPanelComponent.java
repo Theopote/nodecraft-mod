@@ -662,9 +662,6 @@ public class PropertyPanelComponent implements EditorComponent {
             checkAndCleanExpiredEditLocks();
             aiAssistantPanel.flushSessionStateIfDue();
 
-            ImGui.text("Inspector");
-            ImGui.separator();
-
             if (ImGui.beginTabBar("rightPanelTabs")) {
                 if (ImGui.beginTabItem("Properties")) {
                     renderPropertiesTabContent();

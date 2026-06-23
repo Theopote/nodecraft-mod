@@ -33,9 +33,6 @@ public class LeftPanelComponent implements EditorComponent {
             return;
         }
 
-        ImGui.text("Browser");
-        ImGui.separator();
-
         if (ImGui.beginTabBar("leftPanelTabs")) {
             int nodeLibraryTabFlags = applyInitialTab && activeTabIndex == 0
                     ? ImGuiTabItemFlags.SetSelected
