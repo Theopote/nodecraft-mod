@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import com.nodecraft.core.NodeCraft;
+import com.nodecraft.gui.editor.base.GraphApplyHistoryView;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
@@ -29,7 +30,7 @@ import com.nodecraft.nodesystem.registry.NodeRegistry;
  * 4. 移除了不安全的节点克隆机制
  * 5. 修正了历史记录触发时机，确保在正确的地方记录操作
  */
-public class ImGuiNodeHistory {
+public class ImGuiNodeHistory implements GraphApplyHistoryView {
     
     private final ICanvasEditor editor;
     private final Stack<HistoryAction> undoStack = new Stack<>();
@@ -162,6 +163,27 @@ public class ImGuiNodeHistory {
      */
     public ActionType getUndoTopActionType() {
         return undoStack.isEmpty() ? null : undoStack.peek().getType();
+    }
+
+    @Override
+    public String undoTopActionType() {
+        ActionType type = getUndoTopActionType();
+        return type == null ? "null" : type.name();
+    }
+
+    @Override
+    public boolean isUndoTopAiPatch() {
+        return isUndoTopActionType(ActionType.AI_PATCH);
+    }
+
+    @Override
+    public int undoStackSize() {
+        return getUndoStackSize();
+    }
+
+    @Override
+    public int redoStackSize() {
+        return getRedoStackSize();
     }
     
     /**

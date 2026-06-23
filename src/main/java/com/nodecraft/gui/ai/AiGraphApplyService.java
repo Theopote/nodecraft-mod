@@ -7,7 +7,7 @@ import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
-import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.editor.base.GraphApplyTarget;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,7 +39,7 @@ public final class AiGraphApplyService {
     }
 
     public static ApplyResult applyPatch(
-            ImGuiNodeEditor editor,
+            GraphApplyTarget applyTarget,
             NodeGraph graph,
             List<ApplyNode> nodesToApply,
             List<ApplyConnection> connections,
@@ -50,7 +50,7 @@ public final class AiGraphApplyService {
         if (graph == null) {
             return new ApplyResult(false, 0, "Patch apply failed: current graph is unavailable.");
         }
-        if (editor == null) {
+        if (applyTarget == null) {
             return new ApplyResult(false, 0, "Patch apply failed: editor is unavailable.");
         }
         if (nodesToApply == null) {
@@ -111,11 +111,11 @@ public final class AiGraphApplyService {
                 float x = anchor[0] + node.offsetX();
                 float y = anchor[1] + node.offsetY();
                 INode created = node.nodeState() == null
-                        ? editor.addNode(node.typeId(), x, y)
-                        : editor.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
+                        ? applyTarget.addNode(node.typeId(), x, y)
+                        : applyTarget.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
 
                 if (created == null) {
-                    rollbackAiApply(editor, undoSteps);
+                    rollbackAiApply(applyTarget, undoSteps);
                     restoreNodeStates(graph, previousStates);
                     return new ApplyResult(false, undoSteps, "Patch apply failed to create node: " + node.ref() + " (" + node.typeId() + "). Auto-rolled back.");
                 }
@@ -129,7 +129,7 @@ public final class AiGraphApplyService {
                 UUID sourceNodeId = planRefToNodeId.get(connection.sourceRef());
                 UUID targetNodeId = planRefToNodeId.get(connection.targetRef());
                 if (sourceNodeId == null || targetNodeId == null) {
-                    rollbackAiApply(editor, undoSteps);
+                    rollbackAiApply(applyTarget, undoSteps);
                     restoreNodeStates(graph, previousStates);
                     return new ApplyResult(false, undoSteps, "Patch apply connection failed due to missing mapped node ref: "
                             + connection.sourceRef() + " -> " + connection.targetRef() + ". Auto-rolled back.");
@@ -142,7 +142,7 @@ public final class AiGraphApplyService {
                 INode targetNode = graph.getNode(targetNodeId);
                 IPort targetPort = findInputPortById(targetNode, connection.targetPortId());
                 if (targetPort == null) {
-                    rollbackAiApply(editor, undoSteps);
+                    rollbackAiApply(applyTarget, undoSteps);
                     restoreNodeStates(graph, previousStates);
                     return new ApplyResult(false, undoSteps, "Patch apply failed: target input port not found for "
                             + connection.targetRef() + "." + connection.targetPortId() + ".");
@@ -156,14 +156,14 @@ public final class AiGraphApplyService {
                             && (!oldSourceNodeId.equals(sourceNodeId) || !oldSourcePortId.equals(connection.sourcePortId()));
 
                     if (hasDifferentExisting) {
-                        boolean disconnected = editor.disconnectPorts(
+                        boolean disconnected = applyTarget.disconnectPorts(
                                 oldSourceNodeId,
                                 oldSourcePortId,
                                 targetNodeId,
                                 targetPort.getId()
                         );
                         if (!disconnected) {
-                            rollbackAiApply(editor, undoSteps);
+                            rollbackAiApply(applyTarget, undoSteps);
                             restoreNodeStates(graph, previousStates);
                             return new ApplyResult(false, undoSteps, "Patch apply failed to replace existing connection on "
                                     + connection.targetRef() + "." + connection.targetPortId()
@@ -174,14 +174,14 @@ public final class AiGraphApplyService {
                     }
                 }
 
-                boolean connected = editor.connectPorts(
+                boolean connected = applyTarget.connectPorts(
                         sourceNodeId,
                         connection.sourcePortId(),
                         targetNodeId,
                         connection.targetPortId()
                 );
                 if (!connected) {
-                    rollbackAiApply(editor, undoSteps);
+                    rollbackAiApply(applyTarget, undoSteps);
                     restoreNodeStates(graph, previousStates);
                     return new ApplyResult(false, undoSteps, "Patch apply failed to connect: "
                             + connection.sourceRef() + "." + connection.sourcePortId()
@@ -216,14 +216,14 @@ public final class AiGraphApplyService {
                         continue;
                     }
 
-                    boolean disconnected = editor.disconnectPorts(
+                    boolean disconnected = applyTarget.disconnectPorts(
                             currentSource,
                             conn.sourcePort.getId(),
                             currentTarget,
                             conn.targetPort.getId()
                     );
                     if (!disconnected) {
-                        rollbackAiApply(editor, undoSteps);
+                        rollbackAiApply(applyTarget, undoSteps);
                         restoreNodeStates(graph, previousStates);
                         return new ApplyResult(false, undoSteps, "Patch apply failed while removing scoped stale connection. Try Dry Run first.");
                     }
@@ -240,13 +240,11 @@ public final class AiGraphApplyService {
                     + ", removedScoped " + removedScopedConnectionsCount
                     + ". Undo available: 1 grouped AI patch action.";
 
-            if (editor.getHistory() != null) {
-                editor.getHistory().recordAiPatch(status, previousStates, undoSteps);
-            }
+            applyTarget.recordAiPatchApply(status, previousStates, undoSteps);
 
             return new ApplyResult(true, undoSteps, status);
         } catch (Exception e) {
-            rollbackAiApply(editor, undoSteps);
+            rollbackAiApply(applyTarget, undoSteps);
             restoreNodeStates(graph, previousStates);
             NodeCraft.LOGGER.error("Failed to patch-apply AI plan", e);
             return new ApplyResult(false, undoSteps, "Patch apply failed: " + e.getMessage() + ". Auto-rolled back.");
@@ -418,10 +416,10 @@ public final class AiGraphApplyService {
         return counts;
     }
 
-    private static int rollbackAiApply(ImGuiNodeEditor editor, int undoSteps) {
+    private static int rollbackAiApply(GraphApplyTarget applyTarget, int undoSteps) {
         int undone = 0;
         for (int i = 0; i < undoSteps; i++) {
-            if (!editor.undo()) {
+            if (!applyTarget.undo()) {
                 break;
             }
             undone++;

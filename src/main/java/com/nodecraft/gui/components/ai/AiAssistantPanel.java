@@ -7,9 +7,10 @@ import com.nodecraft.gui.components.ai.AiAssistantComponent.AiChatMessage;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiGraphPlan;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiPlanConnection;
 import com.nodecraft.gui.components.ai.AiAssistantComponent.AiPlanNode;
-import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
-import com.nodecraft.gui.editor.impl.ImGuiNodeHistory;
-import com.nodecraft.gui.editor.impl.NodePosition;
+import com.nodecraft.gui.editor.GraphApplyTargetResolver;
+import com.nodecraft.gui.editor.base.GraphApplyHistoryView;
+import com.nodecraft.gui.editor.base.GraphApplyTarget;
+import com.nodecraft.gui.editor.base.GraphNodeAnchor;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.api.IPort;
 import com.nodecraft.nodesystem.api.NodeDataType;
@@ -589,19 +590,20 @@ public final class AiAssistantPanel {
             return "No recent AI apply to undo.";
         }
 
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null || editor.getHistory() == null) {
+        GraphApplyTarget applyTarget = resolveGraphApplyTarget();
+        if (applyTarget == null) {
             return "Editor history is unavailable.";
         }
 
+        GraphApplyHistoryView history = applyTarget.getApplyHistoryView();
         if (lastAiApplyWasPatch) {
-            if (!editor.getHistory().isUndoTopActionType(ImGuiNodeHistory.ActionType.AI_PATCH)) {
+            if (!history.isUndoTopAiPatch()) {
                 return "Latest history action is no longer this AI patch apply.";
             }
             return "";
         }
 
-        if (!editor.getHistory().canUndo()) {
+        if (!history.canUndo()) {
             return "Undo stack is empty.";
         }
 
@@ -1394,14 +1396,14 @@ public final class AiAssistantPanel {
             return false;
         }
 
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null) {
+        GraphApplyTarget applyTarget = resolveGraphApplyTarget();
+        if (applyTarget == null) {
             aiPlanStatusMessage = "Placement apply failed: editor is unavailable.";
             NodeCraft.LOGGER.warn("[AI_SEND] Placement auto-apply failed: editor unavailable.");
             return false;
         }
 
-        float[] anchor = resolveAiPlanAnchorPosition(editor);
+        float[] anchor = resolveAiPlanAnchorPosition(applyTarget);
         NodeCraft.LOGGER.info("[AI_SEND] Placement auto-apply start. nodes={}, anchor=({}, {})",
                 pendingAiPlan.nodes().size(), anchor[0], anchor[1]);
         List<AiPlanApplyCoordinatorService.PlanNode> applyNodes = new ArrayList<>(pendingAiPlan.nodes().size());
@@ -1416,7 +1418,7 @@ public final class AiAssistantPanel {
         }
 
         AiPlanApplyCoordinatorService.ApplyResult result = AiPlanApplyCoordinatorService.applyExact(
-                editor,
+                applyTarget,
                 applyNodes,
                 List.of(),
                 anchor
@@ -1991,15 +1993,15 @@ public final class AiAssistantPanel {
             return;
         }
 
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null) {
+        GraphApplyTarget applyTarget = resolveGraphApplyTarget();
+        if (applyTarget == null) {
             aiPlanStatusMessage = "Cannot apply: editor is unavailable.";
             return;
         }
 
-        logAiApplyHistoryContext("before-apply", editor, pendingAiPlan, aiPatchApplyMode.get());
+        logAiApplyHistoryContext("before-apply", applyTarget, pendingAiPlan, aiPatchApplyMode.get());
 
-        float[] anchor = resolveAiPlanAnchorPosition(editor);
+        float[] anchor = resolveAiPlanAnchorPosition(applyTarget);
         List<AiPlanNode> nodesToApply = aiAutoLayoutBeforeApply.get()
                 ? buildAutoLayoutNodes(pendingAiPlan)
             : safePlanNodes(pendingAiPlan);
@@ -2009,7 +2011,7 @@ public final class AiAssistantPanel {
         List<AiPlanConnection> connectionsToApply = safePlanConnections(pendingAiPlan);
 
         if (aiPatchApplyMode.get()) {
-            applyPendingAiPlanPatch(editor, nodesToApply, anchor);
+            applyPendingAiPlanPatch(applyTarget, nodesToApply, anchor);
             return;
         }
 
@@ -2017,7 +2019,7 @@ public final class AiAssistantPanel {
         List<AiPlanApplyCoordinatorService.PlanConnection> applyConnections = toCoordinatorApplyConnections(connectionsToApply);
 
         AiPlanApplyCoordinatorService.ApplyResult result = AiPlanApplyCoordinatorService.applyExact(
-                editor,
+                applyTarget,
                 applyNodes,
                 applyConnections,
                 anchor
@@ -2029,23 +2031,23 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = 0;
         }
         lastAiApplyWasPatch = false;
-        logAiApplyHistoryContext("after-apply-exact", editor, pendingAiPlan, false);
+        logAiApplyHistoryContext("after-apply-exact", applyTarget, pendingAiPlan, false);
 
         aiPlanStatusMessage = result.statusMessage()
                 + (result.success() && aiAutoLayoutBeforeApply.get() ? " (auto layout enabled)" : "");
     }
 
-    private void applyPendingAiPlanPatch(ImGuiNodeEditor editor, List<AiPlanNode> nodesToApply, float[] anchor) {
+    private void applyPendingAiPlanPatch(GraphApplyTarget applyTarget, List<AiPlanNode> nodesToApply, float[] anchor) {
         AiGraphPlan pendingAiPlan = getPendingAiPlan();
         if (pendingAiPlan == null) {
             aiPlanStatusMessage = "Patch apply failed: no pending plan available.";
             return;
         }
-        if (editor == null) {
+        if (applyTarget == null) {
             aiPlanStatusMessage = "Patch apply failed: editor is unavailable.";
             return;
         }
-        logAiApplyHistoryContext("before-apply-patch", editor, pendingAiPlan, true);
+        logAiApplyHistoryContext("before-apply-patch", applyTarget, pendingAiPlan, true);
         NodeGraph graph = getNodeGraph();
         if (graph == null) {
             aiPlanStatusMessage = "Patch apply failed: current graph is unavailable.";
@@ -2064,7 +2066,7 @@ public final class AiAssistantPanel {
         boolean mergeExistingNodeState = AiIntentAnalysisService.classifyIntent(aiLastSubmittedPrompt) == UserIntent.MODIFY_PARAM || AiIntentAnalysisService.classifyIntent(aiLastSubmittedPrompt) == UserIntent.RESTRUCTURE;
 
         AiGraphApplyService.ApplyResult result = AiGraphApplyService.applyPatch(
-                editor,
+                applyTarget,
                 graph,
                 payload.nodes(),
                 payload.connections(),
@@ -2080,7 +2082,7 @@ public final class AiAssistantPanel {
             lastAiUndoStepCount = 0;
             lastAiApplyWasPatch = false;
         }
-        logAiApplyHistoryContext("after-apply-patch", editor, pendingAiPlan, true);
+        logAiApplyHistoryContext("after-apply-patch", applyTarget, pendingAiPlan, true);
         String patchModeDetail = mergeExistingNodeState
                 ? " (parameter merge mode)"
                 : " (state replace mode)";
@@ -2100,20 +2102,20 @@ public final class AiAssistantPanel {
             return;
         }
 
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null) {
+        GraphApplyTarget applyTarget = resolveGraphApplyTarget();
+        if (applyTarget == null) {
             aiPlanStatusMessage = "Undo failed: editor is unavailable.";
             lastAiUndoStepCount = 0;
             lastAiApplyWasPatch = false;
             return;
         }
 
-        logAiApplyHistoryContext("before-undo-last-ai-apply", editor, getPendingAiPlan(), lastAiApplyWasPatch);
+        logAiApplyHistoryContext("before-undo-last-ai-apply", applyTarget, getPendingAiPlan(), lastAiApplyWasPatch);
 
         int expectedUndoSteps = lastAiUndoStepCount;
         int undone = lastAiApplyWasPatch
-            ? (editor.undo() ? 1 : 0)
-            : AiPlanApplyCoordinatorService.undo(editor, expectedUndoSteps);
+            ? (applyTarget.undo() ? 1 : 0)
+            : AiPlanApplyCoordinatorService.undo(applyTarget, expectedUndoSteps);
 
         if (undone == expectedUndoSteps) {
             aiPlanStatusMessage = "Undo completed: " + undone + " / " + expectedUndoSteps + " steps.";
@@ -2123,20 +2125,24 @@ public final class AiAssistantPanel {
         }
         lastAiUndoStepCount = 0;
         lastAiApplyWasPatch = false;
-        logAiApplyHistoryContext("after-undo-last-ai-apply", editor, getPendingAiPlan(), false);
+        logAiApplyHistoryContext("after-undo-last-ai-apply", applyTarget, getPendingAiPlan(), false);
     }
 
-    private void logAiApplyHistoryContext(String phase, ImGuiNodeEditor editor, AiGraphPlan plan, boolean patchMode) {
-        if (editor == null) {
+    private GraphApplyTarget resolveGraphApplyTarget() {
+        return GraphApplyTargetResolver.resolve();
+    }
+
+    private void logAiApplyHistoryContext(String phase, GraphApplyTarget applyTarget, AiGraphPlan plan, boolean patchMode) {
+        if (applyTarget == null) {
             NodeCraft.LOGGER.info("[AI_APPLY_TRACE] phase={}, editorAvailable=false", phase);
             return;
         }
 
-        ImGuiNodeHistory history = editor.getHistory();
-        int undoStackSize = history == null ? -1 : history.getUndoStackSize();
-        int redoStackSize = history == null ? -1 : history.getRedoStackSize();
-        Object topActionType = history == null ? "null" : history.getUndoTopActionType();
-        boolean topIsAiPatch = history != null && history.isUndoTopActionType(ImGuiNodeHistory.ActionType.AI_PATCH);
+        GraphApplyHistoryView history = applyTarget.getApplyHistoryView();
+        int undoStackSize = history.undoStackSize();
+        int redoStackSize = history.redoStackSize();
+        Object topActionType = history.undoTopActionType();
+        boolean topIsAiPatch = history.isUndoTopAiPatch();
 
         List<AiPlanNode> nodes = safePlanNodes(plan);
         List<AiPlanConnection> connections = safePlanConnections(plan);
@@ -2151,8 +2157,8 @@ public final class AiAssistantPanel {
                 connections.size(),
                 lastAiUndoStepCount,
                 lastAiApplyWasPatch,
-                history != null && history.canUndo(),
-                history != null && history.canRedo(),
+                history.canUndo(),
+                history.canRedo(),
                 undoStackSize,
                 redoStackSize,
                 topActionType,
@@ -2160,15 +2166,15 @@ public final class AiAssistantPanel {
         );
     }
 
-    private float[] resolveAiPlanAnchorPosition(ImGuiNodeEditor editor) {
-        if (editor == null) {
+    private float[] resolveAiPlanAnchorPosition(GraphApplyTarget applyTarget) {
+        if (applyTarget == null) {
             return new float[]{0.0f, 0.0f};
         }
         INode selectedNode = getSelectedNode();
         if (selectedNode != null) {
-            NodePosition selectedPosition = editor.getNodePosition(selectedNode.getId());
+            GraphNodeAnchor selectedPosition = applyTarget.getNodeAnchor(selectedNode.getId());
             if (selectedPosition != null) {
-                return new float[]{selectedPosition.x + 280.0f, selectedPosition.y};
+                return new float[]{selectedPosition.x() + 280.0f, selectedPosition.y()};
             }
         }
         return new float[]{0.0f, 0.0f};
@@ -2338,18 +2344,18 @@ public final class AiAssistantPanel {
         return nodeGraphSupplier.get();
     }
 
-    private NodePosition resolveSelectedNodePosition() {
+    private GraphNodeAnchor resolveSelectedNodePosition() {
         INode selectedNode = getSelectedNode();
         if (selectedNode == null) {
             return null;
         }
 
-        ImGuiNodeEditor editor = ImGuiNodeEditor.getInstance();
-        if (editor == null) {
+        GraphApplyTarget applyTarget = resolveGraphApplyTarget();
+        if (applyTarget == null) {
             return null;
         }
 
-        return editor.getNodePosition(selectedNode.getId());
+        return applyTarget.getNodeAnchor(selectedNode.getId());
     }
 
     private INode getSelectedNode() {

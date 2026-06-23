@@ -1,7 +1,7 @@
 package com.nodecraft.gui.ai;
 
 import com.nodecraft.core.NodeCraft;
-import com.nodecraft.gui.editor.impl.ImGuiNodeEditor;
+import com.nodecraft.gui.editor.base.GraphApplyTarget;
 import com.nodecraft.nodesystem.api.INode;
 
 import java.util.HashMap;
@@ -24,12 +24,12 @@ public final class AiPlanApplyCoordinatorService {
     }
 
     public static ApplyResult applyExact(
-            ImGuiNodeEditor editor,
+            GraphApplyTarget applyTarget,
             List<PlanNode> nodesToApply,
             List<PlanConnection> connections,
             float[] anchor
     ) {
-        if (editor == null) {
+        if (applyTarget == null) {
             return new ApplyResult(false, 0, "Failed to apply plan: editor unavailable.", 0, 0);
         }
         if (nodesToApply == null) {
@@ -51,11 +51,11 @@ public final class AiPlanApplyCoordinatorService {
                 float x = anchor[0] + node.offsetX();
                 float y = anchor[1] + node.offsetY();
                 INode created = node.nodeState() == null
-                        ? editor.addNode(node.typeId(), x, y)
-                        : editor.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
+                        ? applyTarget.addNode(node.typeId(), x, y)
+                        : applyTarget.addNodeWithState(node.typeId(), null, x, y, node.nodeState());
 
                 if (created == null) {
-                    rollback(editor, undoSteps);
+                    rollback(applyTarget, undoSteps);
                     return new ApplyResult(false, 0,
                             "Failed to create node: " + node.ref() + " (" + node.typeId() + "). Auto-rolled back.",
                             0,
@@ -69,7 +69,7 @@ public final class AiPlanApplyCoordinatorService {
                 UUID sourceNodeId = createdNodeIds.get(connection.sourceRef());
                 UUID targetNodeId = createdNodeIds.get(connection.targetRef());
                 if (sourceNodeId == null || targetNodeId == null) {
-                    rollback(editor, undoSteps);
+                    rollback(applyTarget, undoSteps);
                     return new ApplyResult(false, 0,
                             "Connection failed due to missing node ref: "
                                     + connection.sourceRef() + " -> " + connection.targetRef() + ". Auto-rolled back.",
@@ -77,7 +77,7 @@ public final class AiPlanApplyCoordinatorService {
                             0);
                 }
 
-                boolean connected = editor.connectPorts(
+                boolean connected = applyTarget.connectPorts(
                         sourceNodeId,
                         connection.sourcePortId(),
                         targetNodeId,
@@ -87,7 +87,7 @@ public final class AiPlanApplyCoordinatorService {
                     NodeCraft.LOGGER.warn("AI plan connection failed and will rollback: {}.{} -> {}.{}",
                             connection.sourceRef(), connection.sourcePortId(),
                             connection.targetRef(), connection.targetPortId());
-                    rollback(editor, undoSteps);
+                    rollback(applyTarget, undoSteps);
                     return new ApplyResult(false, 0,
                             "Failed to connect: "
                                     + connection.sourceRef() + "." + connection.sourcePortId()
@@ -111,20 +111,20 @@ public final class AiPlanApplyCoordinatorService {
                     successfulConnections
             );
         } catch (Exception e) {
-            rollback(editor, undoSteps);
+            rollback(applyTarget, undoSteps);
             NodeCraft.LOGGER.error("Failed to apply AI plan", e);
             return new ApplyResult(false, 0, "Failed to apply plan: " + e.getMessage() + ". Auto-rolled back.", 0, 0);
         }
     }
 
-    public static int undo(ImGuiNodeEditor editor, int undoSteps) {
-        if (editor == null || undoSteps <= 0) {
+    public static int undo(GraphApplyTarget applyTarget, int undoSteps) {
+        if (applyTarget == null || undoSteps <= 0) {
             return 0;
         }
 
         int undone = 0;
         for (int i = 0; i < undoSteps; i++) {
-            if (!editor.undo()) {
+            if (!applyTarget.undo()) {
                 break;
             }
             undone++;
@@ -132,7 +132,7 @@ public final class AiPlanApplyCoordinatorService {
         return undone;
     }
 
-    private static int rollback(ImGuiNodeEditor editor, int undoSteps) {
-        return undo(editor, undoSteps);
+    private static int rollback(GraphApplyTarget applyTarget, int undoSteps) {
+        return undo(applyTarget, undoSteps);
     }
 }

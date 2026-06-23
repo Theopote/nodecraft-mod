@@ -12,6 +12,9 @@ import java.util.Deque;
 
 import com.nodecraft.core.NodeCraft;
 import com.nodecraft.gui.editor.NodeEditorFactory;
+import com.nodecraft.gui.editor.base.GraphApplyHistoryView;
+import com.nodecraft.gui.editor.base.GraphApplyTarget;
+import com.nodecraft.gui.editor.base.GraphNodeAnchor;
 import com.nodecraft.gui.editor.base.INodeEditor;
 import com.nodecraft.gui.editor.integration.ImGuiInputAdapter;
 import com.nodecraft.gui.recommendation.NodeRecommendationApplyResult;
@@ -54,7 +57,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * ImGui节点编辑器实现
  */
-public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
+public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor, GraphApplyTarget {
 
     private static ImGuiNodeEditor instance;
 
@@ -1350,6 +1353,24 @@ public class ImGuiNodeEditor implements INodeEditor, ICanvasEditor {
         boolean result = history.undo();
         NodeCraft.LOGGER.info("编辑器撤销操作完成 - 结果: {}, 新状态: {}", result, history.getHistoryStats());
         return result;
+    }
+
+    @Override
+    public void recordAiPatchApply(String summary, Map<UUID, Object> previousStates, int undoStepsTaken) {
+        if (history != null) {
+            history.recordAiPatch(summary, previousStates, undoStepsTaken);
+        }
+    }
+
+    @Override
+    public GraphApplyHistoryView getApplyHistoryView() {
+        return history != null ? history : GraphApplyHistoryView.EMPTY;
+    }
+
+    @Override
+    public GraphNodeAnchor getNodeAnchor(UUID nodeId) {
+        NodePosition position = getNodePosition(nodeId);
+        return position == null ? null : new GraphNodeAnchor(position.x, position.y);
     }
 
     @Override

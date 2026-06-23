@@ -3,7 +3,7 @@ package com.nodecraft.gui.ai;
 import com.nodecraft.nodesystem.api.INode;
 import com.nodecraft.nodesystem.core.BaseNode;
 import com.nodecraft.nodesystem.graph.NodeGraph;
-import com.nodecraft.gui.editor.impl.NodePosition;
+import com.nodecraft.gui.editor.base.GraphNodeAnchor;
 
 import java.util.Collection;
 import java.util.List;
@@ -18,7 +18,7 @@ public final class AiPromptContextService {
             boolean useSelectionContext,
             boolean includeGraphContext,
             INode selectedNode,
-            NodePosition selectedNodePosition,
+            GraphNodeAnchor selectedNodePosition,
             NodeGraph graph
     ) {
         StringBuilder context = new StringBuilder(1024);
@@ -36,9 +36,9 @@ public final class AiPromptContextService {
 
             if (selectedNodePosition != null) {
                 context.append(" at canvas position (")
-                        .append(Math.round(selectedNodePosition.x))
+                        .append(Math.round(selectedNodePosition.x()))
                         .append(", ")
-                        .append(Math.round(selectedNodePosition.y))
+                        .append(Math.round(selectedNodePosition.y()))
                         .append(")");
             }
         }
