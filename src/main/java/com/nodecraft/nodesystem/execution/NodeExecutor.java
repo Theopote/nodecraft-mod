@@ -435,12 +435,11 @@ public class NodeExecutor {
     }
 
     private ExecFrontierSnapshot.ExecWire resolveExecWire(UUID sourceNodeId, String sourcePortId, UUID targetNodeId) {
-        for (NodeGraph.Connection connection : graph.getConnections()) {
+        for (NodeGraph.Connection connection : graph.getOutgoingConnections(sourceNodeId)) {
             if (!ExecutionPortKind.isExecConnection(connection)) {
                 continue;
             }
-            if (connection.sourceNode.getId().equals(sourceNodeId)
-                    && connection.sourcePort.getId().equals(sourcePortId)
+            if (connection.sourcePort.getId().equals(sourcePortId)
                     && connection.targetNode.getId().equals(targetNodeId)) {
                 return new ExecFrontierSnapshot.ExecWire(
                         sourceNodeId,
@@ -482,11 +481,8 @@ public class NodeExecutor {
             ExecutionRunGuard guard,
             Set<UUID> visiting
     ) {
-        for (NodeGraph.Connection connection : graph.getConnections()) {
+        for (NodeGraph.Connection connection : graph.getIncomingConnections(node.getId())) {
             if (!ExecutionPortKind.isDataConnection(connection)) {
-                continue;
-            }
-            if (!connection.targetNode.getId().equals(node.getId())) {
                 continue;
             }
 
@@ -591,11 +587,8 @@ public class NodeExecutor {
     }
 
     private boolean requiresRecomputeDueToScopedUpstream(INode node, Set<UUID> recomputedThisRun) {
-        for (NodeGraph.Connection connection : graph.getConnections()) {
+        for (NodeGraph.Connection connection : graph.getIncomingConnections(node.getId())) {
             if (!ExecutionPortKind.isDataConnection(connection)) {
-                continue;
-            }
-            if (!connection.targetNode.getId().equals(node.getId())) {
                 continue;
             }
             UUID sourceId = connection.sourceNode.getId();
@@ -623,14 +616,12 @@ public class NodeExecutor {
             inputPortsById.put(port.getId(), port);
         }
 
-        for (NodeGraph.Connection connection : graph.getConnections()) {
+        for (NodeGraph.Connection connection : graph.getIncomingConnections(node.getId())) {
             if (!ExecutionPortKind.isDataConnection(connection)) {
                 continue;
             }
-            if (connection.targetNode.getId().equals(node.getId())) {
-                Object value = connection.sourceNode.getOutput(connection.sourcePort.getId());
-                mergeCollectedInput(inputs, inputPortsById.get(connection.targetPort.getId()), value);
-            }
+            Object value = connection.sourceNode.getOutput(connection.sourcePort.getId());
+            mergeCollectedInput(inputs, inputPortsById.get(connection.targetPort.getId()), value);
         }
 
         return inputs;

@@ -62,11 +62,8 @@ public final class GraphExecutionPlanner {
         Map<UUID, Integer> levelById = new HashMap<>();
         for (INode node : topologicalOrder) {
             int level = 0;
-            for (NodeGraph.Connection connection : graph.getConnections()) {
+            for (NodeGraph.Connection connection : graph.getIncomingConnections(node.getId())) {
                 if (!ExecutionPortKind.isDataConnection(connection)) {
-                    continue;
-                }
-                if (!connection.targetNode.getId().equals(node.getId())) {
                     continue;
                 }
                 Integer predecessorLevel = levelById.get(connection.sourceNode.getId());
@@ -98,12 +95,11 @@ public final class GraphExecutionPlanner {
 
         if (!visited.contains(node.getId())) {
             temporaryMarked.add(node.getId());
-            for (NodeGraph.Connection connection : graph.getConnections()) {
+            for (NodeGraph.Connection connection : graph.getIncomingConnections(node.getId())) {
                 if (!ExecutionPortKind.isDataConnection(connection)) {
                     continue;
                 }
-                if (connection.targetNode.getId().equals(node.getId())
-                        && !visit(connection.sourceNode, graph, visited, temporaryMarked, result)) {
+                if (!visit(connection.sourceNode, graph, visited, temporaryMarked, result)) {
                     return false;
                 }
             }

@@ -2,6 +2,7 @@ package com.nodecraft.nodesystem.graph;
 
 import java.util.ArrayList;
 import java.util.ArrayDeque;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -26,7 +27,12 @@ public class NodeGraph {
     private String name;
     private final List<INode> nodes = new ArrayList<>();
     private final Map<UUID, INode> nodeMap = new HashMap<>();
+    private static final List<Connection> EMPTY_CONNECTIONS = List.of();
+
     private final List<Connection> connections = new ArrayList<>();
+    private final Map<UUID, List<Connection>> incomingByTarget = new HashMap<>();
+    private final Map<UUID, List<Connection>> outgoingBySource = new HashMap<>();
+    private int execConnectionCount = 0;
     private final NodeExecutionCache executionCache = new NodeExecutionCache();
     
     /**
@@ -102,14 +108,9 @@ public class NodeGraph {
         }
         
         // 移除与此节点相关的所有连接
-        List<Connection> connectionsToRemove = new ArrayList<>();
-        for (Connection connection : connections) {
-            if (connection.sourceNode.getId().equals(nodeId) ||
-                connection.targetNode.getId().equals(nodeId)) {
-                connectionsToRemove.add(connection);
-            }
-        }
-        
+        Set<Connection> connectionsToRemove = new LinkedHashSet<>(getOutgoingConnections(nodeId));
+        connectionsToRemove.addAll(getIncomingConnections(nodeId));
+
         for (Connection connection : connectionsToRemove) {
             removeConnection(connection);
         }
@@ -199,9 +200,11 @@ public class NodeGraph {
         // 创建连接并添加到列表
         Connection connection = new Connection(sourceNode, sourcePort, targetNode, targetPort);
         connections.add(connection);
-        
+        indexConnection(connection);
+
         // 建立端口间连接
         if (!sourcePort.connectTo(targetPort)) {
+            unindexConnection(connection);
             connections.remove(connection);
             return false;
         }
@@ -258,6 +261,7 @@ public class NodeGraph {
             }
             
             // 移除连接
+            unindexConnection(connection);
             connections.remove(connection);
             executionCache.clear();
         }
@@ -295,9 +299,8 @@ public class NodeGraph {
      * @return 连接的输出节点ID，如果没有连接则返回null
      */
     public UUID getConnectedOutputNodeId(UUID nodeId, String inputPortId) {
-        for (Connection connection : connections) {
-            if (connection.targetNode.getId().equals(nodeId) && 
-                connection.targetPort.getId().equals(inputPortId)) {
+        for (Connection connection : getIncomingConnections(nodeId)) {
+            if (connection.targetPort.getId().equals(inputPortId)) {
                 return connection.sourceNode.getId();
             }
         }
@@ -311,9 +314,8 @@ public class NodeGraph {
      * @return 连接的输出端口ID，如果没有连接则返回null
      */
     public String getConnectedOutputPortId(UUID nodeId, String inputPortId) {
-        for (Connection connection : connections) {
-            if (connection.targetNode.getId().equals(nodeId) && 
-                connection.targetPort.getId().equals(inputPortId)) {
+        for (Connection connection : getIncomingConnections(nodeId)) {
+            if (connection.targetPort.getId().equals(inputPortId)) {
                 return connection.sourcePort.getId();
             }
         }
@@ -328,9 +330,8 @@ public class NodeGraph {
      */
     public Map<UUID, String> getConnectedInputs(UUID nodeId, String outputPortId) {
         Map<UUID, String> result = new HashMap<>();
-        for (Connection connection : connections) {
-            if (connection.sourceNode.getId().equals(nodeId) && 
-                connection.sourcePort.getId().equals(outputPortId)) {
+        for (Connection connection : getOutgoingConnections(nodeId)) {
+            if (connection.sourcePort.getId().equals(outputPortId)) {
                 result.put(connection.targetNode.getId(), connection.targetPort.getId());
             }
         }
@@ -343,6 +344,28 @@ public class NodeGraph {
      */
     public List<Connection> getConnections() {
         return new ArrayList<>(connections);
+    }
+
+    /**
+     * Returns incoming connections for the given node (edges whose target is {@code nodeId}).
+     */
+    public List<Connection> getIncomingConnections(UUID nodeId) {
+        if (nodeId == null) {
+            return EMPTY_CONNECTIONS;
+        }
+        List<Connection> indexed = incomingByTarget.get(nodeId);
+        return indexed == null ? EMPTY_CONNECTIONS : Collections.unmodifiableList(indexed);
+    }
+
+    /**
+     * Returns outgoing connections for the given node (edges whose source is {@code nodeId}).
+     */
+    public List<Connection> getOutgoingConnections(UUID nodeId) {
+        if (nodeId == null) {
+            return EMPTY_CONNECTIONS;
+        }
+        List<Connection> indexed = outgoingBySource.get(nodeId);
+        return indexed == null ? EMPTY_CONNECTIONS : Collections.unmodifiableList(indexed);
     }
 
     /**
@@ -360,11 +383,8 @@ public class NodeGraph {
 
         while (!queue.isEmpty()) {
             UUID current = queue.removeFirst();
-            for (Connection connection : connections) {
+            for (Connection connection : getOutgoingConnections(current)) {
                 if (!ExecutionPortKind.isDataConnection(connection)) {
-                    continue;
-                }
-                if (!connection.sourceNode.getId().equals(current)) {
                     continue;
                 }
 
@@ -396,11 +416,8 @@ public class NodeGraph {
 
         while (!queue.isEmpty()) {
             UUID current = queue.removeFirst();
-            for (Connection connection : connections) {
+            for (Connection connection : getOutgoingConnections(current)) {
                 if (!ExecutionPortKind.isExecConnection(connection)) {
-                    continue;
-                }
-                if (!connection.sourceNode.getId().equals(current)) {
                     continue;
                 }
 
@@ -433,12 +450,7 @@ public class NodeGraph {
     }
 
     private boolean hasExecConnections() {
-        for (Connection connection : connections) {
-            if (ExecutionPortKind.isExecConnection(connection)) {
-                return true;
-            }
-        }
-        return false;
+        return execConnectionCount > 0;
     }
 
     private void expandExecDownstreamClosure(Set<UUID> impacted) {
@@ -449,11 +461,8 @@ public class NodeGraph {
         ArrayDeque<UUID> queue = new ArrayDeque<>(impacted);
         while (!queue.isEmpty()) {
             UUID current = queue.removeFirst();
-            for (Connection connection : connections) {
+            for (Connection connection : getOutgoingConnections(current)) {
                 if (!ExecutionPortKind.isExecConnection(connection)) {
-                    continue;
-                }
-                if (!connection.sourceNode.getId().equals(current)) {
                     continue;
                 }
 
@@ -484,11 +493,10 @@ public class NodeGraph {
     }
 
     private Connection findConnection(UUID sourceNodeId, String sourcePortId, UUID targetNodeId, String targetPortId) {
-        for (Connection connection : connections) {
-            if (connection.sourceNode.getId().equals(sourceNodeId) &&
-                connection.sourcePort.getId().equals(sourcePortId) &&
-                connection.targetNode.getId().equals(targetNodeId) &&
-                connection.targetPort.getId().equals(targetPortId)) {
+        for (Connection connection : getOutgoingConnections(sourceNodeId)) {
+            if (connection.sourcePort.getId().equals(sourcePortId)
+                    && connection.targetNode.getId().equals(targetNodeId)
+                    && connection.targetPort.getId().equals(targetPortId)) {
                 return connection;
             }
         }
@@ -496,13 +504,46 @@ public class NodeGraph {
     }
 
     private Connection findConnectionToInput(UUID targetNodeId, String targetPortId) {
-        for (Connection connection : connections) {
-            if (connection.targetNode.getId().equals(targetNodeId) &&
-                connection.targetPort.getId().equals(targetPortId)) {
+        for (Connection connection : getIncomingConnections(targetNodeId)) {
+            if (connection.targetPort.getId().equals(targetPortId)) {
                 return connection;
             }
         }
         return null;
+    }
+
+    private void indexConnection(Connection connection) {
+        incomingByTarget
+                .computeIfAbsent(connection.targetNode.getId(), ignored -> new ArrayList<>())
+                .add(connection);
+        outgoingBySource
+                .computeIfAbsent(connection.sourceNode.getId(), ignored -> new ArrayList<>())
+                .add(connection);
+        if (ExecutionPortKind.isExecConnection(connection)) {
+            execConnectionCount++;
+        }
+    }
+
+    private void unindexConnection(Connection connection) {
+        List<Connection> incoming = incomingByTarget.get(connection.targetNode.getId());
+        if (incoming != null) {
+            incoming.remove(connection);
+            if (incoming.isEmpty()) {
+                incomingByTarget.remove(connection.targetNode.getId());
+            }
+        }
+
+        List<Connection> outgoing = outgoingBySource.get(connection.sourceNode.getId());
+        if (outgoing != null) {
+            outgoing.remove(connection);
+            if (outgoing.isEmpty()) {
+                outgoingBySource.remove(connection.sourceNode.getId());
+            }
+        }
+
+        if (ExecutionPortKind.isExecConnection(connection)) {
+            execConnectionCount = Math.max(0, execConnectionCount - 1);
+        }
     }
     
     /**

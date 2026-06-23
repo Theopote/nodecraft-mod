@@ -43,21 +43,23 @@ public final class ExecutionFlowGraph {
         Set<UUID> execParticipatingNodes = new HashSet<>();
         boolean hasExecEdges = false;
 
-        for (NodeGraph.Connection connection : graph.getConnections()) {
-            if (!ExecutionPortKind.isExecConnection(connection)) {
-                continue;
+        for (INode node : graph.getNodes()) {
+            for (NodeGraph.Connection connection : graph.getOutgoingConnections(node.getId())) {
+                if (!ExecutionPortKind.isExecConnection(connection)) {
+                    continue;
+                }
+                hasExecEdges = true;
+                UUID sourceId = connection.sourceNode.getId();
+                UUID targetId = connection.targetNode.getId();
+                String sourcePortId = connection.sourcePort.getId();
+                execParticipatingNodes.add(sourceId);
+                execParticipatingNodes.add(targetId);
+                successorsByPort
+                        .computeIfAbsent(sourceId, ignored -> new HashMap<>())
+                        .computeIfAbsent(sourcePortId, ignored -> new LinkedHashSet<>())
+                        .add(targetId);
+                nodesWithIncomingExec.add(targetId);
             }
-            hasExecEdges = true;
-            UUID sourceId = connection.sourceNode.getId();
-            UUID targetId = connection.targetNode.getId();
-            String sourcePortId = connection.sourcePort.getId();
-            execParticipatingNodes.add(sourceId);
-            execParticipatingNodes.add(targetId);
-            successorsByPort
-                    .computeIfAbsent(sourceId, ignored -> new HashMap<>())
-                    .computeIfAbsent(sourcePortId, ignored -> new LinkedHashSet<>())
-                    .add(targetId);
-            nodesWithIncomingExec.add(targetId);
         }
 
         if (!hasExecEdges) {
