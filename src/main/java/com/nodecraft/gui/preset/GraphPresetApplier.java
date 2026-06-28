@@ -73,8 +73,12 @@ public final class GraphPresetApplier {
                 UUID sourceNodeId = refToNodeId.get(connection.fromRef);
                 UUID targetNodeId = refToNodeId.get(connection.toRef);
                 if (sourceNodeId == null || targetNodeId == null) {
-                    rollback(editor, createdNodeIds);
-                    return ApplyResult.failure("Preset connection references unknown node");
+                    NodeCraft.LOGGER.warn(
+                            "Skipping preset connection with unknown node reference in {}: {} -> {}",
+                            preset.id,
+                            connection.fromRef,
+                            connection.toRef);
+                    continue;
                 }
                 boolean connected = editor.connectPorts(
                         sourceNodeId,
@@ -82,8 +86,13 @@ public final class GraphPresetApplier {
                         targetNodeId,
                         connection.toPort);
                 if (!connected) {
-                    rollback(editor, createdNodeIds);
-                    return ApplyResult.failure("Failed to connect preset ports");
+                    NodeCraft.LOGGER.warn(
+                            "Skipping invalid preset connection in {}: {}.{} -> {}.{}",
+                            preset.id,
+                            connection.fromRef,
+                            connection.fromPort,
+                            connection.toRef,
+                            connection.toPort);
                 }
             }
         }
