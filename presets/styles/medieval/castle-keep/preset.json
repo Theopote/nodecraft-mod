@@ -1,0 +1,305 @@
+{
+  "preset_id": "styles.medieval.castle_keep",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Castle Keep",
+    "name_i18n": {
+      "zh_CN": "城堡主塔",
+      "en_US": "Castle Keep"
+    },
+    "description": "A fortified castle keep with thick walls and corner towers.",
+    "description_i18n": {
+      "zh_CN": "带有厚墙和角塔的坚固城堡主塔。",
+      "en_US": "A fortified castle keep with thick walls and corner towers."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["castle", "keep", "medieval", "fortress"],
+    "category": "styles",
+    "difficulty": "advanced",
+    "estimated_build_time": "6 minutes",
+    "estimated_node_count": 12
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "size",
+      "name": "Keep Size",
+      "type": "integer",
+      "default": 16,
+      "min": 12,
+      "max": 32,
+      "step": 2,
+      "description": "Width and length of the keep",
+      "group": "Dimensions"
+    },
+    {
+      "id": "wall_height",
+      "name": "Wall Height",
+      "type": "integer",
+      "default": 12,
+      "min": 8,
+      "max": 24,
+      "step": 2,
+      "description": "Height of main walls",
+      "group": "Dimensions"
+    },
+    {
+      "id": "wall_thickness",
+      "name": "Wall Thickness",
+      "type": "integer",
+      "default": 2,
+      "min": 2,
+      "max": 4,
+      "step": 1,
+      "description": "Thickness of outer walls",
+      "group": "Dimensions"
+    },
+    {
+      "id": "tower_height_extra",
+      "name": "Tower Extra Height",
+      "type": "integer",
+      "default": 4,
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "description": "How much taller corner towers are",
+      "group": "Dimensions"
+    },
+    {
+      "id": "stone_material",
+      "name": "Stone Material",
+      "type": "block_selector",
+      "default": "minecraft:stone_bricks",
+      "description": "Block type for castle stone",
+      "group": "Materials"
+    },
+    {
+      "id": "foundation_material",
+      "name": "Foundation Material",
+      "type": "block_selector",
+      "default": "minecraft:cobblestone",
+      "description": "Block type for foundation",
+      "group": "Materials"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "outer_walls",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "corner": {"x": 0, "y": 0, "z": 0},
+          "size": {
+            "x": {"param": "size"},
+            "y": {"param": "wall_height"},
+            "z": {"param": "size"}
+          }
+        }
+      },
+      {
+        "id": "inner_space",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 320},
+        "parameters": {
+          "corner": {
+            "x": {"param": "wall_thickness"},
+            "y": 0,
+            "z": {"param": "wall_thickness"}
+          },
+          "size": {
+            "x": {"param": "inner_size"},
+            "y": {"param": "wall_height"},
+            "z": {"param": "inner_size"}
+          }
+        }
+      },
+      {
+        "id": "hollow_keep",
+        "type": "geometry.boolean.difference",
+        "position": {"x": 450, "y": 260},
+        "parameters": {}
+      },
+      {
+        "id": "tower_1",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 460},
+        "parameters": {
+          "corner": {"x": 0, "y": 0, "z": 0},
+          "size": {
+            "x": {"param": "tower_size"},
+            "y": {"param": "tower_height"},
+            "z": {"param": "tower_size"}
+          }
+        }
+      },
+      {
+        "id": "tower_2",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 560},
+        "parameters": {
+          "corner": {
+            "x": {"param": "tower_x2"},
+            "y": 0,
+            "z": 0
+          },
+          "size": {
+            "x": {"param": "tower_size"},
+            "y": {"param": "tower_height"},
+            "z": {"param": "tower_size"}
+          }
+        }
+      },
+      {
+        "id": "tower_3",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 660},
+        "parameters": {
+          "corner": {
+            "x": 0,
+            "y": 0,
+            "z": {"param": "tower_z2"}
+          },
+          "size": {
+            "x": {"param": "tower_size"},
+            "y": {"param": "tower_height"},
+            "z": {"param": "tower_size"}
+          }
+        }
+      },
+      {
+        "id": "tower_4",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 760},
+        "parameters": {
+          "corner": {
+            "x": {"param": "tower_x2"},
+            "y": 0,
+            "z": {"param": "tower_z2"}
+          },
+          "size": {
+            "x": {"param": "tower_size"},
+            "y": {"param": "tower_height"},
+            "z": {"param": "tower_size"}
+          }
+        }
+      },
+      {
+        "id": "union_all",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 650, "y": 500},
+        "parameters": {}
+      },
+      {
+        "id": "assign_material",
+        "type": "material.gradient_mapping.height_gradient",
+        "position": {"x": 850, "y": 500},
+        "parameters": {
+          "stops": [
+            {"height": 0, "block": {"param": "foundation_material"}},
+            {"height": 2, "block": {"param": "stone_material"}}
+          ]
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1050, "y": 500},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1250, "y": 500},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1450, "y": 500},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "outer_walls", "port": "geometry"},
+        "to": {"node": "hollow_keep", "port": "a"}
+      },
+      {
+        "from": {"node": "inner_space", "port": "geometry"},
+        "to": {"node": "hollow_keep", "port": "b"}
+      },
+      {
+        "from": {"node": "hollow_keep", "port": "result"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "tower_1", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "tower_2", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "tower_3", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "tower_4", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_all", "port": "result"},
+        "to": {"node": "assign_material", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_material", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates fortress architecture with thick defensive walls and corner towers. The hollow interior allows for multiple floors and rooms.",
+    "tips": [
+      "Corner towers provide defensive advantage",
+      "Thick walls resist siege weapons",
+      "Add interior floors and stairs manually",
+      "Place on elevated terrain for better defense",
+      "Connect to curtain walls for complete castle"
+    ],
+    "related_presets": [
+      "architectural.infrastructure.watchtower",
+      "quickstart.simple_tower"
+    ]
+  }
+}

@@ -1,0 +1,233 @@
+{
+  "preset_id": "building_elements.stairs.spiral_staircase",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Spiral Staircase",
+    "name_i18n": {
+      "zh_CN": "螺旋楼梯",
+      "en_US": "Spiral Staircase"
+    },
+    "description": "A circular spiral staircase with adjustable radius, height, and rotation.",
+    "description_i18n": {
+      "zh_CN": "可调节半径、高度和旋转角度的圆形螺旋楼梯。",
+      "en_US": "A circular spiral staircase with adjustable radius, height, and rotation."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["stairs", "spiral", "building-element", "circulation"],
+    "category": "building_elements",
+    "difficulty": "intermediate",
+    "estimated_build_time": "3 minutes",
+    "estimated_node_count": 12
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "height",
+      "name": "Total Height",
+      "type": "integer",
+      "default": 20,
+      "min": 4,
+      "max": 64,
+      "step": 1,
+      "description": "Total height of the staircase in blocks",
+      "group": "Dimensions"
+    },
+    {
+      "id": "radius",
+      "name": "Radius",
+      "type": "float",
+      "default": 3.0,
+      "min": 2.0,
+      "max": 8.0,
+      "step": 0.5,
+      "description": "Radius of the spiral",
+      "group": "Dimensions"
+    },
+    {
+      "id": "rotations",
+      "name": "Full Rotations",
+      "type": "float",
+      "default": 2.0,
+      "min": 0.5,
+      "max": 8.0,
+      "step": 0.5,
+      "description": "Number of complete 360° rotations",
+      "group": "Shape"
+    },
+    {
+      "id": "step_material",
+      "name": "Step Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_planks",
+      "description": "Block type for stair steps",
+      "group": "Materials"
+    },
+    {
+      "id": "post_material",
+      "name": "Center Post Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_log",
+      "description": "Block type for center support post",
+      "group": "Materials"
+    }
+  ],
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "helix_curve",
+        "type": "geometry.curves.helix",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "base": {"param": "input_pos"},
+          "axis": {"x": 0, "y": 1, "z": 0},
+          "radius": {"param": "radius"},
+          "pitch": {"param": "height"},
+          "turns": {"param": "rotations"},
+          "points_per_turn": 16
+        }
+      },
+      {
+        "id": "sample_curve",
+        "type": "geometry.curves.divide_curve",
+        "position": {"x": 450, "y": 200},
+        "parameters": {
+          "count": {"param": "height"}
+        }
+      },
+      {
+        "id": "center_post",
+        "type": "geometry.primitives.cylinder_by_axis_and_radius",
+        "position": {"x": 250, "y": 350},
+        "parameters": {
+          "base": {"param": "input_pos"},
+          "axis": {"x": 0, "y": 1, "z": 0},
+          "radius": 0.5,
+          "height": {"param": "height"}
+        }
+      },
+      {
+        "id": "step_box",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 650, "y": 200},
+        "parameters": {
+          "corner": {"x": 0, "y": 0, "z": 0},
+          "size": {"x": 2, "y": 0.5, "z": 1}
+        }
+      },
+      {
+        "id": "orient_steps",
+        "type": "pattern.instances.orient_instances_to_frames",
+        "position": {"x": 850, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "union_steps",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 1050, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "union_with_post",
+        "type": "geometry.boolean.union",
+        "position": {"x": 1050, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "material_steps",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 1250, "y": 250},
+        "parameters": {
+          "block_type": {"param": "step_material"}
+        }
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1450, "y": 250},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1650, "y": 250},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "helix_curve", "port": "base"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "center_post", "port": "base"}
+      },
+      {
+        "from": {"node": "helix_curve", "port": "curve"},
+        "to": {"node": "sample_curve", "port": "curve"}
+      },
+      {
+        "from": {"node": "sample_curve", "port": "points"},
+        "to": {"node": "orient_steps", "port": "origins"}
+      },
+      {
+        "from": {"node": "step_box", "port": "geometry"},
+        "to": {"node": "orient_steps", "port": "geometry"}
+      },
+      {
+        "from": {"node": "orient_steps", "port": "instances"},
+        "to": {"node": "union_steps", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_steps", "port": "result"},
+        "to": {"node": "union_with_post", "port": "a"}
+      },
+      {
+        "from": {"node": "center_post", "port": "geometry"},
+        "to": {"node": "union_with_post", "port": "b"}
+      },
+      {
+        "from": {"node": "union_with_post", "port": "result"},
+        "to": {"node": "material_steps", "port": "geometry"}
+      },
+      {
+        "from": {"node": "material_steps", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates helix curve generation, curve sampling, instance orientation, and boolean union. The spiral staircase is created by placing step boxes along a helix curve.",
+    "tips": [
+      "Increase rotations for tighter spirals",
+      "Larger radius creates more spacious stairs",
+      "Use different wood types for varied aesthetics",
+      "The center post provides structural support"
+    ],
+    "related_presets": [
+      "building_elements.stairs.straight_staircase",
+      "architectural.infrastructure.watchtower"
+    ]
+  }
+}

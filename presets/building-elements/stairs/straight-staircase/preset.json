@@ -1,0 +1,208 @@
+{
+  "preset_id": "building_elements.stairs.straight_staircase",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Straight Staircase",
+    "name_i18n": {
+      "zh_CN": "直线楼梯",
+      "en_US": "Straight Staircase"
+    },
+    "description": "A simple straight staircase connecting two levels.",
+    "description_i18n": {
+      "zh_CN": "连接两个楼层的简单直线楼梯。",
+      "en_US": "A simple straight staircase connecting two levels."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["stairs", "straight", "simple", "building-element"],
+    "category": "building_elements",
+    "difficulty": "beginner",
+    "estimated_build_time": "2 minutes",
+    "estimated_node_count": 6
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "steps",
+      "name": "Number of Steps",
+      "type": "integer",
+      "default": 8,
+      "min": 3,
+      "max": 20,
+      "step": 1,
+      "description": "Number of steps in the staircase",
+      "group": "Dimensions"
+    },
+    {
+      "id": "step_width",
+      "name": "Staircase Width",
+      "type": "integer",
+      "default": 3,
+      "min": 1,
+      "max": 8,
+      "step": 1,
+      "description": "Width of the staircase",
+      "group": "Dimensions"
+    },
+    {
+      "id": "step_material",
+      "name": "Step Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_stairs",
+      "description": "Block type for steps",
+      "group": "Materials"
+    },
+    {
+      "id": "add_railings",
+      "name": "Add Railings",
+      "type": "boolean",
+      "default": true,
+      "description": "Add railings on both sides",
+      "group": "Features"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "steps_line",
+        "type": "geometry.curves.line",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "start": {"x": 0, "y": 0, "z": 0},
+          "end": {
+            "x": {"param": "steps"},
+            "y": {"param": "steps"},
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "divide_steps",
+        "type": "geometry.curves.divide_curve",
+        "position": {"x": 450, "y": 200},
+        "parameters": {
+          "count": {"param": "steps"}
+        }
+      },
+      {
+        "id": "step_box",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 450, "y": 350},
+        "parameters": {
+          "corner": {"x": 0, "y": 0, "z": 0},
+          "size": {
+            "x": 1,
+            "y": 0.5,
+            "z": {"param": "step_width"}
+          }
+        }
+      },
+      {
+        "id": "array_steps",
+        "type": "pattern.instances.place_instances_at_points",
+        "position": {"x": 650, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "union_steps",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 850, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "assign_material",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 1050, "y": 275},
+        "parameters": {
+          "block_type": {"param": "step_material"}
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1250, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1450, "y": 275},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1650, "y": 275},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "steps_line", "port": "curve"},
+        "to": {"node": "divide_steps", "port": "curve"}
+      },
+      {
+        "from": {"node": "divide_steps", "port": "points"},
+        "to": {"node": "array_steps", "port": "points"}
+      },
+      {
+        "from": {"node": "step_box", "port": "geometry"},
+        "to": {"node": "array_steps", "port": "geometry"}
+      },
+      {
+        "from": {"node": "array_steps", "port": "instances"},
+        "to": {"node": "union_steps", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_steps", "port": "result"},
+        "to": {"node": "assign_material", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_material", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates arraying geometry along a line. Each step is placed at regular intervals along a diagonal line.",
+    "tips": [
+      "One step per block of height",
+      "Use wood stairs for residential buildings",
+      "Stone stairs for public buildings",
+      "Adjust width for narrow or wide staircases",
+      "Connect multiple flights for tall buildings"
+    ],
+    "related_presets": [
+      "building_elements.stairs.spiral_staircase",
+      "architectural.residential.medieval_cottage"
+    ]
+  }
+}

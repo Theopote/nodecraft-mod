@@ -1,0 +1,279 @@
+{
+  "preset_id": "decorative.gazebo",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Garden Gazebo",
+    "name_i18n": {
+      "zh_CN": "花园凉亭",
+      "en_US": "Garden Gazebo"
+    },
+    "description": "An open-air pavilion perfect for gardens and parks.",
+    "description_i18n": {
+      "zh_CN": "适合花园和公园的露天凉亭。",
+      "en_US": "An open-air pavilion perfect for gardens and parks."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["gazebo", "pavilion", "garden", "decorative"],
+    "category": "decorative",
+    "difficulty": "intermediate",
+    "estimated_build_time": "4 minutes",
+    "estimated_node_count": 9
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "size",
+      "name": "Gazebo Size",
+      "type": "integer",
+      "default": 6,
+      "min": 4,
+      "max": 12,
+      "step": 1,
+      "description": "Diameter of the gazebo",
+      "group": "Dimensions"
+    },
+    {
+      "id": "height",
+      "name": "Wall Height",
+      "type": "integer",
+      "default": 3,
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "description": "Height of the gazebo walls",
+      "group": "Dimensions"
+    },
+    {
+      "id": "roof_height",
+      "name": "Roof Height",
+      "type": "integer",
+      "default": 3,
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "description": "Height of the roof cone",
+      "group": "Dimensions"
+    },
+    {
+      "id": "column_count",
+      "name": "Column Count",
+      "type": "integer",
+      "default": 6,
+      "min": 4,
+      "max": 12,
+      "step": 1,
+      "description": "Number of support columns",
+      "group": "Structure"
+    },
+    {
+      "id": "floor_material",
+      "name": "Floor Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_planks",
+      "description": "Block type for floor",
+      "group": "Materials"
+    },
+    {
+      "id": "column_material",
+      "name": "Column Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_log",
+      "description": "Block type for columns",
+      "group": "Materials"
+    },
+    {
+      "id": "roof_material",
+      "name": "Roof Material",
+      "type": "block_selector",
+      "default": "minecraft:oak_stairs",
+      "description": "Block type for roof",
+      "group": "Materials"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "floor_circle",
+        "type": "geometry.primitives.cylinder_by_axis_and_radius",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "radius": {"param": "radius"},
+          "height": 0.5,
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "column_circle",
+        "type": "geometry.curves.circle",
+        "position": {"x": 250, "y": 350},
+        "parameters": {
+          "radius": {"param": "column_radius"},
+          "segments": {"param": "column_count"}
+        }
+      },
+      {
+        "id": "column_points",
+        "type": "geometry.curves.divide_curve",
+        "position": {"x": 450, "y": 350},
+        "parameters": {
+          "count": {"param": "column_count"}
+        }
+      },
+      {
+        "id": "single_column",
+        "type": "geometry.primitives.cylinder_by_axis_and_radius",
+        "position": {"x": 450, "y": 500},
+        "parameters": {
+          "radius": 0.3,
+          "height": {"param": "height"},
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "array_columns",
+        "type": "pattern.instances.place_instances_at_points",
+        "position": {"x": 650, "y": 425},
+        "parameters": {}
+      },
+      {
+        "id": "roof_cone",
+        "type": "geometry.primitives.cone",
+        "position": {"x": 250, "y": 650},
+        "parameters": {
+          "base_radius": {"param": "roof_radius"},
+          "height": {"param": "roof_height"},
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "position_roof",
+        "type": "transform.basic.move",
+        "position": {"x": 450, "y": 650},
+        "parameters": {
+          "translation": {
+            "x": 0,
+            "y": {"param": "height"},
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "union_all",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 850, "y": 450},
+        "parameters": {}
+      },
+      {
+        "id": "assign_materials",
+        "type": "material.gradient_mapping.height_gradient",
+        "position": {"x": 1050, "y": 450},
+        "parameters": {
+          "stops": [
+            {"height": 0, "block": {"param": "floor_material"}},
+            {"height": 0.5, "block": {"param": "column_material"}},
+            {"height": {"param": "height"}, "block": {"param": "roof_material"}}
+          ]
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1250, "y": 450},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1450, "y": 450},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1650, "y": 450},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "column_circle", "port": "curve"},
+        "to": {"node": "column_points", "port": "curve"}
+      },
+      {
+        "from": {"node": "column_points", "port": "points"},
+        "to": {"node": "array_columns", "port": "points"}
+      },
+      {
+        "from": {"node": "single_column", "port": "geometry"},
+        "to": {"node": "array_columns", "port": "geometry"}
+      },
+      {
+        "from": {"node": "roof_cone", "port": "geometry"},
+        "to": {"node": "position_roof", "port": "geometry"}
+      },
+      {
+        "from": {"node": "floor_circle", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "array_columns", "port": "instances"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "position_roof", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_all", "port": "result"},
+        "to": {"node": "assign_materials", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_materials", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates radial arrays by placing columns in a circle. The circular curve is divided into points where columns are instantiated.",
+    "tips": [
+      "Perfect for parks and formal gardens",
+      "Adjust column count for different aesthetics",
+      "More columns create enclosed feeling",
+      "Add seating inside manually",
+      "Use white wood or stone for elegant look"
+    ],
+    "related_presets": [
+      "decorative.fountain_circular",
+      "building_elements.columns.classical_column"
+    ]
+  }
+}

@@ -1,0 +1,239 @@
+{
+  "preset_id": "building_elements.windows.arched_window",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Arched Window",
+    "name_i18n": {
+      "zh_CN": "拱形窗户",
+      "en_US": "Arched Window"
+    },
+    "description": "A medieval-style arched window with stone frame and glass panes.",
+    "description_i18n": {
+      "zh_CN": "带有石框和玻璃的中世纪风格拱形窗户。",
+      "en_US": "A medieval-style arched window with stone frame and glass panes."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["window", "medieval", "arched", "building-element"],
+    "category": "building_elements",
+    "difficulty": "beginner",
+    "estimated_build_time": "2 minutes",
+    "estimated_node_count": 10
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "width",
+      "name": "Window Width",
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 6,
+      "step": 1,
+      "description": "Width of the window opening",
+      "group": "Dimensions"
+    },
+    {
+      "id": "height",
+      "name": "Window Height",
+      "type": "integer",
+      "default": 3,
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "description": "Height of the straight part",
+      "group": "Dimensions"
+    },
+    {
+      "id": "arch_height",
+      "name": "Arch Height",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.5,
+      "max": 3.0,
+      "step": 0.5,
+      "description": "Height of the arch at the top",
+      "group": "Dimensions"
+    },
+    {
+      "id": "depth",
+      "name": "Frame Depth",
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "description": "Depth of the window in blocks",
+      "group": "Dimensions"
+    },
+    {
+      "id": "frame_material",
+      "name": "Frame Material",
+      "type": "block_selector",
+      "default": "minecraft:stone_bricks",
+      "description": "Block type for window frame",
+      "group": "Materials"
+    },
+    {
+      "id": "glass_material",
+      "name": "Glass Material",
+      "type": "block_selector",
+      "default": "minecraft:glass_pane",
+      "description": "Block type for window glass",
+      "group": "Materials"
+    }
+  ],
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "rect_profile",
+        "type": "geometry.profiles.rectangle",
+        "position": {"x": 250, "y": 180},
+        "parameters": {
+          "width": {"param": "width"},
+          "height": {"param": "height"}
+        }
+      },
+      {
+        "id": "arc_profile",
+        "type": "geometry.profiles.arc",
+        "position": {"x": 250, "y": 280},
+        "parameters": {
+          "radius": {"param": "arch_radius_calc"},
+          "start_angle": 0,
+          "end_angle": 180,
+          "segments": 12
+        }
+      },
+      {
+        "id": "union_profiles",
+        "type": "geometry.profiles.union_profiles",
+        "position": {"x": 450, "y": 230},
+        "parameters": {}
+      },
+      {
+        "id": "extrude_opening",
+        "type": "geometry.solids.extrude",
+        "position": {"x": 650, "y": 230},
+        "parameters": {
+          "distance": {"param": "depth"}
+        }
+      },
+      {
+        "id": "frame_box",
+        "type": "geometry.primitives.box_by_center_and_size",
+        "position": {"x": 250, "y": 400},
+        "parameters": {
+          "size": {
+            "x": {"param": "frame_width"},
+            "y": {"param": "frame_height"},
+            "z": {"param": "depth"}
+          }
+        }
+      },
+      {
+        "id": "subtract_opening",
+        "type": "geometry.boolean.difference",
+        "position": {"x": 850, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1050, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "assign_frame",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 1250, "y": 300},
+        "parameters": {
+          "block_type": {"param": "frame_material"}
+        }
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1450, "y": 300},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1650, "y": 300},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "rect_profile", "port": "profile"},
+        "to": {"node": "union_profiles", "port": "a"}
+      },
+      {
+        "from": {"node": "arc_profile", "port": "profile"},
+        "to": {"node": "union_profiles", "port": "b"}
+      },
+      {
+        "from": {"node": "union_profiles", "port": "result"},
+        "to": {"node": "extrude_opening", "port": "profile"}
+      },
+      {
+        "from": {"node": "frame_box", "port": "geometry"},
+        "to": {"node": "subtract_opening", "port": "a"}
+      },
+      {
+        "from": {"node": "extrude_opening", "port": "geometry"},
+        "to": {"node": "subtract_opening", "port": "b"}
+      },
+      {
+        "from": {"node": "subtract_opening", "port": "result"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "assign_frame", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_frame", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset shows how to create complex window shapes by combining rectangle and arc profiles, then using boolean operations to cut the opening from a frame.",
+    "tips": [
+      "Adjust arch height for different architectural styles",
+      "Use colored glass for stained glass windows",
+      "Frame depth affects wall thickness compatibility",
+      "Try cobblestone for rustic medieval look"
+    ],
+    "related_presets": [
+      "building_elements.windows.modern_window",
+      "architectural.residential.medieval_cottage"
+    ]
+  }
+}

@@ -1,0 +1,291 @@
+{
+  "preset_id": "styles.fantasy.wizard_tower",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Wizard Tower",
+    "name_i18n": {
+      "zh_CN": "巫师塔",
+      "en_US": "Wizard Tower"
+    },
+    "description": "A tall, mystical wizard tower with a conical roof and magical aesthetic.",
+    "description_i18n": {
+      "zh_CN": "高耸的神秘巫师塔，带有圆锥形屋顶和魔法美学。",
+      "en_US": "A tall, mystical wizard tower with a conical roof and magical aesthetic."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["wizard", "tower", "fantasy", "magic"],
+    "category": "styles",
+    "difficulty": "intermediate",
+    "estimated_build_time": "5 minutes",
+    "estimated_node_count": 12
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "tower_height",
+      "name": "Tower Height",
+      "type": "integer",
+      "default": 24,
+      "min": 12,
+      "max": 48,
+      "step": 2,
+      "description": "Height of the tower main body",
+      "group": "Dimensions"
+    },
+    {
+      "id": "tower_radius",
+      "name": "Tower Radius",
+      "type": "float",
+      "default": 4.0,
+      "min": 3.0,
+      "max": 8.0,
+      "step": 0.5,
+      "description": "Radius of the tower",
+      "group": "Dimensions"
+    },
+    {
+      "id": "roof_height",
+      "name": "Roof Height",
+      "type": "integer",
+      "default": 8,
+      "min": 4,
+      "max": 16,
+      "step": 1,
+      "description": "Height of the conical roof",
+      "group": "Dimensions"
+    },
+    {
+      "id": "wall_thickness",
+      "name": "Wall Thickness",
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 2,
+      "step": 1,
+      "description": "Thickness of tower walls",
+      "group": "Dimensions"
+    },
+    {
+      "id": "tower_material",
+      "name": "Tower Material",
+      "type": "block_selector",
+      "default": "minecraft:dark_prismarine",
+      "description": "Block type for tower walls",
+      "group": "Materials"
+    },
+    {
+      "id": "roof_material",
+      "name": "Roof Material",
+      "type": "block_selector",
+      "default": "minecraft:purpur_stairs",
+      "description": "Block type for roof",
+      "group": "Materials"
+    },
+    {
+      "id": "trim_material",
+      "name": "Trim Material",
+      "type": "block_selector",
+      "default": "minecraft:amethyst_block",
+      "description": "Block type for decorative trim",
+      "group": "Materials"
+    },
+    {
+      "id": "add_balcony",
+      "name": "Add Balcony",
+      "type": "boolean",
+      "default": true,
+      "description": "Add a circular balcony near the top",
+      "group": "Features"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "tower_outer",
+        "type": "geometry.primitives.cylinder_by_axis_and_radius",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "radius": {"param": "tower_radius"},
+          "height": {"param": "tower_height"},
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "tower_inner",
+        "type": "geometry.primitives.cylinder_by_axis_and_radius",
+        "position": {"x": 250, "y": 320},
+        "parameters": {
+          "radius": {"param": "tower_radius_inner"},
+          "height": {"param": "tower_height"},
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "hollow_tower",
+        "type": "geometry.boolean.difference",
+        "position": {"x": 450, "y": 260},
+        "parameters": {}
+      },
+      {
+        "id": "roof_cone",
+        "type": "geometry.primitives.cone",
+        "position": {"x": 250, "y": 460},
+        "parameters": {
+          "base_radius": {"param": "roof_radius"},
+          "height": {"param": "roof_height"},
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "position_roof",
+        "type": "transform.basic.move",
+        "position": {"x": 450, "y": 460},
+        "parameters": {
+          "translation": {
+            "x": 0,
+            "y": {"param": "tower_height"},
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "balcony_ring",
+        "type": "geometry.primitives.torus",
+        "position": {"x": 250, "y": 620},
+        "parameters": {
+          "major_radius": {"param": "balcony_major_radius"},
+          "minor_radius": 0.3,
+          "axis": {"x": 0, "y": 1, "z": 0}
+        }
+      },
+      {
+        "id": "position_balcony",
+        "type": "transform.basic.move",
+        "position": {"x": 450, "y": 620},
+        "parameters": {
+          "translation": {
+            "x": 0,
+            "y": {"param": "balcony_height"},
+            "z": 0
+          }
+        }
+      },
+      {
+        "id": "union_all",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 650, "y": 400},
+        "parameters": {}
+      },
+      {
+        "id": "assign_tower",
+        "type": "material.gradient_mapping.height_gradient",
+        "position": {"x": 850, "y": 400},
+        "parameters": {
+          "stops": [
+            {"height": 0, "block": {"param": "tower_material"}},
+            {"height": {"param": "tower_height"}, "block": {"param": "roof_material"}}
+          ]
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1050, "y": 400},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1250, "y": 400},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1450, "y": 400},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "tower_outer", "port": "geometry"},
+        "to": {"node": "hollow_tower", "port": "a"}
+      },
+      {
+        "from": {"node": "tower_inner", "port": "geometry"},
+        "to": {"node": "hollow_tower", "port": "b"}
+      },
+      {
+        "from": {"node": "roof_cone", "port": "geometry"},
+        "to": {"node": "position_roof", "port": "geometry"}
+      },
+      {
+        "from": {"node": "balcony_ring", "port": "geometry"},
+        "to": {"node": "position_balcony", "port": "geometry"}
+      },
+      {
+        "from": {"node": "hollow_tower", "port": "result"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "position_roof", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "position_balcony", "port": "geometry"},
+        "to": {"node": "union_all", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_all", "port": "result"},
+        "to": {"node": "assign_tower", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_tower", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset showcases fantasy architecture using unconventional materials and shapes. The torus balcony and conical roof create a magical aesthetic.",
+    "tips": [
+      "Use prismarine or purpur for magical look",
+      "Add glowstone windows for illumination",
+      "Taller towers are more impressive",
+      "Balcony provides exterior viewing platform",
+      "Place in fantasy or mystical biomes"
+    ],
+    "related_presets": [
+      "quickstart.simple_tower",
+      "styles.medieval.castle_keep"
+    ]
+  }
+}

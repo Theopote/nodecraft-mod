@@ -1,0 +1,223 @@
+{
+  "preset_id": "quickstart.garden_wall",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Garden Wall with Gate",
+    "name_i18n": {
+      "zh_CN": "带门的花园围墙",
+      "en_US": "Garden Wall with Gate"
+    },
+    "description": "A simple wall segment with an arched gateway opening, perfect for gardens and courtyards.",
+    "description_i18n": {
+      "zh_CN": "带有拱形门道的简单墙段，非常适合花园和庭院。",
+      "en_US": "A simple wall segment with an arched gateway opening, perfect for gardens and courtyards."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["wall", "gate", "garden", "quickstart", "beginner"],
+    "category": "quickstart",
+    "difficulty": "beginner",
+    "estimated_build_time": "2 minutes",
+    "estimated_node_count": 8
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "wall_length",
+      "name": "Wall Length",
+      "type": "integer",
+      "default": 12,
+      "min": 6,
+      "max": 32,
+      "step": 1,
+      "description": "Total length of the wall",
+      "group": "Dimensions"
+    },
+    {
+      "id": "wall_height",
+      "name": "Wall Height",
+      "type": "integer",
+      "default": 4,
+      "min": 2,
+      "max": 8,
+      "step": 1,
+      "description": "Height of the wall",
+      "group": "Dimensions"
+    },
+    {
+      "id": "wall_thickness",
+      "name": "Wall Thickness",
+      "type": "integer",
+      "default": 1,
+      "min": 1,
+      "max": 3,
+      "step": 1,
+      "description": "Thickness of the wall",
+      "group": "Dimensions"
+    },
+    {
+      "id": "gate_width",
+      "name": "Gate Width",
+      "type": "integer",
+      "default": 3,
+      "min": 2,
+      "max": 6,
+      "step": 1,
+      "description": "Width of the gate opening",
+      "group": "Gate"
+    },
+    {
+      "id": "gate_height",
+      "name": "Gate Height",
+      "type": "integer",
+      "default": 3,
+      "min": 2,
+      "max": 5,
+      "step": 1,
+      "description": "Height of the gate opening",
+      "group": "Gate"
+    },
+    {
+      "id": "wall_material",
+      "name": "Wall Material",
+      "type": "block_selector",
+      "default": "minecraft:cobblestone",
+      "description": "Block type for the wall",
+      "group": "Materials"
+    },
+    {
+      "id": "add_crenellations",
+      "name": "Add Crenellations",
+      "type": "boolean",
+      "default": false,
+      "description": "Add battlements to top of wall",
+      "group": "Features"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "wall_box",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "corner": {"x": 0, "y": 0, "z": 0},
+          "size": {
+            "x": {"param": "wall_length"},
+            "y": {"param": "wall_height"},
+            "z": {"param": "wall_thickness"}
+          }
+        }
+      },
+      {
+        "id": "gate_box",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 350},
+        "parameters": {
+          "corner": {
+            "x": {"param": "gate_x_center"},
+            "y": 0,
+            "z": 0
+          },
+          "size": {
+            "x": {"param": "gate_width"},
+            "y": {"param": "gate_height"},
+            "z": {"param": "wall_thickness"}
+          }
+        }
+      },
+      {
+        "id": "cut_gate",
+        "type": "geometry.boolean.difference",
+        "position": {"x": 450, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "assign_material",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 650, "y": 275},
+        "parameters": {
+          "block_type": {"param": "wall_material"}
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 850, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1050, "y": 275},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1250, "y": 275},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "wall_box", "port": "geometry"},
+        "to": {"node": "cut_gate", "port": "a"}
+      },
+      {
+        "from": {"node": "gate_box", "port": "geometry"},
+        "to": {"node": "cut_gate", "port": "b"}
+      },
+      {
+        "from": {"node": "cut_gate", "port": "result"},
+        "to": {"node": "assign_material", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_material", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset introduces boolean operations by cutting a gate opening from a solid wall. This is a fundamental technique used in many architectural models.",
+    "tips": [
+      "Connect multiple wall segments for longer perimeters",
+      "Use stone bricks for formal gardens",
+      "Cobblestone works well for rustic settings",
+      "Adjust gate width to match door sizes",
+      "Add crenellations for defensive walls"
+    ],
+    "related_presets": [
+      "quickstart.basic_box",
+      "architectural.infrastructure.stone_bridge"
+    ]
+  }
+}

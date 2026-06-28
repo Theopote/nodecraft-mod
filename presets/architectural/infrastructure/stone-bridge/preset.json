@@ -1,0 +1,316 @@
+{
+  "preset_id": "architectural.infrastructure.stone_bridge",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Stone Arch Bridge",
+    "name_i18n": {
+      "zh_CN": "石拱桥",
+      "en_US": "Stone Arch Bridge"
+    },
+    "description": "A classic stone bridge with arch supports spanning a gap.",
+    "description_i18n": {
+      "zh_CN": "跨越间隙的经典石拱桥。",
+      "en_US": "A classic stone bridge with arch supports spanning a gap."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["bridge", "arch", "stone", "infrastructure"],
+    "category": "architectural",
+    "difficulty": "intermediate",
+    "estimated_build_time": "4 minutes",
+    "estimated_node_count": 14
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "span",
+      "name": "Bridge Span",
+      "type": "integer",
+      "default": 16,
+      "min": 8,
+      "max": 48,
+      "step": 2,
+      "description": "Length of the bridge",
+      "group": "Dimensions"
+    },
+    {
+      "id": "width",
+      "name": "Bridge Width",
+      "type": "integer",
+      "default": 5,
+      "min": 3,
+      "max": 12,
+      "step": 1,
+      "description": "Width of the bridge deck",
+      "group": "Dimensions"
+    },
+    {
+      "id": "arch_height",
+      "name": "Arch Rise",
+      "type": "integer",
+      "default": 6,
+      "min": 3,
+      "max": 16,
+      "step": 1,
+      "description": "Height of the arch from base to top",
+      "group": "Dimensions"
+    },
+    {
+      "id": "deck_thickness",
+      "name": "Deck Thickness",
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "description": "Thickness of the bridge deck",
+      "group": "Dimensions"
+    },
+    {
+      "id": "arch_thickness",
+      "name": "Arch Thickness",
+      "type": "integer",
+      "default": 2,
+      "min": 1,
+      "max": 4,
+      "step": 1,
+      "description": "Thickness of the arch structure",
+      "group": "Dimensions"
+    },
+    {
+      "id": "stone_material",
+      "name": "Stone Material",
+      "type": "block_selector",
+      "default": "minecraft:stone_bricks",
+      "description": "Block type for bridge structure",
+      "group": "Materials"
+    },
+    {
+      "id": "deck_material",
+      "name": "Deck Material",
+      "type": "block_selector",
+      "default": "minecraft:smooth_stone",
+      "description": "Block type for walking surface",
+      "group": "Materials"
+    },
+    {
+      "id": "add_railings",
+      "name": "Add Railings",
+      "type": "boolean",
+      "default": true,
+      "description": "Whether to add safety railings",
+      "group": "Features"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 300},
+        "parameters": {}
+      },
+      {
+        "id": "arch_curve",
+        "type": "geometry.curves.arc",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "center": {"x": 0, "y": 0, "z": 0},
+          "radius": {"param": "arch_radius_calc"},
+          "start_angle": 0,
+          "end_angle": 180,
+          "segments": 32
+        }
+      },
+      {
+        "id": "arch_profile",
+        "type": "geometry.profiles.rectangle",
+        "position": {"x": 250, "y": 350},
+        "parameters": {
+          "width": {"param": "arch_thickness"},
+          "height": {"param": "width"}
+        }
+      },
+      {
+        "id": "sweep_arch",
+        "type": "geometry.solids.sweep",
+        "position": {"x": 450, "y": 275},
+        "parameters": {}
+      },
+      {
+        "id": "deck_box",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 250, "y": 500},
+        "parameters": {
+          "corner": {"x": 0, "y": {"param": "arch_height"}, "z": 0},
+          "size": {
+            "x": {"param": "span"},
+            "y": {"param": "deck_thickness"},
+            "z": {"param": "width"}
+          }
+        }
+      },
+      {
+        "id": "union_structure",
+        "type": "geometry.boolean.union",
+        "position": {"x": 650, "y": 350},
+        "parameters": {}
+      },
+      {
+        "id": "railing_left",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 450, "y": 600},
+        "parameters": {
+          "corner": {
+            "x": 0,
+            "y": {"param": "deck_top"},
+            "z": -0.5
+          },
+          "size": {
+            "x": {"param": "span"},
+            "y": 1,
+            "z": 0.2
+          }
+        }
+      },
+      {
+        "id": "railing_right",
+        "type": "geometry.primitives.box_by_corner_and_size",
+        "position": {"x": 450, "y": 700},
+        "parameters": {
+          "corner": {
+            "x": 0,
+            "y": {"param": "deck_top"},
+            "z": {"param": "width_minus_half"}
+          },
+          "size": {
+            "x": {"param": "span"},
+            "y": 1,
+            "z": 0.2
+          }
+        }
+      },
+      {
+        "id": "union_with_railings",
+        "type": "geometry.boolean.union_multiple",
+        "position": {"x": 850, "y": 500},
+        "parameters": {}
+      },
+      {
+        "id": "assign_stone",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 1050, "y": 400},
+        "parameters": {
+          "block_type": {"param": "stone_material"}
+        }
+      },
+      {
+        "id": "assign_deck",
+        "type": "material.gradient_mapping.height_gradient",
+        "position": {"x": 1250, "y": 400},
+        "parameters": {
+          "stops": [
+            {"height": 0, "block": {"param": "stone_material"}},
+            {"height": {"param": "arch_height"}, "block": {"param": "deck_material"}}
+          ]
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 1450, "y": 400},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 1650, "y": 400},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1850, "y": 400},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "arch_curve", "port": "curve"},
+        "to": {"node": "sweep_arch", "port": "path"}
+      },
+      {
+        "from": {"node": "arch_profile", "port": "profile"},
+        "to": {"node": "sweep_arch", "port": "profile"}
+      },
+      {
+        "from": {"node": "sweep_arch", "port": "geometry"},
+        "to": {"node": "union_structure", "port": "a"}
+      },
+      {
+        "from": {"node": "deck_box", "port": "geometry"},
+        "to": {"node": "union_structure", "port": "b"}
+      },
+      {
+        "from": {"node": "union_structure", "port": "result"},
+        "to": {"node": "union_with_railings", "port": "geometries"}
+      },
+      {
+        "from": {"node": "railing_left", "port": "geometry"},
+        "to": {"node": "union_with_railings", "port": "geometries"}
+      },
+      {
+        "from": {"node": "railing_right", "port": "geometry"},
+        "to": {"node": "union_with_railings", "port": "geometries"}
+      },
+      {
+        "from": {"node": "union_with_railings", "port": "result"},
+        "to": {"node": "assign_stone", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_stone", "port": "geometry"},
+        "to": {"node": "assign_deck", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_deck", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates curve sweeping to create an arch, then combining it with deck and railings. The arch is created by sweeping a rectangular profile along a semicircular curve.",
+    "tips": [
+      "Longer spans need taller arches for structural realism",
+      "Add multiple arches for very long bridges",
+      "Railings improve safety and aesthetics",
+      "Use cobblestone for rustic medieval bridges",
+      "Position bridge to span rivers or ravines"
+    ],
+    "related_presets": [
+      "architectural.infrastructure.watchtower",
+      "quickstart.simple_tower"
+    ]
+  }
+}

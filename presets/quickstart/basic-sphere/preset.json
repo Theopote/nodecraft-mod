@@ -1,0 +1,144 @@
+{
+  "preset_id": "quickstart.basic_sphere",
+  "version": "1.0.0",
+  "schema_version": "1.0",
+
+  "metadata": {
+    "name": "Basic Sphere",
+    "name_i18n": {
+      "zh_CN": "基础球体",
+      "en_US": "Basic Sphere"
+    },
+    "description": "A simple sphere structure. Great for domes, planets, or decorative elements.",
+    "description_i18n": {
+      "zh_CN": "简单的球体结构。非常适合圆顶、星球或装饰元素。",
+      "en_US": "A simple sphere structure. Great for domes, planets, or decorative elements."
+    },
+    "author": "NodeCraft Team",
+    "tags": ["sphere", "dome", "basic", "quickstart"],
+    "category": "quickstart",
+    "difficulty": "beginner",
+    "estimated_build_time": "1 minute",
+    "estimated_node_count": 4
+  },
+
+  "thumbnails": {
+    "main": "thumbnail.png",
+    "previews": []
+  },
+
+  "parameters": [
+    {
+      "id": "radius",
+      "name": "Sphere Radius",
+      "type": "integer",
+      "default": 6,
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "description": "Radius of the sphere",
+      "group": "Dimensions"
+    },
+    {
+      "id": "material",
+      "name": "Material",
+      "type": "block_selector",
+      "default": "minecraft:stone",
+      "description": "Block type for the sphere",
+      "group": "Materials"
+    },
+    {
+      "id": "hollow",
+      "name": "Hollow Sphere",
+      "type": "boolean",
+      "default": false,
+      "description": "Create a hollow sphere (shell only)",
+      "group": "Options"
+    }
+  },
+
+  "graph": {
+    "nodes": [
+      {
+        "id": "input_pos",
+        "type": "input.context.player_position",
+        "position": {"x": 50, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "sphere",
+        "type": "geometry.primitives.sphere",
+        "position": {"x": 250, "y": 200},
+        "parameters": {
+          "center": {"x": 0, "y": 0, "z": 0},
+          "radius": {"param": "radius"}
+        }
+      },
+      {
+        "id": "assign_material",
+        "type": "material.basic_assignment.assign_block_type",
+        "position": {"x": 450, "y": 200},
+        "parameters": {
+          "block_type": {"param": "material"}
+        }
+      },
+      {
+        "id": "move_to_pos",
+        "type": "transform.basic.move",
+        "position": {"x": 650, "y": 200},
+        "parameters": {}
+      },
+      {
+        "id": "bake",
+        "type": "output.bake.geometry_to_blocks",
+        "position": {"x": 850, "y": 200},
+        "parameters": {
+          "placement_mode": "solid"
+        }
+      },
+      {
+        "id": "preview",
+        "type": "output.preview.preview_blocks",
+        "position": {"x": 1050, "y": 200},
+        "parameters": {}
+      }
+    ],
+    "connections": [
+      {
+        "from": {"node": "sphere", "port": "geometry"},
+        "to": {"node": "assign_material", "port": "geometry"}
+      },
+      {
+        "from": {"node": "assign_material", "port": "geometry"},
+        "to": {"node": "move_to_pos", "port": "geometry"}
+      },
+      {
+        "from": {"node": "input_pos", "port": "position"},
+        "to": {"node": "move_to_pos", "port": "translation"}
+      },
+      {
+        "from": {"node": "move_to_pos", "port": "geometry"},
+        "to": {"node": "bake", "port": "geometry"}
+      },
+      {
+        "from": {"node": "bake", "port": "blocks"},
+        "to": {"node": "preview", "port": "blocks"}
+      }
+    ]
+  },
+
+  "documentation": {
+    "learning_notes": "This preset demonstrates basic sphere primitive usage. Spheres are perfect for organic shapes and domes.",
+    "tips": [
+      "Use for planet or moon decorations",
+      "Half-sphere makes great dome roofs",
+      "Hollow spheres create interesting structures",
+      "Combine with boolean operations for complex shapes",
+      "Use different materials for varied effects"
+    ],
+    "related_presets": [
+      "quickstart.basic_box",
+      "quickstart.simple_tower"
+    ]
+  }
+}
