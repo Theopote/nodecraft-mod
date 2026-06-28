@@ -14,6 +14,10 @@ import java.util.UUID;
 
 public final class GraphPresetApplier {
 
+    private static final float MIN_NODE_HORIZONTAL_GAP = 260.0f;
+    private static final float MIN_NODE_VERTICAL_GAP = 130.0f;
+    private static final int MAX_LAYOUT_ADJUSTMENTS_PER_NODE = 64;
+
     public record ApplyResult(boolean success, String message, List<UUID> createdNodeIds) {
         public static ApplyResult failure(String message) {
             return new ApplyResult(false, message, List.of());
@@ -48,15 +52,19 @@ public final class GraphPresetApplier {
 
         Map<String, UUID> refToNodeId = new HashMap<>();
         List<UUID> createdNodeIds = new ArrayList<>();
+        Map<String, LayoutPosition> layoutPositions = resolveLayoutPositions(preset.nodes);
 
         for (GraphPresetRules.PresetNode presetNode : preset.nodes) {
             if (presetNode == null || presetNode.ref == null || presetNode.typeId == null) {
                 continue;
             }
+            LayoutPosition position = layoutPositions.getOrDefault(
+                    presetNode.ref,
+                    new LayoutPosition(presetNode.x, presetNode.y));
             INode created = editor.addNode(
                     presetNode.typeId,
-                    originX + presetNode.x,
-                    originY + presetNode.y);
+                    originX + position.x,
+                    originY + position.y);
             if (created == null) {
                 rollback(editor, createdNodeIds);
                 return ApplyResult.failure("Failed to create node: " + presetNode.typeId);
@@ -116,5 +124,53 @@ public final class GraphPresetApplier {
             editor.setSelectedNodeId(ids.iterator().next());
             editor.deleteSelectedNodes();
         }
+    }
+
+    private static Map<String, LayoutPosition> resolveLayoutPositions(List<GraphPresetRules.PresetNode> presetNodes) {
+        Map<String, LayoutPosition> positionsByRef = new HashMap<>();
+        List<LayoutPosition> placedPositions = new ArrayList<>();
+
+        for (GraphPresetRules.PresetNode presetNode : presetNodes) {
+            if (presetNode == null || presetNode.ref == null) {
+                continue;
+            }
+
+            float x = presetNode.x;
+            float y = presetNode.y;
+            int attempts = 0;
+            while (overlapsPlacedNode(x, y, placedPositions) && attempts < MAX_LAYOUT_ADJUSTMENTS_PER_NODE) {
+                y += MIN_NODE_VERTICAL_GAP;
+                attempts++;
+            }
+
+            if (attempts >= MAX_LAYOUT_ADJUSTMENTS_PER_NODE && overlapsPlacedNode(x, y, placedPositions)) {
+                x += MIN_NODE_HORIZONTAL_GAP;
+                y = presetNode.y;
+                attempts = 0;
+                while (overlapsPlacedNode(x, y, placedPositions) && attempts < MAX_LAYOUT_ADJUSTMENTS_PER_NODE) {
+                    y += MIN_NODE_VERTICAL_GAP;
+                    attempts++;
+                }
+            }
+
+            LayoutPosition position = new LayoutPosition(x, y);
+            positionsByRef.put(presetNode.ref, position);
+            placedPositions.add(position);
+        }
+
+        return positionsByRef;
+    }
+
+    private static boolean overlapsPlacedNode(float x, float y, List<LayoutPosition> placedPositions) {
+        for (LayoutPosition placed : placedPositions) {
+            if (Math.abs(x - placed.x) < MIN_NODE_HORIZONTAL_GAP
+                    && Math.abs(y - placed.y) < MIN_NODE_VERTICAL_GAP) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private record LayoutPosition(float x, float y) {
     }
 }
