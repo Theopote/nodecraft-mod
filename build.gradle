@@ -112,3 +112,12 @@ jar {
 		rename { "${it}_${project.archives_base_name}" }
 	}
 }
+
+// Task to run the preset converter
+task runPresetConverter(type: JavaExec) {
+	group = 'nodecraft'
+	description = 'Runs the preset converter tool'
+	mainClass = 'com.nodecraft.nodesystem.preset.PresetConverterTool'
+	classpath = sourceSets.main.runtimeClasspath
+	workingDir = projectDir
+}
