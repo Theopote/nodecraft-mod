@@ -80,7 +80,7 @@
       "description": "Block type for the column",
       "group": "Materials"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [

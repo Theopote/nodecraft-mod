@@ -85,7 +85,7 @@
       "description": "Block type for windows",
       "group": "Materials"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [

@@ -107,7 +107,7 @@
       "description": "Whether to add safety railings",
       "group": "Features"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [

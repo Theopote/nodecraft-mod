@@ -99,7 +99,7 @@
       "description": "Add battlements to top of wall",
       "group": "Features"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [

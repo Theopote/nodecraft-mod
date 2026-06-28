@@ -77,7 +77,7 @@
       "description": "Block type for top battlements",
       "group": "Materials"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [

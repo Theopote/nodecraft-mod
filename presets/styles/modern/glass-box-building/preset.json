@@ -104,7 +104,7 @@
       "description": "Use flat roof instead of pitched",
       "group": "Style"
     }
-  },
+  ],
 
   "graph": {
     "nodes": [
