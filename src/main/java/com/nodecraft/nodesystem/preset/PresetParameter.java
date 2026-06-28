@@ -97,28 +97,17 @@ public class PresetParameter {
             return defaultValue;
         }
 
-        switch (type) {
-            case INTEGER:
-                return validateInteger(value);
-            case FLOAT:
-                return validateFloat(value);
-            case BOOLEAN:
-                return validateBoolean(value);
-            case STRING:
-                return validateString(value);
-            case DROPDOWN:
-                return validateDropdown(value);
-            case BLOCK_SELECTOR:
-                return validateString(value); // Block ID as string
-            case COLOR:
-                return validateString(value); // Color as hex string
-            case VECTOR3:
-                return validateVector3(value);
-            case ANGLE:
-                return validateFloat(value);
-            default:
-                return value;
-        }
+        return switch (type) {
+            case INTEGER -> validateInteger(value);
+            case FLOAT -> validateFloat(value);
+            case BOOLEAN -> validateBoolean(value);
+            case STRING -> validateString(value);
+            case DROPDOWN -> validateDropdown(value);
+            case BLOCK_SELECTOR -> validateString(value); // Block ID as string
+            case COLOR -> validateString(value); // Color as hex string
+            case VECTOR3 -> validateVector3(value);
+            case ANGLE -> validateFloat(value);
+        };
     }
 
     private Object validateInteger(Object value) {

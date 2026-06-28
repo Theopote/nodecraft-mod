@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Loads preset definitions from JSON files.
@@ -118,9 +117,7 @@ public class PresetLoader {
         Map<String, String> map = new HashMap<>();
         if (parent.has(key)) {
             JsonObject i18nObj = parent.getAsJsonObject(key);
-            i18nObj.entrySet().forEach(entry -> {
-                map.put(entry.getKey(), entry.getValue().getAsString());
-            });
+            i18nObj.entrySet().forEach(entry -> map.put(entry.getKey(), entry.getValue().getAsString()));
         }
         return map;
     }
@@ -178,32 +175,24 @@ public class PresetLoader {
             return null;
         }
 
-        switch (type) {
-            case INTEGER:
-                return element.getAsInt();
-            case FLOAT:
-            case ANGLE:
-                return element.getAsDouble();
-            case BOOLEAN:
-                return element.getAsBoolean();
-            case STRING:
-            case DROPDOWN:
-            case BLOCK_SELECTOR:
-            case COLOR:
-                return element.getAsString();
-            case VECTOR3:
+        return switch (type) {
+            case INTEGER -> element.getAsInt();
+            case FLOAT, ANGLE -> element.getAsDouble();
+            case BOOLEAN -> element.getAsBoolean();
+            case STRING, DROPDOWN, BLOCK_SELECTOR, COLOR -> element.getAsString();
+            case VECTOR3 -> {
                 if (element.isJsonObject()) {
                     JsonObject vec = element.getAsJsonObject();
                     Map<String, Object> map = new HashMap<>();
                     map.put("x", vec.get("x").getAsDouble());
                     map.put("y", vec.get("y").getAsDouble());
                     map.put("z", vec.get("z").getAsDouble());
-                    return map;
+                    yield map;
                 }
-                return null;
-            default:
-                return element.getAsString();
-        }
+                yield null;
+            }
+            default -> element.getAsString();
+        };
     }
 
     private static PresetGraph parseGraph(JsonObject graphObj) {
@@ -228,9 +217,7 @@ public class PresetLoader {
                 Map<String, Object> parameters = new HashMap<>();
                 if (nodeObj.has("parameters")) {
                     JsonObject paramsObj = nodeObj.getAsJsonObject("parameters");
-                    paramsObj.entrySet().forEach(entry -> {
-                        parameters.put(entry.getKey(), parseNodeParameterValue(entry.getValue()));
-                    });
+                    paramsObj.entrySet().forEach(entry -> parameters.put(entry.getKey(), parseNodeParameterValue(entry.getValue())));
                 }
 
                 nodes.add(new PresetGraph.PresetNodeDefinition(id, type, position, parameters));
@@ -285,9 +272,7 @@ public class PresetLoader {
             // Could be a parameter reference like {"param": "width"} or a nested object
             JsonObject obj = element.getAsJsonObject();
             Map<String, Object> map = new HashMap<>();
-            obj.entrySet().forEach(entry -> {
-                map.put(entry.getKey(), parseNodeParameterValue(entry.getValue()));
-            });
+            obj.entrySet().forEach(entry -> map.put(entry.getKey(), parseNodeParameterValue(entry.getValue())));
             return map;
         } else if (element.isJsonArray()) {
             List<Object> list = new ArrayList<>();

@@ -24,7 +24,7 @@ public class PresetRegistry {
     private final Map<String, List<PresetDefinition>> presetsByCategory = new HashMap<>();
     private boolean initialized = false;
 
-    private PresetRegistry() {
+    PresetRegistry() {
         // Private constructor for singleton
     }
 

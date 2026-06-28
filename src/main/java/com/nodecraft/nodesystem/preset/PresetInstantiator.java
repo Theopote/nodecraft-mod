@@ -37,8 +37,7 @@ public class PresetInstantiator {
 
         // Validate all parameters
         for (PresetParameter param : preset.getParameters()) {
-            Object value = resolvedParams.get(param.getId());
-            resolvedParams.put(param.getId(), param.validateValue(value));
+            resolvedParams.compute(param.getId(), (k, value) -> param.validateValue(value));
         }
 
         NodeGraph graph = new NodeGraph();
